@@ -157,7 +157,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.29 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.29.4.1 $ $}
 \newcommand{\moldyversion}{2.16}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -5537,8 +5537,6 @@ The command line options are:
 
 \begin{center}
 \Lit{mdvaf}
-\Lit{[-s} \textit{system-specification} \Lit{|}
-\Lit{-r} \textit{restart-file} \Lit{]}
 \Lit{[-d} \textit{dump-file-format}\Lit{]}
 \Lit{[-t} \textit{dump-range}\Lit{]} \\
 \Lit{[-v} \textit{vaf-range}\Lit{]}
@@ -5550,10 +5548,7 @@ The command line options are:
 
 where the arguments have the following meanings:
 \begin{Argdescription}
-\item[-s] read the species data from a system specification file.
-\item[-r] read the species data from a restart file. Only one of \Lit{-s} 
-or \Lit{-r} may be given.
-\item[-d] read the centre of mass velocities from a dump file (of \Lit{dump-level} 
+\item[-d] read the system info and centre of mass velocities from a dump file (of \Lit{dump-level} 
 $>= 2$) given as a prototype name containing a \Lit{printf()} format 
 string -- see section~\ref{sec:dumping} .
 \item[-t] range of records in dump file, specified in selector format.
@@ -5628,8 +5623,6 @@ specified in command line mode:
 
 \begin{center}
 \Lit{msd}
-\Lit{[-s} \textit{system-specification} \Lit{|}
-\Lit{-r} \textit{restart-file}\Lit{]}
 \Lit{[-d} \textit{dump-file-format}\Lit{]}
 \Lit{[-t} \textit{dump-range}\Lit{]} \\
 \Lit{[-c]}
@@ -5643,10 +5636,7 @@ specified in command line mode:
 
 where the meanings of the options are
 \begin{Argdescription}
-\item[-s] read the species data from a system specification file.
-\item[-r] read the species data from a restart file. Only one of
-  \Lit{-s} or \Lit{-r} may be given.
-\item[-d] read the centre of mass coordinates from a dump file given as a
+\item[-d] read the system info and centre of mass coordinates from a dump file given as a
 prototype name containing a \Lit{printf()} format string -- see
 section~\ref{sec:dumping}. 
 \item[-c] if reading a system specification file, skip any preceding control 
@@ -5679,7 +5669,7 @@ Type \Lit{gnu} for format readable by GNUPlot (default) or \Lit{gen} for the gen
 \end{Argdescription}
 
 
-The output format for msd calculations consists of four columns
+The output format for msd calculations consists of four columns for each species
 corresponding to the $x, y, z$ components and total msd, with
 increasing time intervals down the columns.
 
