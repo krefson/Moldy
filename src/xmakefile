@@ -62,7 +62,7 @@ EPFLAGS=	-2r
 A2FLAGS=
 SHFILE=		$$file
 FILES = accel algorith alloc aux beeman convert dump ewald force input \
-	jacobi kernel main matrix output quaterns rdf restart startup \
+	eigens kernel main matrix output quaterns rdf restart startup \
 	values
 
 CFILES = $(FILES:%=%.c)
@@ -76,7 +76,7 @@ INFILES = control.water control.100 tips2.in\
 		methane.in mcy.in water-big.in control.big\
 		control.mgclh2o mgclh2o.in control.clay
 
-SHAKS=	algorith alloc aux jacobi kernel input matrix\
+SHAKS=	algorith alloc aux eigens kernel input matrix\
 		quaterns restart startup
 
 SHAKC= $(SHAKS:%=%.c)
