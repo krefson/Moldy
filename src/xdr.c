@@ -26,6 +26,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	xdr.c,v $
+ * Revision 2.4  93/12/20  16:42:04  keith
+ * Put casts in function calls to satisfy picky-picky-picky SGI compiler.
+ * 
+ * Revision 2.3  93/10/28  10:28:17  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.2  93/09/06  14:42:46  keith
  * Fixed portability problems/bugs in XDR code.
  * 
@@ -34,7 +40,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/xdr.c,v 2.2 93/09/06 14:42:46 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/xdr.c,v 2.4 93/12/20 16:42:04 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -50,9 +56,9 @@ XDR     *xdrs;
 real    *rp;
 {
    if( sizeof(real) == sizeof(double) )
-      return xdr_double(xdrs, rp);
+      return xdr_double(xdrs, (double*)rp);
    else if( sizeof(real) == sizeof(float) )
-      return xdr_float(xdrs, rp);
+      return xdr_float(xdrs, (float*)rp);
    else
       return FALSE;
 }
@@ -112,8 +118,8 @@ spec_mt *sp;
        * file M/C dependent.
        */
       xdr_opaque(xdrs, (gptr*)&sp->site_id, 14*XDR_4PTR_SIZE) &&
-      xdr_int(xdrs,(gptr*)&sp->pad[0]) &&
-      xdr_int(xdrs,(gptr*)&sp->pad[1]);
+      xdr_int(xdrs,(int*)&sp->pad[0]) &&
+      xdr_int(xdrs,(int*)&sp->pad[1]);
 }
 
 bool_t xdr_site(xdrs, sp)
@@ -262,14 +268,14 @@ xdr_vector(xdrs, basep, nelem, elemsize, xdr_elem)
 #else
 void	xdr_set_npotpar () {}
 void	xdr_set_av_size () {}
-bool_t	xdr_site () {}
-bool_t	xdr_restrt () {}
-bool_t	xdr_averages () {}
-bool_t	xdr_real () {}
-bool_t	xdr_contr () {}
-bool_t	xdr_system () {}
-bool_t	xdr_species () {}
-bool_t	xdr_pot () {}
-bool_t	xdr_int () {}
-bool_t	xdr_bool () {}
+bool_t	xdr_site () {return 0;}
+bool_t	xdr_restrt () {return 0;}
+bool_t	xdr_averages () {return 0;}
+bool_t	xdr_real () {return 0;}
+bool_t	xdr_contr () {return 0;}
+bool_t	xdr_system () {return 0;}
+bool_t	xdr_species () {return 0;}
+bool_t	xdr_pot () {return 0;}
+bool_t	xdr_int () {return 0;}
+bool_t	xdr_bool () {return 0;}
 #endif
