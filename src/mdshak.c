@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 2.17 1998/12/14 15:33:51 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 2.18 1999/07/22 13:22:11 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -37,14 +37,14 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 
 #include "structs.h"
 #include "messages.h"
 #include "ReadDCD.h"
+#include "utlsup.h"
 #ifdef HAVE_STDARG_H
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 #else
 gptr	*arralloc();	        	/* Array allocator		      */
 #endif
 
-void	invert();
-void	mat_vec_mul();
+void    moldy_out();
 void	make_sites();
 char	*strlower();
 void	read_sysdef();
@@ -57,682 +57,20 @@ void	read_restart();
 void	init_averages();
 int	getopt();
 gptr	*talloc();
-FILE	*popen();
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 static   char		*comm;
 contr_mt		control;
 
-#define OUTBIN 2
 #define SHAK   0
 #define XYZ 1
+#define OUTBIN 2
 #define DCD 3
 #define PDB 4
-/******************************************************************************
- * Dummies of 'moldy' routines so that mdshak may be linked with moldy library*
- ******************************************************************************/
-void 	init_rdf()
-{}
-gptr *rdf_ptr()
-{return 0;}
-void new_lins()
-{}
-int lines_left()
-{return 0;}
-void new_page()
-{}
-void	new_line()
-{
-   (void)putchar('\n');
-}
-void	banner_page()
-{}
-void	note()
-{}
-void	conv_potentials()
-{}
-void	conv_control()
-{}
-/******************************************************************************
- *  message.   Deliver error message to possibly exiting.  It can be called   *
- *             BEFORE output file is opened, in which case outt to stderr.    *
- ******************************************************************************/
-#ifdef HAVE_STDARG_H
-#   undef  va_alist
-#   define      va_alist int *nerrs, ...
-#   ifdef va_dcl
-#      undef va_dcl
-#   endif
-#   define va_dcl /* */
-#endif
-/*VARARGS*/
-void    message(va_alist)
-va_dcl
-{
-   va_list      ap;
-   char         *buff;
-   int          sev;
-   char         *format;
-   static char  *sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
-#ifdef HAVE_STDARG_H
-   va_start(ap, nerrs);
-#else
-   int          *nerrs;
-
-   va_start(ap);
-   nerrs = va_arg(ap, int *);
-#endif
-   buff  = va_arg(ap, char *);
-   sev   = va_arg(ap, int);
-   format= va_arg(ap, char *);
-
-   (void)fprintf(stderr, "%s: ",comm);
-   (void)vfprintf(stderr, format, ap);
-   va_end(ap);
-   fputc('\n',stderr);
-
-   if(buff != NULL)                     /* null ptr means don't print buffer  */
-   {
-      (void)fprintf(stderr,"     buffer contents=\"%s\"",buff);
-      fputc('\n',stderr);
-   }
-   if(sev >= ERROR && nerrs != NULL)
-      (*nerrs)++;
-   if(sev == FATAL)
-      exit(3);
-}
-
-/******************************************************************************
- *  message.   Deliver error message to possibly exiting. 		      *
- ******************************************************************************/
-#ifdef HAVE_STDARG_H
-#undef  va_alist
-#define	va_alist char *format, ...
-#ifdef  va_dcl
-#   undef  va_dcl
-#endif
-#define va_dcl /* */
-#endif
-/*VARARGS*/
-void	error(va_alist)
-va_dcl
-{
-   va_list	ap;
-#ifdef HAVE_STDARG_H
-   va_start(ap, format);
-#else
-   char		*format;
-
-   va_start(ap);
-   format= va_arg(ap, char *);
-#endif
-
-   (void)fprintf(stderr, "%s: ",comm);
-   (void)vfprintf(stderr, format, ap);
-   fputc('\n',stderr);
-   va_end(ap);
-
-   exit(3);
-}
-static char * mystrdup(s)
-char *s;
-{
-   char * t = NULL;
-   if(s) t=malloc(strlen(s)+1);
-   return t?strcpy(t,s):0;
-}
-/******************************************************************************
- * get_int().  Read an integer from stdin, issuing a prompt and checking      *
- * validity and range.  Loop until satisfied, returning EOF if appropriate.   *
- ******************************************************************************/
-int get_int(prompt, lo, hi)
-char	*prompt;
-int	lo, hi;
-{
-   char		ans_str[80];
-   int		ans_i, ans_flag;
-
-   ans_flag = 0;
-   while( ! feof(stdin) && ! ans_flag )
-   {
-      fputs(prompt, stderr);
-      fflush(stderr);
-      fgets(ans_str, sizeof ans_str, stdin);
-      if( sscanf(ans_str, "%d", &ans_i) == 1 && ans_i >= lo && ans_i <= hi)
-	 ans_flag++;
-   }
-   if( ans_flag )
-      return(ans_i);
-   else
-      return(EOF);
-}
-/******************************************************************************
- * get_sym().  Read a character from stdin and match to suplied set	      *
- ******************************************************************************/
-int get_sym(prompt, cset)
-char	*prompt;
-char	*cset;
-{
-   char		ans_c, ans_str[80];
-   int		ans_flag;
-
-   ans_flag = 0;
-   while( ! feof(stdin) && ! ans_flag )
-   {
-      fputs(prompt, stderr);
-      fflush(stderr);
-      fgets(ans_str, sizeof ans_str, stdin);
-      if( sscanf(ans_str, " %c", &ans_c) == 1 && strchr(cset, ans_c))
-	 ans_flag++;
-   }
-   if( ans_flag )
-      return(ans_c);
-   else
-      return(EOF);
-}
-/******************************************************************************
- * get_str().  Read an string from stdin, issuing a prompt.		      *
- ******************************************************************************/
-char	*get_str(prompt)
-char	*prompt;
-{
-   char		ans_str[80];
-   char		*str = malloc(80);
-   int		ans_flag;
-
-   ans_flag = 0;
-   while( ! feof(stdin) && ! ans_flag )
-   {
-      fputs(prompt, stderr);
-      fflush(stderr);
-      fgets(ans_str, sizeof ans_str, stdin);
-      if( sscanf(ans_str, "%s", str) == 1)
-	 ans_flag++;
-   }
-   if( ans_flag )
-      return(str);
-   else
-      return(NULL);
-}
-/******************************************************************************
- ******************************************************************************/
-/******************************************************************************
- * forstr.  Parse string str of format s-f:n  (final 2 parts optional),       *
- *          returning integer values of s,f,n. f defaults to s and n to 1     *
- ******************************************************************************/
-int
-forstr(instr, start, finish, inc)
-char	*instr;
-int	*start, *finish, *inc;
-{
-   char	*p, *pp, *str = mystrdup(instr);
-   long strtol();
-   
-   if( (p = strchr(str,':')) != NULL)
-   {
-      *inc = strtol(p+1, &pp, 0);
-      if( pp == p+1 )
-	 goto limerr;
-      *p = 0;
-   }
-   else
-      *inc = 1;
-   if( (p = strchr(str,'-')) != NULL)
-   {
-      *p = 0;
-      *start = strtol(str, &pp, 0);
-      if( pp == str )
-	 goto limerr;
-      *finish = strtol(p+1, &pp, 0);
-      if( pp == p+1 )
-	 goto limerr;
-   }
-   else
-   {
-      *start = *finish = strtol(str, &pp, 0);
-      if( pp == str )
-	 goto limerr;
-   }
-   return 0;
- limerr:
-   return -1;
-}
-/******************************************************************************
- * dump_to_moldy.  Fill the 'system' arrays with the dump data in 'buf' (see  *
- * dump.c for format), expanding floats to doubles if necessary.              *
- ******************************************************************************/
+#define CSSR 5
 #define DUMP_SIZE(level)  (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
-			            (3*sys.nmols + 4*sys.nmols_r + 9)+ \
-			     (level>>3 & 1) * \
-			            (3*sys.nmols + 3*sys.nmols_r + 9) +\
-			     (level & 1))
-void
-dump_to_moldy(buf, system)
-float	*buf;
-system_mt *system;
-{
-   int i;
-   float	*c_of_m = buf;
-   float	*quat   = buf+3*system->nmols;
-   float	*h      = buf+3*system->nmols + 4*system->nmols_r;
-   mat_mt hinv;
-
-/* $dir no_recurrence */
-   for(i = 0; i < system->nmols; i++)
-   {
-      system->c_of_m[i][0] = c_of_m[3*i];
-      system->c_of_m[i][1] = c_of_m[3*i+1];
-      system->c_of_m[i][2] = c_of_m[3*i+2];
-   }
-/* $dir no_recurrence */
-   for(i = 0; i < system->nmols_r; i++)
-   {
-      system->quat[i][0] = quat[4*i];
-      system->quat[i][1] = quat[4*i+1];
-      system->quat[i][2] = quat[4*i+2];
-      system->quat[i][3] = quat[4*i+3];
-   }
-/* $dir no_recurrence */
-   for(i = 0; i < 3; i++)
-   {
-      system->h[i][0] = h[3*i];
-      system->h[i][1] = h[3*i+1];
-      system->h[i][2] = h[3*i+2];
-   }
-
-   invert(system->h, hinv);
-   mat_vec_mul(hinv, system->c_of_m, system->c_of_m, system->nmols);
-}
-/******************************************************************************
- ******************************************************************************/
-void mat_vec_mul3(m, vec, number)
-int             number;         /* Number of vectors to be multiplied         */
-real            m[3][3];        /* Matrix                                     */
-real            **vec;          /* Output vector.  CAN BE SAME AS INPUT  (out)*/
-{
-   int i;
-   register double        a0, a1, a2;
-   
-   for(i = 0; i < number; i++)
-   {
-      a0 = vec[0][i];  a1 = vec[1][i];  a2 = vec[2][i];
-      
-      vec[0][i] = m[0][0]*a0 + m[0][1]*a1 + m[0][2]*a2;
-      vec[1][i] = m[1][0]*a0 + m[1][1]*a1 + m[1][2]*a2;
-      vec[2][i] = m[2][0]*a0 + m[2][1]*a1 + m[2][2]*a2;
-   }
-}
-/******************************************************************************
- * shakal_out().  Write a system configuration to stdout in the form of an    *
- * input data file for the graphics program SCHAKAL88.			      *
- ******************************************************************************/
-void
-schakal_out(n, system, species, site_info, insert)
-int	n;
-system_mt	*system;
-spec_mt		species[];
-site_mt		site_info[];
-char		*insert;
-{
-   double	**site = (double**)arralloc(sizeof(double),2,
-					    0,2,0,system->nsites-1);
-   spec_mt	*spec;
-   double	a, b, c, alpha, beta, gamma;
-   mat_mp	h = system->h;
-   mat_mt	hinv;
-   int		imol, isite, is;
-
-   invert(h,hinv);
-
-   a = sqrt(SQR(h[0][0]) + SQR(h[1][0]) + SQR(h[2][0]));
-   b = sqrt(SQR(h[0][1]) + SQR(h[1][1]) + SQR(h[2][1]));
-   c = sqrt(SQR(h[0][2]) + SQR(h[1][2]) + SQR(h[2][2]));
-   alpha = 180/PI*acos((h[0][1]*h[0][2]+h[1][1]*h[1][2]+h[2][1]*h[2][2])/b/c);
-   beta  = 180/PI*acos((h[0][0]*h[0][2]+h[1][0]*h[1][2]+h[2][0]*h[2][2])/a/c);
-   gamma = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/a/b);
-
-   printf("CELL %f %f %f %f %f %f\n", a, b, c, alpha, beta, gamma);
-   for(spec = species; spec < species+system->nspecies; spec++)
-   {
-      make_sites(system->h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 spec->framework, site, spec->nmols, spec->nsites);
-
-      mat_vec_mul3(hinv, site, spec->nsites*spec->nmols);
-
-      isite = 0;
-      for(imol = 0; imol < spec->nmols; imol++)
-      {
-	 puts("MOL");
-	 for(is = 0; is < spec->nsites; is++)
-	 {
-	    if(fabs(site_info[spec->site_id[is]].mass) != 0)
-	       (void)printf("ATOM %-8s %7.4f %7.4f %7.4f\n",
-			    site_info[spec->site_id[is]].name,
-			    site[0][isite], site[1][isite], site[2][isite]);
-	    isite++;
-	 }
-      }
-   }
-
-   if( insert != NULL)
-      (void)printf("%s\n", insert);
-
-   (void)printf("END %d\n", n);
-   if( ferror(stdout) )
-      error("Error writing output - \n%s\n", strerror(errno));
-   afree((gptr*) site);
-}
-/******************************************************************************
- * pdb_out().  Write a system configuration to stdout in the form of a        *
- * Brookhaven Protein Data Bank (pdb) file                                    *
- ******************************************************************************/
-void
-pdb_out(n, system, species, site_info, insert)
-int	n;
-system_mt	*system;
-spec_mt		species[];
-site_mt		site_info[];
-char		*insert;
-{
-   double	**site = (double**)arralloc(sizeof(double),2,
-                                            0,2,0,system->nsites-1);
-   mat_mp       h = system->h;
-   spec_mt	*spec;
-   double	a,b,c, alpha, beta, gamma;
-   int		imol, isite, itot=1, ispec=1;
-   int		is;
-   
-   a = sqrt(SQR(h[0][0]) + SQR(h[1][0]) + SQR(h[2][0]));
-   b = sqrt(SQR(h[0][1]) + SQR(h[1][1]) + SQR(h[2][1]));
-   c = sqrt(SQR(h[0][2]) + SQR(h[1][2]) + SQR(h[2][2]));
-   alpha = 180/PI*acos((h[0][1]*h[0][2]+h[1][1]*h[1][2]+h[2][1]*h[2][2])/b/c);
-   beta  = 180/PI*acos((h[0][0]*h[0][2]+h[1][0]*h[1][2]+h[2][0]*h[2][2])/a/c);
-   gamma = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/a/b);
-
-/* Write the pdb header */
-   (void)printf("CRYST1 %8.3f %8.3f %8.3f %6.2f %6.2f %6.2f P 1\n",
-          a,b,c,alpha,beta,gamma);
-   for(spec = species; spec < species+system->nspecies; ispec++, spec++)
-   {
-     make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-           spec->framework, site, spec->nmols, spec->nsites);
-
-     isite = 0;
-     for(imol = 0; imol < spec->nmols; imol++)
-     {
-       for(is = 0; is < spec->nsites; is++)
-       {
-         if(fabs(site_info[spec->site_id[is]].mass) != 0)
-            (void)printf("HETATM%5d %2s%d  NONE    1     %7.3f %7.3f %7.3f  1.00  0.00\n",
-               itot, site_info[spec->site_id[is]].name, ispec,
-                  site[0][isite], site[1][isite], site[2][isite]);
-         isite++;
-         itot++;
-       }
-     }
-   }
-   (void)printf("TER              %d     NONE    1\n",itot);
-   (void)printf("END\n");
-   if( insert != NULL)
-      (void)printf("%s\n", insert);
-
-   if( ferror(stdout) )
-      error("Error writing output - \n%s\n", strerror(errno));
-}
-/******************************************************************************
- * xyz_out().  Write a system configuration to stdout in the form of an    *
- * input data file for the graphics program XYZ (rasmol -xyz file)	      *
- ******************************************************************************/
-void
-xyz_out(n, system, species, site_info, insert)
-int	n;
-system_mt	*system;
-spec_mt		species[];
-site_mt		site_info[];
-char		*insert;
-{
-   double	**site = (double**)arralloc(sizeof(double),2,
-					    0,2,0,system->nsites-1);
-   spec_mt	*spec;
-   int		imol, isite, is;
-
-/* We count the number of atoms */
-   isite=0;
-   for(spec = species; spec < species+system->nspecies; spec++)
-   {
-      for(imol = 0; imol < spec->nmols; imol++)
-      {
-	 for(is = 0; is < spec->nsites; is++)
-         {
-	    if(fabs(site_info[spec->site_id[is]].mass) != 0)
-              isite++;
-         }
-      }
-   }
-/* Now we write the Xyz header */
-   (void)printf("%d\n",isite);
-/* It would be nice to have here the real title */
-   (void)printf("%s\n",control.title);
-   
-   for(spec = species; spec < species+system->nspecies; spec++)
-   {
-      make_sites(system->h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 spec->framework, site, spec->nmols, spec->nsites);
-
-      isite = 0;
-      for(imol = 0; imol < spec->nmols; imol++)
-      {
-	 for(is = 0; is < spec->nsites; is++)
-	 {
-	    if(fabs(site_info[spec->site_id[is]].mass) != 0)
-	       (void)printf("%-8s %7.4f %7.4f %7.4f\n",
-			    site_info[spec->site_id[is]].name,
-			    site[0][isite], site[1][isite], site[2][isite]);
-	    isite++;
-	 }
-      }
-   }
-
-   if( insert != NULL)
-      (void)printf("%s\n", insert);
-
-   if( ferror(stdout) )
-      error("Error writing output - \n%s\n", strerror(errno));
-   afree((gptr*) site);
-}
-/******************************************************************************
- * dcd_out().  Write a system configuration to stdout in the form of an    *
- * DCD data file for the graphics program VMD                              *
- ******************************************************************************/
-void
-dcd_out(n, irec, inc, system, species, site_info, insert)
-int	n, irec, inc;
-system_mt	*system;
-spec_mt		species[];
-site_mt		site_info[];
-char		*insert;
-{
-   double	**site = (double**)arralloc(sizeof(double),2,
-					    0,2,0,system->nsites-1);
-   float	**sitef = (float**)arralloc(sizeof(float),2,
-					    0,2,0,system->nsites-1);
-   spec_mt	*spec;
-   int		isite, is, i, imol, isitem;
-
-   isitem=0; 
-   for(spec = species; spec < species+system->nspecies; spec++)
-   {
-      make_sites(system->h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 spec->framework, site, spec->nmols, spec->nsites);
-
-      isite = 0;
-      for(imol = 0; imol < spec->nmols; imol++)
-      {
-	 for(is = 0; is < spec->nsites; is++)
-	 {
-	    if(fabs(site_info[spec->site_id[is]].mass) != 0)
-	    {
-	       for(i=0; i<3; i++)
-		  sitef[i][isitem] = site[i][isite];
-	       isitem++;
-	    }
-	    isite++;
-	 }
-      }
-   }
-/* On first call  write the DCD header.  Always write to stdout. */
-   if( n == 0 )
-      write_dcdheader(stdout, control.title, isitem, irec, 0, inc, control.step);
-   
-   write_dcdstep(stdout, isitem, sitef[0], sitef[1], sitef[2]);
-
-   if( ferror(stdout) )
-      error("Error writing output - \n%s\n", strerror(errno));
-   afree((gptr*)site);
-   afree((gptr*)sitef);
-}
-/******************************************************************************
- * atoms_out().  Write a system configuration to stdout in the form of an     *
- * binary atomic co-ordinates.						      *
- ******************************************************************************/
-void
-atoms_out(n, system, species, site_info, atom_sel)
-int	n;
-system_mt	*system;
-spec_mt		species[];
-site_mt		site_info[];
-char		*atom_sel;
-{
-   double	**site = (double**)arralloc(sizeof(double),2,
-					    0,2,0,system->nsites-1);
-   spec_mt	*spec;
-   float	fsite[3];
-   mat_mp	h = system->h;
-   mat_mt	hinv;
-   int		imol, isite, is,i;
-
-   invert(h,hinv);
-
-   for(spec = species; spec < species+system->nspecies; spec++)
-   {
-      make_sites(system->h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 spec->framework, site, spec->nmols, spec->nsites);
-
-      mat_vec_mul3(hinv, site, spec->nsites*spec->nmols);
-
-      isite = 0;
-      for(imol = 0; imol < spec->nmols; imol++)
-      {
-	 for(is = 0; is < spec->nsites; is++)
-	 {
-	    for(i=0; i<3; i++)
-	       fsite[i]=site[i][isite];
-            fwrite((char*)fsite, sizeof fsite, 1, stdout);
-	    isite++;
-	 }
-      }
-   }
-   if( ferror(stdout) )
-      error("Error writing output - \n%s\n", strerror(errno));
-   afree((gptr*) site);
-}
- /******************************************************************************
- * Centre_mass.  Shift system centre of mass to origin (in discrete steps),   *
- ******************************************************************************/
-void
-centre_mass(species, nspecies, c_of_m)
-spec_mt		species[];
-int		nspecies;
-vec_mt		c_of_m;
-{
-   double	mass;
-   spec_mt	*spec;
-   int		imol;
-   vec_mt	*s_c_of_m;
-
-   mass = c_of_m[0] = c_of_m[1] = c_of_m[2] = 0.0;
-   for(spec = species; spec < species + nspecies; spec++ )
-   {
-      s_c_of_m = spec->c_of_m;
-      for(imol = 0; imol < spec->nmols; imol++)
-      {
-	 c_of_m[0] += spec->mass*s_c_of_m[imol][0];
-	 c_of_m[1] += spec->mass*s_c_of_m[imol][1];
-	 c_of_m[2] += spec->mass*s_c_of_m[imol][2];
-      }
-      mass += spec->nmols*spec->mass;
-   }
-
-   c_of_m[0] /= mass;
-   c_of_m[1] /= mass;
-   c_of_m[2] /= mass;
-   c_of_m[0] = floor(c_of_m[0]+0.5);
-   c_of_m[1] = floor(c_of_m[1]+0.5);
-   c_of_m[2] = floor(c_of_m[2]+0.5);
-}
-/******************************************************************************
- * Shift.  Translate all co-ordinates.					      *
- ******************************************************************************/
-void	shift(r, nmols, s)
-vec_mt	r[];
-int	nmols;
-vec_mt	s;
-{
-   int imol;
-   for(imol = 0; imol < nmols; imol++)
-   {
-      r[imol][0] -= s[0];
-      r[imol][1] -= s[1];
-      r[imol][2] -= s[2];
-   }
-}
-/******************************************************************************
- * moldy_out.  Select output routine and handle file open/close		      *
- * Translate system relative to either centre of mass of posn of framework.   *
- ******************************************************************************/
-void
-moldy_out(n, irec, inc, system, species, site_info, atom_sel, outsw, insert)
-int	n, irec, inc;
-system_mt	*system;
-spec_mt		species[];
-site_mt		site_info[];
-char		*atom_sel;
-int		outsw;
-char		*insert;
-{
-   spec_mp	spec, frame_spec  = NULL;
-   vec_mt	c_of_m;
-   
-   for(spec = species; spec < species+system->nspecies; spec++)
-      if( spec->framework )
-	 frame_spec = spec;
-
-   if( frame_spec != NULL )
-      shift(system->c_of_m, system->nmols, frame_spec->c_of_m[0]);
-   else
-   {
-      centre_mass(species, system->nspecies, c_of_m);
-      shift(system->c_of_m, system->nmols, c_of_m);
-   }
-   switch (outsw)
-   {
-   case DCD:
-      dcd_out(n, irec, inc, system, species, site_info, insert);
-      break;
-    case SHAK:
-      schakal_out(n, system, species, site_info, insert);
-      break;
-    case PDB:
-      pdb_out(n, system, species, site_info, insert);
-      break;
-    case XYZ:
-      xyz_out(n, system, species, site_info, insert);
-      break;
-    case OUTBIN:
-      atoms_out(n, system, species, site_info, atom_sel);
-      break;
-   }
-}
+           (3*sys.nmols + 4*sys.nmols_r + 9)+ (level>>3 & 1) * \
+           (3*sys.nmols + 3*sys.nmols_r + 9) + (level & 1))
 /******************************************************************************
  * main().   Driver program for generating SCHAKAL input files from MOLDY     *
  * files.    Acceptable inputs are sys-spec files, or restart files. Actual   *
@@ -783,17 +121,16 @@ char	*argv[];
      outsw = XYZ;
    else if (strstr(comm, "mddcd") || strstr(comm, "mdvmd") )
      outsw = DCD;
+   else if (strstr(comm, "mdcssr") )
+     outsw = CSSR;
    else
      outsw = OUTBIN;
 
-   while( (c = getopt(argc, argv, "a:bo:cr:s:d:t:i:xhvp") ) != EOF )
+   while( (c = getopt(argc, argv, "a:do:cr:s:d:t:i:hxbvpg") ) != EOF )
       switch(c)
       {
        case 'a': 
 	 atom_sel = optarg;
-	 break;
-       case 'b':
-	 outsw=OUTBIN;
 	 break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
@@ -823,17 +160,23 @@ char	*argv[];
        case 'i':
 	 insert = optarg;
 	 break;
-       case 'x':
-	 outsw = XYZ;
-	 break;
        case 'h':
 	 outsw = SHAK;
 	 break;
-       case 'p':
-	 outsw = PDB;
+       case 'x':
+	 outsw = XYZ;
+	 break;
+       case 'b':
+	 outsw = OUTBIN;
 	 break;
        case 'v':
 	 outsw = DCD;
+	 break;
+       case 'p':
+         outsw = PDB;
+	 break;
+       case 'g':
+	 outsw = CSSR;
 	 break;
        default:
        case '?':
@@ -925,14 +268,14 @@ char	*argv[];
    {
     case 's':				/* Lattice_start file		      */
 	lattice_start(Fp, &sys, species, qpf);
-	moldy_out(1, 1, 1, &sys, species, site_info, atom_sel, outsw, insert);
+	moldy_out(0, 0, 1, &sys, sys.h, species, site_info, outsw, 0, insert);
       break;
     case 'r':				/* Restart file			      */
 	init_averages(sys.nspecies, restart_header.vsn,
 		      control.roll_interval, control.roll_interval,
 		      &av_convert);
 	read_restart(Fp, restart_header.vsn, &sys, av_convert);
-	moldy_out(1, 1, 1, &sys, species, site_info, atom_sel, outsw, insert);
+	moldy_out(0, 0, 1, &sys, sys.h, species, site_info, outsw, 0, insert);
       break;
     case 'd':				/* Dump dataset			      */
 	if( dump_name == 0 )
@@ -1009,7 +352,7 @@ char	*argv[];
 
 	   dump_to_moldy(dump_buf, &sys);
 
-	   moldy_out(iout++, irec, inc, &sys, species, site_info, atom_sel, outsw, insert);
+	   moldy_out(iout++, irec, inc, &sys, sys.h, species, site_info, outsw, 0, insert);
 #ifdef DEBUG
 	   fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
 		   irec%header.maxdumps, dump_name);

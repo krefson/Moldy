@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1.16 1998/05/07 17:06:11 keith stable $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1.1 1999/10/11 10:50:07 keith Exp keith $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.1  1999/10/11 10:50:07  keith
+ *  Initial revision
+ *
  *  Revision 1.0  1999/07/07 17:10:55  craig
  *  Initial revision
  *
@@ -51,6 +54,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1
 #include <stdio.h>
 #include "structs.h"
 #include "messages.h"
+#include "utlsup.h"
 #ifdef HAVE_STDARG_H
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 #else
@@ -59,8 +63,6 @@ gptr	*arralloc();	        	/* Array allocator		      */
 
 #define DOTPROD(x,y)   ((x[0]*y[0])+(x[1]*y[1])+(x[2]*y[2]))
 
-void	invert();
-void	mat_vec_mul();
 void	make_sites();
 char	*strlower();
 void	read_sysdef();
@@ -72,7 +74,6 @@ void	read_restart();
 void	init_averages();
 int	getopt();
 gptr	*talloc();
-FILE	*popen();
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 static char  *comm;
@@ -81,284 +82,6 @@ contr_mt                control;
 #define VAF  0
 #define VTF  1
 
-/******************************************************************************
- * Dummies of 'moldy' routines so that mdvaf may be linked with moldy library   *
- ******************************************************************************/
-void 	init_rdf()
-{}
-gptr *rdf_ptr()
-{return 0;}
-void new_lins()
-{}
-int lines_left()
-{return 0;}
-void new_page()
-{}
-void	new_line()
-{
-   (void)putchar('\n');
-}
-void	banner_page()
-{}
-void	note()
-{}
-void	conv_potentials()
-{}
-void	conv_control()
-{}
-/******************************************************************************
- *  message.   Deliver error message to possibly exiting.  It can be called   *
- *             BEFORE output file is opened, in which case outt to stderr.    *
- ******************************************************************************/
-#ifdef HAVE_STDARG_H
-#   undef  va_alist
-#   define      va_alist int *nerrs, ...
-#   ifdef va_dcl
-#      undef va_dcl
-#   endif
-#   define va_dcl /* */
-#endif
-/*VARARGS*/
-void    message(va_alist)
-va_dcl
-{
-   va_list      ap;
-   char         *buff;
-   int          sev;
-   char         *format;
-   static char  *sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
-#ifdef HAVE_STDARG_H
-   va_start(ap, nerrs);
-#else
-   int          *nerrs;
-
-   va_start(ap);
-   nerrs = va_arg(ap, int *);
-#endif
-   buff  = va_arg(ap, char *);
-   sev   = va_arg(ap, int);
-   format= va_arg(ap, char *);
-
-   (void)fprintf(stderr, "%s: ", comm);
-   (void)vfprintf(stderr, format, ap);
-   va_end(ap);
-   fputc('\n',stderr);
-
-   if(buff != NULL)                     /* null ptr means don't print buffer  */
-   {
-      (void)fprintf(stderr,"     buffer contents=\"%s\"",buff);
-      fputc('\n',stderr);
-   }
-   if(sev >= ERROR && nerrs != NULL)
-      (*nerrs)++;
-   if(sev == FATAL)
-      exit(3);
-}
-
-/******************************************************************************
- *  message.   Deliver error message to possibly exiting. 		      *
- ******************************************************************************/
-#ifdef HAVE_STDARG_H
-#undef  va_alist
-#define	va_alist char *format, ...
-#ifdef  va_dcl
-#   undef  va_dcl
-#endif
-#define va_dcl /* */
-#endif
-/*VARARGS*/
-void	error(va_alist)
-va_dcl
-{
-   va_list	ap;
-#ifdef HAVE_STDARG_H
-   va_start(ap, format);
-#else
-   char		*format;
-
-   va_start(ap);
-   format= va_arg(ap, char *);
-#endif
-
-   (void)fprintf(stderr, "mdvaf: ");
-   (void)vfprintf(stderr, format, ap);
-   fputc('\n',stderr);
-   va_end(ap);
-
-   exit(3);
-}
-static char * mystrdup(s)
-char *s;
-{
-   char * t = NULL;
-   if(s) t=malloc(strlen(s)+1);
-   return t?strcpy(t,s):0;
-}
-/******************************************************************************
- * get_int().  Read an integer from stdin, issuing a prompt and checking      *
- * validity and range.  Loop until satisfied, returning EOF if appropriate.   *
- ******************************************************************************/
-int get_int(prompt, lo, hi)
-char	*prompt;
-int	lo, hi;
-{
-   char		ans_str[80];
-   int		ans_i, ans_flag;
-
-   ans_flag = 0;
-   while( ! feof(stdin) && ! ans_flag )
-   {
-      fputs(prompt, stderr);
-      fflush(stderr);
-      fgets(ans_str, sizeof ans_str, stdin);
-      if( sscanf(ans_str, "%d", &ans_i) == 1 && ans_i >= lo && ans_i <= hi)
-	 ans_flag++;
-   }
-   if( ans_flag )
-      return(ans_i);
-   else
-      return(EOF);
-}
-/******************************************************************************
- * get_real().  Read a real from stdin, issuing a prompt and checking         *
- * validity and range.  Loop until satisfied, returning EOF if appropriate.   *
- ******************************************************************************/
-real get_real(prompt, lo, hi)
-char	*prompt;
-real 	lo, hi;
-{
-   char		ans_str[80];
-   real		ans_r; 
-   int		ans_flag;
-   ans_flag = 0;
-   while( ! feof(stdin) && ! ans_flag )
-   {
-      fputs(prompt, stderr);
-      fflush(stderr);
-      fgets(ans_str, sizeof ans_str, stdin);
-      if( sscanf(ans_str, "%lf", &ans_r) == 1 && ans_r >= lo && ans_r <= hi)
-	 ans_flag++;
-   }
-   if( ans_flag )
-      return(ans_r);
-   else
-      return(EOF);
-}
-/******************************************************************************
- * get_sym().  Read a character from stdin and match to supplied set	      *
- ******************************************************************************/
-int get_sym(prompt, cset)
-char	*prompt;
-char	*cset;
-{
-   char		ans_c, ans_str[80];
-   int		ans_flag;
-
-   ans_flag = 0;
-   while( ! feof(stdin) && ! ans_flag )
-   {
-      fputs(prompt, stderr);
-      fflush(stderr);
-      fgets(ans_str, sizeof ans_str, stdin);
-      if( sscanf(ans_str, " %c", &ans_c) == 1 && strchr(cset, ans_c))
-	 ans_flag++;
-   }
-   if( ans_flag )
-      return(ans_c);
-   else
-      return(EOF);
-}
-/******************************************************************************
- * get_str().  Read a string from stdin, issuing a prompt.		      *
- ******************************************************************************/
-char	*get_str(prompt)
-char	*prompt;
-{
-   char		ans_str[80];
-   char		*str = malloc(80);
-   int		ans_flag;
-
-   ans_flag = 0;
-   while( ! feof(stdin) && ! ans_flag )
-   {
-      fputs(prompt, stderr);
-      fflush(stderr);
-      fgets(ans_str, sizeof ans_str, stdin);
-      if( sscanf(ans_str, "%s", str) == 1)
-	 ans_flag++;
-   }
-   if( ans_flag )
-      return(str);
-   else
-      return(NULL);
-}
-/******************************************************************************
- * forstr.  Parse string str of format s-f:n (final 2 parts optional),        *
- *          returning integer values of s,f,n. f defaults to s and n to 1     *
- ******************************************************************************/
-int
-forstr(instr, start, finish, inc)
-char	*instr;
-int	*start, *finish, *inc;
-{
-   char	*p, *pp, *str = mystrdup(instr);
-   /* long strtol(); */
-   
-   if( (p = strchr(str,':')) != NULL)
-   {
-      *inc = strtol(p+1, &pp, 0);
-      if( pp == p+1 )
-	 goto limerr;
-      *p = 0;
-   }
-   else
-      *inc = 1;
-   if( (p = strchr(str,'-')) != NULL)
-   {
-      *p = 0;
-      *start = strtol(str, &pp, 0);
-      if( pp == str )
-	 goto limerr;
-      *finish = strtol(p+1, &pp, 0);
-      if( pp == p+1 )
-	 goto limerr;
-   }
-   else
-   {
-      *start = *finish = strtol(str, &pp, 0);
-      if( pp == str )
-	 goto limerr;
-   }
-   if( *start > *finish || *start < 0 || *inc <= 0 )
-   {
-      fputs("Limits must satisfy", stderr);
-      fputs(" finish >= start, start >= 0 and increment > 0\n", stderr);
-      goto limerr;
-   }
-   return 0;
- limerr:
-   return -1;
-}
-/******************************************************************************
- * dump_to_moldy.  Fill the 'system' velocity arrays with the dump data in    *
- * 'buf' (see dump.c for format), expanding floats to doubles if necessary.   *
- ******************************************************************************/
-void
-dump_to_moldy(buf, system)
-float	*buf;
-system_mt *system;
-{
-   int i;
-   float	*vel    = buf;
-
-/* $dir no_recurrence */
-   for(i = 0; i < system->nmols; i++)
-   {
-      system->vel[i][0] = vel[3*i];
-      system->vel[i][1] = vel[3*i+1];
-      system->vel[i][2] = vel[3*i+2]; 
-   }
-}
 /******************************************************************************
  * vel_copy().  Copy molecular c_of_m velocities to array                     * 
  ******************************************************************************/

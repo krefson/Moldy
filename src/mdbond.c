@@ -28,6 +28,12 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdbond.c,v $
+ *  Revision 1.2  1999/09/23 07:31:40  keith
+ *  Removed unnecessary references to bond and angle increments.
+ *  Minor changes to usage message.
+ *  Fixed bug in if statement checking validity of angle limits.
+ *  Fixed bug when defining system from restart file.
+ *
  *  Revision 1.2  1999/09/22 11:06:31  craig
  *  Removed unnecessary references to bond and angle increments.
  *  Minor changes to usage message.
@@ -43,7 +49,7 @@ what you give them.   Help stamp out software-hoarding! */
  */
 
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 1.2  1999/09/22 11:06:31 Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 1.2 1999/09/23 07:31:40 keith Exp keith $";
 #endif
 #include "defs.h"
 #ifdef HAVE_STDARG_H
@@ -60,6 +66,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 
 #include "structs.h"
 #include "messages.h"
 #include "list.h"
+#include "utlsup.h"
 #ifdef HAVE_STDARG_H
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 #else
@@ -76,6 +83,10 @@ gptr	*arralloc();	        	/* Array allocator		      */
 #define ANGLE_MAX  180        /* Angle intervals in degrees */
 
 #define DOTPROD(x,y)   ((x[0]*y[0])+(x[1]*y[1])+(x[2]*y[2])) 
+
+#define DUMP_SIZE(level)  (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
+           (3*sys.nmols + 4*sys.nmols_r + 9)+ (level>>3 & 1) * \
+           (3*sys.nmols + 3*sys.nmols_r + 9) + (level & 1))
 /*
  * Structures for bond and angle data. 
  */
@@ -101,8 +112,6 @@ typedef struct
    double	value;
 } ANGLE;
 
-void	invert();
-void	mat_vec_mul();
 void	make_sites();
 char	*strlower();
 void	read_sysdef();
@@ -115,278 +124,8 @@ void	read_restart();
 void	init_averages();
 int	getopt();
 gptr	*talloc();
-FILE	*popen();
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
-/******************************************************************************
- * Dummies of 'moldy' routines so that mdbond may be linked with moldy library*
- ******************************************************************************/
-void 	init_rdf()
-{}
-gptr *rdf_ptr()
-{return 0;}
-void new_lins()
-{}
-int lines_left()
-{return 0;}
-void new_page()
-{}
-void	new_line()
-{
-   (void)putchar('\n');
-}
-void	banner_page()
-{}
-void	note()
-{}
-void	conv_potentials()
-{}
-void	conv_control()
-{}
-/******************************************************************************
- *  message.   Deliver error message to possibly exiting.  It can be called   *
- *             BEFORE output file is opened, in which case out to stderr.     *
- ******************************************************************************/
-#ifdef HAVE_STDARG_H
-#   undef  va_alist
-#   define      va_alist int *nerrs, ...
-#   ifdef va_dcl
-#      undef va_dcl
-#   endif
-#   define va_dcl /* */
-#endif
-/*VARARGS*/
-void    message(va_alist)
-va_dcl
-{
-   va_list      ap;
-   char         *buff;
-   int          sev;
-   char         *format;
-   static char  *sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
-#ifdef HAVE_STDARG_H
-   va_start(ap, nerrs);
-#else
-   int          *nerrs;
-
-   va_start(ap);
-   nerrs = va_arg(ap, int *);
-#endif
-   buff  = va_arg(ap, char *);
-   sev   = va_arg(ap, int);
-   format= va_arg(ap, char *);
-
-   (void)fprintf(stderr, "mdbond: ");
-   (void)vfprintf(stderr, format, ap);
-   va_end(ap);
-   fputc('\n',stderr);
-
-   if(buff != NULL)                     /* null ptr means don't print buffer  */
-   {
-      (void)fprintf(stderr,"     buffer contents=\"%s\"",buff);
-      fputc('\n',stderr);
-   }
-   if(sev >= ERROR && nerrs != NULL)
-      (*nerrs)++;
-   if(sev == FATAL)
-      exit(3);
-}
-
-/******************************************************************************
- *  error.   Deliver error message to possibly exiting. 		      *
- ******************************************************************************/
-#ifdef HAVE_STDARG_H
-#undef  va_alist
-#define	va_alist char *format, ...
-#ifdef  va_dcl
-#   undef  va_dcl
-#endif
-#define va_dcl /* */
-#endif
-/*VARARGS*/
-void	error(va_alist)
-va_dcl
-{
-   va_list	ap;
-#ifdef HAVE_STDARG_H
-   va_start(ap, format);
-#else
-   char		*format;
-
-   va_start(ap);
-   format= va_arg(ap, char *);
-#endif
-
-   (void)fprintf(stderr, "mdbond: ");
-   (void)vfprintf(stderr, format, ap);
-   fputc('\n',stderr);
-   va_end(ap);
-
-   exit(3);
-}
-/* strcpy with call to memory allocation */
-static char * mystrdup(s)
-char *s;
-{
-   char * t = NULL;
-   if(s) t=malloc(strlen(s)+1);
-   return t?strcpy(t,s):0;
-}
-/******************************************************************************
- * get_int().  Read an integer from stdin, issuing a prompt and checking      *
- * validity and range.  Loop until satisfied, returning EOF if appropriate.   *
- ******************************************************************************/
-int get_int(prompt, lo, hi)
-char	*prompt;
-int	lo, hi;
-{
-   char		ans_str[80];
-   int		ans_i, ans_flag;
-
-   ans_flag = 0;
-   while( ! feof(stdin) && ! ans_flag )
-   {
-      fputs(prompt, stderr);
-      fflush(stderr);
-      fgets(ans_str, sizeof ans_str, stdin);
-      if( sscanf(ans_str, "%d", &ans_i) == 1 && ans_i >= lo && ans_i <= hi)
-	 ans_flag++;
-   }
-   if( ans_flag )
-      return(ans_i);
-   else
-      return(EOF);
-}
-/******************************************************************************
- * get_sym().  Read a character from stdin and match to supplied set	      *
- ******************************************************************************/
-int get_sym(prompt, cset)
-char	*prompt;
-char	*cset;
-{
-   char		ans_c, ans_str[80];
-   int		ans_flag;
-
-   ans_flag = 0;
-   while( ! feof(stdin) && ! ans_flag )
-   {
-      fputs(prompt, stderr);
-      fflush(stderr);
-      fgets(ans_str, sizeof ans_str, stdin);
-      if( sscanf(ans_str, " %c", &ans_c) == 1 && strchr(cset, ans_c))
-	 ans_flag++;
-   }
-   if( ans_flag )
-      return(ans_c);
-   else
-      return(EOF);
-}
-/******************************************************************************
- * get_str().  Read a string from stdin, issuing a prompt.		      *
- ******************************************************************************/
-char	*get_str(prompt)
-char	*prompt;
-{
-   char		ans_str[80];
-   char		*str = malloc(80);
-   int		ans_flag;
-
-   ans_flag = 0;
-   while( ! feof(stdin) && ! ans_flag )
-   {
-      fputs(prompt, stderr);
-      fflush(stderr);
-      fgets(ans_str, sizeof ans_str, stdin);
-      if( sscanf(ans_str, "%s", str) == 1)
-	 ans_flag++;
-   }
-   if( ans_flag )
-      return(str);
-   else
-      return(NULL);
-}
-/******************************************************************************
- * forstr.  Parse string str of format s-f:n (final 2 parts optional),        *
- *          returning integer values of s,f,n.                                *
- ******************************************************************************/
-int
-forstr(instr, start, finish, inc)
-char	*instr;
-int	*start, *finish, *inc;
-{
-   char	*p, *pp, *str = mystrdup(instr);
-   long strtol();
-   
-   if( (p = strchr(str,':')) != NULL)
-   {
-      *inc = strtol(p+1, &pp, 0);
-      if( pp == p+1 )
-	 goto limerr;
-      *p = 0;
-   }
-   if( (p = strchr(str,'-')) != NULL)
-   {
-      *p = 0;
-      *start = strtol(str, &pp, 0);
-      if( pp == str )
-	 goto limerr;
-      *finish = strtol(p+1, &pp, 0);
-      if( pp == p+1 )
-	 goto limerr;
-   }
-   else
-   {
-      *start = *finish = strtol(str, &pp, 0);
-      if( pp == str )
-	 goto limerr;
-   }
-   return 0;
- limerr:
-   return -1;
-}
-/******************************************************************************
- * dump_to_moldy.  Fill the 'system' arrays with the dump data in 'buf' (see  *
- * dump.c for format), expanding floats to doubles if necessary.              *
- ******************************************************************************/
-#define DUMP_SIZE(level)  (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
-			            (3*sys.nmols + 4*sys.nmols_r + 9)+ \
-			     (level>>3 & 1) * \
-			            (3*sys.nmols + 3*sys.nmols_r + 9) +\
-			     (level & 1))
-void
-dump_to_moldy(buf, system)
-float	*buf;
-system_mt *system;
-{
-   int i;
-   float	*c_of_m = buf;
-   float	*quat   = buf+3*system->nmols;
-   float	*h      = buf+3*system->nmols + 4*system->nmols_r;
-   mat_mt hinv;
-
-/* $dir no_recurrence */
-   for(i = 0; i < system->nmols; i++)
-   {
-      system->c_of_m[i][0] = c_of_m[3*i];
-      system->c_of_m[i][1] = c_of_m[3*i+1];
-      system->c_of_m[i][2] = c_of_m[3*i+2]; 
-   }
-/* $dir no_recurrence */
-   for(i = 0; i < system->nmols_r; i++)
-   {
-      system->quat[i][0] = quat[4*i];
-      system->quat[i][1] = quat[4*i+1];
-      system->quat[i][2] = quat[4*i+2];
-      system->quat[i][3] = quat[4*i+3];
-   }
-/* $dir no_recurrence */
-   for(i = 0; i < 3; i++)
-   {
-      system->h[i][0] = h[3*i];
-      system->h[i][1] = h[3*i+1];
-      system->h[i][2] = h[3*i+2];
-   }
-}
 /******************************************************************************
  * morethan_BOND(). Compare distances stored in BOND structure types          *
  ******************************************************************************/
@@ -732,7 +471,7 @@ char	*argv[];
    int		irec;
    char         *bondlims = NULL, *anglims = NULL;
    char		*filename = NULL, *dump_name = NULL;
-   char		*insert = NULL, *speclims = NULL;
+   char		*speclims = NULL;
    char		*dumplims = NULL, *tempname;
    char		dumpcommand[256];
    int		dump_size;
