@@ -1,7 +1,17 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.16 91/08/14 14:23:58 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.15 91/08/15 18:12:22 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.15  91/08/15  18:12:22  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
  * Revision 1.14  91/03/12  15:43:31  keith
  * Tidied up typedefs size_t and include file <sys/types.h>
  * Added explicit function declarations.
@@ -59,8 +69,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.16 $"
-#define		 REVISION_DATE    "$Date: 91/08/14 14:23:58 $"
+#define          REVISION         "$Revision: 1.15 $"
+#define		 REVISION_DATE    "$Date: 91/08/15 18:12:22 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -68,7 +78,7 @@
 /*
  *  Set symbol USG to identify system V variant of unix, BSD for Berkeley.
  */
-#if defined(unix) && !defined(NOBSD)
+#if (defined(unix) || defined(__unix__) ) && !defined(USG)
 #include <errno.h>
 /*
  * Berkeley error numbers appear to be very regular, so the following is
