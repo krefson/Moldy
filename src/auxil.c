@@ -26,6 +26,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.9  1996/03/06 15:24:46  keith
+ *       Modified CRAY defs to pick up SCILIB stuff on MPP archs.
+ *
+ *       Protected "precision()" against very clever optimisers keeping
+ *       eps in register - caused failure on Intels w/ long fp regs.
+ *
  *       Revision 2.8  1995/12/05 20:55:10  keith
  *       Separated ANSI replacement routines from Auxil.c into Ansi.c
  *       Removed all COS functionality.
@@ -239,7 +245,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/auxil.c,v 2.8 1995/12/05 20:55:10 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/auxil.c,v 2.10 1996/11/12 14:29:03 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -289,7 +295,7 @@ void            tfree();	       /* Free allocated memory	      	      */
  *  library versions.  Other machines do it the hard way.		      *
  *  CRAY versions.							      *
  ******************************************************************************/
-#if defined(_CRAY)
+#if defined(_CRAY1)
 #define VECTS_DEFINED
 
 double vdot(n,x,ix,y,iy)
@@ -317,17 +323,6 @@ int	ix;
    void SSCAL();
    SSCAL(&n, &s, x, &ix);
 }
-#ifdef NOT_FOR_NOW
-void saxpy(n, sa, sx, ix, sy, iy)
-int	n, ix, iy;
-double	sa;
-double	sx[], sy[];
-{
-   void SAXPY();
-   SAXPY(&n, &sa, sx, &ix, sy, &iy);
-}
-#endif
-#ifndef _CRAYMPP
 int	search_lt(n, x, ix, s)
 int	n;
 real	x[];
@@ -339,23 +334,6 @@ double	s;
       return(0);
    return( ISRCHFLT(&n, x, &ix, &s) - 1);
 }
-#else
-int	search_lt(n, x, ix, s)
-int	n;
-real	x[];
-int	ix;
-double	s;
-{
-   int i, im=n*ix;
-VECTORIZE
-   for( i = (n-1)*ix; i >= 0; i -= ix )
-      if( x[i] < s )
-	 im = i;
-   return(im/ix);
-}
-#endif
-#ifndef _CRAYMPP
-                            /*ARGSUSED*/
 void	gather(n, a, b, ix, lim)
 int	n;
 real	a[], b[];
@@ -364,83 +342,6 @@ int	ix[];
    void GATHER();
    GATHER(&n, a, b+1, ix);
 }
-void    gatheri(n, a, b, ix)
-int     n;
-int     a[], b[];
-int     ix[];
-{
-   void GATHER();
-   GATHER(&n, a, b+1, ix);
-}
-#else
-                            /*ARGSUSED*/
-void	gather(n, a, b, ix, lim)
-int	n, lim;
-real	a[], b[];
-int	ix[];
-{
-   int i;
-VECTORIZE
-   for( i = 0; i < n; i++)
-   {
-#ifdef DEBUG
-      if(ix[i] < 0 || ix[i] >= lim )
-	 message(0,0,2, "Gather index out of bounds %d %d\n", i, ix[i]);
-#endif
-      a[i] = b[ix[i]];
-   }
-}
-void	gatheri(n, a, b, ix)
-int	n;
-int	a[], b[];
-int	ix[];
-{
-   int i;
-VECTORIZE
-   for( i = 0; i < n; i++)
-      a[i] = b[ix[i]];
-}
-#endif
-#ifdef NOT_FOR_NOW
-void	scatter(n, a, ix, b)
-int	n;
-real	a[], b[];
-int	ix[];
-{
-   void SCATTER();
-   SCATTER(&n, a+1, ix, b);
-}
-#endif
-#ifndef _CRAYMPP
-int wheneq(n, x, ix, s, idx)
-int n, ix, idx[];
-int x[], s;
-{
-  int nval = 0, i;
-  void WHENEQ();
-
-  WHENEQ(&n, x, &ix, &s, idx, &nval);
-  for(i=0; i < nval; i++)
-     idx[i]--;
-  return( nval );
-}
-#else
-int wheneq(n, x, ix, s, idx)
-int n, ix, idx[];
-int x[], s;
-{
-  int nval = 0, i;
- 
-  for(i = 0; i != n*ix; i += ix)
-    if(x[i] == s)
-    {
-      idx[nval] = i;
-      nval++;
-   }
-  return( nval );
-}
-#endif
-
 #endif
 /******************************************************************************
  *  Vector routines - CONVEX versions.  The calls are to VECLIB functions.    *
@@ -484,20 +385,6 @@ int	ix;
    else
       dscal_(&n, &s, x, &ix);
 }
-#ifdef NOT_FOR_NOW
-void saxpy(n, sa, sx, ix, sy, iy)
-int	n, ix, iy;
-double	sa;
-double	sx[], sy[];
-{
-   float s2 = sa;
-   void daxpy_(), saxpy_();
-   if(SINGLE)
-      saxpy_(&n, &s2, sx, &ix, sy, &iy);
-   else
-      daxpy_(&n, &sa, sx, &ix, sy, &iy);
-}
-#endif
 int	search_lt(n, x, ix, s)
 int	n;
 real	x[];
@@ -522,41 +409,6 @@ int	ix[];
       sgthr_(&n, b+1, a, ix);
    else
       dgthr_(&n, b+1, a, ix);
-}
-#ifdef NOT_FOR_NOW
-void	scatter(n, a, ix, b)
-int	n;
-real	a[], b[];
-int	ix[];
-{
-   void dsctr_(), ssctr_();
-   if(SINGLE)
-      ssctr_(&n, b, ix, a+1);
-   else
-      dsctr_(&n, b, ix, a+1);
-}
-#endif
-
-void    gatheri(n, a, b, ix)
-int     n;
-int     a[], b[];
-int     ix[];
-{
-   void igthr_();
-   igthr_(&n, b+1, a, ix);
-}
-
-int wheneq(n, x, ix, s, idx)
-int n, ix, idx[];
-int x[], s;
-{
-   int nval = 0, i;
-   void ilsteq_();
-   
-   ilsteq_(&n, x, &ix, &s, &nval, idx);
-   for(i=0; i < nval; i++)
-      idx[i]--;
-   return( nval );
 }
 #endif
 /******************************************************************************
@@ -590,16 +442,6 @@ int	ix;
    void sscal_();
    sscal_(&n, &s, x, &ix);
 }
-#ifdef NOT_FOR_NOW
-void saxpy(n, sa, sx, ix, sy, iy)
-int	n, ix, iy;
-double	sa;
-double	sx[], sy[];
-{
-   void saxpy_();
-   saxpy_(&n, &sa, sx, &ix, sy, &iy);
-}
-#endif
 int	search_lt(n, x, ix, s)
 int	n;
 real	x[];
@@ -618,17 +460,6 @@ int	ix[];
    void gather_();
    gather_(&n, a, b+1, ix);
 }
-#ifdef NOT_FOR_NOW
-void	scatter(n, a, ix, b)
-int	n;
-real	a[], b[];
-int	ix[];
-{
-   void scatter_();
-   scatter_(&n, a+1, ix, b);
-}
-#endif
-
 #endif
 /******************************************************************************
  *  Vector handling functions - C versions. 		     		      *
@@ -660,26 +491,43 @@ VECTORIZE
 }
 double sum(n,x,ix)
 register int	n;
-register real	x[];
+register double	x[];
 register int	ix;
 {
-   register double	s=0.0;
+   register double	sa=0.0,sb=0.0,sc=0.0,sd=0.0,s1=0.0,s2=0.0,s3=0.0,s4=0.0;
    int i;
 
    if( ix == 1 )
    {
-VECTORIZE
-     for( i = 0; i < n; i++)
-       s += x[i];
+
+     for( i = 0; i < n-3; i+=4)
+     {
+	s1 += sa;
+	sa = x[i];
+	s2 += sb;
+	sb = x[i+1];
+	s3 += sc;
+	sc = x[i+2];
+	s4 += sd;
+	sd = x[i+3];
+	
+     }
+     s1 += sa;
+     s2 += sb;
+     s3 += sc;
+     s4 += sd;
+     for( ; i < n; i++)
+       s1 += x[i];
    } 
    else
    {
-VECTORIZE
+
       for(i = 0; i != n*ix; i += ix)
-	s += x[i];
+	s1 += x[i];
    }
-   return(s);
+   return(s1+s2+s3+s4);
 }
+
 void	vscale(n,s,x,ix)
 register int	n;
 register double	s;
@@ -691,18 +539,7 @@ VECTORIZE
    for(i = 0; i != n*ix; i += ix)
       x[i] *= s;
 }
-#ifdef NOT_FOR_NOW
-void saxpy(n, sa, sx, ix, sy, iy)
-int	n, ix, iy;
-double	sa;
-double	sx[], sy[];
-{
-   int i, j;
-VECTORIZE
-   for(i = j = 0; i != n*ix; i += ix, j += iy)
-      sy[j] += sa * sx[i];
-}
-#endif
+
 /*
  *  Two alternatives for search_lt.  The first can vectorize using an
  *  IDFMIN type function, the second using an isrchtl.  They don't
@@ -762,42 +599,7 @@ VECTORIZE
       a[i] = b[ix[i]];
    }
 }
-void	gatheri(n, a, b, ix)
-int	n;
-int	a[], b[];
-int	ix[];
-{
-   int i;
-VECTORIZE
-   for( i = 0; i < n; i++)
-      a[i] = b[ix[i]];
-}
-#ifdef NOT_FOR_NOW
-void	scatter(n, a, ix, b)
-int	n;
-real	a[], b[];
-int	ix[];
-{
-   int i;
-VECTORIZE
-   for( i = 0; i < n; i++)
-      a[ix[i]] = b[i];
-}
-#endif
-int wheneq(n, x, ix, s, idx)
-int n, ix, idx[];
-int x[], s;
-{
-  int nval = 0, i;
- 
-  for(i = 0; i != n*ix; i += ix)
-    if(x[i] == s)
-    {
-      idx[nval] = i;
-      nval++;
-   }
-  return( nval );
-}
+
 #endif
 /******************************************************************************
  *  random number generators. Note they assume 'unsigned' of at least 32 bits *
