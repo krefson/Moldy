@@ -24,8 +24,8 @@ dnl Unfortunately the Bourne-shell "env=value command" construct breaks the
 dnl configure script.
 dnl However we can rely on the "env" command in the case of the crays.
 dnl   
-      T3D-cray-unicos*)   DEFCC="env TARGET=cray-t3d cc" ALTCC="mpicc bspcc cc";;
-      T3E-cray-unicos*)   DEFCC="env TARGET=cray-t3e cc" ALTCC="mpicc bspcc cc";;
+      alpha-cray-unicosmk*)   DEFCC="env TARGET=cray-t3d cc" ALTCC="mpicc bspcc cc";;
+      alphaev*-cray-unicosmk*) DEFCC="env TARGET=cray-t3e cc" ALTCC="mpicc bspcc cc";;
 dnl
 dnl Alternative compilers for Linux
 dnl
@@ -69,14 +69,14 @@ dnl
      c*-convex-bsd*)    : ${OPT=-O2\ -na\ -nv\ -fi}  \
                           ${OPT2=${OPT}\ -alias\ standard\ -alias\ ptr_args\ -alias\ array_args} \
                           ${OPTAUX=$OPT2} ${LIBS=-fi\ -lveclib}  ;;
-     *mp-cray-unicos*|*90-cray-unicos*) 
+     *mp-cray-unicos*|*90-cray-unicos*|sv1-cray-unicos*) 
                         : ${OPT=-h\ nostdc,vector3,scalar3,ivdep}  \
                           ${OPT2=$OPT} ${OPTAUX=$OPT2} \
                           ${LDFLAGS=-Wl,-D,HEAP=50000+50000\ -Wl,-D,STACK=10000+10000} \
                           ${LIBS=-lsci}  ;;
-     T3D-cray-unicos*)  : ${OPT=-O2} ${OPT2=-O3\ -hunroll,aggress,restrict=a} \
+     alpha-cray-unicosmk*)   : ${OPT=-O2} ${OPT2=-O3\ -hunroll,aggress,restrict=a} \
                           ${OPTAUX=$OPT2} ${LIBS=-lsci} ;;
-     T3E-cray-unicos*)  : ${OPT=-O2} ${OPTAUX=-O3\ -hunroll,aggress,restrict=a} \
+     alphaev*-cray-unicosmk*) : ${OPT=-O2} ${OPTAUX=-O3\ -hunroll,aggress,restrict=a} \
                           ${OPT2=$OPTAUX,inlinefrom=auxil.c} \
                           ${LIBS=-lsci} ;;
      i?86-pc-linux*)      if test $CC = "pgcc" ; then
