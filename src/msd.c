@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.16 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.16 1998/05/07 17:06:11 keith stable $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -1022,7 +1022,7 @@ char	*argv[];
    }
    xfree(dump_buf);
 
-#if defined (HAS_POPEN) 
+#if defined (HAVE_POPEN) 
    pclose(Dp);
 #else
    fclose(Dp);
