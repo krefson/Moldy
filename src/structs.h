@@ -1,7 +1,10 @@
 /*
- * $Header: structs.h,v 1.1 89/04/27 14:44:58 keith Exp $
+ * $Header: structs.h,v 1.3 89/05/15 15:48:13 keith Exp $
  *
  * $Log:	structs.h,v $
+ * Revision 1.2  89/05/11  13:50:32  keith
+ * Modified restrt_t to allow commensurate sun3/sun4 padding
+ * 
  * Revision 1.1  89/04/27  14:44:58  keith
  * Initial revision
  * 
@@ -177,12 +180,14 @@ typedef	struct			/* Restart file header format 		      */
 
 typedef struct			/* Dump file header format		      */
 {
-   char		title[L_name];	/* Run title at beginning of dump run	      */
+   char		title[L_name],	/* Run title at beginning of dump run	      */
+   		vsn[16];	/* RCS Revision number			      */
    int		istep,		/* Timestep at beginning of this file	      */
    		dump_interval,	/* How many steps between dumps		      */
    		dump_level,	/* Parameter determining contents of record   */
    		maxdumps,	/* Maximum number of dump records in file     */
-   		ndumps;		/* How many dump records in file	      */
+   		ndumps,		/* How many dump records in file	      */
+   		dump_size;	/* Size of a dump record		      */
    time_t	timestamp,	/* Time file was written		      */
    		dump_init,	/* Time dump run was started (ie first file)  */
    		restart_timestamp;/* Time corresponding restart file written  */
