@@ -1,7 +1,11 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.6 90/03/26 18:04:33 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.7 90/03/27 17:36:12 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.7  90/03/27  17:36:12  keith
+ * Moved O/S dependent conditionals to here, esp VPRINTF.
+ * Reorganised configuration conditionals into one block.
+ * 
  * Revision 1.6  90/03/26  18:04:33  keith
  * Tidied up system dependant includes.
  * Added system-dependant backup and temp file names (for input.c).
@@ -30,8 +34,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.6 $"
-#define		 REVISION_DATE    "$Date: 90/03/26 18:04:33 $"
+#define          REVISION         "$Revision: 1.7 $"
+#define		 REVISION_DATE    "$Date: 90/03/27 17:36:12 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -106,6 +110,8 @@ typedef	unsigned	size_t;
 /******************************************************************************
  *  End of machine/OS configuration.					      *
  ******************************************************************************/
+#define NPOTP 5                 /* Must be number of doubles in pot_t        */
+
 #ifndef SEEK_END
 #define	SEEK_SET	0
 #define	SEEK_CUR	1
