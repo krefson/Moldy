@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/molout.c,v 1.12.8.2 2003/07/31 03:08:56 moldydv Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/molout.c,v 1.12.8.3 2003/08/01 00:44:01 moldydv Exp $";
 #endif
 
 #include "defs.h"
@@ -504,7 +504,7 @@ cssr_out(system_mt *system, mat_mp h, spec_mt *species,
          if( divd > 1 )
             sprintf(atomname,"%s%d",site_info[spec->site_id[is]].name,itot%divd);
 
-         (void)printf("%4d %-4s  %9.5f %9.5f %9.5f",
+         (void)printf("%4d %-4s  %9.5f %9.5f %9.5f ",
               itot, atomname, site[0][isite], site[1][isite], site[2][isite]);
          (void)printf("   0   0   0   0   0   0   0   0 %7.3f\n",
               site_info[spec->site_id[is]].charge*qconv);
