@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/md/moldy/RCS/messages.h,v 2.11 1996/01/03 12:04:13 keith Exp keith $
+ * $Header: /home/rahman/keith/moldy/src/RCS/messages.h,v 2.12 1996/01/16 17:21:49 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -162,3 +162,5 @@ of %2.2f.\n Maximum will be used but accuracy of Ewald sum is compromised."
 Gaussian thermostat would interfere with each other."
 #define	NOKEY	"no keyword found on line"
 #define NOCUT   "No real-space cutoff specified or cutoff invalid"
+#define BODGUP  "Reading bad 2.10 restart file - thermostat parameters invalid. \
+\n     Setting ttmass and rtmass to %f and const-temp=0"

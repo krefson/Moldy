@@ -36,7 +36,13 @@ what you give them.   Help stamp out software-hoarding!  */
  * gauss_rand()		Return random sample from univariant gaussian         *
  ******************************************************************************
  *      Revision Log
- *      $Log: $
+ *      $Log: startup.c,v $
+ *      Revision 2.11  1996/01/15 15:23:30  keith
+ *      Changed input to new units
+ *      Reset defaults for cutoff, alpha to zero for "auto" select.
+ *      (Murashov's code missed this)
+ *      Added safety checks to auto-ewald routine.
+ *
  * Revision 2.10  1995/12/04 11:45:49  keith
  * Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
  * Thanks to V. Murashov.
@@ -226,7 +232,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/startup.c,v 2.11 1995/12/22 13:57:38 keith Exp keith $";
+static char *RCSid = "$Header: /home/rahman/keith/moldy/src/RCS/startup.c,v 2.11 1996/01/15 15:23:30 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -917,17 +923,18 @@ double		step, step1;
  *  of freedom.  The number of sites can change subject to c).                *
  ******************************************************************************/
 static
-void	check_sysdef(restart, system, species)
+void	check_sysdef(restart, vsn, system, species)
 FILE		*restart;		/* Restart file pointer		      */
+char            *vsn;                   /* restart file version.              */
 system_mp	system;			/* NEW 'system' struct		      */
-spec_mt	species[];		/* NEW 'species' struct array	      */
+spec_mt	species[];		        /* NEW 'species' struct array	      */
 {
    system_mt	sys_tmp;		/* Local temporaries of system,       */
    spec_mp	spec_tmp, spec;		/* species, site_info and potpar      */
    site_mp	site_tmp;		/* used when overwriting restart      */
    pot_mp	pot_tmp;		/* sysdef.			      */
 
-   re_re_sysdef(restart, &sys_tmp, &spec_tmp, &site_tmp, &pot_tmp);
+   re_re_sysdef(restart, vsn, &sys_tmp, &spec_tmp, &site_tmp, &pot_tmp);
 
    if(system->nspecies != sys_tmp.nspecies)
       message(NULLI, NULLP, FATAL, NSPCON, system->nspecies, sys_tmp.nspecies);
@@ -1120,7 +1127,7 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
       control = backup_control;
       (void)strcpy(restart_header->init_date, backup_header.init_date);
       (void)strcpy(restart_header->title,backup_header.title);
-      re_re_sysdef(backup, system, species, site_info, potpar);
+      re_re_sysdef(backup,backup_header.vsn,system,species,site_info,potpar);
       allocate_dynamics(system, *species);/* Memory for dynamic variables     */
       init_averages(system->nspecies, backup_header.vsn,
 		    control.roll_interval, control.roll_interval,&av_convert);
@@ -1216,7 +1223,8 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
       }
 
       if( !control.new_sysdef )		/* Usual case, get sysdef from restart*/
-         re_re_sysdef(restart, system, species, site_info, potpar);
+         re_re_sysdef(restart, restart_header->vsn, 
+		      system, species, site_info, potpar);
       else				/* Get sysdef from new sys-spec file  */
       {
          if( control.sysdef[0]=='\0' || strcmp(control.sysdef,contr_name) == 0 )
@@ -1236,7 +1244,8 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
 #endif
 	 qpf = qalloc(system->nspecies);
          initialise_sysdef(system, *species, *site_info, qpf);
-         check_sysdef(restart, system, *species);/* Consistent with saved one?*/
+	 /* Consistent with saved one?*/
+         check_sysdef(restart, restart_header->vsn, system, *species);
          if(sysdef != contr_file)
             (void)fclose(sysdef);
          control.reset_averages = 1;	/* Averages invalid if sysdef changed */
