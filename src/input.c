@@ -9,6 +9,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	input.c,v $
+ * Revision 1.6  89/06/26  13:55:34  keith
+ * Tidied up loops over species to use one pointer as counter.
+ * Incorrect code to print control params removed from read_control()
+ * 
  * Revision 1.5  89/06/21  13:36:42  keith
  * Moved pot. par. defs arrays types[], npotp[] and npott to kernel.c
  * Moved print_sysdef() to output.c
@@ -29,7 +33,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: input.c,v 1.7 89/06/23 15:32:15 keith Exp $";
+static char *RCSid = "$Header: input.c,v 1.6 89/06/26 13:55:34 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<ctype.h>
@@ -428,16 +432,20 @@ quat_t	qpf;				/* Princ frame rotation quaternion    */
 	    cur->species = spec-species;
 	    if(n_items < 4)
 	       message(&nerrs, line, ERROR, FEWCOO, name);
-	    if(n_items < 8 && species[cur->species].rdof != 0)
-	       message(&nerrs, line, ERROR, FEWQUA, name);
 	    if(cur->r[0] < 0 || cur->r[0] >= 1 ||
 	       cur->r[1] < 0 || cur->r[1] >= 1 ||
 	       cur->r[2] < 0 || cur->r[2] >= 1)
 	       message(&nerrs,NULLP,ERROR,FRACCO,cur->r[0],cur->r[1],cur->r[2]);
-	    if(fabs(1.0 - SQR(cur->q[0]) - SQR(cur->q[1])
-		        - SQR(cur->q[2]) - SQR(cur->q[3])) > 1e-4)
-	       message(&nerrs,NULLP,ERROR,QNORM,
-		       cur->q[0],cur->q[1],cur->q[2],cur->q[3]);
+
+	    if(species[cur->species].rdof != 0)
+	    {
+	       if( n_items < 8 )
+		  message(&nerrs, line, ERROR, FEWQUA, name);
+	       if(fabs(1.0 - SQR(cur->q[0]) - SQR(cur->q[1])
+		           - SQR(cur->q[2]) - SQR(cur->q[3])) > 1e-4)
+		  message(&nerrs,NULLP,ERROR,QNORM,
+			  cur->q[0],cur->q[1],cur->q[2],cur->q[3]);
+	    }
 	    nmols[cur->species] += nx*ny*nz;
 	 }
       }
