@@ -31,7 +31,7 @@ some other file.
 
 This run executes 10 timesteps of the standard benchmark test case,
 and prints timing information as the bottom of the file.  The output
-should be numerically identical to the sample in "water-canon.out",
+should be numerically identical to the sample in "water-example.out",
 which was run on a SparcStation II.  (Floating point roundoff should
 *not* make any significant difference.)
 
