@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/msd.c,v 2.4.10.2 2003/07/30 09:30:53 moldydv Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/msd.c,v 2.4.10.3 2003/07/31 02:55:58 moldydv Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,12 @@ static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/msd.c,v 2.4.10.2 2
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 2.4.10.3  2003/07/31 02:55:58  moldydv
+ *  Removed obsolete variables.
+ *  Updated function descriptions to reflect changes in input syntax.
+ *  Improved error message handling when problem with dump files.
+ *  More commenting.
+ *
  *  Revision 2.4.10.2  2003/07/30 09:30:53  moldydv
  *  Incorporated Keith's changes to read sysinfo from dump header.
  *  Removed ispec increment causing error in msd_out.
@@ -208,7 +214,7 @@ traj_gnu(spec_mt *species, vec_mt (**traj_cofm), int nslices, real (*range)[3],
    int		ispec=0;
    spec_mp      spec;
 
-   for( spec = species; spec < species+nspecies; spec++, ispec++)
+   for( spec = species, ispec=0; spec < species+nspecies; spec++, ispec++)
    {
       if( spec_mask[ispec] )
          for( imol = 0; imol < spec->nmols; imol++)
@@ -245,7 +251,7 @@ traj_idl(spec_mt *species, vec_mt (**traj_cofm), int nslices, real (*range)[3],
    for( itime = 0; itime < nslices; itime++)
    {
       totmol = 0;
-      for( spec = species; spec < species+nspecies; spec++, ispec++)
+      for( spec = species, ispec=0; spec < species+nspecies; spec++, ispec++)
       {
 	 if( spec_mask[ispec] )
             for( imol = 0; imol < spec->nmols; imol++)
