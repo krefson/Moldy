@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/kr/CVS/moldy/src/messages.h,v 2.29 2002/02/27 17:48:34 kr Exp $
+ * $Header: /usr/users/moldydv/CVS/moldy/src/messages.h,v 2.30 2002/03/04 16:08:12 kr Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -174,6 +174,8 @@ Gaussian thermostat would interfere with each other."
 #define DESYNC  "Trajectories on parallel threads are diverging.\n     Thread %d: %20.17g != %20.17g"
 #define RDFALT  "One of the RDF sampling parameters changed on restart\n     stored RDF data has been discarded"
 #define RDFDIS  "RDF output frequency parameters changed on restart\n     Excess stored RDF data may be discarded"
+#define CNVRDF "Converting stored RDF data from old integer format (%s) to new format"
+#define RDFFIS "Can not convert partial RDF data from restart file version %s on this machine because sizeof(int)(%d) != sizeof(float)\n -- This might be possible on a different platform (eg Intel x86)"
 #define DPSCHG  "Surface dipole term switched ON but some species are charged\n     Expect non-conservation of energy and large, impulsive forces!"
 #define FIXROL "Changing roll-interval when converting pre 2.19 restart file is not supported"
 #define SAVINC "Save file would overwrite input restart file.  Filename changed to %s"

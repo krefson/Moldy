@@ -29,6 +29,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: rdf.c,v $
+ *       Revision 2.13  2002/09/19 09:26:30  kr
+ *       Tidied up header declarations.
+ *       Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *       Revision 2.12  2000/12/06 17:45:33  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -167,7 +171,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/rdf.c,v 2.12 2000/12/06 17:45:33 keith Exp $";
+static char *RCSid = "$Header: /usr/users/moldydv/CVS/moldy/src/rdf.c,v 2.13 2002/09/19 09:26:30 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -194,8 +198,8 @@ void	inhibit_vectorization(void);		/* Self-explanatory dummy     */
 /*========================== External data references ========================*/
 extern contr_mt	control;    		    /* Main simulation control parms. */
 /*====================================data definitions  ======================*/
-static int	***rdf;				/* The RDF 'array'	      */
-static   int	*rdf_base;			/* base of data area          */
+static   float	***rdf;				/* The RDF 'array'	      */
+static   float	*rdf_base;			/* base of data area          */
 static   int    rdf_size;
 gptr *rdf_ptr(int *size)
 {
@@ -214,14 +218,14 @@ void	init_rdf(system_mp system)		/* System info struct	      */
 {
    int		max_id = system->max_id;
    int		idi, idj;
-   int		*base;
+   float	*base;
 
-   rdf = aalloc(max_id, int ** );
+   rdf = aalloc(max_id, float ** );
    rdf_size = control.nbins * max_id * (max_id - 1) / 2;
-   base = rdf_base = ialloc(rdf_size);
-   memst(base, 0, rdf_size*sizeof(int));
+   base = rdf_base = aalloc(rdf_size,float);
+   memst(base, 0, rdf_size*sizeof(float));
    for(idi = 1; idi < max_id; idi++)
-      rdf[idi] = aalloc(max_id, int * );
+      rdf[idi] = aalloc(max_id, float * );
    for(idi = 1; idi < max_id; idi++)
       for(idj = idi; idj < max_id; idj++)
       {
@@ -230,82 +234,21 @@ void	init_rdf(system_mp system)		/* System info struct	      */
       }
 }
 /******************************************************************************
- *  rdf_calc.  Calculate site pair distances and bin for RDF.                 *
- ******************************************************************************/
-void	rdf_calc(real **site,                   /* Site co-ordinate array     */
-		 system_mp system,              /* System info struct         */ 
-		 spec_mt *species)              /* Species info struct array  */
-{
-   spec_mp	spec;
-   register double	t;
-   double	r;
-   real		*site0 = site[0], *site1 = site[1], *site2 = site[2];
-   vec_mt	rij;
-   double	rbin;				/* 1.0/bin width	      */
-   int		imol, isite, jsite, nsites = system->nsites;
-   int		*id = ialloc(system->nsites),
-                *bind = ialloc(system->nsites);
-   int		*id_ptr;
-   mat_mt	hinv;
-   double	lx   = system->h[0][0], lxy  = system->h[0][1],
-		ly   = system->h[1][1], lxz  = system->h[0][2],
-		lz   = system->h[2][2], lyz  = system->h[1][2];
-   invert(system->h,hinv);
-
-   rbin = control.nbins / control.limit;
-   
-/*  Construct and fill expanded site-identifier array, id                     */
-   id_ptr = id;
-   for (spec = species; spec < &species[system->nspecies]; spec++)
-      for(imol = 0; imol < spec->nmols; imol++)
-      {
-         memcp(id_ptr, spec->site_id, spec->nsites*sizeof(int));
-         id_ptr += spec->nsites;
-      }
-
-    for(isite = 0; isite < nsites; isite++)
-    {
-VECTORIZE
-       for(jsite = isite+1; jsite < nsites; jsite++)
-       {
-          rij[0] = site0[jsite] - site0[isite];
-          rij[1] = site1[jsite] - site1[isite];
-          rij[2] = site2[jsite] - site2[isite];
-          
-          rij[0] -= lx  *      floor(MATMUL(0,hinv,rij) + 0.5);
-          rij[0] -= lxy * (t = floor(MATMUL(1,hinv,rij) + 0.5));
-          rij[1] -= ly  * t;
-          rij[0] -= lxz * (t = floor(MATMUL(2,hinv,rij) + 0.5));
-          rij[1] -= lyz * t;
-          rij[2] -= lz  * t;
-           
-          r = sqrt(rij[0]*rij[0] + rij[1]*rij[1] + rij[2]*rij[2]);
-	  bind[jsite] = rbin*r;
-       }
-       for(jsite = isite+1; jsite < nsites; jsite++)
-       {
-	  inhibit_vectorization();
-	  if( bind[jsite] < control.nbins )
-             rdf[id[isite]][id[jsite]][bind[jsite]]++;
-       }
-    }
-    xfree(id);    xfree(bind);
-}
-/******************************************************************************
  *  rdf_accum.  Calculate site pair distances and bin for RDF.                *
  ******************************************************************************/
-void	rdf_accum(int lo, int hi, real *rsq, int iid, int *id, int *nab)
+void	rdf_accum(double density, int lo, int hi, real *rsq, int iid, int *id, int *nab)
 {
    int  j, bin;
    int  *nj = nab + lo;
-   int  **rdfi = rdf[iid];
+   float  **rdfi = rdf[iid];
    double rbin = control.nbins / control.limit;
+   double	invrho = 1.0/density;
 
    for(j=lo; j<hi; j++,nj++)
    {
       bin = rbin*sqrt(rsq[j]);
       if( bin < control.nbins)
-	 rdfi[id[*nj]][bin]++;      
+	 rdfi[id[*nj]][bin]+=invrho;      
    }
 }
 /******************************************************************************
@@ -321,8 +264,7 @@ void	print_rdf(system_mt *system, spec_mt *species, site_mt *site_info)
    int		*nfrac = ialloc(system->max_id);  /* Per site count of system*/
    spec_mt	*spec;
    double	bin = control.limit/control.nbins,
-   		bincb = bin*bin*bin,
-   		rho = system->nsites/det(system->h);
+                bincb = bin*bin*bin;
    double	norm;
    char		buf[32];
    
@@ -345,7 +287,7 @@ void	print_rdf(system_mt *system, spec_mt *species, site_mt *site_info)
 	    col = 0;
 
 	    norm = 3.0*system->nsites*control.rdf_interval /
-	       (4.0*PI*bincb*rho*nfrac[idi]*nfrac[idj]*control.rdf_out);
+	      (4.0*PI*bincb*nfrac[idi]*nfrac[idj]*control.rdf_out);
 	    if( idi == idj )
 	       norm += norm;
 	    for(ibin = 0; ibin < control.nbins; ibin++)
@@ -359,7 +301,7 @@ void	print_rdf(system_mt *system, spec_mt *species, site_mt *site_info)
 		  new_line();
 	       }
 	       fputs(buf, stdout);
-	       rdf[idi][idj][ibin] = 0;				/* Reset      */
+	       rdf[idi][idj][ibin] = 0.0;				/* Reset      */
 	    }
 	    new_line();
 	 }
