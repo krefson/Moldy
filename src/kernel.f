@@ -1,7 +1,10 @@
 c     
-c     $Header: kernel.f,v 1.2 89/07/04 18:43:07 keith Exp $
+c     $Header: /home/tigger/keith/md/RCS/kernel.f,v 1.3 89/07/13 15:14:53 keith Exp $
 c     
 c     $Log:	kernel.f,v $
+c Revision 1.3  89/07/13  15:14:53  keith
+c Fixed error in erfc evaluation in MCY potential.
+c 
 c     Revision 1.2  89/07/04  18:43:07  keith
 c     Fixed error in kernel and force which led to sites being allocated the
 c     wrong potential parameters.  Needed extra parameter to kernel.
@@ -90,7 +93,7 @@ C     6-exp potential
       return
 C     MCY potential
  3000 continue
-      if(alpha .gt. 0) then
+      if(alpha .ge. 0) then
          do 300 jsite = j0+1, nnab
             r     = sqrt(rsqr(jsite))
             rr    = 1.0 / r
