@@ -4,7 +4,7 @@ AC_CONFIG_SRCDIR([accel.c])
 
 AC_CANONICAL_TARGET([])
 
-AM_INIT_AUTOMAKE(Moldy, 3.4)
+AM_INIT_AUTOMAKE(Moldy, 3.5)
 AM_CONFIG_HEADER(config.h)
 
 dnl Checks for programs.
