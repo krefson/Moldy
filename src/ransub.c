@@ -27,6 +27,13 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.5  1999/10/25 10:41:46  craig
+ *  Corrected memory leak when performing strcmp of NULL value.
+ *  Added check for correct entry of substituting species' name.
+ *
+ *  Revision 1.4  1999/10/11 14:07:08  keith
+ *  Removed common utility functions to "utlsup.c".
+ *
  *  Revision 1.3  1999/09/24 11:02:28  keith
  *  Minor changes to random seeder and terminology.
  *
@@ -243,10 +250,11 @@ int             intyp;
       for(imol = 0; imol < spec->nmols; imol++)
       {
         specname = spec->name;
-        if( !strcmp(strlower(spec->name), molname))
-          for( i = 0; i < dop->mols; i++)
-             if( dop->pos[i] == imol )
-                specname = dop->name;
+        if( molname != NULL)
+           if( !strcmp(strlower(spec->name), molname))
+             for( i = 0; i < dop->mols; i++)
+                if( dop->pos[i] == imol )
+                   specname = dop->name;
         (void)printf("%s ", specname);
         for( i = 0; i < 3; i++)
           (void)printf("%9g ",
@@ -306,7 +314,7 @@ char	*argv[];
    int		errflg = 0;
    int		intyp = 0;
    int		start, finish, inc;
-   int		rflag, mflag;
+   int		rflag, mflag, uflag;
    int		irec;
    char		*filename = NULL, *dump_name = NULL;
    char		*dumplims = NULL;
@@ -327,7 +335,10 @@ char	*argv[];
    int          maxmol;
    static dopant       dop = {0, -1, -1.0, NULL, NULL, NULL};
 
+#define MAXTRY 100
    control.page_length=1000000;
+
+   comm = argv[0];
 
    while( (c = getopt(argc, argv, "cr:s:d:t:m:n:u:o:w:q:z:") ) != EOF )
       switch(c)
@@ -452,30 +463,42 @@ char	*argv[];
          else
             mflag++;
 
-      for(spec = species; spec < species+sys.nspecies; spec++)
-         if( !strcmp(strlower(spec->name), molname) )
+      if( molname != NULL)
       {
-          maxmol = spec->nmols;
-          mflag++;
-      }
-      if(!mflag)
-      {
-          fprintf(stderr,"Species \"%s\" cannot be found\n", molname);
-          (void)free(molname);
-          molname = NULL;
+         for(spec = species; spec < species+sys.nspecies; spec++)
+            if( !strcmp(strlower(spec->name), molname) )
+         {
+             maxmol = spec->nmols;
+             mflag++;
+         }
+         if(!mflag)
+         {
+             fprintf(stderr,"Species \"%s\" cannot be found\n", molname);
+             (void)free(molname);
+             molname = NULL;
+         }
       }
    } while (!mflag);
 
-   if( dop.name == NULL && dop.mols > 0 )
+  /*
+   * Request substituting species if not already provided
+   */
+   do
    {
-        fputs("What is the name of the substituting species ",stderr);
-        dop.name = get_str("? ");
-   }
+      uflag = 0;
+      if( dop.name == NULL && dop.mols > 0 )
+      {
+           fputs("What is the name of the substituting species ",stderr);
+           dop.name = get_str("? ");
+      }
+      else
+         uflag++;
+   } while (!uflag);
 
-   if( dop.name != NULL && dop.mols < 0 )
+   if( dop.name != NULL && dop.mols <= 0 )
    {
         fprintf(stderr, "How many %s species do you want to replace", molname);
-	dop.mols = get_int("? ",0,maxmol);
+	dop.mols = get_int("? ",1,maxmol);
    }
 
    if( dop.mols < 0 )
