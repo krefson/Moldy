@@ -28,16 +28,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *		The actual calculation of the potential is in a different     *
  *		module (kernel.c) for ease of modification.		      *
  ******************************************************************************
- *      Revision Log
- * Revision 1.3  90/03/29  15:44:51  keith
- * Merged force.c revisions 1.8.1.11-1.8.1.13
- * 
- * Revision 1.2  90/03/09  17:30:29  keith
- * Modified FKERNEL ifdefs for UNICOS.
- * 
- * Revision 1.1  90/01/31  13:19:28  keith
- * Initial revision
- * 
+ *       $Log: force.c,v $
  * Revision 1.8.1.8  89/11/01  17:34:15  keith
  * Modified to use SPAXPY vectorised scattered add.
  * 
@@ -90,9 +81,18 @@ what you give them.   Help stamp out software-hoarding!  */
  * Revision 1.1  89/04/20  16:00:40  keith
  * Initial revision
  * 
+ * Revision 1.3  90/03/29  15:44:51  keith
+ * Merged force.c revisions 1.8.1.11-1.8.1.13
+ * 
+ * Revision 1.2  90/03/09  17:30:29  keith
+ * Modified FKERNEL ifdefs for UNICOS.
+ * 
+ * Revision 1.1  90/01/31  13:19:28  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.9 1994/12/16 11:58:54 keith stab keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.12 1996/01/16 17:59:34 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -125,10 +125,12 @@ void    	transpose();            /* Generate 3x3 matrix transpose      */
 void    	zero_real();            /* Initialiser                        */
 void    	zero_double();          /* Initialiser                        */
 void    	force_inner();          /* Inner loop forward reference       */
+void    	rdf_inner();            /* RDF calc forward reference         */
 int     	nprocessors();          /* Return no. of procs to execute on. */
 double  	precision();            /* Floating pt precision.             */
 void    	kernel();               /* Force kernel routine               */
 double 		mol_radius();           /* Radius of largest molecule.        */
+void		rdf_accum();		/* Bin distances for rdf evaluation.  */
 #if defined(ANSI) || defined(__STDC__)
 gptr		*arralloc(size_mt,int,...); /* Array allocator		      */
 void		note(char *, ...);	/* Write a message to the output file */
@@ -170,7 +172,7 @@ static          int nx = 0, ny = 0, nz = 0, onx = 0, ony = 0, onz = 0;
  * to increase this from 1, your system must be *highly* inhomogeneous
  * and may not make sense!
  */
-#define         NMULT 4.0
+#define         NMULT 3.0
 #define		NSHELL (2*NSH+1)
 #define         NREL(ix,iy,iz) ((iz)+NSH+NSHELL*((iy)+NSH+NSHELL*((ix)+NSH)))
 #define         CELLMAX 5
@@ -259,10 +261,11 @@ void histout()
 /******************************************************************************
  *  Neighbour_list.  Build the list of cells within cutoff radius of cell 0   *
  ******************************************************************************/
-static ivec_mt   *neighbour_list(nnabor, h, cutoff)
+static ivec_mt   *neighbour_list(nnabor, h, cutoff, icheck)
 int  	*nnabor;
 mat_mt  h;
 double  cutoff;
+int icheck;
 {
    double               dist;
    int                  i, j, ix, iy, iz, mx, my, mz, inabor = 0, nnab;
@@ -310,9 +313,12 @@ double  cutoff;
 #endif
             }
          }
-   if( inabor != onabor )
-      note(NABORS,2 * inabor);
-   onabor = inabor;
+   if( icheck )
+   {
+      if( inabor != onabor )
+	 note(NABORS,2 * inabor);
+      onabor = inabor;
+   }
    *nnabor = inabor;
    return(nabor);
 }
@@ -362,10 +368,11 @@ double  cutoff;
  *         coincide with the corner points, the edges or none of the faces.   *
  *  4) The final list is built by scanning the map.			      *
  ******************************************************************************/
-static ivec_mt   *strict_neighbour_list(nnabor, h, cutoff)
+static ivec_mt   *strict_neighbour_list(nnabor, h, cutoff, icheck)
 int  	*nnabor;
 mat_mt  h;
 double  cutoff;
+int icheck;
 {
    double               dist;
    int                  i, j, k, ix, iy, iz, mx, my, mz, inabor = 0, nnab;
@@ -500,9 +507,12 @@ double  cutoff;
             }
          }
 
-   if( inabor != onabor )
-      note(NABORS,2 * inabor);
-   onabor = inabor;
+   if( icheck )
+   {
+      if( inabor != onabor )
+	 note(NABORS,2 * inabor);
+      onabor = inabor;
+   }
    *nnabor = inabor;
    afree((gptr*)cellmap);
    return(nabor);
@@ -701,11 +711,13 @@ mat_mt          stress;                 /* Stress virial                (out) */
    cell_mt      *c_ptr = aalloc(n_cell_list, cell_mt );
    spec_mp      spec;
    cell_mt      **cell;
-   ivec_mt      *nabor;
+   ivec_mt      *nabor, *rdf_nabor;
+   int		n_rdf_nabors;
    
    static boolean       init = true;
    static int           n_nabors;
    static reloc_mt      ***reloc = 0;
+   double               reloc_lim;
    double	subcell = control.subcell;	/* Local copy. May change it. */
 
 #ifdef DEBUG2
@@ -724,10 +736,24 @@ mat_mt          stress;                 /* Stress virial                (out) */
    {
       note("MD cell divided into %d subcells (%dx%dx%d)",ncells,nx,ny,nz);
 
-      if(control.cutoff >= NSH*MIN3(system->h[0][0]*(nx-1)/nx,
-				    system->h[1][1]*(ny-1)/ny,
-				    system->h[2][2]*(nz-1)/nz))
-	 message(NULLI, NULLP, FATAL, CUTOFF, NSH);
+      reloc_lim = NSH*MIN3(system->h[0][0]*(nx-1)/nx,
+			   system->h[1][1]*(ny-1)/ny,
+			   system->h[2][2]*(nz-1)/nz);
+      if(control.cutoff >= reloc_lim)
+	 if( ithread == 0 )
+	    message(NULLI, NULLP, FATAL, CUTOFF, NSH);
+#ifdef SPMD
+         else
+	    par_abort(3);
+#endif
+      if(control.limit >= reloc_lim)
+	 if( ithread == 0 )
+	    message(NULLI, NULLP, FATAL, CUTRDF, NSH);
+#ifdef SPMD
+         else
+	    par_abort(3);
+#endif
+
       if( reloc )
 	 xfree((reloc-NSH*onx));
       reloc = (reloc_mt***)arralloc((size_mt)sizeof(reloc_mt),3,
@@ -758,9 +784,9 @@ mat_mt          stress;                 /* Stress virial                (out) */
    }
    if( control.strict_cutoff )
       nabor = strict_neighbour_list(&n_nabors, system->h, control.cutoff
-				    +2.0*mol_radius(species, system->nspecies));
+			       +2.0*mol_radius(species, system->nspecies), 1);
    else
-      nabor = neighbour_list(&n_nabors, system->h, control.cutoff);
+      nabor = neighbour_list(&n_nabors, system->h, control.cutoff, 1);
    
    cell = aalloc(ncells, cell_mt *);
    for( icell=0; icell < ncells; icell++)
@@ -791,7 +817,6 @@ NOVECTOR
       message(NULLI, NULLP, FATAL,
 	      "Multiple framework molecules are not supported");
    
-
 #ifdef DEBUG2
    ppe = 0;
    spec = species; isite = 0;
@@ -833,6 +858,21 @@ NOVECTOR
 	       system,
 	       stress, pe, site_force);
 
+   /*
+    * Accumulate radial distribution functions
+    */
+   if (control.rdf_interval > 0 && 
+       control.istep >= control.begin_rdf &&
+       control.istep % control.rdf_interval == 0)
+   {
+      n_nab_sites = nsites*NMULT*4.19*CUBE(control.limit)/det(system->h);
+      rdf_nabor = strict_neighbour_list(&n_rdf_nabors, system->h, control.limit
+				    +2.0*mol_radius(species, system->nspecies),0);
+      rdf_inner(ithread, nthreads, site, id,
+		n_nab_sites, n_rdf_nabors, rdf_nabor, cell, reloc, n_frame_types, 
+		system);
+      xfree(rdf_nabor);
+   }
 #ifdef DEBUG2
    histout();
 #endif
@@ -1016,6 +1056,7 @@ VECTORIZE
 #ifdef DEBUG2
 	    hist(jmin, jmax, r_sqr);
 #endif
+	       
             /*  Call the potential function kernel                            */
             kernel(jmin, jmax, forceij, pe, r_sqr, nab_chg, chg[isite],
 		   norm, control.alpha, system->ptype, nab_pot);
@@ -1071,5 +1112,117 @@ VECTORIZE
    xfree(r_sqr);   xfree(R);       xfree(forceij);
    xfree(rx);      xfree(ry);      xfree(rz);
    xfree(forcejx); xfree(forcejy); xfree(forcejz);
+   xfree(nab_sx);  xfree(nab_sy);  xfree(nab_sz);
+}
+/******************************************************************************
+ *  Rdf_inner() Paralellised inner loops of force_calc.  Based on force_inner *
+ *     but only calls rdf_accum().                                            *
+ ******************************************************************************/
+void
+rdf_inner(ithread, nthreads, site, id, n_nab_sites, n_nabors, 
+	    nabor, cell, reloc, n_frame_types, system)
+int	ithread, nthreads;
+real	**site;
+int	id[];
+int	n_nab_sites;
+int	n_nabors;
+int	n_frame_types;
+system_mt *system;
+cell_mt	**cell;
+reloc_mt	***reloc;
+ivec_mt	*nabor;
+{
+   int          *nab  = ialloc(n_nab_sites),	/* Neigbour site gather vector*/
+                *reloc_i = ialloc(n_nab_sites),	/* Vector of pbc relocations  */
+   		*work = ialloc(4*n_nab_sites);  /* Workspace for s_n_list     */
+   real         *nab_sx  = dalloc(n_nab_sites),	/* 'Gathered' list of         */
+   		*nab_sy  = dalloc(n_nab_sites),	/*   neighbour site co-ords   */
+                *nab_sz  = dalloc(n_nab_sites),	/*   - x,y,z components.      */
+                *r_sqr   = dalloc(n_nab_sites),	/* Squared site-site distance */
+                *R = dalloc(n_nab_sites);    	/* pbc site relocation cpt    */
+   real         site0, site1, site2;
+   register real rrx,rry,rrz;
+   real         reloc_v[3][CUBE(NSHELL)];	/* PBC relocation vectors     */
+   int          ix, iy, iz;		/* 3-d cell indices for ref and neig. */
+   int          icell,			/* Index for cells of molecule pair   */
+                nnab, jbeg, jmin, jmax,	/* Number of sites in neighbour list  */
+   		isite, jsite, lim;
+   int		nsites = system -> nsites;
+   int		nfnab[2];
+   cell_mt      *cmol;
+   reloc_alloc(system->h, reloc_v);
+
+/******************************************************************************
+ *  Start of main loops.  Loop over species, ispec, molecules, imol, and      *
+ *  sites, isite_mol on imol.  Isite is index into 'site' of site specified   *
+ *  by isite_mol, imol and ispec.  Jbase is set to first site of imol+1, ispec*
+ *  so jsite, counts from jbase to end.  Thus isite, jsite run over all site  *
+ *  site pairs on distinct molecules.                                         *
+ ******************************************************************************/
+   for( icell = ithread; icell < nx*ny*nz; icell += nthreads)
+   {
+      if(cell[icell] == NULL) continue;       /* Empty cell - go on to next */
+      ix = icell/ (ny*nz);
+      iy = icell/nz - ny*ix;
+      iz = icell - nz*(iy + ny*ix);
+
+      /*
+       * Build site neighbour list 'nab' from cell list.
+       */ 
+      nnab = site_neighbour_list(nab, reloc_i,n_nab_sites,nfnab,n_frame_types, 
+				 n_nabors, ix, iy, iz, nabor, cell, reloc, work);
+      gather(nnab, nab_sx, site[0], nab, nsites);     /* Construct list of site     */
+      gather(nnab, nab_sy, site[1], nab, nsites);     /* co-ordinated from nabor    */
+      gather(nnab, nab_sz, site[2], nab, nsites);     /* list.                      */
+
+      gather(nnab, R, reloc_v[0], reloc_i, CUBE(NSHELL));
+VECTORIZE
+      for(jsite=0; jsite<nnab; jsite++)
+	 nab_sx[jsite] += R[jsite];
+      gather(nnab, R, reloc_v[1], reloc_i, CUBE(NSHELL));
+VECTORIZE
+      for(jsite=0; jsite<nnab; jsite++)
+	 nab_sy[jsite] += R[jsite];
+      gather(nnab, R, reloc_v[2], reloc_i, CUBE(NSHELL));
+VECTORIZE
+      for(jsite=0; jsite<nnab; jsite++)
+	 nab_sz[jsite] += R[jsite];
+
+      jbeg = 0;			/* Extra element alllocated makes [1] safe*/
+            			/* Loop over all molecules in cell icell. */
+      for(cmol = cell[icell]; cmol != NULL; cmol = cmol->next)
+      {
+	 if( cmol->frame_type )
+	 {
+	    jmin = 0;
+	    jmax = nfnab[0];
+	 }
+	 else
+	 {
+	    jmin = jbeg += cmol->num;
+	    jmax = nnab;
+	 }
+         lim = cmol->isite + cmol->num;
+         for(isite = cmol->isite; isite < lim; isite++)
+         {                                   /* Loop over sites in molecule */
+	    site0=site[0][isite]; site1=site[1][isite]; site2=site[2][isite];
+VECTORIZE
+            for(jsite=jmin; jsite < jmax; jsite++)
+            {
+               rrx = nab_sx[jsite] - site0;
+               rry = nab_sy[jsite] - site1;
+               rrz = nab_sz[jsite] - site2;
+               r_sqr[jsite] = rrx*rrx+rry*rry+rrz*rrz;
+            }
+	    /*
+	     * Accumulate radial distribution functions
+	     */
+	    rdf_accum(jmin, jmax, r_sqr, id[isite], id, nab);
+	 }
+      }
+   }
+   xfree(work);  
+   xfree(nab);     xfree(reloc_i);
+   xfree(r_sqr);   xfree(R);
    xfree(nab_sx);  xfree(nab_sy);  xfree(nab_sz);
 }
