@@ -108,6 +108,9 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #CC=TARGET=cray-t3d cc
 #CFLAGS= -O2 $(XDR) $(PARLIBC) $(CFLAGS0)
 #CFLAGS2=-hrestrict=a
+#
+# The benchmark lib contains fast trig and sqrt functions. 
+# It's not essential but it speeds the program up slightly.
 #LDFLAGS=$(PARLIBL) $(LDFLAGS0) -L/usr/local/lib/bnchlib -lbnch -lsci
 #  ***** End *****
 LINT=		lint
@@ -301,10 +304,10 @@ annihilate:
 #
 #  Export options
 #
-moldy.tar:	$(CFILES) $(HFILES)  Makefile \
+moldy.tar:	$(CFILES) $(HFILES)  Makefile xmakefile \
 		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
 		$(TAR) cf moldy.tar\
-		$(CFILES)  $(HFILES) Makefile \
+		$(CFILES)  $(HFILES) Makefile xmakefile \
 		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
 
 moldy.tar.Z:	moldy.tar
@@ -313,9 +316,9 @@ moldy.tar.Z:	moldy.tar
 moldy.tar.gz:	moldy.tar
 		gzip moldy.tar
 
-moldy.shar:	$(CFILES) $(HFILES)  Makefile \
+moldy.shar:	$(CFILES) $(HFILES)  Makefile xmakefile \
 		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
-		shar $(CFILES)  $(HFILES) Makefile \
+		shar $(CFILES)  $(HFILES) Makefile xmakefile \
 		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)\
 			 > moldy.shar
 
