@@ -18,6 +18,7 @@ dnl
       rs6000-ibm-aix*)    DEFCC=cc ALTCC="mpcc mpicc bspcc xlc c89" ;;
       sparc-sun-sunos*)   DEFCC=cc ALTCC="mpicc bspcc acc";;
       sparc-sun-solaris*) DEFCC=cc ALTCC="mpicc bspcc c89";;
+      mips-sgi-irix*)     DEFCC=cc ALTCC="mpicc bspcc c89";;
 dnl   
 dnl Unfortunately the Bourne-shell "env=value command" construct breaks the 
 dnl configure script.
@@ -57,7 +58,8 @@ dnl
                           ${OPT2=$OPT} ${OPTAUX=$OPT2};;
      mips-sgi-irix5*)   : ${OPT=-O2\ -mips2} ${OPT2=$OPT} ${OPTAUX=$OPT2}\
                           ${LIBS=-lmalloc\ -lfastm} ;;
-     mips-sgi-irix6*)   : ${CFLAGS=-woff\ 1174,84} ${OPT=-O3} \
+     mips-sgi-irix6*)   : ${CFLAGS=-woff\ 1174,84,1552,1680} ${LDFLAGS=-woff\ 84} \
+			  ${OPT=-O3} \
                           ${OPT2=${OPT}\ -OPT:alias=restrict:fast_sqrt=on:roundoff=3:IEEE_arithmetic=3}} \
                           ${OPTAUX=$OPT2};;
      hppa1.*-hp-*)      : ${OPT=+O3\ +Olibcalls}  \
