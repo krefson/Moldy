@@ -59,12 +59,15 @@
 %\headheight 0.0pt
 %\headsep    0.0pt
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%% Needed for tables 3.1 and 3.2.  If you get rid of it %%%%%%%
+%%%%%%%%%%% Needed for table 3.1.  If you get rid of it          %%%%%%%
 %%%%%%%%%%% edit the tabular header to excise the >{} descriptor.%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{array}
 \usepackage{longtable}
 \usepackage{afterpage}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%% For \textdegree etc.                                %%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{textcomp}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% Prettifies some script letters.  Omit if necessary. %%%%%%%%
@@ -93,12 +96,12 @@
 %%%%%%%%%%% does this  *right*. Otherwise use \mathbf, but you won't
 %%%%%%%%%%% get bold greek or symbols. 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%begin{latexonly}
-\typeout{^^JAttention - if the ``bm'' Package isn't installed you will
-  get an error here.^^JJust hit <ret> and continue. (Bold math won't
-  work quite as well).}
+%%%begin{latexonly}
+%%\typeout{^^JAttention - if the ``bm'' Package isn't installed you will
+%%  get an error here.^^JJust hit <ret> and continue. (Bold math won't
+%%  work quite as well).}
 \usepackage{bm}
-%end{latexonly}
+%%end{latexonly}
 \providecommand{\bm}[1]{\mathbf{#1}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -120,11 +123,18 @@
 %%%%%%%%%%% No option defaults to ``hypertex'' using LaTeX and  %%%%%%%%
 %%%%%%%%%%% ``pdftex'' using pdflatex.                          %%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\usepackage{hyperref}
+\usepackage{url}
+%
+% Uncomment this for LaTeX2html translation
+%
+%\usepackage{html}
 %
 % Comment this out for LaTeX2html translation
 %
+\usepackage[breaklinks]{hyperref}
+%begin{latexonly}
 \providecommand{\htmladdnormallink}[2]{#1}
+%end{latexonly}
 
 \renewcommand{\topfraction}{0.9}
 \renewcommand{\textfraction}{0.1}
@@ -146,8 +156,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.18 $ $}
-\newcommand{\moldyversion}{2.13}
+\newcommand{\RCSrevision}{$ $Revision: 2.20 $ $}
+\newcommand{\moldyversion}{2.14}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -156,9 +166,8 @@
 
 \title{Moldy User's Manual}
 \author{Keith Refson\\Department of Earth Sciences\\Parks Road
-\\Oxford OX1
-3PR\\\htmladdnormallink{Keith.Refson@earth.ox.ac.uk}{mailto:Keith.Refson@earth.ox.ac.uk}\\} 
-
+\\Oxford OX1 3PR\\
+\htmladdnormallink{Keith.Refson@earth.ox.ac.uk}{mailto:Keith.Refson@earth.ox.ac.uk}\\}
 \version{\RCSrevision for release \moldyversion}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -798,8 +807,8 @@ If we require that the sums converge to an accuracy of $ \epsilon =
 \exp ( -p )$ the cutoffs are then given by
 
 \begin{eqnarray}
-r_c  = \frac{\sqrt{p}}{\alpha} \\
-k_c = 2 \alpha \sqrt{p}
+r_c  &=& \frac{\sqrt{p}}{\alpha} \\
+k_c &=& 2 \alpha \sqrt{p}
 \label{eqn:ewald-cut}
 \end{eqnarray}
 
@@ -1171,12 +1180,12 @@ motion (equations~\ref{eqn:newton} and~\ref{eqn:euler}) are modified thus
 
 \begin{eqnarray}
 \label{eqn:nhtherm}
-\ddot{\bm{R}}_i = \frac{\bm{F}_i}{M_i} - \zeta \dot{\bm{R}}_i
+\ddot{\bm{R}}_i &=& \frac{\bm{F}_i}{M_i} - \zeta \dot{\bm{R}}_i
 \nonumber \\
 \bm{I}_i \cdot \dot{\bm{\omega}}_i - \bm{\omega}_i \times \bm{I}_i
 \cdot
-\bm{\omega}_i = \bm{N}_i - \zeta \bm{I}_i \cdot \bm{\omega}_i \\
-\dot{\zeta} = \frac{g}{Q}\left ( k_B {\mathcal T} - k_B T \right )
+\bm{\omega}_i &=& \bm{N}_i - \zeta \bm{I}_i \cdot \bm{\omega}_i \\
+\dot{\zeta} &=& \frac{g}{Q}\left ( k_B {\mathcal T} - k_B T \right )
 \nonumber
 \end{eqnarray}
 
@@ -1234,12 +1243,12 @@ equations of motion are
 \begin{eqnarray}
 \label{eqn:gtherm}
 \itemsep=0.5em
-\ddot{\bm{R}}_i = \frac{\bm{F}_i}{M_i} - \zeta_T \dot{\bm{R}}_i \nonumber \\
-\zeta_T = \frac{\sum_j\bm{v}_j \cdot \bm{F}_j}{\sum_j M_j\bm{v}_j^2} \\
+\ddot{\bm{R}}_i &=& \frac{\bm{F}_i}{M_i} - \zeta_T \dot{\bm{R}}_i \nonumber \\
+\zeta_T &=& \frac{\sum_j\bm{v}_j \cdot \bm{F}_j}{\sum_j M_j\bm{v}_j^2} \\
 \bm{I}_i \cdot \dot{\bm{\omega}}_i - \bm{\omega}_i \times \bm{I}_i
 \cdot
-\bm{\omega}_i = \bm{N}_i - \zeta_R \bm{I}_i \cdot \bm{\omega}_i \nonumber \\
-\zeta_R = \frac{\sum_j\bm{\omega}_j \cdot \bm{N}_j}{\sum_j
+\bm{\omega}_i &=& \bm{N}_i - \zeta_R \bm{I}_i \cdot \bm{\omega}_i \nonumber \\
+\zeta_R &=& \frac{\sum_j\bm{\omega}_j \cdot \bm{N}_j}{\sum_j
   \bm{\omega}_j \cdot \bm{I}_j \cdot \bm{\omega}_j}\nonumber
 \end{eqnarray}
 
@@ -1269,8 +1278,7 @@ applied pressure.  For an exposition of the method the reader should
 refer to Parrinello and Rahman's paper\cite{parrinello:81} and to
 Nos\'{e} and Klein's extension to rigid molecular
 systems\cite{nose:83}.  The equation of motion for the reduced
-centre-of-mass co-ordinates $\bm{S}_i =
-\bm{h}^{-1}\bm{R}_i$ is
+centre-of-mass co-ordinates $\bm{S}_i = \bm{h}^{-1}\bm{R}_i$ is
 \begin{equation}
 \label{eqn:par}
 M_i\ddot{\bm{S}}_i = \bm{h}^{-1} \bm{F}_i - M_i \bm{G}^{-1}\dot{\bm{G}}\dot{\bm{S}}_i
@@ -1441,8 +1449,8 @@ spacing of the line's images, $d$. For simplicity, choose $k=1$ which
 leads to the condition:
 \begin{eqnarray}
 \nonumber
- &a = \frac{L \sqrt{h^2+1}}{N} \approx \frac{L}{\sqrt{h^2+1}} = d \\
-& \Rightarrow h \approx \sqrt{N-1}
+a = \frac{L \sqrt{h^2+1}}{N} &\approx& \frac{L}{\sqrt{h^2+1}} = d \\
+ \Rightarrow h &\approx& \sqrt{N-1}
 \end{eqnarray}
 Therefore the optimum value of $h$ is the nearest integer to
 $\sqrt{N-1}$.  
@@ -1862,15 +1870,15 @@ their meanings and default values appears in
 table~\ref{tab:parameters}. 
 
 \afterpage{%
-\begin{longtable}{|l|l|l|>{\saferagged}p{2.9in}|}%
-\caption{Control Parameters}
-\\\hline
-\textbf{name} & \textbf{type} &
-\textbf{default} & \textbf{function}  \endfirsthead%\hline\hline 
-\caption[]{Control Parameters (\emph{continued})}
-\\\hline
-\textbf{name} & \textbf{type} &
-\textbf{default} & \textbf{function}   \endhead\hline\hline
+\begin{longtable}{|l|l|l|>{\saferagged}p{2.9in}|}
+\caption{Control Parameters}\\\hline
+\textbf{name} & \textbf{type} & \textbf{default} & \textbf{function}
+\endfirsthead
+%begin{latexonly}
+\caption[]{Control Parameters (\emph{continued})}\\\hline
+%end{latexonly}
+\textbf{name} & \textbf{type} & \textbf{default} & \textbf{function} \endhead
+\hline\hline
 \setlength{\rightskip}{0pt plus 2cm}
 \label{tab:parameters}
 \Lit{title} &                  character  & {\small Test Simulation} &
@@ -2996,11 +3004,20 @@ available for:
 \item[VMS]  The archive is a DCL command file called \Fname{moldy.com},
 and is unpacked by the command \Lit{@moldy}.
 
-\item[MS Windows 3/Windows 95/NT] The shareware program ``winzip'' may be
-  used to unpack the compressed tar archive
-  \Fname{moldy.tar.gz}. There is also a precompiled binary version for
-  Windows 95/NT which is available as \Fname{moldy.zip}.  Winzip may
-  also be used to uncompress this distribution.
+\item[MS Windows 3/Windows 95/NT] The shareware program ``winzip'' may
+  be used to unpack the compressed tar archive \Fname{moldy.tar.gz}.
+  There is also a precompiled binary version for Windows 95/98/NT
+  which is available as \Fname{moldy.zip}.  Winzip may also be used to
+  uncompress this distribution.  Two versions of each executable are
+  provided in directories ``cygwin'' and ``mingw''.  One of these sets
+  should be installed in a suitable directory which should be added to
+  the user path.  The Cygwin-compiled binaries rely on the shared
+  library \Fname{cygwin1.dll} and incorporate XDR support (see
+  section~\ref{sec:compile}).  If Cygwin is not already installed the
+  DLL (included) must also be installed in a suitable directory on the
+  system.  The Mingw32-compiled executables do not require a dll and
+  should run on any Windows machine, but do not support the creation
+  or reading of XDR format restart files or dumps.
 
 \item[MS-DOS] The files must be unpacked from the tar archive on
 another host and transferred to the PC by disk or ftp.
@@ -3111,11 +3128,20 @@ which provides ``bspcc''.
   a DLL file and are therefore more portable.  On the other hand only
   Cygwin has support for the XDR calls to produce portable restart and 
   dump files (see section~\ref{sec:xdr}).  As of version B.20, Cygwin
-  incorporates mingw32 which can be selected using a command-line option.
-
+  incorporates Mingw32 which can be selected using a command-line option.
+  
   Cygwin may be downloaded from the homepage at URL
-  \Lit{\htmladdnormallink{http://sourceware.cygnus.com/cygwin/}%
-  {http://sourceware.cygnus.com/cygwin/index.html}}.
+  \url{http://sourceware.cygnus.com/cygwin/} and links to Mingw32 as
+  well as general information on GNU compilers under Windows may be
+  found at
+  \url{http://www.xraylith.wisc.edu/~khan/software/gnu-win32/x86-win32-ports.html}.
+  It is also well worth installing the additional ``sunrpc'' package
+  which contains the XDR headers and libraries needed to produce
+  portable restart and dump files (see section~\ref{sec:xdr}).  A
+  binary installation for Cygwin is available from URL
+  \url{ftp://ftp.franken.de/pub/win32/develop/gnuwin32/cygwin/porters/Vinschen_Corinna/B20/sunrpc-4.0.cygwin1.bin.tar.gz}.
+  There is also a source version which might work under Mingw32, but
+  only the binary version under Cygwin has been tested.
 
   The compilation procedure is exactly the same as under a unix
   environment -- \Lit{configure} followed by \Lit{make}. \textbf{N.B.}
@@ -3134,15 +3160,6 @@ which provides ``bspcc''.
 
 \end{description}
 
-\subsection{XDR Dump and Restart}
-As described in section~\ref{sec:xdr} binary restart and dump files
-may be written and read in a portable way using the Sun XDR calls.
-Since these are are not part of the ANSI C standard libraries, this
-code is conditionally included. On unix-like systems the ``configure''
-script detects the availability of the XDR headers and libraries.  If
-``configure'' is not usable the capabilities may be enabled by
-defining the C preprocessor macro \Lit{USE\_XDR}.
-
 \subsection{Parallel Version (Message Passing)}
 \label{sec:spmdpar}
 The parallel version of \moldy\ relies on an interface with a suitable
@@ -3159,25 +3176,18 @@ multiprocessors and many distributed-memory parallel machines.
 \begin{description}
 \raggedright
 \item[MPI] The MPICH implementation can be downloaded by anonymous ftp
-  from the URL
-   \Lit{\htmladdnormallink{ftp://info.mcs.anl.gov/pub/mpi/mpich.tar.gz}%
-{ftp://info.mcs.anl.gov/pub/mpi/mpich.tar.gz}}\ and with other information at
-   \Lit{\htmladdnormallink{http://www.mcs.anl.gov/mpi/index.html}%
-{http://www.mcs.anl.gov/mpi/index.html}}.
-
-  The CHIMP implementation can be downloaded by anonymous ftp
-  from
-   \Lit{\htmladdnormallink{ftp://ftp.epcc.ed.ac.uk/pub/chimp/release/chimp.tar.Z}%
-{ftp://ftp.epcc.ed.ac.uk/pub/chimp/release/chimp.tar.Z}}.
+  from the URL \url{ftp://info.mcs.anl.gov/pub/mpi/mpich.tar.gz} and
+  with other information at \url{http://www.mcs.anl.gov/mpi/index.html}.
+  
+  The CHIMP implementation can be downloaded by anonymous ftp from
+  \url{ftp://ftp.epcc.ed.ac.uk/pub/chimp/release/chimp.tar.Z}
 \item[TCGMSG] This may be obtained by anonymous ftp from
-   \Lit{\htmladdnormallink{ftp://ftp.tcg.anl.gov/pub/tcgmsg/tcgmsg.4.04.tar.Z}%
-{ftp://ftp.tcg.anl.gov/pub/tcgmsg/tcgmsg.4.04.tar.Z}}.
+  \url{ftp://ftp.tcg.anl.gov/pub/tcgmsg/tcgmsg.4.04.tar.Z}
 \item[BSP] The Oxford BSP Library is available through Oxford
   Parallel's WWW server
-   \Lit{\htmladdnormallink{http://www.BSP-Worldwide.org/implmnts/oxtool.htm}{http://www.BSP-Worldwide.org/implmnts/oxtool.htm}}\ or by anonymous ftp
-   \Lit{\htmladdnormallink{ftp://ftp.comlab.ox.ac.uk/pub/Packages/BSP/}%
-{ftp://ftp.comlab.ox.ac.uk/pub/Packages/BSP/}}.
-%v1.3\_bsplib\_toolset.tar.gz}.
+  \url{http://www.BSP-Worldwide.org/implmnts/oxtool.html} or by
+  anonymous ftp
+  \url{ftp://ftp.comlab.ox.ac.uk/pub/Packages/BSP/v1.3_bsplib_toolset.tar.gz}.
 \item[SHMEM] The CRI native communications library for T3D and T3E
   systems.
 \end{description}
@@ -3535,42 +3545,52 @@ loop, one for each kind of potential.  The potential type in use is
 passed as a parameter to \Lit{kernel()} and is used in a \Lit{switch}
 statement to select the appropriate code.
 
-To add a new potential the array of structs called \Lit{potspec[]}
-must be extended.  The new array element should contain the name of
-the new potential (against which the names given in system
-specification files will be matched) and the number of potential
-parameters for each site pair.\footnote{By default the arrays are sized
-  for up to seven parameters. If this is not sufficient, the limit,
-  set by the value of the constant \Lit{NPOTP} defined in
-  \Fname{defs.h} may be increased.}  In parallel with
-\Lit{potspec[]}, the array \Lit{pot\_dim[]} must also be updated
-with a new entry which describes the dimensions of each parameter for
-the new potential. It is used by the input routines to convert from
-the input units into program units.  The entry consists of triplets
-containing the powers of mass, length and time, one for each
-parameter.  Then define a new preprocessor symbol to the index of the
-new type in the array \Lit{potspec[]} (after the line
-\Lit{\#define~MCYPOT~2}).  The value must correspond to the index
-of the new entry in \Lit{potspec[]} starting from 0 in accordance
-with the usual C convention.  This constant should be used to define a
-new case in the \Lit{switch} statement of \Lit{kernel()}, and
-this is where the code to evaluate the potential goes.
+To add a new potential the following modifications must be perfomed:
+\begin{itemize}
+\item The array of structs called \Lit{potspec[]} must be extended.
+  The new array element should contain the name of the new potential
+  \emph{in all lowercase}\footnote{Potential names in system
+    specification files are converted to lowercase before being
+    compared with \Lit{potspec[]}, so it is impossible to match a name
+    containing uppercase letters.}  and the number of potential
+  parameters for each site pair.\footnote{By default the arrays are
+    sized for up to seven parameters. If this is not sufficient, the
+    limit, set by the value of the constant \Lit{NPOTP} defined in
+    \Fname{defs.h} may be increased.}  The name of a potential type
+  given in system specification files will be matched against this
+  name after being converted to lowercase.
+\item In parallel with \Lit{potspec[]}, the array \Lit{pot\_dim[]}
+  must also be updated with a new entry which describes the dimensions
+  of each parameter for the new potential. This array is used by the
+  input routines to convert from the input units into program units.
+  Each entry consists of triplets, one triplet per parameter,
+  containing the powers of mass, length and time corresponding to the
+  dimensionality of that parameter.
+\item Define a new preprocessor symbol (after the line
+  \Lit{\#define~MCYPOT~2}) to an integer which will be used as the
+  index of the new type in the arrays and to select the code in the
+  case statement.  The value must correspond to the index of the new
+  entry in \Lit{potspec[]} starting from 0 in accordance with the
+  usual C convention.  
+  
+\item This constant should be used as the label to a new case in the
+  \Lit{switch} statement of \Lit{kernel()}, and this is where the code
+  to evaluate the potential goes.  The existing cases may be used as a
+  model, especially for the evaluation of the electrostatic term
+  $\erfc(\alpha r) / r$ which is evaluated by the polynomial expansion
+  of Abramowitz and Stegun\cite[section 7.1.26]{abramowitz:70}. There
+  are currently \emph{two} versions of each loop, the second omitting
+  this term for efficiency when all the electric charges are zero
+  (which case is flagged by a negative value of $\alpha$).
 
-The existing cases may be used as a model, especially for the
-evaluation of the electrostatic term $\erfc(\alpha r) / r$ which is
-evaluated by the polynomial expansion of Abramowitz and
-Stegun\cite[section 7.1.26]{abramowitz:70}. There are currently
-\emph{two} versions of each loop, the second omitting this term for
-efficiency when all the electric charges are zero (which case is
-flagged by a negative value of $\alpha$).
-
-Finally, the distant potential correction for the new potential should
-be added as a new case to function \Lit{dist\_pot()}. The code
-should evaluate
+\item Finally, the distant potential correction for the new potential
+  should be added as a new case to function \Lit{dist\_pot()}. The
+  code should evaluate
 \[
 - \int^{\infty}_{r_c} r^2 U(r) \, \Calcd r
 \]
 for the potential $U(r)$.
+\end{itemize}
 
 \subsection{Porting the Parallel Version}
 \label{sec:parport}
