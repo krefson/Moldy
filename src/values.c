@@ -34,6 +34,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ *       Revision 2.13  2000/11/07 10:26:51  keith
+ *       Updated header text to correct th'dy fn for ensemble.
+ *       Tidied up some of the auto-converted function declarations
+ *
  *       Revision 2.12  2000/11/06 16:02:07  keith
  *       First working version with a Nose-Poincare thermostat for rigid molecules.
  *
@@ -160,7 +164,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.12 2000/11/06 16:02:07 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.13 2000/11/07 10:26:51 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -209,7 +213,7 @@ typedef struct
 typedef struct
 {
    av_n		id;
-   char		*name, *unit;
+   char		name[12], *unit;
    int		field_width;
    char		*format;
    int		mult;
@@ -276,16 +280,16 @@ void	init_averages(int nspecies, char *vsn, long int roll_interval,
    if( control.const_pressure > 0 )
    {
       if( control.const_temp > 0 )
-	 strcpy(av_info[3].name,"Gibbs Enrgy");
+	 strcpy(av_info[3].name,"Gibbs En.");
       else
 	 strcpy(av_info[3].name,"Enthalpy");
    }
    else
    {
       if( control.const_temp > 0 )
-	 strcpy(av_info[3].name,"Free Energy");
+	 strcpy(av_info[3].name,"Free En.");
       else
-	 strcpy(av_info[3].name,"Intl Energy");
+	 strcpy(av_info[3].name,"Intl En.");
    }
 
    /* Determine size of database, Allocate space and set pointers             */
