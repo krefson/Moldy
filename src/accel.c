@@ -25,6 +25,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.19  1999/10/08 15:49:58  keith
+ *       Fully implemented new constant-pressure algorithm.
+ *       Select by "const-pressure=2" in control.
+ *
  *       Revision 2.18  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -226,7 +230,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/accel.c,v 2.18 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/accel.c,v 2.19 1999/10/08 15:49:58 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -899,7 +903,6 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
       for (imol = 0; imol < spec->nmols; imol++)
 	 for (isite = 0; isite < spec->nsites; isite++)
 	    *chg_ptr++ = site_info[spec->site_id[isite]].charge;
-   mat_vec_mul(sys->h, sys->c_of_m, c_of_m, sys->nmols);
 /*
  * Set some accumulators to zero
  */
@@ -973,6 +976,7 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
 /*
  * Calculate the centre of mass forces and torques from the site forces
  */
+   mat_vec_mul(sys->h, sys->c_of_m, c_of_m, sys->nmols);
    for (spec = species; spec < &species[nspecies]; spec++)
    {
       ispec = spec-species;
