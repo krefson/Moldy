@@ -31,6 +31,14 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.9  1996/01/12 15:45:52  keith
+ *       Reworked V. Murashov's thermostat code.
+ *       Convert mass params from kJ/mol ps^2 to prog units. Defaults=1.
+ *       Restored defaults of zero for Ewald sum params.
+ *       Modified Alpha/cutoff initialization to handle uncharged case correctly.
+ *
+ *       Changed to macros from defs.h for input units.
+ *
  *       Revision 2.8  1995/12/04 11:45:49  keith
  *       Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
  *       Thanks to V. Murashov.
@@ -145,7 +153,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/restart.c,v 2.8 1995/12/04 11:45:49 keith Exp keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/restart.c,v 2.10 1996/09/25 18:46:46 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -376,6 +384,7 @@ FILE	  *restart;
 restrt_mt *header;
 contr_mt  *contr;
 {
+   int		vmajor,vminor;
    xfp_mt	xfp;
    xfp.xp =     &xdrs;
 
@@ -399,6 +408,21 @@ contr_mt  *contr;
    if( ! xdr_read )
       cread(xfp,  (gptr*)header, lsizeof(restrt_mt), 1, xdr_restrt);
    cread(xfp,  (gptr*)contr, lsizeof(contr_mt), 1, xdr_contr); 
+   /*
+    * Parse header version
+    */
+   if( sscanf(header->vsn, "%d.%d", &vmajor, &vminor) < 2 )
+      message(NULLI, NULLP, FATAL, INRVSN, header->vsn);
+   /*
+    * Bodge up botched control struct in restart files written by 
+    * Moldy 2.10 ir restart.c 2.9
+    */
+   if( vmajor == 2 && vminor == 9 )
+   {
+      contr->ttmass = contr->rtmass = 10000.0;
+      contr->const_temp = 0;
+      message(NULLI,NULLP,WARNING,BODGUP,contr->ttmass);
+   }
 }
 /******************************************************************************
  *  conv_potsize    Convert potential parameters array if NPOTP has changed   *
@@ -432,8 +456,9 @@ int     old_npotp, npotpar, npotrecs;
  *  structures system and species and arrays site_info and potpar (allocating *
  *  space) and read in the supplied values.  				      *
  ******************************************************************************/
-void	re_re_sysdef(restart, system, spec_ptr, site_info, pot_ptr)
+void	re_re_sysdef(restart, vsn, system, spec_ptr, site_info, pot_ptr)
 FILE		*restart;		/* File pointer to read info from     */
+char		*vsn;			/* Version string file written with */
 system_mp	system;			/* Pointer to system array (in main)  */
 spec_mp		*spec_ptr;		/* Pointer to be set to species array */
 site_mp		*site_info;		/* To be pointed at site_info array   */
@@ -442,13 +467,27 @@ pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
    spec_mp	spec;
    size_mt	old_pot_size;
    int		old_npotp, n_pot_recs;
+   int		vmajor,vminor;
    xfp_mt	xfp;
 
    xfp.xp = &xdrs;
    xfp.fp = restart;
 
-   cread(xfp,  (gptr*)system, lsizeof(system_mt), 1, xdr_system);
-   						   /* Read in system structure*/
+   /*
+    * Parse header version
+    */
+   if( sscanf(vsn, "%d.%d", &vmajor, &vminor) < 2 )
+      message(NULLI, NULLP, FATAL, INRVSN, vsn);
+
+   /*
+    *  Read in system structure.
+    *  Size changed in 2.11, read old files (XDR only).
+    */
+   if( vmajor > 2 || (vmajor == 2 && vminor > 9) )
+     cread(xfp,  (gptr*)system, lsizeof(system_mt), 1, xdr_system);
+   else
+     cread(xfp,  (gptr*)system, lsizeof(system_mt)-10*lsizeof(real*),
+	   1, xdr_system_2);
 
    /* Allocate space for species, site_info and potpar arrays and set pointers*/
    *spec_ptr  = aalloc(system->nspecies,                spec_mt );
@@ -531,7 +570,7 @@ int		av_convert;
    cread(xfp,  (gptr*)system->hddoto,  lsizeof(real), 9, xdr_real);
    cread(xfp,  (gptr*)system->hddotvo, lsizeof(real), 9, xdr_real);
 
-   if( vmajor > 2 || vminor > 7) 
+   if( vmajor > 2 || (vmajor == 2 && vminor > 7) )
    {
       cread(xfp,  (gptr*)system->ta,      lsizeof(real), system->nspecies, xdr_real);
       cread(xfp,  (gptr*)system->tap,     lsizeof(real), system->nspecies, xdr_real);
@@ -586,7 +625,7 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
    FILE		*save;
    XDR		xdrsw;
    xfp_mt	xfp;
-   char		*vsn = "$Revision: 2.8 $"+11;
+   char		*vsn = "$Revision: 2.10 $"+11;
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)
