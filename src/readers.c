@@ -41,6 +41,7 @@ what you give them.   Help stamp out software-hoarding! */
 #include <math.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <strings.h>
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
