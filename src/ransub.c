@@ -27,6 +27,9 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.17.10.8  2004/05/07 07:39:43  moldydv
+ *  Now uses eigensort to find principal frame.
+ *
  *  Revision 1.17.10.7  2004/04/12 08:14:28  moldydv
  *  Switched off eigensort.
  *
@@ -175,79 +178,100 @@ static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/ransub.c,v 1.17.10
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
+#include <ctype.h>
 #include "structs.h"
 #include "messages.h"
 #include "utlsup.h"
 #include "specdata.h"
 #include "sginfo.h"
+#include "readers.h"
 
-void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_info, pot_mp *pot_ptr);
-void	initialise_sysdef(system_mp system, spec_mt *species, site_mt *site_info, quat_mt (*qpf));
-void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr);
-void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr);
-void	allocate_dynamics(system_mp system, spec_mt *species);
-void	lattice_start(FILE *file, system_mp system, spec_mp species, quat_mt (*qpf));
-void	read_restart(FILE *restart, char *vsn, system_mp system, int av_convert);
-void	init_averages(int nspecies, char *vsn, long int roll_interval, long int old_roll_interval, int *av_convert);
-void    conv_potentials(const unit_mt *unit_from, const unit_mt *unit_to, pot_mt *potpar, int npotpar, int ptype, site_mt *site_info, int max_id);
-void    q_to_rot(real *quat,mat_mt rot);
-int	getopt(int, char *const *, const char *);
 void    afree(gptr *p);
-char    *atime(void);
-double  det(mat_mt a);
-char	*read_ftype(char *filename);
-int     read_ele(spec_data *element, char *filename);
-int     read_pdb(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
-int     read_cssr(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
-int     read_shak(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, double *);
-int     read_xtl(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
-int     read_xyz(char *, mat_mp, char (*)[NLEN], vec_mp, char *);
-int     sgexpand(int , int , vec_mt *, char (*)[NLEN], double *, char *);
+double		mdrand(void);
 
-/*======================== Global vars =======================================*/
-int ithread=0, nthreads=1;
 extern const  unit_mt prog_unit;
 static  unit_mt input_unit = {MUNIT, LUNIT, TUNIT, _ELCHG};
-contr_mt               control;
+
+void eigens(real *A, real *RR, real *E, int N);
+void eigensort(real *ev, real *e, int n, vec_mt m);
+void	q_to_rot(real *quat, mat_mt rot);
+
+/*======================== Global variables =======================================*/
+int ithread=0, nthreads=1;
 
 /* Time units for different energy units */
-#define EV 1.018050697e-14  		/* electron volts */
 #define KJMOL 1.0e-13 			/* kilojoules per mole */
+#define EV 1.018050697e-14  		/* electron volts */
 #define KCALS 4.88882131e-14 		/* kilocalories per mole */
 #define E2A 2.682811715e-15 		/* electron charge squared per angstrom */
+
+/* Energy unit selection */
+#define UNIT_KJMOL 0
+#define UNIT_KCALS 1
+#define UNIT_EV 2
+#define UNIT_E2A 3
 
 #define OFF               0
 #define ON                1
 
-#define DEBUG_RANSUB 1
 #define NJACOBI 30
 #define PRECISION 1e-6
+/*
+ *  Default backup and temporary file names if not set in "defs.h"
+ */
+#ifndef BACKUP_FILE
+#define BACKUP_FILE     "MDBACKUP"
+#endif
+#ifndef TEMP_FILE
+#define TEMP_FILE       "MDTEMPX"
+#endif
+
 /*========================== External data references ========================*/
 
 extern  const pots_mt   potspec[];          /* Potential type specification */
 
+/*========================== Control file keyword template ===================*//*
+ * format SFORM is defined as %NAMLENs in structs.h, to avoid overflow.
+ */
+extern const match_mt  match[];
+
+/******************************************************************************
+ *  default_control.   Initialise 'control' with default values from 'match' *
+ ******************************************************************************/static
+void    default_control(void)
+{
+   const match_mt       *match_p;
+   char tmp[64];
+                                                                                
+   for( match_p = match; match_p->key; match_p++)
+      (void)sscanf(strncpy(tmp,match_p->defalt, sizeof tmp),
+                   match_p->format, match_p->ptr);
+}
 /******************************************************************************
  * prep_pot().  Convert units from system to user specified units             *
  ******************************************************************************/
-int     prep_pot(system_mt *system, site_mt *site_info, pot_mt *potpar)
+int     prep_pot(system_mt *system, site_mt *site_info, pot_mt *potpar, int nunits)
 {
-int   nunits;
 
-      fputs("What energy units would you like the potentials in:\n",stderr);
-      fputs("(1) eV, (2) kJ/mol, (3) kcal/mol, or (4) e**2/A",stderr);
-      nunits = get_int(" ? ", 1, 4);
+      if( nunits < 0 || nunits > 3 )
+        {
+        fputs("What energy units would you like the potentials in:\n",stderr);
+        fputs("(0) kJ/mol, (1) kcal/mol, (2) eV, or (3) e**2/A",stderr);
+        nunits = get_int(" ? ", 0, 3);
+        }
+
       switch(nunits)
       {
-      case 1:
-         input_unit.t = EV;
-         break;
-      case 2:
+      case UNIT_KJMOL:
          input_unit.t = KJMOL;
          break;
-      case 3:
+      case UNIT_KCALS:
          input_unit.t = KCALS;
          break;
-      case 4:
+      case UNIT_EV:
+         input_unit.t = EV;
+         break;
+      case UNIT_E2A:
          input_unit.t = E2A;
          break;
       }
@@ -296,7 +320,7 @@ FILE       *Fpot;
                  && strcmp(strlower(name), "end") != 0)
     {
        n_items = 0;
-       if(sscanf(line,"%s %lf %s %lf %[^#]",&atom1,&chg1,&atom2,&chg2,pline) <= 2)
+       if(sscanf(line,"%s %lf %s %lf %[^#]",atom1,&chg1,atom2,&chg2,pline) <= 2)
             message(&nerrs,line,ERROR,NOPAIR);
        else
        {
@@ -370,22 +394,6 @@ void    random_quat2(quat_mp q, int n)
    }
 }
 
-/******************************************************************************
- * ran_quat. Assign new random quaternions to polyatomic species.             *
- ******************************************************************************/
-void
-ran_quat(system_mt *system, spec_mt *species, char *molname)
-{
-    spec_mp	spec;
-    int		i, imol;
-
-    for(spec = species; spec < species+system->nspecies; spec++)
-      if( !strcmp(strlower(spec->name), molname) )
-         if( spec->quat != NULL )   /* If polyatomic, generate quaternions */
-             random_quat2(&(spec->quat[imol]), spec->nmols);
-
-   return;
-}
 /*********************************************************
  JACOBI
  Jacobi diagonalizer with sorted output.
@@ -609,6 +617,84 @@ calc_quat(quat_mt q, vec_mt *sites, vec_mt *p_f_sites, int n)
  q[2] = v[2][3];
  q[3] = v[3][3];
 }
+void control_out()
+{
+printf("# Control file written by RANSUB on %s\n",atime());
+printf("title=%s\n", control.title);
+printf("nsteps=%ld\n", control.nsteps);
+printf("step=%lf\n", control.step);
+if( control.print_sysdef )
+  printf("text-mode-save=%d\n", control.print_sysdef);
+printf("molecular-cutoff=%d\n", control.molpbc);
+if( control.scale_options )
+  printf("scale-options=%d\n", control.scale_options);
+if( control.surface_dipole )
+  printf("surface-dipole=%d\n", control.surface_dipole);
+if( control.lattice_start )
+{
+  printf("lattice-start=%d\n", control.lattice_start);
+  if( control.sysdef != NULL && strcmp(control.sysdef,""))
+    printf("sys-spec-file=%s\n", control.sysdef);
+}
+if( control.save_file != NULL && strcmp(control.save_file,""))
+  printf("save-file=%s\n", control.save_file);
+if( control.dump_file != NULL && strcmp(control.dump_file,""))
+  printf("dump-file=%s\n", control.dump_file);
+if( control.backup_file != NULL && strcmp(control.backup_file,""))
+  printf("backup-file=%s\n", control.backup_file);
+if( control.temp_file != NULL && strcmp(control.temp_file,""))
+  printf("temp-file=%s\n", control.temp_file);
+if(control.strict_cutoff)
+  printf("strict-cutoff=%d\n", control.strict_cutoff);
+printf("xdr=%d\n", control.xdr_write);
+printf("nbins=%d\n", control.nbins);
+printf("seed=%ld\n", control.seed);
+printf("page-width=%d\n", control.page_width);
+printf("page-length=%d\n", control.page_length);
+printf("scale-interval=%ld\n", control.scale_interval);
+printf("reset-averages=%d\n", control.reset_averages);
+printf("scale-end=%ld\n", control.scale_end);
+printf("begin-average=%ld\n", control.begin_average);
+printf("average-interval=%ld\n", control.average_interval);
+printf("begin-dump=%ld\n", control.begin_dump);
+printf("dump-interval=%ld\n", control.dump_interval);
+printf("dump-level=%d\n", control.dump_level);
+printf("ndumps=%d\n", control.maxdumps);
+printf("backup-interval=%ld\n", control.backup_interval);
+printf("roll-interval=%ld\n", control.roll_interval);
+printf("print-interval=%ld\n", control.print_interval);
+printf("begin-rdf=%ld\n", control.begin_rdf);
+printf("rdf-interval=%ld\n", control.rdf_interval);
+printf("rdf-out=%ld\n", control.rdf_out);
+if( control.const_pressure )
+{
+  printf("const-pressure=%d\n", control.const_pressure);
+  printf("pressure=%lf\n", control.pressure);
+  printf("w=%lf\n", control.pmass);
+  printf("strain-mask=%d\n", control.strain_mask);
+}
+if( control.const_temp )
+{
+  printf("const-temp=%d\n", control.const_temp);
+  printf("temperature=%lf\n", control.temp);
+  printf("rtmass=%lf\n", control.rtmass);
+  printf("ttmass=%lf\n", control.ttmass);
+}
+if(control.subcell)
+  printf("subcell=%lf\n", control.subcell);
+printf("cutoff=%lf\n", control.cutoff);
+printf("density=%lf\n", control.density);
+printf("ewald-accuracy=%lf\n", control.ewald_accuracy);
+printf("alpha=%lf\n", control.alpha);
+printf("k-cutoff=%lf\n", control.k_cutoff);
+printf("rdf-limit=%lf\n", control.limit);
+printf("cpu-limit=%g\n", control.cpu_limit);
+printf("mass-unit=%g\n", input_unit.m);
+printf("length-unit=%g\n", input_unit.l);
+printf("time-unit=%g\n", input_unit.t);
+printf("charge-unit=%g\n", input_unit.q);
+puts("end");
+}
 /******************************************************************************
  * sys_spec_out().  Write a system configuration to stdout in the form of a   *
  * system specification file for MOLDY                                        *
@@ -676,10 +762,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
       if(dopant->mass < 1.0)              /* Lighter than 1 amu ?              */
             message(NULLI,NULLP,FATAL,ZMASS,dopant->name,dopant->mass);
 
-#if DEBUG_RANSUB
-   fprintf(stderr,"Total mass %f\n",dopant->mass);
-#endif
-         for( isite = 0; isite < dopant->nsites; isite++)
+      for( isite = 0; isite < dopant->nsites; isite++)
          for(i=0; i < 3; i++)           /* Subtract c_of_m from co-ordinates */
             dopant->p_f_sites[isite][i] -= solute_pos[i];
 
@@ -951,7 +1034,7 @@ void
 copy_pot(pot_mt *new_pot, pot_mt *old_pot, int max_id, int new_sites)
 {
    int     i, j, k;
-   int     idi, idj, idij_new, idij_old;
+   int     idij_new, idij_old;
 
    for( i = 0; i < max_id; i++)
       for( j = 0; j < max_id; j++)
@@ -975,41 +1058,33 @@ int
 main(int argc, char **argv)
 {
    int  c, cflg = 0, ans_i, sym, data_source = 0;
-   char         line[80];
    extern char  *optarg;
    int          errflg = 0;
    int          intyp = 0;
-   int          start, finish, inc;
-   int          rflag, mflag, uflag;
+   int          mflag, uflag;
    int          i,j,k,irec;
    int          n_elem = -1;       /* No of records read from element data file */
-   char         *filename = NULL, *dump_name = NULL;
-   char         *dumplims = NULL;
+   char         *filename = NULL;
    char         *molname = NULL;
    char         *elename = "elements.dat";
    char         *potname = NULL;
    char         *dopfile = NULL;
    char         elefile[PATHLN] = "";
    char         potfile[PATHLN] = "";
-   char         *tempname;
-   char         dumpcommand[256];
-   int          dump_size;
-   float        *dump_buf;
-   FILE         *Fp, *Dp;
+   FILE         *Fp = NULL;
    restrt_mt    restart_header;
    system_mt    sys;
-   spec_mt      *species, *spec, *new_species;
+   spec_mt      *species, *spec;
    site_mt      *site_info;
    pot_mt       *potpar;
    pot_mp       new_pot;
-   quat_mt      *qpf;
-   contr_mt     control_junk;
+   quat_mt      *qpf = NULL;
    int          av_convert;
    int          maxmol;
    spec_data    element[NELEM];
    spec_data    dopant = {"","",-1.0, 1e6};
    spec_mt      dopspec;
-   site_mt      *dopsite, *totsite;
+   site_mt      *dopsite=NULL, *totsite;
    int          ndopsites = -1, *pos;
    vec_mt       dopant_coords[MAX_ATOMS];
    double       charge[MAX_ATOMS];
@@ -1023,6 +1098,7 @@ main(int argc, char **argv)
    real		euler[3];
    boolean      strict_match = OFF;
    boolean      shift_cofm = OFF;
+   int		file_type, energy_unit = 0;
 
 #define MAXTRY 100
    control.page_length=1000000;
@@ -1033,7 +1109,7 @@ main(int argc, char **argv)
    strcpy(spgr,"P 1");
 
    comm = argv[0];
-   while( (c = getopt(argc, argv, "cr:s:m:n:u:o:w:q:z:e:y:a:hxjf:t:p:") ) != EOF )
+   while( (c = getopt(argc, argv, "cr:s:m:n:u:o:w:q:z:e:y:a:hxjf:t:p:v:") ) != EOF )
       switch(c)
       {
        case 'c':
@@ -1092,6 +1168,9 @@ main(int argc, char **argv)
        case 'p':
          euler[2] = atof(optarg);   /* Euler angle 'psi' */
          break;
+       case 'v':
+         energy_unit = atoi(optarg);      /* Energy units */
+         break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error("failed to open file \"%s\" for output", optarg);
@@ -1104,10 +1183,11 @@ main(int argc, char **argv)
    if( errflg )
    {
       fprintf(stderr,
-             "Usage: %s [-r restart-file | -s sys-spec-file] ",comm);
-      fputs("[-c] [-m solvent-species] ",stderr);
+             "Usage: %s [-r restart-file | -s sys-spec-file] ", comm);
+      fputs("[-c] [-m solvent-species] [-e element-data-file] [-v energy-unit-code] ",stderr);
       fputs("[-u solute-species] [-n no-of-substitutions] [-w mass] [-q charge] [-z symbol] ",stderr);
-      fputs("[-a solute-structure-file] [-f] [-t] [-p] ",stderr);
+      fputs("[-a solute-structure-file] ",stderr);
+      fputs("[-f euler-angle-phi] [-t euler-angle-theta] [-p euler-angle-psi] ",stderr);
       fputs("[-x] [-h] [-j] [-o output-file]\n",stderr);
       exit(2);
    }
@@ -1120,9 +1200,9 @@ main(int argc, char **argv)
       if( (ans_i = get_int("? ", 1, 2)) == EOF )
 	 exit(2);
       intyp = ans_i-1 ? 'r': 's';
-      if( intyp == 's' )
+      if( !cflg )
       {
-	 fputs( "Do you need to skip 'control' information?\n", stderr);
+	 fputs( "Do you wish to ignore 'control' information?\n", stderr);
 	 if( (sym = get_sym("y or n? ","yYnN")) == 'y' || sym == 'Y')
 	    cflg++;
       }
@@ -1136,15 +1216,11 @@ main(int argc, char **argv)
     case 's':
       if( (Fp = fopen(filename,"r")) == NULL)
 	 error("Couldn't open sys-spec file \"%s\" for reading", filename);
-      if( cflg )
-      {
-	 do
-	 {
-	    fscanf(Fp, "%132s",line);
-	    (void)strlower(line);
-	 }
-	 while(! feof(stdin) && strcmp(line,"end"));
-      }
+      default_control(); 
+      file_type = check_control(Fp);
+      if (file_type)
+        read_control(Fp, match);
+        
       read_sysdef(Fp, &sys, &species, &site_info, &potpar);
       qpf = qalloc(sys.nspecies);
       initialise_sysdef(&sys, species, site_info, qpf);
@@ -1153,9 +1229,9 @@ main(int argc, char **argv)
       if( (Fp = fopen(filename,"rb")) == NULL)
 	 error("Couldn't open restart file \"%s\" for reading -\n%s\n", 
 	       filename, strerror(errno));
-      re_re_header(Fp, &restart_header, &control_junk);
+      re_re_header(Fp, &restart_header, &control);
       re_re_sysdef(Fp, restart_header.vsn, &sys, &species, &site_info, &potpar);
-      prep_pot(&sys, site_info, potpar);
+      prep_pot(&sys, site_info, potpar, energy_unit);
       break;
     default:
       error("Internal error - invalid input type", "");
@@ -1439,6 +1515,9 @@ main(int argc, char **argv)
 
    sys.max_id += newsites;
 
+   if( !cflg ) /* Write control info at top of new file */
+     control_out(&sys);
+
    switch(data_source)                  /* To read configurational data       */
    {
     case 's':                           /* Lattice_start file                 */
@@ -1448,7 +1527,7 @@ main(int argc, char **argv)
       break;
     case 'r':                           /* Restart file                       */
         init_averages(sys.nspecies, restart_header.vsn,
-                      control_junk.roll_interval, control_junk.roll_interval,
+                      control.roll_interval, control.roll_interval,
                       &av_convert);
         read_restart(Fp, restart_header.vsn, &sys, av_convert);
         random_pos(maxmol, dopspec.nmols, pos);
