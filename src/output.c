@@ -17,6 +17,12 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	output.c,v $
+ * Revision 1.7  89/08/11  10:53:38  keith
+ * Tidied up loops over species to use pointer as counter
+ * Fixed print_config() to convert control parameters to correct units
+ * before outputting them.
+ * Explicitly included stdio.h before varargs to get round VMS C problem.
+ * 
  * Revision 1.6  89/07/04  18:46:01  keith
  * Print_config() added. Prints control, sys-spec and configurational info
  * which can be reread as a lattice start, for portable restart.
@@ -38,7 +44,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: output.c,v 1.7 89/08/10 17:19:48 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/output.c,v 1.8 89/09/04 17:37:18 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include <stdio.h>
@@ -301,6 +307,9 @@ spec_t	species[];
       format_int("Number of molecules",spec->nmols);
       format_int("Number of sites",spec->nsites);
       format_dbl("Mass",spec->mass,MUNIT_N);
+      format_dbl("Electric Charge", spec->charge*CONV_Q,CONV_Q_N);
+      if(spec->nsites > 1 )
+	 format_dbl("Dipole moment",spec->dipole*CONV_D,CONV_D_N);
       if(spec->rdof == 0)
       {
 	 (void)printf(
@@ -316,7 +325,6 @@ spec_t	species[];
 	 }
 	 format_vec("Moments of inertia",
 		    spec->inertia[0],spec->inertia[1],spec->inertia[2],IUNIT_N);
-	 format_dbl("Dipole moment",spec->dipole*CONV_D,CONV_D_N);
       }
    }
    new_line();
