@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 2.4 94/01/18 13:23:17 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $
  *
- * $Log:	string.h,v $
+ * $Log: string.h,v $
+ * Revision 2.5  94/01/18  13:33:00  keith
+ * Null update for XDR portability release
+ * 
  * Revision 2.4  94/01/18  13:23:17  keith
  * Incorporated all portability experience to multiple platforms since 2.2.
  * Including ports to VAX/VMS and Open VMS on Alpha AXP and Solaris.
@@ -68,6 +71,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #ifndef _STRING_H
 #ifndef _STRING_H_
 #ifndef __STRING_H
+#ifndef _H_STRING
 #ifndef __STRING_H__
 #ifndef _STRING_INCLUDED
 
@@ -79,6 +83,7 @@ what you give them.   Help stamp out software-hoarding!  */
 
 extern char
 	*strcat(),
+	*strncat(),
         *strcpy(),
         *strncpy(),
 	*strchr(),
@@ -90,7 +95,7 @@ extern char
 extern int
 	strcmp();
 #ifdef __GNUC__
-extern size_t
+extern unsigned long
 #else
 extern int
 #endif
@@ -107,8 +112,10 @@ extern gptr
 #define _STRING_H_
 #define __STRING_H
 #define __STRING_H__
+#define  _H_STRING
 #define _STRING_INCLUDED
 
+#endif
 #endif
 #endif
 #endif
