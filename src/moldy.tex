@@ -30,7 +30,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
+%%tth: \input moldy.sty
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% Use Times-Roman fonts. This works for PSNFSS Latex2e%%%%%%%%
 %%%%%%%%%%% mode.  Just comment it out if it doesn't work       %%%%%%%%
@@ -144,7 +144,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.16 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.17 $ $}
 \newcommand{\moldyversion}{2.13}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -577,7 +577,7 @@ $j$ from site $\alpha$ of molecule $i$.
 The total force and torque acting on any particular molecule are
 calculated using equations~\ref{eqn:comf} and~\ref{eqn:comt}.  Since
 $\bm{f}_{i\alpha j\beta}$ and therefore $\bm{F}_{ij}$ are short-ranged
-forces (\ie they decay faster than $r^{-3}$) one can define a
+forces (\ie\ they decay faster than $r^{-3}$) one can define a
 \emph{cutoff} radius, $r_c$.  Interactions between sites whose
 separation $r_{ij}$ is greater than $r_c$ are assumed to be negligible
 and need not be evaluated.  In the case of a polyatomic molecular
@@ -3053,7 +3053,7 @@ Then just type \Lit{make} to compile and link \moldy\  and
   to both distributions. (The mirror site in the USA
   \Lit{\htmladdnormallink{http://www.geocities.com/Tokyo/Towers/6162/gcc.html}%
 {http://www.geocities.com/Tokyo/Towers/6162/gcc.html}} may be
-  faster).  Both ports contain the GNU make program and will work with
+  faster).  Both ports contain the GNU ``make'' program and will work with
   the supplied \Fname{Makefile}.  Simply edit \Fname{Makefile} and
   uncomment the appropriate set of compiler options before invoking
   \Fname{make}.
@@ -3487,7 +3487,7 @@ statement to select the appropriate code.
 
 To add a new potential the array of structs called \Lit{potspec[]}
 must be extended.  The new array element should contain the name of
-the new potential (against which, the names given in system
+the new potential (against which the names given in system
 specification files will be matched) and the number of potential
 parameters for each site pair.\footnote{By default the arrays are sized
   for up to seven parameters. If this is not sufficient, the limit,
@@ -5006,7 +5006,7 @@ each record.
 \emph{Mdshak} was written as an interface between \moldy\ 
 configurations and a molecular graphics program called
 SCHAKAL\cite{schakal:88}.  It will also, optionally, write the output
-in XYZ form, suitable for input to the freely available viewers
+in PDB or XYZ form, suitable for input to the freely available viewers
 \emph{Xmol} and \emph{RasMol}.  The output format is sufficiently
 transparent that it should not be hard to modify it for any other
 molecular graphics package, but note that the \emph{babel} package,
@@ -5025,8 +5025,8 @@ lattice start, (\emph{b}) a system specification file plus dump file
 (\emph{c}) a restart file or (\emph{d}) a restart file plus dump file.
 It can be driven either interactively or using command-line arguments.
 If the executable file is named \Fname{mdshak} then the default output
-is in SCHAKAL file format. If it is renamed to \Fname{mdxyz} then the
-default is XYZ file format.  
+is in SCHAKAL file format. If it is renamed to \Fname{mdxyz} or
+\Fname{mdpdb} then the default is XYZ or PDB file format respectively.
 
 In interactive mode you are prompted for the source of the system
 specification (sys-spec or restart file) and the configurational
@@ -5062,6 +5062,8 @@ format.
 to add extra SCHAKAL commands, such as BOX.
 \item[-x] Write an output file in XYZ format suitable for \emph{Xmol}
   or \emph{RasMol}
+\item[-p] Write an output file in Brookhaven PDB format suitable for
+  \emph{VMD}, \emph{Xmol}  or \emph{RasMol}
 \item[-b] Write the atom co-ordinates in raw binary (unformatted) format.
 \end{Argdescription}
 
@@ -5157,7 +5159,7 @@ The time intervals specified by \Lit{-m} (and initial time increment
 \Lit{-i}) are taken relative to the dump slices selected with \Lit{-t}
 rather than the complete dump records stored in the dump files. For
 example, if dump records 1,3,5,\ldots{}19 are extracted using \Lit{-t}, then
-time intervals of \Lit{-m} 1-5 correspond to "real" intervals of
+time intervals of \Lit{-m} 1-5 correspond to ``real'' intervals of
 2,4,\ldots{}10 relative to the original dump file data. It should also be
 pointed out that the msds for each time interval are only averaged
 over as many initial time slices as the \emph{longest} time interval.
@@ -5168,7 +5170,7 @@ averaged.
 
 Selecting option \Lit{-u} circumvents calculation of the msds and
 instead sends the connected trajectory coordinates to the output. The
-default format for trajectory data is "\# \textit{species-name}" followed by a
+default format for trajectory data is ``\# \textit{species-name}'' followed by a
 row of $x y z$ for a single particle for each increasing time interval.
 Trajectory data for each particle are separated by two blank lines.
 This is the format favoured by GNUPlot. Specifying \Lit{-w 1}  selects
@@ -5178,7 +5180,7 @@ columns.
 
 The \Lit{-x}, \Lit{-y} and \Lit{-z} options only apply to the
 trajectory data and are useful for reducing the number of particle
-trajectories outputted by "cutting" the simulation box into more
+trajectories outputted by ``cutting'' the simulation box into more
 manageable slices.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
