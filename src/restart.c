@@ -11,6 +11,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 1.14  92/03/19  15:14:12  keith
+ * Added support for dynamic allocation of rolling average arrays,
+ * conversion of existing restart files is done on fly.
+ * 
  * Revision 1.13  91/08/23  14:12:46  keith
  * Fixed declaration of av_ptr to agree with definition in values.c
  * 
@@ -60,7 +64,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.13 91/08/23 14:12:46 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.14 92/03/19 15:14:12 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -230,7 +234,7 @@ system_p	system;
    cread(restart,  (gptr*)system->hddotvo, sizeof(vec_t), 3);
 
    ap = av_ptr(&asize);			/* get addr and size of database      */
-   if( asize == 0 || control.reset_averages)/* Don't read in any data	      */
+   if( asize == 0 )			/* Don't read in any data	      */
       cskip(restart);
    else
       cread(restart, ap, asize, 1);
