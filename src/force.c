@@ -29,6 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.19.2.3  2001/02/14 12:26:44  keith
+ *       Added improved test for close approaches from main branch
+ *
  *       Revision 2.19.2.1.2.8  2000/12/07 15:58:33  keith
  *       Mainly cosmetic minor modifications and added special comments to
  *       shut lint up.
@@ -209,7 +212,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.19.2.2 2000/12/19 11:47:48 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.19.2.3 2001/02/14 12:26:44 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -1008,8 +1011,13 @@ NOVECTOR
       imcell_offset=IMCELL_XTRA*IMCELL_L*IMCELL_L*ncells;
       ii0 = IMCELL_XTRA;
 #endif
-      pbclookup = arralloc(sizeof (int), 2, imcell_offset, NIMCELLS*ncells-1,0,1);
-      
+      /*
+       * N.B.  Use alloc of int[2] rather than 2-D dope-vector array
+       *       for efficieny.
+       */
+      pbclookup = (int (*)[2])arralloc(2*sizeof(int), 1,
+                                     imcell_offset, NIMCELLS*ncells-1); 
+
       icell4d=imcell_offset;
       for(ii = ii0; ii < IMCELL_L; ii++)
 	 for(ix = 0; ix < nx; ix++)
