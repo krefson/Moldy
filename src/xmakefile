@@ -18,6 +18,9 @@ XDR=-DUSE_XDR
 # MPI library
 #PARLIBC=-DSPMD -DMPI -I/usr/local/include/mpi
 #PARLIBL=-L/usr/local/lib -lmpi
+# MPI library on Edinburgh T3D
+#PARLIBC=-DSPMD -DMPI -I/usr/include/mpp
+#PARLIBL=-lmpi
 #  **** MSDOS with Turbo C ****
 #CC=tcc
 #CFLAGS= -A -DANSI_LIBS -f287 -mh -O -Z -G $(CFLAGS0)
@@ -25,7 +28,7 @@ XDR=-DUSE_XDR
 #LDFLAGS1= -mh $(LDFLAGS0)
 #  **** Scalar machines using default C compiler ****
 CFLAGS=	-O  $(XDR) $(PARLIBC) $(CFLAGS0)
-#LDFLAGS= $(LDFLAGS0)
+LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #INLINE=
 #  **** Scalar machines using gcc - can compile with -g ****
 #CC=	gcc
@@ -66,6 +69,8 @@ CFLAGS=	-O  $(XDR) $(PARLIBC) $(CFLAGS0)
 #INLINE=
 #  **** DEC Alpha ****
 #CFLAGS=	-O2 $(XDR) $(PARLIBC) $(CFLAGS0) -D_FASTMATH -DANSI_LIBS -std
+#CC=cc -migrate
+#CFLAGS= -O5 $(XDR) $(PARLIBC) $(CFLAGS0) -D_FASTMATH -DANSI_LIBS -std
 #CFLAGS2=
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #  **** HP 700 ****
@@ -93,6 +98,10 @@ CFLAGS=	-O  $(XDR) $(PARLIBC) $(CFLAGS0)
 #CFLAGS= -h nostdc,vector3,scalar3,report=itvf,ivdep,fastaddr $(XDR) $(PARLIBC) $(CFLAGS0)
 #LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" -lsci
 #INLINE=
+#  **** Cray T3D ****
+#CC=cc -Tcray-t3d
+#CFLAGS= -O2 $(PARLIBC) $(CFLAGS0)
+#LDFLAGS=$(PARLIBL) $(LDFLAGS0)
 #  ***** End *****
 LINT=		lint
 TAR=		tar
@@ -101,7 +110,7 @@ PFLAGS=		-P
 EPFLAGS=	-2r
 A2FLAGS=
 SHFILE=		$$file
-FILES = accel algorith alloc auxil beeman convert dump ewald force input \
+FILES = accel algorith alloc ansi auxil beeman convert dump ewald force input \
 	eigens kernel main matrix output quaterns rdf restart startup \
 	values xdr parallel
 
@@ -130,7 +139,9 @@ SHAKOBJS= $(SHAKS:%=%.o)
 
 UTILS = moldyext dumpanal dumpconv dumpext  manalyze
 
-EXTRAS = $(UTILS:%=%.c) mdshak.c ewald_parallel.c force_parallel.c ewald-RIL.c
+EXTRA0 = $(UTILS:%=%.c) mdshak.c ewald_parallel.c force_parallel.c
+
+EXTRAS = $(EXTRA0) ewald-RIL.c
 
 HFILES=		structs.h defs.h string.h time.h stddef.h stdlib.h messages.h xdr.h
 
@@ -178,9 +189,10 @@ install2:	moldy $(UTILS) mdshak
 
 Makefile:	xmakefile
 		@PATH=/usr/5bin:${PATH};\
-		echo		'{{{{{{\n/^CFILES *=/  c\\\nCFILES=' $(CFILES)\
+		echo		'{{{{{{{\n/^CFILES *=/  c\\\nCFILES=' $(CFILES)\
 				'\n}\n/^OFILES *=/  c\\\nOFILES=' $(OFILES)\
 				'\n}\n/^LFILES *=/  c\\\nLFILES=' $(LFILES)\
+				'\n}\n/^EXTRA0 *=/  c\\\nEXTRA0=' $(EXTRA0)\
 				'\n}\n/^EXTRAS *=/  c\\\nEXTRAS=' $(EXTRAS)\
 				'\n}\n/^SHAKC *=/   c\\\nSHAKC='  $(SHAKC)\
 				'\n}\n/^SHAKOBJS *=/  c\\\nSHAKOBJS='$(SHAKOBJS)\
@@ -356,11 +368,11 @@ force.o:	force.c structs.h defs.h
 #
 #  Rule for checking out source under RCS
 #
+$(CFILES) $(HFILES) $(EXTRA0) moldy.tex BENCHMARK COPYING READ.ME xmakefile:
+	co $@
+
 ewald-RIL.c:
 	co -pRIL ewald.c > ewald-RIL.c
-
-$(CFILES) $(HFILES) $(EXTRAS) moldy.tex:
-	co $@
 
 .SUFFIXES:	.c .o
 
