@@ -127,11 +127,11 @@
 %
 % Uncomment this for LaTeX2html translation
 %
-%\usepackage{html}
+\usepackage{html}
 %
 % Comment this out for LaTeX2html translation
 %
-\usepackage[breaklinks]{hyperref}
+%\usepackage[breaklinks]{hyperref}
 %begin{latexonly}
 \providecommand{\htmladdnormallink}[2]{#1}
 %end{latexonly}
@@ -1057,19 +1057,19 @@ option ought to be used.
 \section{Temperature Initialization and Control}%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 From the equipartition theorem, every degree of freedom in the system,
-$f$ has the same kinetic energy, given by $\left < {\mathcal K} \right
+$f$ has the same kinetic energy, given by $\left < \mathcal{K} \right
 >_f~=~\frac{1}{2}k_BT$.  The effective temperature of the system is
 therefore given by the ensemble average of its kinetic energy.
 \begin{equation}
 \label{eqn:equipartition}
-T = \left < {\mathcal T} \right > = \frac{2}{gk_B} \left <
-  \sum_{f=1}^{g} {\mathcal K}_f \right > = \frac{1}{3Nk_B}\left <
+T = \left < \mathcal{T} \right > = \frac{2}{gk_B} \left <
+  \sum_{f=1}^{g} \mathcal{K}_f \right > = \frac{1}{3Nk_B}\left <
   \sum_{i=1}^N m_i \bm{v}_i^2 + \bm{\omega}_i \cdot \bm{I} \cdot
   \bm{\omega}_i \right >
 \end{equation}
-Here ${\mathcal K}_f$ is the instantaneous kinetic energy of degree of
+Here $\mathcal{K}_f$ is the instantaneous kinetic energy of degree of
 freedom $f$, $g$ is the number of degrees of freedom, $N$ is the
-number of molecules, $\mathcal T$ is an instantaneous ``temperature''.
+number of molecules, $\mathcal{T}$ is an instantaneous ``temperature''.
 
 It is almost always desirable that a simulation be conducted so that
 the temperature is the supplied parameter rather than the kinetic
@@ -1100,7 +1100,7 @@ At periodic intervals linear and
 angular velocities are multiplied by a factor of
 \begin{equation}
 \label{eqn:scaling}
-s = \sqrt{\frac{gk_BT}{2\mathcal K}}
+s = \sqrt{\frac{gk_BT}{2\mathcal{K}}}
 \end{equation}
 where $T$ is the desired temperature.  By repeatedly setting the
 ``instantaneous'' temperature to the correct value while the system
@@ -1126,15 +1126,15 @@ The other refinement addresses the problem of setting the temperature
 accurately.  At equilibrium the system's kinetic energy fluctuates
 with mean-square amplitude\footnote{This formula actually applies to
 the Canonical rather than the microcanonical ensemble, but it serves
-for the purpose of this argument.} $\left < \delta {\mathcal K}^2\right > =
+for the purpose of this argument.} $\left < \delta \mathcal{K}^2\right > =
 \frac{1}{2}g\left(k_BT\right)^2$, which corresponds to a
 rms fluctuation in the instantaneous ``temperature'' 
-$\sqrt{\left < \delta {\mathcal T}^2\right >} = 
+$\sqrt{\left < \delta \mathcal{T}^2\right >} = 
 \sqrt{2 /g} T$.   
 The difficulty with applying equation~\ref{eqn:scaling}
-is the instantaneous kinetic energy $\mathcal K$ in the denominator.
+is the instantaneous kinetic energy $\mathcal{K}$ in the denominator.
 Strictly, scaling ought to use the \emph{average} kinetic energy
-$\left<\mathcal K \right>$ as in equation~\ref{eqn:equipartition}, but
+$\left<\mathcal{K} \right>$ as in equation~\ref{eqn:equipartition}, but
 this quantity is not known until after the run is completed.  Because
 of this equation~\ref{eqn:scaling} can only set the temperature to an
 accuracy of $\sqrt{1/g}$.  This is often inadequate for purposes of
@@ -1144,21 +1144,21 @@ In order to allow the temperature to be set with greater accuracy,
 \moldy\ allows the use of a partial average in the denominator,
 \begin{equation}
 \label{eqn:rav-scaling}
-s = \sqrt{\frac{gk_BT}{2\left < {\mathcal  K}\right >^\prime}}
+s = \sqrt{\frac{gk_BT}{2\left < \mathcal{K}\right >^\prime}}
 \end{equation}
-where $\left < {\mathcal K}\right >^\prime$ is the ``rolling'' average of
-$\mathcal K$ over some number of preceding timesteps.  That number is
+where $\left < \mathcal{K}\right >^\prime$ is the ``rolling'' average of
+$\mathcal{K}$ over some number of preceding timesteps.  That number is
 determined by the control parameter \Lit{roll-interval}.   
 
-This option should be used cautiously.  The change in $\left <{\mathcal
-K}\right >$ upon scaling only has a significant effect on the average
-after many timesteps. If the subsequent scaling is performed before
-this change is reflected in the value of $\left < {\mathcal K}\right
->^\prime$ it will use an out-of-date value of the average kinetic
-energy.  It is therefore recommended that the number of timesteps
-between scalings be greater than or equal to the number used to
-compute the rolling average.  Otherwise it is possible to produce wild
-overshoots and oscillations in the temperature.
+This option should be used cautiously.  The change in $\left
+  <\mathcal{K}\right >$ upon scaling only has a significant effect on
+the average after many timesteps. If the subsequent scaling is
+performed before this change is reflected in the value of $\left <
+  \mathcal{K}\right >^\prime$ it will use an out-of-date value of
+the average kinetic energy.  It is therefore recommended that the
+number of timesteps between scalings be greater than or equal to the
+number used to compute the rolling average.  Otherwise it is possible
+to produce wild overshoots and oscillations in the temperature.
 
 Finally, there is a method for tackling really difficult cases when
 even individual scaling is unable to keep the temperature under
@@ -1185,7 +1185,7 @@ motion (equations~\ref{eqn:newton} and~\ref{eqn:euler}) are modified thus
 \bm{I}_i \cdot \dot{\bm{\omega}}_i - \bm{\omega}_i \times \bm{I}_i
 \cdot
 \bm{\omega}_i &=& \bm{N}_i - \zeta \bm{I}_i \cdot \bm{\omega}_i \\
-\dot{\zeta} &=& \frac{g}{Q}\left ( k_B {\mathcal T} - k_B T \right )
+\dot{\zeta} &=& \frac{g}{Q}\left ( k_B \mathcal{T} - k_B T \right )
 \nonumber
 \end{eqnarray}
 
@@ -1209,7 +1209,7 @@ velocities in equations~\ref{eqn:par}.  It is therefore treated as if
 it was a velocity and updated using only steps \emph{ii--v} of the
 Beeman integration procedure (equations~\ref{sec:beeman}).  Note that
 the equation for the centre-of-mass acceleration depends
-\emph{indirectly} on the velocities through $\mathcal T$ as well as
+\emph{indirectly} on the velocities through $\mathcal{T}$ as well as
 explicitly.  The iteration on steps \emph{iii--v} of
 equations~\ref{sec:beeman} is therefore essential to integrate these
 equations consistently.
@@ -1236,7 +1236,7 @@ satisfy them both.
 \subsection{Gaussian Thermostat}
 An alternative approach is known as ``constrained dynamics'' whereby
 the equations of motion are modified to generate trajectories which
-exactly satisfy ${\mathcal T} = T$ at all times.  One such is the Gaussian
+exactly satisfy $\mathcal{T} = T$ at all times.  One such is the Gaussian
 constraint (see Allen and Tildesley\cite{allen:87} pp 230-231). The
 equations of motion are 
 
@@ -1256,7 +1256,7 @@ These bear a superficial resemblance to equations~\ref{eqn:nhtherm}
 but now $\zeta$ is not itself a dynamical variable but a function of the
 other dynamical variables.  Note
 that $T$ does not enter explicitly into  equations~\ref{eqn:gtherm}
-since ${\mathcal T}$ is now a conserved quantity equal to its initial
+since $\mathcal{T}$ is now a conserved quantity equal to its initial
 value at all subsequent times. Perhaps surprisingly these equations of
 motion generate configurational \emph{averages} from the canonical
 ensemble, but this does \emph{not} hold true for the momenta and
@@ -1662,7 +1662,7 @@ framework system.    The pressure of a system in a space with periodic
 boundary conditions  is defined in terms of the molecular virial
 \begin{equation}
 \label{eqn:virial}
-{\mathcal W} = \frac{1}{3} \sum_{i=1}^N \sum_{j \neq i}^N \bm{R}_{ij}
+\mathcal{W} = \frac{1}{3} \sum_{i=1}^N \sum_{j \neq i}^N \bm{R}_{ij}
 \cdot \bm{F}_{ij}
 \end{equation}
 But the framework has no centre-of-mass, and so the quantity
@@ -3539,7 +3539,7 @@ a vector of (squared) distances between some reference site and its
 neighbour sites.  Vectors of potential parameters and charges are
 supplied which bear a one to one correspondence with the elements of
 the distance vector.  It calculates the corresponding values of
-$\frac{1}{r_{ij}}\frac{dU(r_{ij})}{dr_{ij}}$ which it stores in
+$-\frac{1}{r_{ij}}\frac{dU(r_{ij})}{dr_{ij}}$ which it stores in
 \Lit{forceij[]}.  There are several variants of the force-calculation
 loop, one for each kind of potential.  The potential type in use is
 passed as a parameter to \Lit{kernel()} and is used in a \Lit{switch}
