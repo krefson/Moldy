@@ -22,6 +22,9 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.23  2000/04/27 17:57:10  keith
+ *       Converted to use full ANSI function prototypes
+ *
  *       Revision 2.22  2000/04/26 16:01:01  keith
  *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
  *
@@ -82,7 +85,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/parallel.c,v 2.22 2000/04/26 16:01:01 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2.23 2000/04/27 17:57:10 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -1102,11 +1105,12 @@ void	copy_dynamics(system_mp system)
    par_broadcast((gptr*)system->hdot,    9, sizeof(real), 0);
    par_broadcast((gptr*)system->hdotp,   9, sizeof(real), 0); 
 
-   par_broadcast((gptr*)system->ta,      system->nspecies, sizeof(real), 0);
-   par_broadcast((gptr*)system->tap,     system->nspecies, sizeof(real), 0);
+   par_broadcast((gptr*)&system->ts,      1, sizeof(real), 0);
+   par_broadcast((gptr*)&system->tsmom,   1, sizeof(real), 0);
 					                   	      
-   par_broadcast((gptr*)system->ra,      system->nspecies, sizeof(real), 0);
-   par_broadcast((gptr*)system->rap,     system->nspecies, sizeof(real), 0);
+   par_broadcast((gptr*)&system->rs,      1, sizeof(real), 0);
+   par_broadcast((gptr*)&system->rsmom,   1, sizeof(real), 0);
+
 
    ap = av_ptr(&asize,0);	      /* get addr, size of database   */
    par_broadcast(ap, 1, asize,0);
