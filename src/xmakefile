@@ -80,9 +80,9 @@ UTILC= $(UTILS:%=%.c) $(UTILS2:%=%.c)
 
 UTILO= $(UTILC:%.c=%.o) ReadDCD.o utlsup.o molout.o
 
-EXTRA0 = $(UTILC) getopt.c ReadDCD.c ReadDCD.h ewald_parallel.c \
-         force_parallel.c configure.in config.h.in defconf.h aclocal.m4 \
-         config.guess config.sub list.h plotrdf utlsup.c utlsup.h molout.c
+EXTRA0 = $(UTILC) getopt.c ReadDCD.c ReadDCD.h configure.in config.h.in \
+	 defconf.h aclocal.m4 config.guess config.sub list.h \
+	 plotrdf utlsup.c utlsup.h molout.c
 
 EXTRAS= $(EXTRA0) ewald-RIL.c configure Makefile.in install-sh 
 
