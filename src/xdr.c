@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.17  2000/11/09 16:28:03  keith
+ *       Updated dump file format for new Leapfrog dynamics\nAdded #molecules etc to dump header format
+ *
  *       Revision 2.16  2000/11/06 16:02:08  keith
  *       First working version with a Nose-Poincare thermostat for rigid molecules.
  *
@@ -108,7 +111,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.16 2000/11/06 16:02:08 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.17 2000/11/09 16:28:03 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -190,7 +193,7 @@ bool_t xdr_species(XDR *xdrs, spec_mt *sp)
    return
       xdr_vector(xdrs, (gptr*)sp->inertia, 6, sizeof(real), (xdrproc_t)xdr_real) &&
       xdr_vector(xdrs, (gptr*)&sp->nsites, 4, sizeof(int), (xdrproc_t)xdr_int) &&
-      xdr_opaque(xdrs, sp->name, 32) &&
+      xdr_opaque(xdrs, sp->name, L_spec) &&
       /*
        * This is an awful hack.  There are 8 real[3]* pointers
        * next.  Their stored values are NEVER re-used so we just
@@ -207,7 +210,7 @@ bool_t xdr_site(XDR *xdrs, site_mt *sp)
    return
       xdr_double(xdrs, &sp->mass) &&
       xdr_double(xdrs, &sp->charge) &&
-      xdr_opaque(xdrs, sp->name, 8) &&
+      xdr_opaque(xdrs, sp->name, L_site) &&
       xdr_int(xdrs, &sp->flag) &&
       xdr_int(xdrs, &sp->pad);
 }
@@ -233,26 +236,31 @@ bool_t xdr_restrt(XDR *xdrs, restrt_mt *sp)
    return
       xdr_u_long(xdrs, &sp->timestamp) &&
       xdr_u_long(xdrs, &sp->prev_timestamp) &&
-      xdr_opaque(xdrs, sp->init_date, DLEN+L_name+16) &&
+      xdr_opaque(xdrs, sp->init_date, DLEN+L_name+L_vsn) &&
       xdr_int(xdrs, &sp->seq);
 }
 
 bool_t xdr_dump(XDR *xdrs, dump_mt *sp)
 {
    return
-      xdr_opaque(xdrs, sp->title, L_name+16) &&
+      xdr_opaque(xdrs, sp->title, L_name+L_vsn) &&
       xdr_vector(xdrs, (gptr*)&sp->istep, 2, sizeof(long), (xdrproc_t)xdr_long) &&
       xdr_vector(xdrs, (gptr*)&sp->dump_level, 4, sizeof(int), (xdrproc_t)xdr_int) &&
-      xdr_vector(xdrs, (gptr*)&sp->timestamp, 3, sizeof(unsigned long), (xdrproc_t)xdr_u_long) &&
-      xdr_vector(xdrs, (gptr*)&sp->nmols, 2, sizeof(int), (xdrproc_t)xdr_int);
+      xdr_vector(xdrs, (gptr*)&sp->timestamp, 4, sizeof(unsigned long), (xdrproc_t)xdr_u_long);
 }
-bool_t xdr_dump_v2(XDR *xdrs, dump_mt *sp)
+
+bool_t xdr_dump_sysinfo(XDR *xdrs, dump_sysinfo_mt *sp)
 {
-   return
-      xdr_opaque(xdrs, sp->title, L_name+16) &&
-      xdr_vector(xdrs, (gptr*)&sp->istep, 2, sizeof(long), (xdrproc_t)xdr_long) &&
-      xdr_vector(xdrs, (gptr*)&sp->dump_level, 4, sizeof(int), (xdrproc_t)xdr_int) &&
-      xdr_vector(xdrs, (gptr*)&sp->timestamp, 3, sizeof(unsigned long), (xdrproc_t)xdr_u_long);
+   int i, ispec;
+   i = 
+      xdr_float(xdrs, &sp->deltat) &&
+      xdr_vector(xdrs, (gptr*)&sp->nmols, 3, sizeof(int), (xdrproc_t)xdr_int);
+   for(ispec = 0; ispec < sp->nspecies; ispec++)
+   {
+      i = i && xdr_opaque(xdrs, (gptr*)&sp->mol[ispec].name, L_spec);
+      i = i && xdr_vector(xdrs, (gptr*)&sp->mol[ispec].nmols, 2, sizeof(int), (xdrproc_t)xdr_int);
+   }
+   return i;
 }
 
 static
@@ -348,6 +356,7 @@ xdr_vector(xdrs, basep, nelem, elemsize, xdr_elem)
 bool_t xdr_averages(XDR *xdrs, gptr *ap){return 0;}
 bool_t xdr_contr(XDR *xdrs, contr_mt *cp){return 0;}
 bool_t xdr_dump(XDR *xdrs, dump_mt *sp){return 0;}
+bool_t xdr_dump_sysinfo(XDR *xdrs, dump_sysinfo_mt *sp){return 0;}
 bool_t xdr_pot(XDR *xdrs, pot_mt *sp){return 0;}
 bool_t xdr_real(XDR *xdrs, real *rp){return 0;}
 bool_t xdr_restrt(XDR *xdrs, restrt_mt *sp){return 0;}

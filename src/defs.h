@@ -19,9 +19,13 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.16 2000/11/09 16:28:03 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.17 2000/11/13 16:01:22 keith Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.17  2000/11/13 16:01:22  keith
+ * Changed dump format to contain principle-frame angular velocities.
+ * Adapted mdvaf.c to calculate angular acf's too - added "-a" flag.
+ *
  * Revision 2.16  2000/11/09 16:28:03  keith
  * Updated dump file format for new Leapfrog dynamics\nAdded #molecules etc to dump header format
  *
@@ -286,7 +290,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * Version ID strings
  */
 #define          REVISION         "$Name:  $"
-#define		 REVISION_DATE    "$Date: 2000/11/09 16:28:03 $"
+#define		 REVISION_DATE    "$Date: 2000/11/13 16:01:22 $"
 #define		 REVISION_STATE   "$State: Exp $"
 
 #ifdef HAVE_CONFIG_H
@@ -360,7 +364,15 @@ what you give them.   Help stamp out software-hoarding!  */
 
 #define MOLPBC 1
 #define SITEPBC 0
+/*
+ * N.B.  If these are changed the restart and dump formats will be incompatible.
+ */
+#define         SFORM   "%127[^#]" /* Format for scanf to read strings safely */
 #define	L_name		128			/* Max Length of file names  */
+#define L_spec           32			/* Max length of species name*/
+#define L_site            8			/* Max length of site name   */
+#define L_vsn            16			/* Max length of RCS version */
+#define DLEN             28			/* Length of date/time string*/
 #define	NPE		2			/* real & Ewald PE's	     */
 #ifdef MAX
 #undef  MAX

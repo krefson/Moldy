@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/messages.h,v 2.20.4.1 2000/10/20 11:48:53 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/messages.h,v 2.21 2000/10/20 15:15:47 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -134,6 +134,7 @@ rotational degrees of freedom (%d vs %d)"
 #define	CORUPT	"Dump file \"%s\" corrupt - expected %d bytes, found %d"
 #define DOERRR	"Failed to open dump file \"%s\"\n    -  %s"
 #define DRERR	"Read from dump file \"%s\" failed\n    -  %s"
+#define DHDERR	"Failed to read header from dump file \"%s\""
 #define DMPALT	"Dump-level altered on restart: new dump run started"
 #define DMPAL2	"Dump-interval or maxdumps altered on restart: new dump run started"
 #define DMPEXS	"File \"%s\" exists - Dumps will be written to \"%s\""
@@ -149,7 +150,8 @@ correction of %g kJmol(-1) added to self energy"
 number of words"
 #define NCNVRG  "Do_step: velocities failed to converge after %d iterations \
 - dist = %f"
-#define INRVSN	"Values.c:init_averages: Invalid RCS version \"%s\"\n"
+#define INRVSN	"Values.c:init_averages: Invalid RCS version \"%s\""
+#define OLDVSN	"Attempt to append to incompatible version of dump files (RCS version \"%s\")"
 #define CPOTFL  "Not enough space to store potential parameters from restart\
  file.  Increase NPOTP in \"defs.h\" from %d to at least %d and recompile"
 #define LOCKED   "Another instance of MOLDY is accessing the same %s files.\n\

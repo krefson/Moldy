@@ -28,9 +28,13 @@ what you give them.   Help stamp out software-hoarding!  */
 #   include	"xdr.h"
 #endif
 #include        "utlsup.h"
+#include	"messages.h"
 
 int		getopt(int, char *const *, const char *);
 
+#ifdef USE_XDR
+   XDR          xdrs;
+#endif
 /******************************************************************************
  * strstr replacement for pre-ANSI machines which don't have it.              *
  ******************************************************************************/
@@ -103,11 +107,138 @@ put(float *buf, int n, int bflg)
 	 fprintf(stdout,"%7g ",*buf++);
 
 }
+FILE  *open_dump(char *fname, char *mode)
+{
+   FILE *dumpf;
+
+   dumpf = fopen(fname, mode);
+   
+#ifdef USE_XDR
+   if( dumpf )
+   {
+      if( mode[0] == 'w' || mode[0] && mode[1] == '+' ||  mode[1] && mode[2] == '+')
+	 xdrstdio_create(&xdrs, dumpf, XDR_ENCODE);
+      else
+	 xdrstdio_create(&xdrs, dumpf, XDR_DECODE);
+   }
+#endif
+    return dumpf;
+}
+
+int close_dump(FILE *dumpf)
+{
+#ifdef USE_XDR
+   xdr_destroy(&xdrs);
+#endif
+   return fclose(dumpf);
+}
+int rewind_dump(FILE *dumpf, int xdr)
+{
+#ifdef USE_XDR
+   if( xdr )
+      xdr_setpos(&xdrs, 0);
+#endif
+   return fseek(dumpf, 0L, SEEK_SET);
+}
+
+static
+int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_write,
+		     int sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
+{
+   int      errflg = true;	/* Provisionally !!   */
+   char     vbuf[sizeof hdr_p->vsn + 1];
+   int	    vmajor,vminor;
+
+   *xdr_write = false;
+#ifdef USE_XDR
+   /*
+       * Attempt to read dump header in XDR format
+       */
+   if( xdr_dump(&xdrs, hdr_p) )
+   {
+      strncpy(vbuf,hdr_p->vsn,sizeof hdr_p->vsn);
+      vbuf[sizeof hdr_p->vsn] = '\0';
+      if( strstr(vbuf,"(XDR)") )
+      {
+	 errflg = false;
+	 *xdr_write = true;
+      }
+   }
+#endif
+   /*
+    * If we failed, try to read header as native struct image.
+    */
+   if( ! *xdr_write )
+   {
+      if( fseek(dumpf, 0L, 0) ) 
+	 message(NULLI, NULLP, WARNING, SEFAIL, fname, strerror(errno));
+      else if( fread((gptr*)&*hdr_p, sizeof(dump_mt), 1, dumpf) == 0 )
+	 message(NULLI, NULLP, WARNING, DRERR, fname, strerror(errno));
+      else
+	 errflg = false;
+   }
+   if( ! errflg )
+   {
+      /*
+       * Parse header version
+       */
+      errflg = true;
+      if( sscanf(hdr_p->vsn, "%d.%d", &vmajor, &vminor) < 2 )
+	 message(NULLI, NULLP, WARNING, INRVSN, hdr_p->vsn);
+      if( vmajor < 2 || vminor <= 17)
+	 message(NULLI, NULLP, WARNING, OLDVSN, hdr_p->vsn);
+      else
+	 errflg = false;
+   }
+   if( ! errflg && dump_sysinfo )
+   {
+      if( hdr_p->sysinfo_size != sysinfo_size )
+	 message(NULLI, NULLP, WARNING, CORUPT, fname, sysinfo_size, 
+		 hdr_p->sysinfo_size);
+      /*
+       * Now check for sysinfo and read it
+       */
+#ifdef USE_XDR
+      if( *xdr_write ) {
+	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo) )
+	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+	 errflg = false;
+      } else
+#endif
+      {
+	 if( fread((gptr*)dump_sysinfo, sysinfo_size, 1, dumpf) == 0)
+	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+	 errflg = false;
+      }
+   }
+   return errflg;
+}
+
+static
+void read_dump_record(gptr *dump_buf, FILE *dumpf, size_mt dump_size, 
+		       char *cur_file, boolean xdr_write)
+{
+#ifdef USE_XDR
+   if( xdr_write )
+   {
+      if( ! xdr_vector(&xdrs, dump_buf, dump_size, sizeof(float), 
+		     (xdrproc_t)xdr_float) )
+	 message(NULLI, NULLP, FATAL, DRERR, cur_file, strerror(errno));
+   }
+   else
+#endif
+   {
+      if( fread(dump_buf, sizeof(float), dump_size, dumpf) ==0 )
+	 message(NULLI, NULLP, FATAL, DRERR, cur_file, strerror(errno));
+   }
+}
+
 /******************************************************************************
  * Extract.  Process one dump file, extracting and outputting data.	      *
  ******************************************************************************/
 void
-extract(char *dump_name, int cpt_mask, list_mt *molecules, cpt_mt *cpt, int ncpt, int tslice, int num, int inc, int bflg, int nmols, int xdr)
+extract(char *dump_name, int cpt_mask, list_mt *molecules, cpt_mt *cpt, int ncpt, 
+	int tslice, int num, int inc, int bflg, int nmols, int xdr, size_mt sysinfo_size)
 {
    FILE		*dump_file;
    dump_mt	header;
@@ -116,12 +247,9 @@ extract(char *dump_name, int cpt_mask, list_mt *molecules, cpt_mt *cpt, int ncpt
    int		icpt, start, nitems;
    list_mt	*mol;
    int		errflg = 0;
-#ifdef USE_XDR
-   XDR          xdrs;
-#endif
-
+   dump_sysinfo_mt *dump_sysinfo =  (dump_sysinfo_mt*)malloc(sysinfo_size);
    
-   if( (dump_file = fopen(dump_name, "rb")) == NULL)
+   if( (dump_file = open_dump(dump_name, "rb")) == NULL)
    {
       fprintf(stderr, "Failed to open dump file \"%s\"\n", dump_name);
       exit(2);
@@ -129,23 +257,10 @@ extract(char *dump_name, int cpt_mask, list_mt *molecules, cpt_mt *cpt, int ncpt
 #ifdef DEBUG
    fprintf(stderr,"Working on file \"%s\" (%d-%d)\n", dump_name, tslice, num);
 #endif
-#ifdef USE_XDR
-   /*
-    * Attempt to read dump header in XDR format
-    */
-   if( xdr )
-   {
-      xdrstdio_create(&xdrs, dump_file, XDR_DECODE);
-      errflg = ! xdr_dump(&xdrs, &header);
-   }
-   else
-#endif
-   {
-      if( fread((char*)&header, sizeof(dump_mt), 1, dump_file) == 0 )
-	 errflg = false;
-   }
          
-   if( errflg || ferror(dump_file) || feof(dump_file) )
+   if( read_dump_header(dump_name, dump_file, &header, &xdr, 
+			sysinfo_size, dump_sysinfo) 
+       || ferror(dump_file) || feof(dump_file) )
    {
       fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
       exit(2);
@@ -153,10 +268,12 @@ extract(char *dump_name, int cpt_mask, list_mt *molecules, cpt_mt *cpt, int ncpt
 
 #ifdef USE_XDR
    if( xdr )
-      dump_base = XDR_DUMP_SIZE+tslice*header.dump_size*XDR_FLOAT_SIZE;
+      dump_base = XDR_DUMP_SIZE + XDR_SYSINFO_SIZE(dump_sysinfo->nspecies) 
+	                        + tslice*header.dump_size*XDR_FLOAT_SIZE;
    else
 #endif
-      dump_base = sizeof(dump_mt)+tslice*header.dump_size*sizeof(float);
+      dump_base = sizeof(dump_mt) + sysinfo_size 
+	                        + tslice*header.dump_size*sizeof(float);
    while(tslice < num && tslice < header.ndumps)
    {
 #ifdef DEBUG
@@ -202,12 +319,35 @@ extract(char *dump_name, int cpt_mask, list_mt *molecules, cpt_mt *cpt, int ncpt
 #endif
 	 dump_base += inc*sizeof(float) * header.dump_size;
    }
-#ifdef USE_XDR
-   if( xdr )
-      xdr_destroy(&xdrs);
-#endif
-   (void)fclose(dump_file);
+   (void)close_dump(dump_file);
    (void)free((char*)buf);
+   (void)free((char*)dump_sysinfo);
+}
+
+void	print_header(dump_mt *header, dump_sysinfo_mt *sysinfo)
+{
+   int ispec;
+   printf("Title\t\t\t\t= \"%s\"\n",header->title);
+   printf("RCS Revision\t\t\t= %.*s\n", (int)strlen(header->vsn), header->vsn);
+   printf("Istep\t\t\t\t= %d\n",header->istep);
+   printf("Dump_interval\t\t\t= %d\n", header->dump_interval);
+   printf("Dump_level\t\t\t= %d\n", header->dump_level);
+   printf("Max dumps\t\t\t= %d\n", header->maxdumps);
+   printf("Dump Size\t\t\t= %d\n", header->dump_size);
+   printf("Number of dumps\t\t\t= %d\n", header->ndumps);
+   printf("Timestamp\t\t\t= %s", ctime((time_t*)&header->timestamp));
+   printf("Restart Timestamp\t\t= %s", ctime((time_t*)&header->restart_timestamp));
+   printf("Dump Start\t\t\t= %s", ctime((time_t*)&header->dump_init));
+   printf("Time between dumps\t\t= %fps\n", sysinfo->deltat);
+   printf("Number of molecules\t\t= %d\n", sysinfo->nmols);
+   printf("Number of polyatomics\t\t= %d\n", sysinfo->nmols_r);
+   printf("Number of species\t\t= %d\n", sysinfo->nspecies);
+   for(ispec = 0; ispec < sysinfo->nspecies; ispec++)
+   {
+      printf("Species %d name\t\t\t= %s\n", ispec+1, sysinfo->mol[ispec].name);
+      printf("  Number of molecules\t\t= %d\n",sysinfo->mol[ispec].nmols);
+      printf("  Rotational deg. of freedom\t= %d\n", sysinfo->mol[ispec].rdof);
+   }
 }
 
 int
@@ -218,7 +358,7 @@ main(int argc, char **argv)
    extern char	*optarg;
    int		errflg = 0, genflg = 0, tsflg = 0, bflg = 0;
    int          nmols=-1, nmols_r=-1;
-   int		xcpt= -1;
+   int		xcpt= -2;
    char		*dump_name=0, *dump_base=0, *out_name=0;
    char		cur_dump[256];
    char		*tsrange;
@@ -229,9 +369,7 @@ main(int argc, char **argv)
    int		offset, icpt;
    int		idump0;
    int		xdr = 0;
-#ifdef USE_XDR
-   XDR          xdrs;
-#endif
+   dump_sysinfo_mt *dump_sysinfo;
    
    static cpt_mt cpt[] = {{3, 0, 3, 1, "C of M positions"},
 			  {4, 0, 4, 1, "quaternions"},
@@ -329,13 +467,14 @@ main(int argc, char **argv)
    if( nmols_r < 0)
       nmols_r = get_int("Number of polyatomic molecules? ",0,1000000);
 #endif
-   if( xcpt < 0 )
+   if( xcpt < -1 )
    {
       fprintf(stderr,"Which quantity do you require?\n");
+      fprintf(stderr,"\t%-32s %d\n","Header information",-1);
       fprintf(stderr,"\t%-32s %d\n","All data components",0);
       for(icpt = 0; icpt < NCPT; icpt++)
 	 fprintf(stderr,"\t%-32s %d\n",cpt[icpt].name,icpt+1);
-      xcpt=get_int("Quantity index (0-13)? ",0,NCPT);
+      xcpt=get_int("Quantity index (0-13)? ",-1,NCPT);
    }
    /*
     *  Generate list of dump files if required
@@ -376,40 +515,15 @@ main(int argc, char **argv)
 	    break;
       }
 
-      if( (dump_file = fopen(dump_name, "rb")) == NULL)
+      if( (dump_file = open_dump(dump_name, "rb")) == NULL)
       {
 	 if( genflg )
 	    break;		/* Exit loop if at end of sequence */
 	 fprintf(stderr, "Failed to open dump file \"%s\"\n", dump_name);
 	 exit(2);
       }
-#ifdef USE_XDR
-      /*
-       * Attempt to read dump header in XDR format
-       */
-      xdrstdio_create(&xdrs, dump_file, XDR_DECODE);
-      if( xdr_dump(&xdrs, &header) )
-      {
-	 header.vsn[sizeof header.vsn - 1] = '\0';
-	 if( strstr(header.vsn,"(XDR)") )
-	 {
-	    errflg = 0;
-	    xdr = 1;
-	 }
-      }
-      else
-	 errflg = 1;
-#endif
-      /*
-       * If we failed, try to read header as native struct image.
-       */
-      if( ! xdr )
-      {
-	 if( fseek(dump_file, 0L, 0) == 0 &&
-             fread((char*)&header, sizeof(dump_mt), 1, dump_file) == 1) 
-	    errflg = 0;
-      }
-      if( errflg || ferror(dump_file) || feof(dump_file) )
+      if( read_dump_header(dump_name, dump_file, &header, &xdr, 0, 0) 
+	                       || ferror(dump_file) || feof(dump_file) )
       {
 	 fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
 	 exit(2);
@@ -418,8 +532,23 @@ main(int argc, char **argv)
       if( nfiles++ == 0 )
       {
 	 proto_header = header;
-	 nmols = header.nmols;
-	 nmols_r = header.nmols_r;
+	 /*
+	  * Allocate space for and read dump sysinfo.
+	  */
+	 dump_sysinfo = (dump_sysinfo_mt*)malloc(header.sysinfo_size);
+	 /*
+	  * Rewind and reread header, this time including sysinfo.
+	  */
+	 (void)rewind_dump(dump_file, xdr);
+	 if( read_dump_header(dump_name, dump_file, &header, &xdr, 
+			      header.sysinfo_size, dump_sysinfo) 
+	     || ferror(dump_file) || feof(dump_file) )
+	 {
+	    fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
+	    exit(2);
+	 }
+	 nmols   = dump_sysinfo->nmols;
+	 nmols_r = dump_sysinfo->nmols_r;
       }
       else if( strncmp(header.title, proto_header.title, L_name) ||
 	      strncmp(header.vsn, proto_header.vsn, sizeof header.vsn) ||
@@ -432,11 +561,8 @@ main(int argc, char **argv)
 	 exit(2);
       };
 
-#ifdef USE_XDR
-      if( xdr )
-	 xdr_destroy(&xdrs);
-#endif
-      (void)fclose(dump_file);
+      (void)close_dump(dump_file);
+
       cur = (list_mt *)calloc(1, sizeof(list_mt));
       cur->p = mystrdup(dump_name);
       cur->i = header.istep/header.dump_interval;
@@ -565,6 +691,19 @@ main(int argc, char **argv)
 	 fprintf(stderr,"Failed to open file \"%s\" for output - ",out_name);
 	 exit(4);
       }
+
+   if( xcpt == -1 )
+   {
+      if( bflg )
+      {
+	 fwrite(&proto_header, sizeof(proto_header), 1, stdout);
+	 fwrite(dump_sysinfo, sizeof(*dump_sysinfo), 1, stdout);
+      }
+      else
+	 print_header(&proto_header, dump_sysinfo);
+      exit(0);
+   }
+
    /*
     *  Do the extraction
     */
@@ -574,7 +713,8 @@ main(int argc, char **argv)
       {
 	 extract(cur->p, xcpt?1<<(xcpt-1):~0, mol_head.next, cpt, NCPT, 
 		 tslice-cur->i,
-		 MIN(cur->num,numslice-cur->i), inc, bflg, nmols, xdr);
+		 MIN(cur->num,numslice-cur->i), inc, bflg, nmols, xdr,
+		 proto_header.sysinfo_size);
 	 tslice += (cur->i + cur->num - tslice - 1) / inc * inc + inc;
       }
    }

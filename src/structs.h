@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.12 2000/11/06 16:02:07 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.13 2000/11/09 16:28:02 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.13  2000/11/09 16:28:02  keith
+ * Updated dump file format for new Leapfrog dynamics\nAdded #molecules etc to dump header format
+ *
  * Revision 2.12  2000/11/06 16:02:07  keith
  * First working version with a Nose-Poincare thermostat for rigid molecules.
  *
@@ -159,7 +162,6 @@ what you give them.   Help stamp out software-hoarding!  */
 
 #include "defs.h"
 
-#define         SFORM   "%127[^#]" /* Format for scanf to read strings safely */
 typedef struct                  /* Control parameters for simulation          */
 {
    char         title[L_name];  /* Job title                                  */
@@ -262,7 +264,7 @@ typedef struct                  /* Information for one species                */
                 nmols;          /* Number of molecules of this species        */
    int          rdof,           /* Rotational degrees of freedom (2=linear)   */
                 framework;      /* Flag to signal this is a framework species */
-   char         name[32];       /* Name of this species                       */
+   char         name[L_spec];   /* Name of this species                       */
    int          *site_id;       /* site identifier array                      */
    vec_mp       p_f_sites;      /* Site co-ordinates in principal frame       */
                 /* Dynamic variable arrays for this species                   */
@@ -282,7 +284,7 @@ typedef struct                  /* site info template.                        */
 {
    double       mass,
                 charge;
-   char         name[8];
+   char         name[L_site];
    int          flag;
    int          pad;
 }       site_mt,  *site_mp;
@@ -325,21 +327,20 @@ typedef struct                          /* Struct template for keyword        */
    gptr *ptr;
 }       match_mt;
 
-#define DLEN    28              /* Length of date/time string                 */
 typedef struct                  /* Restart file header format                 */
 {
    time_mt      timestamp,      /* Date and time restart file was written     */
                 prev_timestamp; /* Timestamp of preceding restart file        */
    char         init_date[DLEN],/* Date run was initiated (propagated through)*/
                 title[L_name],  /* Title when run was initiated               */
-                vsn[16];        /* Version SID of program that wrote restart  */
+                vsn[L_vsn];     /* Version SID of program that wrote restart  */
    int          seq;            /* Sequence NO.  eg 5th restart in run        */
 }       restrt_mt;
 
 typedef struct                  /* Dump file header format                    */
 {
    char         title[L_name],  /* Run title at beginning of dump run         */
-                vsn[16];        /* RCS Revision number                        */
+                vsn[L_vsn];     /* RCS Revision number                        */
    long         istep,          /* Timestep at beginning of this file         */
                 dump_interval;  /* How many steps between dumps               */
    int          dump_level,     /* Parameter determining contents of record   */
@@ -349,23 +350,23 @@ typedef struct                  /* Dump file header format                    */
    time_mt      timestamp,      /* Time file was written                      */
                 dump_init,      /* Time dump run was started (ie first file)  */
                 restart_timestamp;/* Time corresponding restart file written  */
-   int		nmols, nmols_r; /* Number of molecules and rotations          */
+   size_mt	sysinfo_size;
 }       dump_mt;
 
-typedef struct                  /* Dump file header format                    */
+struct mol_mt
 {
-   char         title[L_name],  /* Run title at beginning of dump run         */
-                vsn[16];        /* RCS Revision number                        */
-   long         istep,          /* Timestep at beginning of this file         */
-                dump_interval;  /* How many steps between dumps               */
-   int          dump_level,     /* Parameter determining contents of record   */
-                maxdumps,       /* Maximum number of dump records in file     */
-                ndumps,         /* How many dump records in file              */
-                dump_size;      /* Size of a dump record                      */
-   time_mt      timestamp,      /* Time file was written                      */
-                dump_init,      /* Time dump run was started (ie first file)  */
-                restart_timestamp;/* Time corresponding restart file written  */
-}       dump_2_mt;
+   char name[L_spec];
+   int nmols;
+   int rdof;
+} mol_mt;
+
+typedef struct dump_sysinfo_mt  /* Dump file system info format               */
+{
+   float      deltat;		/* Timestep*dump-interval		      */
+   int	      nmols, nmols_r;   /* Number of molecules and rotations          */
+   int	      nspecies;         /* Number of species in system.		      */
+   struct     mol_mt mol[1]; /* Number of molecules per species         1   */
+}       dump_sysinfo_mt;
 
 #define MAX_ROLL_INTERVAL       100
 typedef struct

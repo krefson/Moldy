@@ -27,6 +27,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  * $Log: main.c,v $
+ * Revision 2.15  2000/04/27 17:57:09  keith
+ * Converted to use full ANSI function prototypes
+ *
  * Revision 2.14  1999/10/08 10:53:34  keith
  * Added checks to behave sensibly if rdf-interval changed during accumulation
  * of RDF data upon restart and to discard excess data if begin-rdf changed.
@@ -171,7 +174,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/main.c,v 2.14 1999/10/08 10:53:34 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.15 2000/04/27 17:57:09 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -193,7 +196,6 @@ double	value(av_n type, int comp);
 void	averages(void);
 void	output(void);
 void	rescale(system_mp system, spec_mp species);
-void	dump(system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3], double pe, restrt_mt *restart_header, int backup_restart);
 void	print_rdf(system_mt *system, spec_mt *species, site_mt *site_info);
 void	print_config(char *save_name, system_mp system, spec_mp species, site_mp site_info, pot_mp potpar);
 double	cpu(void);

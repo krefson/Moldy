@@ -26,6 +26,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.26  2000/11/08 18:36:24  keith
+ *       Moved calculation of H0 from beginning to midpoint.  This gives a much more
+ *       accurate value -- any error will bias the temperature.
+ *       Recalculates H0 after every velocity rescaling.  The thermostat should not
+ *       fight with rescaling as much now.
+ *
  *       Revision 2.25  2000/11/06 16:02:04  keith
  *       First working version with a Nose-Poincare thermostat for rigid molecules.
  *
@@ -265,7 +271,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.25 2000/11/06 16:02:04 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.26 2000/11/08 18:36:24 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -319,7 +325,7 @@ double dist_pot(real *potpar, double cutoff, int ptype);
                                       /* Returns integrated potential fn     */
 void   ewald(real **site, real **site_force, system_mp system, spec_mt *species, 
              real *chg, double *pe, mat_mt stress); 
-void   dump(system_mp system, vec_mt (*force), vec_mt (*torque), 
+void   dump(system_mp system, spec_mt *species, vec_mt (*force), vec_mt (*torque), 
             mat_mt stress, double pe, restrt_mt *restart_header, 
             int backup_restart);	/*  Write dump data files            */
 void   zero_real(real *r, int n);      /* Clear area of memory		     */
@@ -1025,7 +1031,7 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
       if (control.dump_interval > 0 && control.dump_level != 0 &&
 	 control.istep >= control.begin_dump &&
 	  (control.istep - control.begin_dump) % control.dump_interval == 0)
-       dump(sys, force_base, torque_base, stress, pe[0] + pe[1], restart_header,
+       dump(sys, species, force_base, torque_base, stress, pe[0] + pe[1], restart_header,
 	      backup_restart);
       
    }

@@ -19,11 +19,17 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dumpconv.c,v 2.12 2000/11/09 16:28:03 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dumpconv.c,v 2.13 2000/11/10 12:16:27 keith Exp $";
 #endif
 
 /*
  * $Log: dumpconv.c,v $
+ * Revision 2.13  2000/11/10 12:16:27  keith
+ * Tidied up some dubious cases to get rid of compiler warnings.
+ * Updated configure scripts -- fix for non-pgcc linux case.
+ * Got rid of redundant Makefile.w32 and Makefile.mak
+ * make -f xmakefile Makefile.in now works under Linux
+ *
  * Revision 2.12  2000/11/09 16:28:03  keith
  * Updated dump file format for new Leapfrog dynamics\nAdded #molecules etc to dump header format
  *
@@ -109,6 +115,7 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dumpconv.c,v 2
  */
 
 #include "defs.h"
+#include "messages.h"
 #include "stdlib.h"
 #include "stddef.h"
 #include "structs.h"
@@ -117,7 +124,7 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dumpconv.c,v 2
 #include <stdio.h>
 #ifdef USE_XDR
 #include "xdr.h"
-XDR	 xdrsr;
+XDR	 xdrs;
 XDR	 xdrsw;
 bool_t xdr_dump(XDR *xdrs, dump_mt *sp);
 #endif
@@ -149,6 +156,40 @@ void error(char *format, ...)
    exit(3);
 }
 
+/******************************************************************************
+ *  message.   Deliver error message to possibly exiting.  It can be called   *
+ *             BEFORE output file is opened, in which case output to stderr.  *
+ ******************************************************************************/
+char    *comm;             
+/*VARARGS*/
+void    message(int *nerrs, ...)
+{
+   va_list      ap;
+   char         *buff;
+   int          sev;
+   char         *format;
+   static char  *sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
+   va_start(ap, nerrs);
+   buff  = va_arg(ap, char *);
+   sev   = va_arg(ap, int);
+   format= va_arg(ap, char *);
+ 
+   (void)fprintf(stderr,"%s: ",comm);
+   (void)vfprintf(stderr, format, ap);
+   va_end(ap);
+   fputc('\n',stderr);
+ 
+   if(buff != NULL)                     /* null ptr means don't print buffer  */
+   {
+      (void)fprintf(stderr,"     buffer contents=\"%s\"",buff);
+      fputc('\n',stderr);
+   }
+   if(sev >= ERROR && nerrs != NULL)
+      (*nerrs)++;
+   if(sev == FATAL)
+      exit(3);
+}
+
 void read_text(float *buf, int buflen)
 {
    int i;
@@ -164,88 +205,19 @@ void write_text(float *buf, int buflen)
    int i;
 
    for( i = 0; i < buflen; i++ )
-      printf("%.7g%c",buf[i],(i+1) % 5 ? ' ' : '\n');
+      printf("%.8g%c",buf[i],(i+1) % 5 ? ' ' : '\n');
    if( i % 5 ) fputc('\n', stdout);
    if( ferror(stdout) )
       error("Write error on output file (Error code %d).",ferror(stdout));
 }
 
-void read_binary(float *buf, int buflen, int xdr)
-{
-#ifdef USE_XDR
-   if( xdr )
-   {
-      xdr_vector(&xdrsr, (char*)buf, buflen, XDR_FLOAT_SIZE, 
-		 (xdrproc_t)xdr_float);
-   }
-   else
-#endif
-   {
-      fread(buf , sizeof(float), buflen, stdin);
-   }
-   if( ferror(stdin) )
-      error("Read error on input file (Error code %d).",ferror(stdin));
-}
+static dump_sysinfo_mt *dump_sysinfo;
 
-void write_native(float *buf, int buflen)
+int	read_header(dump_mt *header, dump_sysinfo_mt **sysinfo)
 {
-   fwrite(buf , sizeof(float), buflen, stdout);
-   if( ferror(stdout) )
-      error("Write error on output file (Error code %d).",ferror(stdout));
-}
-
-#ifdef USE_XDR
-void write_xdr(float *buf, int buflen)
-{
-   xdr_vector(&xdrsw, (char*)buf, buflen, XDR_FLOAT_SIZE,
-	      (xdrproc_t)xdr_float);
-   if( ferror(stdout) )
-      error("Write error on output file (Error code %d).",ferror(stdout));
-}
-#endif
-
-void read_bin_hdr(dump_mt *header, int *xdrw)
-{
-   int    xdr = 0, errflg = 0;
-
-#ifdef USE_XDR
-   /*
-    * Attempt to read dump header in XDR format
-    */
-   xdrstdio_create(&xdrsr, stdin, XDR_DECODE);
-   if( xdr_dump(&xdrsr, header) )
-   {
-      header->vsn[sizeof header->vsn - 1] = '\0';
-      if( strstr(header->vsn,"(XDR)") )
-      {
-	 errflg = 0;
-	 xdr = 1;
-      }
-   }
-   else
-      errflg = 1;
-#endif
-   /*
-    * If we failed, try to read header as native struct image.
-    */
-   if( ! xdr )
-   {
-      if( fseek(stdin, 0L, 0) == 0 &&
-	 fread((char*)header, sizeof(dump_mt), 1, stdin) == 1) 
-	 errflg = 0;
-   }
-   if( errflg || ferror(stdin) || feof(stdin) )
-   {
-      error("Failed to read header record (Error code %d).",ferror(stdin));
-      exit(2);
-   }
-   *xdrw = xdr;
-}
-
-int	read_header(dump_mt *header)
-{
-   int num;
+   int num, ispec;
    char *c;
+   
    
    fgets(header->title, sizeof header->title, stdin);
    if((c = strchr(header->title, '\n')))
@@ -254,46 +226,268 @@ int	read_header(dump_mt *header)
    if((c = strchr(header->vsn, '\n')))
       *c = '\0';
    num  = 2;
-   num += scanf("%d %d %d %d %d", &header->istep, &header->dump_interval,
+   num += scanf("%ld %ld %d %d %d", &header->istep, &header->dump_interval,
 	  &header->dump_level, &header->maxdumps, &header->ndumps);
-   num += scanf("%ld %ld %ld %d %d %d",&header->timestamp,
-		 &header->restart_timestamp,
-		 &header->dump_init, &header->dump_size,
-		 &header->nmols, &header->nmols_r);
-   if( num == 11 || num == 13 ) return 0;
-   else            return -1;
+   num += scanf("%ld %ld %ld %d %ld",&header->timestamp, &header->restart_timestamp,
+		 &header->dump_init, &header->dump_size, &header->sysinfo_size);
+   if( num < 10 ) 
+      return -1;
+   if ( ( dump_sysinfo = *sysinfo = malloc(header->sysinfo_size)) == 0)
+      error("Failed to malloc memory for sysinfo header");
+   num = scanf("%f %d %d %d ", &dump_sysinfo->deltat, &dump_sysinfo->nmols, 
+	                      &dump_sysinfo->nmols_r, &dump_sysinfo->nspecies);
+   for(ispec = 0; ispec < dump_sysinfo->nspecies; ispec++)
+   {
+      fgets(dump_sysinfo->mol[ispec].name, L_spec, stdin);     
+      if((c = strchr(dump_sysinfo->mol[ispec].name, '\n')))
+	 *c = '\0';
+      num += scanf("%d %d", &dump_sysinfo->mol[ispec].nmols, &dump_sysinfo->mol[ispec].rdof);
+   }
+   if( num < 4+2*dump_sysinfo->nspecies) 
+      return -1;
+   return 0;
 }
 
-void write_native_hdr(dump_mt *header)
+void	print_header(dump_mt *header, dump_sysinfo_mt *sysinfo)
 {
    char *s;
-   if( (s = strstr(header->vsn,"(XDR") ) != 0 )
-      *s = 0;
-   if( ! fwrite((char*)header, sizeof(dump_mt), 1, stdout) )
-      error("Write error on output file (Error code %d).",ferror(stdout));
-}
-
-#ifdef USE_XDR
-void write_xdr_hdr(dump_mt *header)
-{
-   strncat(header->vsn,"(XDR)",sizeof header->vsn);
-   xdrstdio_create(&xdrsw, stdout, XDR_ENCODE);
-   if( ! xdr_dump(&xdrsw, header) )
-      error("Write error on output file (Error code %d).",ferror(stdout));
-}
-#endif
-
-void	print_header(dump_mt *header)
-{
-   char *s;
+   int ispec;
    if( (s = strstr(header->vsn,"(XDR") ) != 0 )
       *s = 0;
    printf("%s\n%s\n",header->title, header->vsn);
-   printf("%d %d %d %d %d\n", header->istep, header->dump_interval,
+   printf("%ld %ld %d %d %d\n", header->istep, header->dump_interval,
 	  header->dump_level, header->maxdumps, header->ndumps);
-   printf("%ld %ld %ld %d %d %d\n",header->timestamp, header->restart_timestamp,
-	   header->dump_init, header->dump_size,
-	  header->nmols, header->nmols_r); 
+   printf("%ld %ld %ld %d %ld\n",header->timestamp, header->restart_timestamp,
+	   header->dump_init, header->dump_size, header->sysinfo_size);
+   printf("%.8g %d %d %d\n", sysinfo->deltat, sysinfo->nmols, 
+	                     sysinfo->nmols_r, sysinfo->nspecies);
+   for(ispec = 0; ispec < sysinfo->nspecies; ispec++)
+      printf("%s\n%d %d\n",sysinfo->mol[ispec].name,sysinfo->mol[ispec].nmols,
+	                   sysinfo->mol[ispec].rdof);
+}
+
+
+FILE  *open_dump(char *fname, char *mode)
+{
+   FILE *dumpf;
+
+   dumpf = fopen(fname, mode);
+   
+#ifdef USE_XDR
+   if( dumpf )
+   {
+      if( mode[0] == 'w' || mode[0] && mode[1] == '+' ||  mode[1] && mode[2] == '+')
+	 xdrstdio_create(&xdrs, dumpf, XDR_ENCODE);
+      else
+	 xdrstdio_create(&xdrs, dumpf, XDR_DECODE);
+   }
+#endif
+    return dumpf;
+}
+
+FILE  *reopen_dump(FILE *dumpf, char *mode)
+{
+
+#ifdef USE_XDR
+   if( dumpf )
+   {
+      if( mode[0] == 'w' || mode[0] && mode[1] == '+' ||  mode[1] && mode[2] == '+')
+	 xdrstdio_create(&xdrs, dumpf, XDR_ENCODE);
+      else
+	 xdrstdio_create(&xdrs, dumpf, XDR_DECODE);
+   }
+#endif
+    return dumpf;
+}
+
+int close_dump(FILE *dumpf)
+{
+#ifdef USE_XDR
+   xdr_destroy(&xdrs);
+#endif
+   return fclose(dumpf);
+}
+
+int rewind_dump(FILE *dumpf, int xdr)
+{
+#ifdef USE_XDR
+   if( xdr )
+      xdr_setpos(&xdrs, 0);
+#endif
+   return fseek(dumpf, 0L, SEEK_SET);
+}
+
+size_mt	dump_curpos(size_mt sysinfo_size, int dump_size, 
+		    int ndumps, int nspecies,  boolean xdr_write)
+{
+#ifdef USE_XDR
+   if( xdr_write )
+      return XDR_DUMP_SIZE + XDR_SYSINFO_SIZE(nspecies) 
+	                   + ndumps*dump_size*XDR_FLOAT_SIZE;
+   else
+#endif
+      return sizeof(dump_mt) + sysinfo_size + ndumps*dump_size*sizeof(float);
+}
+
+static
+void dump_setpos(FILE *dumpf, size_mt file_pos, boolean xdr_write)
+{
+#ifdef USE_XDR
+   if( xdr_write )
+   {
+      if( ! xdr_setpos(&xdrs, file_pos) )		/* Write data at end */
+	 message(NULLI, NULLP, FATAL, SEFAIL, "", strerror(errno));
+   }
+   else
+#endif
+   {
+      if( fseek(dumpf, file_pos, SEEK_SET) )		/* Write data at end */
+	 message(NULLI, NULLP, FATAL, SEFAIL, "", strerror(errno));
+   }
+}
+
+
+static
+int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_write,
+		     int sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
+{
+   int      errflg = true;	/* Provisionally !!   */
+   char     vbuf[sizeof hdr_p->vsn + 1];
+   int	    vmajor,vminor;
+
+   *xdr_write = false;
+#ifdef USE_XDR
+   /*
+       * Attempt to read dump header in XDR format
+       */
+   if( xdr_dump(&xdrs, hdr_p) )
+   {
+      strncpy(vbuf,hdr_p->vsn,sizeof hdr_p->vsn);
+      vbuf[sizeof hdr_p->vsn] = '\0';
+      if( strstr(vbuf,"(XDR)") )
+      {
+	 errflg = false;
+	 *xdr_write = true;
+      }
+   }
+#endif
+   /*
+    * If we failed, try to read header as native struct image.
+    */
+   if( ! *xdr_write )
+   {
+      if( fseek(dumpf, 0L, 0) ) 
+	 message(NULLI, NULLP, WARNING, SEFAIL, fname, strerror(errno));
+      else if( fread((gptr*)&*hdr_p, sizeof(dump_mt), 1, dumpf) == 0 )
+	 message(NULLI, NULLP, WARNING, DRERR, fname, strerror(errno));
+      else
+	 errflg = false;
+   }
+   if( ! errflg )
+   {
+      /*
+       * Parse header version
+       */
+      errflg = true;
+      if( sscanf(hdr_p->vsn, "%d.%d", &vmajor, &vminor) < 2 )
+	 message(NULLI, NULLP, WARNING, INRVSN, hdr_p->vsn);
+      if( vmajor < 2 || vminor <= 17)
+	 message(NULLI, NULLP, WARNING, OLDVSN, hdr_p->vsn);
+      else
+	 errflg = false;
+   }
+   if( ! errflg && dump_sysinfo )
+   {
+#if 0
+      if( hdr_p->sysinfo_size != sysinfo_size )
+	 message(NULLI, NULLP, WARNING, CORUPT, fname, sysinfo_size, 
+		 hdr_p->sysinfo_size);
+#endif
+      /*
+       * Now check for sysinfo and read it
+       */
+#ifdef USE_XDR
+      if( *xdr_write ) {
+	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo) )
+	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+	 errflg = false;
+      } else
+#endif
+      {
+	 if( fread((gptr*)dump_sysinfo, sysinfo_size, 1, dumpf) == 0)
+	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+	 errflg = false;
+      }
+   }
+   return errflg;
+}
+
+static
+void write_dump_header(FILE *dumpf, char *cur_file, dump_mt *dump_header, 
+		      boolean xdr_write,
+		      int sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
+{
+   dump_setpos(dumpf, 0L, xdr_write);
+#ifdef USE_XDR
+   if( xdr_write )
+   {
+      if( ! xdr_dump(&xdrs, dump_header) )
+	 message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+      if( dump_sysinfo ) 
+      {
+	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo) )
+	    message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+      }
+   }
+   else
+#endif
+   {
+      if( fwrite((gptr*)dump_header, sizeof(dump_mt), 1, dumpf) == 0)
+	 message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+      if( dump_sysinfo ) 
+      {
+	 if( fwrite((gptr*)dump_sysinfo, sysinfo_size, 1, dumpf) == 0)
+	    message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+      }
+   }
+}
+
+static
+void write_dump_record(gptr *dump_buf, FILE *dumpf, size_mt dump_size, 
+		       char *cur_file, boolean xdr_write)
+{
+#ifdef USE_XDR
+   if( xdr_write )
+   {
+      if( ! xdr_vector(&xdrs, dump_buf, dump_size, sizeof(float), 
+		     (xdrproc_t)xdr_float) )
+	 message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+   }
+   else
+#endif
+   {
+      if( fwrite(dump_buf, sizeof(float), dump_size, dumpf) < dump_size )
+	 message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+   }
+}
+
+static
+void read_dump_record(gptr *dump_buf, FILE *dumpf, size_mt dump_size, 
+		       char *cur_file, boolean xdr)
+{
+#ifdef USE_XDR
+   if( xdr )
+   {
+      if( ! xdr_vector(&xdrs, dump_buf, dump_size, sizeof(float), 
+		     (xdrproc_t)xdr_float) )
+	 message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+   }
+   else
+#endif
+   {
+      if( fread(dump_buf, sizeof(float), dump_size, dumpf)== 0 )
+	 message(NULLI, NULLP, FATAL, DRERR, cur_file, strerror(errno));
+   }
 }
 
 int
@@ -303,16 +497,22 @@ main(int argc, char **argv)
    dump_mt header;
    float *buf;
    int   idump;
-   int   textin = 0, xdrin, xdrout = 0;
+   int   textin = 0, textout = 1, xdrin, xdrout = 1;
+   dump_sysinfo_mt *dump_sysinfo;
 
    while( argc > 0 && argv[1][0] == '-' )
    {
       switch( argv[1][1] ) {
+       case 'b':	
+	 textin  = 0;
+	 textout = 0;
+	 break;
        case 'd':	
 	 textin++;
+	 textout = 0;
 	 break;
-       case 'x':
-	  xdrout++;
+       case 'n':
+	  xdrout=0;
 	 break;
        default:
 	 fprintf(stderr,"Usage: dumpconvert [-d] [-x] infile outfile\n");
@@ -321,12 +521,12 @@ main(int argc, char **argv)
       argc--; argv++;
    }
 
-   if( argc > 0 )
+   if( argc > 1 )
    {
       if( strcmp(argv[1],"-") && freopen(argv[1], ity[textin], stdin) == NULL )
 	 error("Failed to open file \"%s\" for input", argv[1]);
    }
-   if( argc > 1 )
+   if( argc > 2 )
    {
       if( strcmp(argv[2],"-") && freopen(argv[2], oty[textin], stdout) == NULL )
 	 error("Failed to open file \"%s\" for writing", argv[2]);
@@ -335,24 +535,36 @@ main(int argc, char **argv)
       
    if( textin )
    {
-      read_header(&header);
-#ifdef USE_XDR
-      if( xdrout )
-	 write_xdr_hdr(&header);
-      else
-#endif
-	 write_native_hdr(&header);
+      if( read_header(&header,&dump_sysinfo) )
+	 error("Failed to read text header");
    }
    else
    {
-      read_bin_hdr(&header, &xdrin);
-#ifdef USE_XDR
-      if( xdrout )
-	 write_xdr_hdr(&header);
-      else
-#endif
-	 print_header(&header);
+      reopen_dump(stdin,"rb");
+      if( read_dump_header("", stdin, &header, &xdrin, 0, 0) )
+	 error("Failed to read dump header");
+      dump_sysinfo = (dump_sysinfo_mt*)malloc(header.sysinfo_size);
+      /*
+       * Rewind and reread header, this time including sysinfo.
+       */
+      (void)rewind_dump(stdin, xdrin);
+      if( read_dump_header("", stdin, &header, &xdrin, 
+			   header.sysinfo_size, dump_sysinfo) 
+	  || ferror(stdin) || feof(stdin) )
+	 error("Failed to read dump header.");
    }
+      
+
+   if( textout )
+      print_header(&header, dump_sysinfo);
+   else
+   {
+      reopen_dump(stdout,"wb");
+      if( xdrout )
+	   strncat(header.vsn,"(XDR)",sizeof header.vsn);
+      write_dump_header(stdout,"", &header, xdrout, header.sysinfo_size, dump_sysinfo);
+   }
+      
 
    if( ! (buf = (float *)calloc(header.dump_size, sizeof(float))))
       error("Failed to allocate memory (%d words requested)\n",
@@ -361,25 +573,14 @@ main(int argc, char **argv)
    for( idump = 0; idump < header.ndumps; idump++)
    {
       if( textin )
-      {
 	 read_text(buf, header.dump_size);
-#ifdef USE_XDR
-	 if( xdrout )
-	    write_xdr(buf, header.dump_size);
-	 else
-#endif
-	    write_native(buf, header.dump_size);
-      }
       else
-      {
-	 read_binary(buf, header.dump_size, xdrin);
-#ifdef USE_XDR
-	 if( xdrout )
-	    write_xdr(buf, header.dump_size);
-	 else
-#endif
-	    write_text(buf, header.dump_size);
-      }
+	 read_dump_record(buf, stdin, header.dump_size, "", xdrin);
+
+      if( textout )
+	 write_text(buf, header.dump_size);
+      else
+	 write_dump_record(buf, stdout, header.dump_size, "", xdrout);
    }
 return 0;
 }

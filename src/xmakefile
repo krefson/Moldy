@@ -72,7 +72,7 @@ SHAKC= $(SHAKS:%=%.c)
 
 SHAKOBJS= $(SHAKS:%=%.o)
 
-UTILS = moldyext dumpanal dumpconv dumpext  manalyze bdist
+UTILS = moldyext dumpconv dumpext  manalyze bdist
 
 UTILS2= mdshak msd mdavpos mdbond ransub mdvaf
 
@@ -123,9 +123,6 @@ moldyext:	moldyext.c $(LIBOBJS) $(HFILES)
 
 manalyze:	manalyze.c $(HFILES)
 		$(CC) $(CFLAGS)  -o manalyze $(OPT) $(DEFS) $(LDFLAGS1) manalyze.c $(LDFLAGS) $(LIBS)
-
-dumpanal:	dumpanal.c xdr.o $(HFILES)
-		$(CC) $(CFLAGS) -o dumpanal $(OPT) $(DEFS) $(LDFLAGS1) dumpanal.c xdr.o  $(LDFLAGS) $(LIBS)
 
 dumpext:	dumpext.c xdr.o utlsup.o matrix.o $(LIBOBJS) $(HFILES)
 		$(CC) $(CFLAGS) -o dumpext $(OPT) $(DEFS) $(LDFLAGS1) dumpext.c xdr.o utlsup.o matrix.o $(LIBOBJS) $(LDFLAGS) $(LIBS)
@@ -232,7 +229,7 @@ lint-utils2:
 		$(LINT) $(XDR) $(LFLAGS) mdvaf.c $(SHAKC) -lm
 
 lint-utils:	lint-utils2
-		for file in moldyext.c dumpanal.c dumpconv.c dumpext.c manalyze.c bdist.c;do\
+		for file in moldyext.c dumpconv.c dumpext.c manalyze.c bdist.c;do\
 			$(LINT) $(XDR) $(LFLAGS) $$file\
                         ;done
 
