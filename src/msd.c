@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/msd.c,v 2.9 2005/01/13 11:29:49 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/msd.c,v 2.10 2005/02/04 14:52:34 cf Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,10 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/msd.c,v 2.9 2005/01/13 
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 2.10  2005/02/04 14:52:34  cf
+ *  Reads header info with dumpext to determine system info and maximum time slice range.
+ *  Common utility messages/errors moved to utlsup.h.
+ *
  *  Revision 2.9  2005/01/13 11:29:49  cf
  *  Fixed formatting error in dumpext command line.
  *
@@ -227,24 +231,6 @@ int ithread=0, nthreads=1;
 #define INNER 1
 #define OUTER 2
 
-typedef struct list_mt
-{
-   struct list_mt       *next;
-   int                  i;
-   char *p;
-   int num;
-} list_mt;
-/******************************************************************************
- * List manipulation procedures                                               *
- ******************************************************************************/void
-insert(list_mt *entry, list_mt *head)
-{
-   while( head->next != NULL && entry->i > head->next->i)
-      head = head->next;
-                                                                                
-   entry->next = head->next;
-   head->next  = entry;
-}
 /******************************************************************************
  *  header_to_moldy. Extract data from header info file created by dumpext.   *
  ******************************************************************************/
