@@ -25,6 +25,10 @@ what you give them.   Help stamp out software-hoarding! */
  **************************************************************************************
  *  Revision Log
  *  $Log: syswrite.c,v $
+ *  Revision 2.6.10.2  2004/03/01 04:54:03  moldydv
+ *  Syswrite now treats non-periodic data (from XYZ and some CSSR files) as single species with initial configuration to be set using skew start.
+ *  Options -n and -l added for no of particles and species label, respectively, for such systems.
+ *
  *  Revision 2.6.10.1  2003/07/29 09:37:15  moldydv
  *  Moved defs of file format numbers to utlsup.h
  *  Replaced explicit lengths of name variables with NLEN.
@@ -61,7 +65,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/syswrite.c,v 2.6.10.1 2003/07/29 09:37:15 moldydv Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/syswrite.c,v 2.6.10.2 2004/03/01 04:54:03 moldydv Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -81,8 +85,6 @@ static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/syswrite.c,v 2.6.1
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 contr_mt                control;
-
-#define xtoupper(c) (islower(c) ? toupper(c) : c)
 
 /*========================== External data references ========================*/
 extern  const pots_mt   potspec[];           /* Potential type specification  */
