@@ -46,21 +46,13 @@ LDFLAGS= $(LDFLAGS0)
 #CFLAGSP= -O3 -re
 #LDFLAGS= $(LDFLAGS0) -fi -lveclib 
 #INLINE=
-#  **** Cray **** (CC 4.n) - Link in FORTRAN kernel
-#CFLAGS= -h vector,olevel_3,vmesg_1,ivdep  $(CFLAGS0)
-#CFLAGSF= -DFKERNEL
-#EXTRA_OBJ= kernelf.o
-#LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" \
-#	-lf -lio -lbsd -lsci
-#FC=	cf77
-#INLINE=
-#  **** Cray **** (CC 5.n) - At last can compile C kernel
-#CFLAGS= -h vector,olevel_3,vmesg_1,ivdep  $(CFLAGS0)
-#LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" -lbsd -lsci
-#INLINE=
-#  **** Cray **** (SCC )
+#  **** Cray **** (SCC 2.0)
 #CC=scc
 #CFLAGS= -h vector,olevel_3,vreport,ivdep,fastaddr $(CFLAGS0)
+#LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" -lsci
+#INLINE=
+#  **** Cray **** (SCC 3.0)
+#CFLAGS= -h nostdc,vector3,scalar3,report=itvf,ivdep,fastaddr $(CFLAGS0)
 #LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" -lsci
 #INLINE=
 #  ***** End *****
