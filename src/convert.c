@@ -2,10 +2,13 @@
  * Convert	Functions for conversion of units of input parameters.	      *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log:	convert.c,v $
+ * Revision 1.1  89/04/20  16:00:36  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/convert.c,v 1.1 89/04/20 16:00:36 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -25,9 +28,7 @@ typedef struct
   unit_t	unit;			/* Units (in MKS) for conversion from */
 }  conv_t,  *conv_p;
 /*========================== Global variables ================================*/
-static dim_t    pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
-                                   {{1,8,-2},{1,2,-2},{0,-1,0}},
-			           {{1,2,-2},{0,-1,0},{1,2,-2},{0,-1,0}}};
+extern dim_t    pot_dim[][NPOTP];
 #define	NPOTT	(sizeof npotp / sizeof(int))
 		/* Specification array for conversion between units 	      */
 

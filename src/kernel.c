@@ -14,6 +14,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 1.8  90/05/02  13:04:52  keith
+ * Tidied up and restructured code to improve readability.
+ * Reduced number of scalar temporaries in vector loops - this is
+ * necessary to vectorize under CRAY CC 5.0.
+ * 
  * Revision 1.7  89/12/22  19:33:44  keith
  * Added p0-p3 - temporaries for pot[0..3] pointers within loops.
  * Some machines (eg stellar) generate better code this way.
@@ -39,7 +44,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.8 90/05/01 17:26:03 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.8 90/05/02 13:04:52 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -57,6 +62,13 @@ pots_t	potspec[]  = {{"lennard-jones",2},
 		      {"buckingham",3},
                       {"mcy",4}};
 int	npott=(sizeof potspec / sizeof(pots_t));
+/*
+ *  Array of dimensions of pot'l parameters.  Powers of {m,l,t} per parameter.
+ */
+dim_t    pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
+                           {{1,8,-2},{1,2,-2},{0,-1,0}},
+		           {{1,2,-2},{0,-1,0},{1,2,-2},{0,-1,0}}};
+
 /*========================== Macros ==========================================*/
 
 #define E1	 0.254829592		/* Polynomial Constants used in	      */
