@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/utlsup.c,v 1.15.8.2 2003/07/30 09:31:30 moldydv Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/utlsup.c,v 1.15.8.3 2003/07/31 09:01:24 kr Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -139,6 +139,24 @@ int     tokenise(char *fields, char *mask, int len)
       fields = NULL;
    }
    return 1;
+}
+/******************************************************************************
+ * get_tokens(). Routine for breaking down string into substrings.            *
+ *               Returns no of substrings.                                    *
+ ******************************************************************************/
+int   get_tokens(char *buf, char **linev, char *sep)
+{
+   char *p;
+   int linec = 0;
+
+   while( (p = strtok(buf,sep) ) != NULL)
+   {
+      *(linev++) = p;
+      linec++;
+      buf = NULL;
+   }
+
+   return linec;
 }
 /******************************************************************************
  * get_int().  Read an integer from stdin, issuing a prompt and checking      *
