@@ -25,6 +25,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.10  1995/12/04 11:45:49  keith
+ *       Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
+ *       Thanks to V. Murashov.
+ *
  * Revision 2.9  1994/07/12  16:20:26  keith
  * Fixed bug whereby "dip_mom" left uninitialized for non-coulomb system.
  *
@@ -189,7 +193,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.9 1994/07/12 16:20:26 keith stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.10 1995/12/04 11:45:49 keith Exp keith $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -243,6 +247,7 @@ double          gaussianr1();          /* Return Torque*omega                 */
 double          gaussianr2();          /* Return omega*I*omega                */
 void            q_conj_mul();          /* Quat. conjugated x by quat. dot     */
 void	inhibit_vectorization();       /* Self-explanatory dummy              */
+void            kernel();              /* Potential function evaluation       */
 #if defined(ANSI) || defined(__STDC__)
 gptr		*arralloc(size_mt,int,...); /* Array allocator		      */
 void		note(char *, ...);	/* Write a message to the output file */
@@ -383,16 +388,39 @@ spec_mp		species;
    tfree((gptr*)temp_value);
 }
 /******************************************************************************
+ * Poteval	      Return potential evaluated at a single point.           *
+ ******************************************************************************/
+static double
+poteval(potpar, r, ptype)
+real	potpar[];			/* Array of potential parameters      */
+double	r;				/* Cutoff distance		      */
+int	ptype;				/* Potential type selector	      */
+{
+   double pe = 0.0;
+   real f,rr;
+   real **pp = aalloc(NPOTP,real*);
+   int  i;
+
+   for(i=0; i<NPOTP; i++)
+      pp[i] = potpar+i;
+
+   rr = SQR(r);
+   kernel(0,1,&f,&pe,&rr,0,0.0,0.0,0.0,ptype, pp);
+   return pe;
+}
+/******************************************************************************
  *  distant_const     Return the constant part of the distant-potential term  *
  *  c = - 2 pi sum i sum j Ni Nj Aij(cutoff), where i,j are site types, Ni,Nj *
  *  are their populations and Aij(r) is pot'l integrated from r to infinity.  *
+ *  If Iflag == 0, return potential correction, == 1, pressure correction.    *
  ******************************************************************************/
 static double 
-distant_const(system, species, potpar, cutoff)
+distant_const(system, species, potpar, cutoff, iflag)
 system_mp       system;
 spec_mt         species[];
 pot_mt          potpar[];
 double          cutoff;
+int		iflag;
 {
    int             isite, id, jd;	/* Counters		      */
    spec_mp         spec;	       		/* pointer to current species */
@@ -415,8 +443,14 @@ NOVECTOR
 
    for (id = 1; id < system->max_id; id++)	/* Loops for sum over i,j     */
       for (jd = 1; jd < system->max_id; jd++)
+      {
 	 c -= 2 * PI * site_count[id] * site_count[jd]
 	    * dist_pot(potpar[id + system->max_id*jd].p, cutoff, system->ptype);
+	 if( iflag )
+	    c += 2.0/3.0 * PI * site_count[id] * site_count[jd]
+	    * CUBE(cutoff) * poteval(potpar[id + system->max_id*jd].p, cutoff, 
+				     system->ptype);
+      }
 
    xfree(site_count);
    return (c);
@@ -501,7 +535,7 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
    int             ispec, imol, imol_r, isite;
    int             i, j;
    static boolean  init = true;
-   static double   dist;
+   static double   dist, distp;
    double          vol = det(sys->h);
    int             iter;
    mat_mt          ke_dyad, hinv;
@@ -520,10 +554,12 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
  */
    if (init)
    {
-      dist = distant_const(sys, species, potpar, control.cutoff);
+      dist  = distant_const(sys, species, potpar, control.cutoff,0);
+      distp = distant_const(sys, species, potpar, control.cutoff,1);
+
       if( ithread == 0 )
 	 note("Distant potential correction = %f, Pressure correction = %f",
-	      CONV_E * dist / vol, CONV_P * dist / (vol * vol));
+	      CONV_E * dist / vol, CONV_P * distp / (vol * vol));
       init = false;
    }
 /*
@@ -692,7 +728,7 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
  */
    pe[0] += dist / vol;
    for (i = 0; i < 3; i++)
-      stress[i][i] += dist / vol;
+      stress[i][i] += distp / vol;
 
 /*
  * Shuffle the accelerations (acc -> acco, acco-> accvo, accvo -> acc) Don't
