@@ -82,7 +82,7 @@ each with an arbitrary number of atoms and an arbitrary number of
 molecules of each. Molecules or ions may be monatomic or polyatomic,
 linear or three dimensional in any combination.  The potential
 functions may be of the Lennard-Jones, Buckingham (including
-Born-Meyer) or MCY types, and other potential types may be easily
+Born-Mayer) or MCY types, and other potential types may be easily
 added.  Such flexibility is possible because \moldy\  is written in the
 `C' language which permits dynamic memory allocation.
 
@@ -229,7 +229,7 @@ quaternions used here differs from that used in Evans' paper\cite[equation 21]{e
 error has been compounded by subsequent authors\cite{sonnenschein:85,smith:82,laakonsen:85} who also managed to 
 permute the components which means that the parameters do not form an
 ordered number quartet which obeys quaternion algebra. Like Allen and
-Tildesley\cite[page 88]{allen:87} we follow the definition of of
+Tildesley\cite[page 88]{allen:87} we follow the definition of
 Goldstein\cite[pages 143 and 155]{goldstein:80}.}
 \begin{eqnarray}
 q_0 & = & \cos \frac{\phi+\psi}{2} \cos \frac{\theta}{2} \nonumber \\
@@ -457,7 +457,7 @@ and $\bm{\delta}$ is the unit matrix.
 
 
 \subsection{Potential Functions}
-% LJ, Buckingham (Born-Meyer) & MCY
+% LJ, Buckingham (Born-Mayer) & MCY
 \moldy\ supports most common forms of potential function.  In
 particular, 
 \begin{list}{}{\labelwidth=1in \labelsep=0.25in \leftmargin=1.5in \parsep=0in
@@ -467,7 +467,7 @@ particular,
 \item[6-exp] $\phi(r) = -\frac{A}{r^{6}} +
 B\exp(-Cr)$\\
 This is the most general 6-exp form and
-includes potential of the {\em Born-Meyer\/} and {\em Buckingham\/} forms.
+includes potential of the {\em Born-Mayer\/} and {\em Buckingham\/} forms.
 \item[MCY] $\phi(r) = A \exp(-Br) - C \exp(-Dr)$
 \item[generic]  $\phi(r) = A \exp(-Br) + C/r^{12} - D/r^4 -E/r^6 -F/r^8$\\
 This is a composite which contains terms of almost any
@@ -486,7 +486,7 @@ The long range Coulomb interactions are handled using the Ewald Sum
 technique in three dimensions\cite[p.\ 156]{berthaut:52,allen:87}.
 The electrostatic potential of a system of charges is expressed as a
 sum of short-range and long-range contributions.  Each term is written
-as a series,the first in real space and the second, obtained by
+as a series, the first in real space and the second, obtained by
 Fourier transformation using the periodicity of the MD cell, in
 reciprocal space.  The expression for the Coulomb energy $U$ is
 \begin{eqnarray}
@@ -744,7 +744,7 @@ site-site virial $\sum_i f_i.r_i$ and the molecular virial $\sum_i
 F_i.R_i$ and is subtracted after all of the site forces and the
 molecular forces have been calculated including the short-range
 potential components which are not included in the equations above.
-Though is is not apparent in reference\cite[Appendix A]{nose:83} this
+Though it is not apparent in reference\cite[Appendix A]{nose:83} this
 term has exactly the same form for all parts of the stress --- the
 short-range potential and the real- and reciprocal space coulombic
 parts.
@@ -1090,10 +1090,10 @@ with the short-ranged and electrostatic components given by
 equations~\ref{eqn:stress-sr} and~\ref{eqn:ewald-stress} respectively.
 
 Nos\'{e} and Klein\cite{nose:83} describe and address the problem of
-the whole MD cell rotating during the course of the simulation.
-Angular momentum is not conserved in a periodic system, and because
-the $\bm{h}$ matrix has 9 degrees of freedom, three more than needed
-to specify the position and orientation of the MD cell.  Their
+the whole MD cell rotating during the course of the simulation.  This
+is because angular momentum is not conserved in a periodic system, and
+because the $\bm{h}$ matrix has 9 degrees of freedom, three more than
+needed to specify the position and orientation of the MD cell.  Their
 solution is to constrain the $\bm{h}$ matrix to be symmetric, and
 involves a modification of the Parrinello-Rahman equations.
 
@@ -1361,7 +1361,7 @@ leads to the condition:
 Therefore the optimum value of $h$ is the nearest integer to
 $\sqrt{N-1}$.  
 
-The formalism may be extended to three dimension, and yields the
+The formalism may be extended to three dimensions, and yields the
 results for the molecular and ``inter-line'' spacings $a$, $d_y$ and
 $d_z$ respectively
 \begin{eqnarray}
@@ -1398,7 +1398,7 @@ these are assigned randomly, which works well for small or
 near-spherical molecules.  Further refinements which may help avoid
 overlaps for elongated molecules are possible, such as a periodic
 sequence of orientations along the line, but no investigation of this
-possibility have yet been carried out.
+possibility has yet been carried out.
 
 In practice the method has proved to work well for water and aqueous
 systems and always yields a configuration which may be evolved towards
@@ -1462,15 +1462,15 @@ velocities \etc\ are simply set to zero.
 In addition to the bulk properties of solids and liquids, much
 attention has been devoted in recent years to using MD simulation to
 model atoms or molecules interacting with surfaces or other structures
-such as zeolites.  The distinctive feature of such a situation is the
-2- or 3-dimensional surface or structure is larger than the
+such as zeolites.  The distinctive feature of such a situation is that
+the 2- or 3-dimensional surface or structure is larger than the
 interacting molecules by many orders of magnitude.  In fact the
 idealisation of this system makes the structure infinite in extent.
 An atomistic model of this kind of a system necessitates choosing the
 periodic boundary conditions of the MD cell to be commensurate with
 the periodicity of the surface or structure.  This manual will refer
 to an infinitely repeating crystalline surface or structure as a {\em
-framework}.
+  framework}.
 
 There are two possible formulations of a system of this kind for use
 in a MD simulation.  Firstly the framework may be modelled as a set of
@@ -1500,11 +1500,11 @@ framework will probably be much higher than those of the fluid.
 Consequently the timestep must be chosen sufficiently small to
 accurately model the crystalline vibrations.  This will usually be far
 smaller than the value required for the fluid, necessitating very
-lengthy MD runs to model both regimes properly.  This is of course
+lengthy MD runs to model both regimes properly.  This is, of course,
 exactly the argument used to justify rigid-molecule models. 
 
 \moldy\ implements a variation on the rigid-molecule model to simulate
-rigid a framework structure periodically extended throughout space.
+a rigid framework structure periodically extended throughout space.
 There are a few subtleties which must be correctly handled to achieve
 a consistent implementation, which are described hereafter.  
 
@@ -1522,7 +1522,7 @@ translational motion is forbidden also.
 or any of its periodic images are evaluated.  That is,
 framework-framework interactions, both potentials and forces, are
 systematically excluded from the real-space and reciprocal-space parts
-of the ewald sum, including the point and intra-molecular self terms
+of the Ewald sum, including the point and intra-molecular self terms
 of equation~\ref{eqn:ewald}. (The exact modifications to
 equations~\ref{eqn:ewald},\ref{eqn:ewald-force} \etc\ are left as an
 exercise for the reader.)
@@ -1597,7 +1597,7 @@ the stress tensor {\em does\/} have a physical meaning and is correctly
 calculated. 
  
 \subsection{Charged Frameworks}
-A minor complication arises when using a framework which is has a
+A minor complication arises when using a framework which has a
 non-zero net electric charge.  Although the system as a whole may be
 electrically neutral, the omission of  framework-framework
 interactions from the calculation also means that the
@@ -1710,7 +1710,7 @@ parameter has a default value.  This is either the value listed in
 table~\ref{tab:parameters} or, in the case where the simulation is
 continuing from a restart file, the value it had on the previous run
 (see section~\ref{sec:restarting}). Parameters are read in sequence
-from the control file anf one appears more than once only the final
+from the control file and if one appears more than once only the final
 instance is used.
 
 The two most important parameters are \texttt{step} which sets the size
@@ -1828,7 +1828,7 @@ Value of P \& R mass parameter (amu). \\
 \texttt{pressure} &               real &                  0 &
 External applied pressure (MPa). \\
 \texttt{strain-mask} &            integer &               200 &
-bitmask controlling $\bm{h}$ matrix constraint. \\ \hline
+Bitmask controlling $\bm{h}$ matrix constraint. \\ \hline
 \texttt{alpha} &                  real &                  {\em auto} &
 $\alpha$ parameter for Ewald sum. \\
 \texttt{k-cutoff} &               real &                  {\em auto} &
@@ -1870,7 +1870,7 @@ How frequently to calculate and print RDFs. \\
 Calculate RDFs up to what distance? (\AA) \\
 \texttt{nbins} &                  integer &               100 &
 Number of binning intervals between 0 and rdf-limit. \\ \hline
-\texttt{xdr} &                    boolean &               false &
+\texttt{xdr} &                    boolean &               true &
 Write restart,  backup and dump files in portable
 binary format using Sun XDR. \\ \hline
 \texttt{dump-file} &              character  &    null &
@@ -1890,7 +1890,7 @@ Name of backup file. \\ \hline
 \texttt{temp-file} &              character  &    MDTEMPX &
 Name of temporary file used for writing restart configurations. \\ \hline
 \texttt{subcell} &                real &                  0 &
-Size of sub cell (in \AA) to divide MD cell into for link-cell force
+Size of sub-cell (in \AA) to divide MD cell into for link-cell force
 calculation. \\ \hline
 \texttt{seed} &                   integer &               1234567 &
 Seed for random number generator. \\ \hline
@@ -1995,7 +1995,7 @@ factor of 4 more usually separated out.  The control parameter
 \texttt{time-unit} may be divided by four to read potentials
 specified in the standard form.
 
-\item[Buckingham] This includes potentials of the Born-Meyer type and
+\item[Buckingham] This includes potentials of the Born-Mayer type and
 has formula \[\phi(r_{ij}) = -A_{ij}/r^{6}_{ij} + B_{ij}\exp(-C_{ij}r_{ij}).\]
 The three parameters appear on each line in the order $A, B, C$.
 \item[MCY] This type supports potentials of the same form as the water
@@ -2003,7 +2003,7 @@ model of Matsuoka, Clementi and Yoshimine\cite{matsuoka:75},
 \[\phi(r_{ij}) = A_{ij}\exp(-B_{ij}r_{ij}) - C_{ij}\exp(-D_{ij}r_{ij}),\]
 and the four parameters appear on the line in the order $A, B, C, D$.
 \end{description}
-Other types of potential types may be easily added: see
+Other types of potential may be easily added: see
 appendix~\ref{sec:newpot}.
 
 It is possible to specify the units in which these quantities are given
@@ -2393,7 +2393,7 @@ is parameterized.
 
 Radial distribution functions are calculated by binning site pair
 distances periodically throughout the simulation (see
-section~\ref{sec:rdf}.  As this process is expensive in computer time
+section~\ref{sec:rdf}).  As this process is expensive in computer time
 the binning subroutine is invoked only every few timesteps, as set by
 the control parameter \texttt{rdf-interval} (20 by default).  Since
 the pair distances only change a little on each timestep, very little
@@ -2528,7 +2528,7 @@ record's exact contents are determined by the control parameter
 means that bit $n$ is set.  Four bits are used and any combination may
 be specified but the cumulative values 1, 3, 7 and 15 are most
 useful.  A value of 0 disables dumping. The data dumped for each bit
-is as follows:
+are as follows:
 \begin{description}
 \item[bit 0]    centre of mass co-ordinates, quaternions, unit cell matrix 
 and potential energy.         
@@ -2637,7 +2637,7 @@ Setting  the control parameter   \texttt{const-pressure} switches from a
 constant-volume  simulation to a con\-stant-stress  simulation using the
 method     of    Parrinello     and    Rahman\cite{parrinello:81}   (see
 section~\ref{sec:const-stress}).   The value of  the  ``MD cell'' mass
-parameter,  $W$  is given by the control  parameter \texttt{w}  and  the
+parameter,  $W$,  is given by the control  parameter \texttt{w}  and  the
 external pressure by \texttt{pressure}. At present it is not possible to
 specify an anisotropic external stress, though this  capability may be
 added in future versions of the program.
@@ -2825,7 +2825,7 @@ information message.
 \item[{\tt*W*}] warning.  When the system specification is suspicious
 but not clearly wrong, or some untoward condition is detected such as
 two atoms approaching too closely, a warning message is issued.
-\item[{\tt*E*}] error. Error messages are issued when an mistake is
+\item[{\tt*E*}] error. Error messages are issued when a mistake is
 detected reading any of the input files. To make correction easier,
 processing continues until the end of that file, so that all of the
 errors are found.  The simulation is then stopped with a fatal error.
@@ -2861,7 +2861,7 @@ equilibrium, particularly in the case of molecules with small moments
 of inertia, such as methane.  In most cases the simulation may be
 restarted using strong rescaling or a Gaussian thermostat to limit
 velocities during the approach to equilibrium.  Occasionally a smaller
-timestep may be help during equilibration.  The third cause of
+timestep may help during equilibration.  The third cause of
 normalisation or constraint errors is an error in the potentials or
 the units which allows for a state with high or infinite negative
 binding energy.
@@ -2911,7 +2911,7 @@ another host and transferred to the PC by disk or ftp.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 The source code of \moldy\  consists of 23 files of C programs (which have
 suffix ``.c'') and 8 header files (suffix ``.h'').
-To build \moldy\ , all of the ``.c'' files must be compiled and linked
+To build \moldy, all of the ``.c'' files must be compiled and linked
 together to form an executable.  The method of doing this depends on
 the operating system of the target computer.
 \begin{description}
@@ -2990,13 +2990,13 @@ multiprocessors and many distributed-memory parallel machines.
 
 \noindent
 Alternatively a port to another parallel interface should be quite
-straightforward, see section\ref{sec:parport}.
+straightforward, see section~\ref{sec:parport}.
 
 Once a suitable message-passing library is installed the procedure for
 building \moldy\ is quite simple.  The C preprocessor macro
 \texttt{SPMD} must be defined as well as one of \texttt{MPI},
 \texttt{TCG} or \texttt{BSP}. This is usually done in the make file by
-setting the Make macro \texttt{PARLIBC=-DSPMD -DMPI} for example.
+setting the Make macro \texttt{PARLIBC=-DSPMD -DMPI}, for example.
 This macro should also include a \texttt{-I} directive specifying the
 directory for the library's header files if these are not in the
 default path searched by the compiler.  The similar make macro
@@ -3011,7 +3011,7 @@ molecule.  The computation of the real-space potential and forces is
 distributed over processors on the basis of link cells.  For the
 reciprocal-space part of the Ewald sum, the $\bm{k}$-vectors are
 distributed among processors.  This is an extremely efficient way of
-implementing parallelism since the forces etc must be summed over
+implementing parallelism since the forces \etc\ must be summed over
 processors only once per timestep, thus minimising interprocessor
 communication costs.  It is therefore possible to get considerable
 speedup for a small number of workstations coupled by a fast network
@@ -3033,7 +3033,7 @@ computer where it is desirable to scale the system size with the
 number of processors.  In such architectures the memory per processor
 is usually a constant independent of the number of processors. But the
 memory {\em per processor}\/ increases with system size.  Mostly the
-scaling is linear, but reciprocal-space sum uses temporary arrays
+scaling is linear, but the reciprocal-space sum uses temporary arrays
 whose size scales with the product of the number of sites and
 $\bm{k}$-vectors, and hence with the square of the system size.
 
@@ -3077,7 +3077,7 @@ machines too under the message-passing interface.) Nevertheless, it
 works and has been run on Stardent, Convex and Cray computers.  It
 consists of replacements for files ``force.c'' and ``ewald.c'' called
 ``force\_parallel.c'' and ``ewald\_parallel.c''. Then the program
-should be compiled with the preprocessor macro\ texttt{PARALLEL}
+should be compiled with the preprocessor macro \texttt{PARALLEL}
 defined ( not \texttt{SPMD} .)
 
 The distributed-memory parallel version (section~\ref{sec:spmdpar}) is
@@ -3320,7 +3320,7 @@ whereas the convex and Stellar compilers use a ``significant comment''
   C preprocessor on that file. The output will show the form that
   should be defined in ``defs.h''.
   
-  Unfortunately this method had been obsoleted by the ANSI C standard,
+  Unfortunately this method had been made obsolete by the ANSI C standard,
   which makes it impossible to insert pragmas using the
   preprocessor. } 
 
@@ -3362,7 +3362,7 @@ program units.  The entry consists of triplets containing the powers
 of mass, length and time, one for each parameter.  Then define a new
 preprocessor symbol to the index of the new type in the array
 \texttt{potspec[]} (after the line
-\texttt{\#define}~\texttt{MCYPOT}~\texttt{2}.  The value must
+\texttt{\#define}~\texttt{MCYPOT}~\texttt{2}).  The value must
 correspond to the index of the new entry in \texttt{potspec[]}
 starting from 0 in accordance with the usual C convention.  This
 constant should be used to define a new case in the \texttt{switch}
@@ -3421,7 +3421,7 @@ versions will provide a model.  Their specifications are:
       (sizeof(real)==sizeof(double)?MPI\_DOUBLE:MPI\_FLOAT)} is used
     to determine which constant to pass to the MPI sum function.},
   doubles or ints.
-\item[par\_imax(int *idat)] Perform a global "maximum" reduction on
+\item[par\_imax(int *idat)] Perform a global ``maximum'' reduction on
   the single int argument.
 \fussy
 \end{description}
@@ -3467,7 +3467,7 @@ end
 \section{Aqueous MgCl$_2$ Solution}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 This is a three-component system consisting of MCY
-water\cite{matsuoka:75}, Magnesium and Chloride ions.  The Mg$^{2+}$
+water\cite{matsuoka:75}, magnesium and chloride ions.  The Mg$^{2+}$
 potential was fitted to the SCF calculations of Dietz and
 Heinzinger\cite{dietz:82} and the Cl$^-$ to the calculations of
 Kistenmacher, Popkie and Clementi\cite{kistenmacher:73b}.  Note that
@@ -3554,10 +3554,10 @@ unix systems in mind using unix-style option arguments, but ought to
 compile and run under VMS if defined as foreign commands.
 
 Since several of them require you to specify lists of (integer)
-numbers, for example selected molecules, timeslices \etc\ they share a
+numbers, for example selected molecules, timeslices \etc, they share a
 common syntax for these options.  For example the command-line
 argument \mbox{\texttt{-t 1,5,17-20,34-100:10}} selects numbers 1, 5, 17 to 20
-inclusive and 34,44,54\ldots.  Selectors are separated by commas and
+inclusive and 34,44,54\ldots94.  Selectors are separated by commas and
 each one may be a range separated by a hyphen with an optional
 increment following a colon.
 
@@ -3575,7 +3575,7 @@ tabular form for input into plotting programs.  The command is
 \end{center}
 where {\em fields\/} is a list in the selector format above.  The
 numbering runs from left to right, ignoring newlines and blank columns
-so that the translational KEs in figure~\ref{fig:output} are fields 1
+so that the translational KE's in figure~\ref{fig:output} are fields 1
 and 14 and the $\sigma_{zz}$ component of the stress tensor is 30.
 
 {\em Moldyext\/} can currently only extract information from the
