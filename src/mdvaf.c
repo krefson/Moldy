@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/mdvaf.c,v 1.13.10.2 2003/07/31 02:52:45 moldydv Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -32,7 +32,7 @@ static char *RCSid = "$Header$";
  *		nb. mdvaf time intervals taken relative to extracted dump slices.     *
  ************************************************************************************** 
  *  Revision Log
- *  $Log$
+ *  $Log: mdvaf.c,v $
  *  Revision 1.13.10.2  2003/07/31 02:52:45  moldydv
  *  System info now read from dump header, not sys-spec or restart files.
  *  Updated function descriptions to reflect this.
@@ -282,6 +282,7 @@ main(int argc, char **argv)
    int		nslices;
    int		dflag, iflag, sflag, vflag;
    int		outsw;
+   int		verbose = 0;
    int		irec, ispec, it_inc = 1;
    char         *filename = NULL, *dump_base = NULL;
    char         *dump_name = NULL, *dump_names = NULL;
@@ -319,7 +320,7 @@ main(int argc, char **argv)
      outsw = VAF;
 
 
-   while( (c = getopt(argc, argv, "3acd:t:v:i:g:o:q") ) != EOF )
+   while( (c = getopt(argc, argv, "3acd:t:l:i:g:o:qv") ) != EOF )
       switch(c)
       {
        case '3':
@@ -337,7 +338,7 @@ main(int argc, char **argv)
        case 't':
 	 dumplims = mystrdup(optarg);
          break;
-       case 'v':
+       case 'l':
 	 vaflims = mystrdup(optarg);
          break;
        case 'g':
@@ -352,6 +353,9 @@ main(int argc, char **argv)
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error("failed to open file \"%s\" for output", optarg);
+	 break;
+       case 'v':
+	 verbose++;
 	 break;
        default:
        case '?':
@@ -560,16 +564,20 @@ main(int argc, char **argv)
       error("malloc failed to allocate dump record buffer (%d bytes)",
           dump_size);
 #if defined (HAVE_POPEN) 
-   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d %s",
-        sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, dump_name);
-   
+   sprintf(dumpcommand,"dumpext %s -R%d -Q%d -b -c %d -t %d-%d:%d %s",
+	   verbose?"-v":"",
+	   sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, dump_names);
+
+   if ( verbose ) {
+     fprintf(stderr, "About to execute command \"%s\"\n",dumpcommand);
+   }
    if( (Dp = popen(dumpcommand,"r")) == 0)
         error("Failed to execute \'dumpext\" command - \n%s",
             strerror(errno));
 #else
    tempname = tmpnam((char*)0);
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d -o %s %s",
-         sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, tempname, dump_name);
+         sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, tempname, dump_names);
    system(dumpcommand);
    if( (Dp = fopen(tempname,"rb")) == 0)
         error("Failed to open \"%s\"",tempname);
