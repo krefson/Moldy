@@ -238,6 +238,18 @@ while ( <> ) {
       $_ = <>; ($junk, $junk, $b1, $b2, $b3, $junk) = split;
       $_ = <>; ($junk, $junk, $c1, $c2, $c3, $junk) = split;
       $vol = $a1*($b2*$c3-$b3*$c2)+$a2*($b3*$c1-$b1*$c3)+$a3*($b1*$c2-$ab*$c1);
+      printf STDERR "Warning: Initial MD Cell volume (%f) may give inaccurate results for running integration number if it changes during run\n",$vol if $runflag;
+    }
+    if ( /^\s+h\(1,\*\)\s+=/) {
+      ($junk, $junk, $a1, $junk,$junk,$a2, $junk, $junk, $a3, $junk) = split;
+    }
+    if ( /^\s+h\(2,\*\)\s+=/) {
+      ($junk, $junk, $b1, $junk,$junk,$b2, $junk, $junk, $b3, $junk) = split;
+    }
+    if ( /^\s+h\(3,\*\)\s+=/) {
+      ($junk, $junk, $c1, $junk,$junk,$c2, $junk, $junk, $c3, $junk) = split;
+      $vol = $a1*($b2*$c3-$b3*$c2)+$a2*($b3*$c1-$b1*$c3)+$a3*($b1*$c2-$ab*$c1);
+      printf STDERR "Info: Cell volume computed from averages block (%f) may give inaccurate results for running integration number\n",$vol if $runflag;
     }
     if ( /^_+$/ ... /^_+$/ ) {
 	#
