@@ -22,6 +22,9 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.19  1996/10/15 13:50:45  keith
+ *       Corrections to Cray SHMEM library interface.
+ *
  *       Revision 2.18  1996/09/03 15:04:51  keith
  *       Added optional code for MPI global sums to guarantee identical
  *       results on all processors. Compile with -DUNSYMM to activate.
@@ -65,7 +68,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/parallel.c,v 2.18 1996/09/03 15:04:51 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/parallel.c,v 2.19 1996/10/15 13:50:45 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -74,6 +77,10 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/parallel.c,v
 /*========================== system  include files ===========================*/
 #include	<signal.h>
 #include	"string.h"
+#ifdef BSP
+#include	<bsp.h>
+#include	<bsp_level1.h>
+#endif
 #ifdef DEBUG
 #include        <stdio.h>
 #endif
@@ -100,9 +107,9 @@ extern int 	ithread, nthreads;
 static long	lval;
 #define		ADDR(expr) (lval=(expr),&lval)
 #endif
-#ifdef BSP
+#ifdef BSP0
 /*
- * BSP currently doesn't handle auto & heap vars.  This interface
+ * BSP version 0 doesn't handle auto & heap vars.  This interface
  * copies to static storage.  A 1MB buffer is large enough to
  * handle up to 44000 atomic sites in one go, and data for larger 
  * systems is parcelled up appropriately and sent in chunks.
@@ -172,6 +179,13 @@ par_sigintreset()
    signal(SIGINT, SigintHandler);
 }
 #endif
+#ifdef BSP0
+void
+par_sigintreset()
+{
+   signal(SIGINT, SIG_DFL);
+}
+#endif
 #ifdef BSP
 void
 par_sigintreset()
@@ -205,6 +219,14 @@ int *idat;
 }
 #endif
 #ifdef BSP
+void
+par_imax(idat)
+int *idat;
+{
+   *idat = bsp_maxI(*idat);
+}
+#endif
+#ifdef BSP0
 static void imax(i1, i2, i3, size)
 int *i1, *i2, *i3;
 int	size;
@@ -256,6 +278,24 @@ int  n;
 #ifdef BSP
 static void viadd(res, x, y, nb)
 int res[], x[], y[];
+int *nb;
+{
+   int i, n=*nb/sizeof(int);
+   for(i = 0; i < n; i++)
+      res[i] = x[i] + y[i];
+}
+
+void
+par_isum(buf, n)
+int *buf;
+int  n;
+{
+   bsp_fold(viadd, buf, buf, n*sizeof(int));
+}
+#endif
+#ifdef BSP0
+static void viadd(res, x, y, nb)
+int res[], x[], y[];
 int nb;
 {
    int i, n=nb/sizeof(int);
@@ -295,7 +335,7 @@ int  n;
    int m;
    
    /*
-    * BSP only allows operations on statically allocated buffers. *sigh*
+    * SHMEM only allows operations on statically allocated buffers. *sigh*
     * Use loop to perform general operation copying in and out of a
     * fixed-size, static buffer.
     */
@@ -361,6 +401,39 @@ int  n;
 }
 #endif
 #ifdef BSP
+static void vradd(res, x, y, nb)
+real res[], x[], y[];
+int *nb;
+{
+   int i, n=*nb/sizeof(real);
+   for(i = 0; i < n; i++)
+      res[i] = x[i] + y[i];
+}
+static void vdadd(res, x, y, nb)
+double res[], x[], y[];
+int *nb;
+{
+   int i, n=*nb/sizeof(double);
+   for(i = 0; i < n; i++)
+      res[i] = x[i] + y[i];
+}
+
+void
+par_rsum(buf, n)
+real *buf;
+int  n;
+{
+   bsp_fold(vradd, buf, buf, n*sizeof(real));
+}
+void
+par_dsum(buf, n)
+double *buf;
+int  n;
+{
+   bsp_fold(vradd, buf, buf, n*sizeof(double));
+}
+#endif
+#ifdef BSP0
 static void vradd(res, x, y, nb)
 real res[], x[], y[];
 int nb;
@@ -578,6 +651,19 @@ int	n;
 size_mt	size;
 int	ifrom;
 {
+   bsp_push_reg(buf, n*size);
+   bsp_bcast(ifrom, buf, buf, n*size);
+   bsp_pop_reg(buf);
+}
+#endif
+#ifdef BSP0
+void
+par_broadcast(buf, n, size, ifrom)
+gptr	*buf;
+int	n;
+size_mt	size;
+int	ifrom;
+{
    int m;
    long nbyt = n*size;	/* Must have a signed type for loop test */
    
@@ -644,6 +730,50 @@ int	ifrom;
  * par_collect_all().  Global gather to all.                                  *
  ******************************************************************************/
 #ifdef BSP
+void
+par_collect_all(send, recv, n, stride, nblk)
+real	*send, *recv;
+int	n, nblk, stride;
+{
+   int  i, right, left, iblk, ibeg;
+   
+   bsp_push_reg(recv, nblk*stride*sizeof(real));
+   /*
+    * Copy send data to proper place in receive buffer unless it is
+    * already there.
+    */
+   if( recv+ithread*n != send )
+   {
+      for(iblk = 0; iblk < nblk; iblk++)
+	 memcp(recv+ithread*n+iblk*stride, send+iblk*stride, n*sizeof(real));
+   }
+
+   for (i=1; i<nthreads; i*=2) 
+   {
+      left  = (nthreads + ithread - i) % nthreads;
+      right = (ithread + i) % nthreads;
+      ibeg = ithread + 1 - i;
+
+      if( ibeg >= 0 )
+	 for(iblk = 0; iblk < nblk; iblk++)
+	    bsp_hpput(right, recv+ibeg*n+iblk*stride, recv,
+                            (ibeg*n+iblk*stride)*sizeof(real), i*n*sizeof(real));
+      else
+	 for(iblk = 0; iblk < nblk; iblk++)
+	 {
+	    bsp_hpput(right, recv+(ibeg+nthreads)*n+iblk*stride, recv,
+                            ((ibeg+nthreads)*n+iblk*stride)*sizeof(real), 
+		            -ibeg*n*sizeof(real));
+	    bsp_hpput(right, recv+iblk*stride, recv,
+                            (iblk*stride)*sizeof(real), 
+                            (ithread+1)*n*sizeof(real));
+	 }
+      bsp_sync();
+   }
+   bsp_pop_reg(recv);
+}
+#endif
+#ifdef BSP0
 void
 par_collect_all(send, recv, n, stride, nblk)
 real	*send, *recv;
@@ -836,6 +966,19 @@ char	***argv;
 int	*ithread;
 int	*nthreads;
 {
+   bsp_begin(bsp_nprocs());
+   *nthreads = bsp_nprocs();
+   *ithread  = bsp_pid();
+}
+#endif
+#ifdef BSP0
+void
+par_begin(argc, argv, ithread, nthreads)
+int	*argc;
+char	***argv;
+int	*ithread;
+int	*nthreads;
+{
    bspstart(*argc, *argv, 0, nthreads, ithread);
 }
 #endif
@@ -885,6 +1028,13 @@ par_finish()
 void
 par_finish()
 {
+   bsp_end();
+}
+#endif
+#ifdef BSP0
+void
+par_finish()
+{
    bspfinish();
 }
 #endif
@@ -915,6 +1065,15 @@ int code;
 }
 #endif
 #ifdef BSP
+void
+par_abort(code)
+int code;
+{
+   bsp_abort("");
+   exit(code);
+}
+#endif
+#ifdef BSP0
 void
 par_abort(code)
 int code;
@@ -1040,15 +1199,14 @@ system_mp	system;
    /*
     * N.B. We do NOT broadcast the accumulated RDF info.  That would
     * be incorrect since it is later summed. Leave on thread zero and
-    * zeros on other threads.  WHen globally summed it will be correct.
+    * zeros on other threads.  When globally summed it will be correct.
     */
 #endif
 }
 /******************************************************************************
  * replicate().  Make a copy of all Moldy's constant and dynamic data.        *
  *               This is for parallel implementations and allows "start_up"   *
- *		 to be called on one processor.  This version calls the       *
- *		 Oxford BSP library.					      *
+ *		 to be called on one processor.                               *
  ******************************************************************************/
 void replicate(control, system, spec_ptr, site_info, pot_ptr, restart_header)
 contr_mt  *control;
