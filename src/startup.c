@@ -37,6 +37,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.26  2001/02/19 19:36:45  keith
+ *      First working version of combined isothermic/isobaric ensemble.
+ *      (Previous version was faulty).
+ *      Also includes uniform-dilation, constant-pressure mode.
+ *
  *      Revision 2.25  2001/02/13 17:45:09  keith
  *      Added symplectic Parrinello-Rahman constant pressure mode.
  *
@@ -298,7 +303,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.25 2001/02/13 17:45:09 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.26 2001/02/19 19:36:45 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -376,9 +381,11 @@ static	char	afmt[] = "    %8s = %8X %8s = %8X %8s = %8X %8s = %8X\
 /*
  * Tolerances for comparing stored parameters.
  */
-#define STEP_TOL 1.0e-12
-#define TEMP_TOL 1.0e-3			/* 1mK */
-#define PRESSURE_TOL 1.0e-6		/* 1PA */
+#define fcompare(a,b) (fabs((a)-(b))/(fabs(a)+fabs(b)))
+#define CUTOFF_TOL 10e-6
+#define STEP_TOL 1.0e-6
+#define TEMP_TOL 1.0e-6
+#define PRESSURE_TOL 1.0e-6
 #define FICTICIOUS_MASS_TOL 1.0e-6
 /*========================== Control file keyword template ===================*/
 /*
@@ -1317,7 +1324,7 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
          init_rdf(system);		/* Prepare to calculate rdf	      */
       if( (control.rdf_interval != old_rdf_interval ||
 	   control.nbins != old_nbins ||
-	   control.limit != old_limit) &&
+	   fcompare(control.limit, old_limit) > CUTOFF_TOL) &&
 	   control.istep > control.begin_rdf )
       {  
 	 message(NULLI, NULLP, WARNING, RDFALT);
@@ -1349,19 +1356,19 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
       convert_averages(control.roll_interval, old_roll_interval, av_convert);
       control.reset_averages = 0;              /* This flag never propagated.*/
 
-      if(fabs(control.step - old_step) > STEP_TOL)
+      if(fcompare(control.step, old_step) > STEP_TOL)
 	 message(NULLI, NULLP, INFO, NEWTS, old_step, control.step);
 
       if( control.const_temp != old_const_temp || 
 	 (control.const_temp && 
-  	     (fabs(control.ttmass - old_ttmass) > FICTICIOUS_MASS_TOL ||
-	      fabs(control.temp - old_temp) > TEMP_TOL)))
+  	     (fcompare(control.ttmass, old_ttmass) > FICTICIOUS_MASS_TOL ||
+	      fcompare(control.temp, old_temp) > TEMP_TOL)))
 	 *new_ensemble = true;
 
       if( control.const_pressure != old_const_pressure ||
 	 (control.const_pressure && 
-	    (fabs(control.pmass - old_pmass) > FICTICIOUS_MASS_TOL ||
-	     fabs(control.pressure - old_pressure) > PRESSURE_TOL)))
+	    (fcompare(control.pmass, old_pmass) > FICTICIOUS_MASS_TOL ||
+	     fcompare(control.pressure, old_pressure) > PRESSURE_TOL)))
 	 *new_ensemble = true;
 
       for(i = 0; i < 9; i++)		/* Zap cell velocities if constrained */
