@@ -27,6 +27,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: main.c,v $
+ * Revision 2.8  1994/07/07  16:57:01  keith
+ * Updated for parallel execution on SPMD machines.
+ * Interface to MP library routines hidden by par_*() calls.
+ * Compile with -DSPMD to activate
+ *
  * Revision 2.7  1994/06/08  13:14:37  keith
  * Changed all timestep-related parameters to type "long". This means
  * that 16-bit DOS compilers can do more than 32767 timesteps.
@@ -139,7 +144,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 2.7 1994/06/08 13:14:37 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 2.8 1994/07/07 16:57:01 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -319,7 +324,7 @@ char	*argv[];
 	    (control.istep-control.begin_rdf+1) % control.rdf_out == 0)
 	    print_rdf(&system, species, site_info);
 
-	 if(control.backup_interval > 0 &&
+	 if(control.backup_interval > 0 && control.backup_file[0] &&
 	    control.istep % control.backup_interval == 0)
 	 {
 	    write_restart(control.backup_file, &restart_header,
