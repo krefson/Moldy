@@ -13,9 +13,13 @@
 		e.g.  cc -DGETOPT getopt.c -o getopt
 */
 
-#ifndef HAVE_GETOPT
+#ifdef HAVE_CONFIG_H
+#   include "config.h"
+#else
+#   include "defconf.h"
+#endif
 
-#include "defs.h"
+#ifndef HAVE_GETOPT
 
 #include <stdio.h>
 
