@@ -1,0 +1,162 @@
+#
+#  Compilation Options  - choose a suitable set for your machine
+#     
+#
+#  **** Scalar machines using default C compiler ****
+#CFLAGS=	-O  $(CFLAGS0)
+#CFLAGS=	-O4 $(CFLAGS0)
+#
+#  **** Scalar machines using gcc - can compile with -g ****
+CC=	gcc
+CFLAGS= -g -O $(CFLAGS0)
+#  **** Stellar ****
+#CFLAGS= -g -O2 -va -na  $(CFLAGS0)
+#CFLAGS2= +CaliasFreePointers
+#LDFLAGS= -g -z 
+#  **** convex ****
+#CC=	vc
+#CFLAGS= -g -O2 -va -na  $(CFLAGS0)
+#LDFLAGS= -lveclib 
+#  **** Cray **** (CC 4.n) - Link in FORTRAN kernel
+#CFLAGS= -h vector,olevel_3,vmesg_1,ivdep  $(CFLAGS0)
+#CFLAGSF= -DFKERNEL
+#EXTRA_OBJ= kernelf.o
+#LDFLAGS= -lf -lio -lbsd -lsci
+#FC=	cft
+#  **** Cray **** (CC 5.n) - At last can compile C kernel
+#CFLAGS= -h vector,olevel_3,vmesg_1,ivdep  $(CFLAGS0)
+#LDFLAGS=  -l /usr/lib/libbsd.a -l /lib/libsci.a
+#  ***** End *****
+LINT=		lint
+PFLAGS=		-p
+EPFLAGS=	-2r
+A2FLAGS=
+SHFILE=		$$file
+FILES = accel algorith alloc aux beeman convert dump ewald force input \
+	jacobi kernel main matrix output quaterns rdf restart startup \
+	values
+
+CFILES = $(FILES:%=%.c)
+
+OFILES = $(FILES:%=%.o)
+
+LFILES = $(FILES:%=%.ln)
+
+INFILES = control.water tips2.in\
+		control.tip4p tip4p.in\
+		methane.in mcy.in\
+		control.mgclh2o mgclh2o.in
+
+SHAKOBJS=	algorith.o alloc.o aux.o jacobi.o kernel.o input.o matrix.o\
+		quaterns.o restart.o startup.o
+
+UTILS = moldyextract dumpanalyze dumpconvert dumpextract  moldyanalyze
+
+EXTRAS = $(UTILS:%=%.c) mdshak.c
+
+HFILES=		structs.h defs.h string.h time.h messages.h
+
+moldy:		$(OFILES) $(EXTRA_OBJ)
+		$(CC)  $(OFILES) $(EXTRA_OBJ) $(LDFLAGS) -lm -o moldy
+
+$(UTILS):	$$@.c
+		$(CC) $(CFLAGS) $? -o $@
+
+mdshak:		mdshak.o $(SHAKOBJS)
+		$(CC) $(LDFLAGS) -o mdshak mdshak.o $(SHAKOBJS) -lm
+
+utilities:	$(UTILS) mdshak
+
+Makefile:	xmakefile
+		@PATH=/usr/5bin:${PATH};\
+		echo		'{{{\n/^CFILES/  c\\\nCFILES =' $(CFILES)\
+				'\n}\n/^OFILES/  c\\\nOFILES='  $(OFILES)\
+				'\n}\n/^LFILES/  c\\\nLFILES='  $(LFILES)\
+				'\n}\n/^EXTRAS/  c\\\nEXTRAS='  $(EXTRAS)\
+				 > make.sed 
+		sed -f make.sed ./xmakefile > Makefile
+
+cflow:		$(CFILES)
+		cflow $(CFILES) > moldy.cflow
+		cflow -r $(CFILES) > moldy.cflow.r
+
+print:		$(CFILES) $(HFILES)
+		for file in $(CFILES) $(HFILES) ;do\
+			a2ps $(A2FLAGS) ${SHFILE} | lpr -l -Plp2\
+                        ;done
+		touch print
+
+lint:		$(LFILES)
+		$(LINT) $(LFLAGS) $(LFILES)
+
+lint5:		
+		$(LINT) $(LFLAGS) $(CFILES)
+		
+
+tags:		$(CFILES) $(HFILES) kernel.f
+		etags $(CFILES) $(HFILES) kernel.f 
+
+clean:		
+		/bin/rm -f  $(OFILES) $(LFILES) moldy $(UTILS) mdshak
+
+cleaner:	
+		make -i clean
+		/bin/rm moldy.shar moldy.shar.Z cray.job cray.job.Z \
+			moldy.job moldy.job.Z compile.com compile.com.Z\
+			moldy.com moldy.com.Z
+annihilate:
+		make -i cleaner
+		/bin/rm $(CFILES) $(HFILES) kernel.f Makefile\
+		$(EXTRAS) $(INFILES)
+#
+#  Export options
+#
+moldy.shar:	READ.ME $(CFILES) $(HFILES) kernel.f Makefile moldy.tex\
+		$(EXTRAS) $(INFILES)
+		shar READ.ME $(CFILES) kernel.f $(HFILES) Makefile moldy.tex\
+		$(EXTRAS) $(INFILES) > moldy.shar
+
+cray:		$(CFILES) $(HFILES) kernel.f 
+		./cray_make $(CFILES) kernel.f $(HFILES) > cray.job
+
+moldy.job:	$(CFILES) $(HFILES) kernel.f 
+		./make_cray $(CFILES) kernel.f $(HFILES) > moldy.job
+
+compile.com:	Makefile
+		./make_vms_compile $(CFILES) > compile.com
+
+moldy.com:	$(CFILES) $(HFILES) kernel.f compile.com moldy.tex $(EXTRAS)\
+		$(INFILES) Aaaa_Read.Me
+		./make_vms Aaaa_Read.Me compile.com $(CFILES) $(HFILES)\
+		 kernel.f $(INFILES) moldy.tex $(EXTRAS) > moldy.com
+
+$(INFILES):	../input/$$@
+		cp ../input/$@ ./
+
+$(LFILES):	$(HFILES)
+
+$(OFILES):	structs.h defs.h
+
+kernelf.o:	kernel.f
+		$(FC) -o btreg,killtemp -a stack -b kernelf.o kernel.f
+
+ewald.o:	ewald.c 
+	$(CC) $(CFLAGS) $(CFLAGS2) $(TARGET_ARCH) -c  $<
+
+rdf.o:	rdf.c 
+	$(CC) $(CFLAGS) $(CFLAGS2) $(TARGET_ARCH) -c  $<
+
+force.o:	force.c 
+	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSF) $(TARGET_ARCH) -c $<
+
+%.c:		RCS/%.c,v
+		co $@
+
+%.h:		RCS/%.h,v
+		co $@
+
+.SUFFIXES:	.c .ln
+
+.c.ln:
+	$(LINT) $(LFLAGS) -i $<
+	
