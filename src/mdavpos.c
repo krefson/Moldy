@@ -20,14 +20,17 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdavpos.c,v 2.20 2004/12/07 13:00:02 cf Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *
  *              molecules and average box dimensions from MolDy dump files            *
  ************************************************************************************** 
  *  Revision Log
- *  $Log$
+ *  $Log: mdavpos.c,v $
+ *  Revision 2.20  2004/12/07 13:00:02  cf
+ *  Merged with latest utilities.
+ *
  *  Revision 2.19.10.2  2004/12/06 19:07:57  cf
  *  Removed unused variables.
  *  Removed option -c for skipping control info.
@@ -354,13 +357,14 @@ main(int argc, char **argv)
    quat_mt	*qpf;
    spec_mt	*avpos;
    mat_mt	avh;
+   int          verbose = 0;
 
 #define MAXTRY 100
    control.page_length=1000000;
 
    comm = argv[0];
 
-   while( (c = getopt(argc, argv, "r:s:d:t:o:f:ali") ) != EOF )
+   while( (c = getopt(argc, argv, "r:s:d:t:o:f:aliv") ) != EOF )
       switch(c)
       {
        case 'r':
@@ -412,6 +416,8 @@ main(int argc, char **argv)
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error("failed to open file \"%s\" for output", optarg);
 	 break;
+       case 'v':
+         verbose++;
        default:
        case '?': 
 	 errflg++;
@@ -421,7 +427,7 @@ main(int argc, char **argv)
    {
       fputs("Usage: mdavpos [-r restart-file | -s sys-spec-file] ",stderr);
       fputs("[-f output-type] [-a] [-l] [-i] -d dump-files ",stderr);
-      fputs("[-t s[-f[:n]]] [-o output-file]\n",stderr);
+      fputs("[-t s[-f[:n]]] [-v] [-o output-file]\n",stderr);
       exit(2);
    }
 
@@ -518,16 +524,23 @@ main(int argc, char **argv)
       error("malloc failed to allocate dump record buffer (%d bytes)",
 	    dump_size);
 #if defined (HAVE_POPEN) 
-   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s",
-	   sys.nmols, sys.nmols_r, start, finish, inc, dump_name);
+   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s%s",
+      sys.nmols, sys.nmols_r, start, finish, inc, verbose?"-v ":" ", dump_name);
    
+   if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
    if( (Dp = popen(dumpcommand,"r")) == 0)
-      error("Failed to execute \"dumpext\" command - \n%s",
+   {
+      if( !strcmp(strerror(errno),"Success") )
+         error("Failed to execute \"dumpext\" command\n");
+      else
+         error("Failed to execute \"dumpext\" command - \n%s",
             strerror(errno));
+   }
 #else
    tempname = tmpnam((char*)0);
-   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d -o %s %s",
-	   sys.nmols,sys.nmols_r, start, finish, inc, tempname, dump_name);
+   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d -o %s %s%s",
+         sys.nmols, sys.nmols_r, start, finish, inc, tempname, verbose?"-v ":" ", dump_name);
+   if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
    system(dumpcommand);
    if( (Dp = fopen(tempname,"rb")) == 0)
       error("Failed to open \"%s\"",tempname);

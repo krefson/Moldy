@@ -27,7 +27,10 @@ what you give them.   Help stamp out software-hoarding! */
  *              of molecules within same bond cutoffs                                 *
  ************************************************************************************** 
  *  Revision Log
- *  $Log$
+ *  $Log: mdbond.c,v $
+ *  Revision 1.13  2004/12/07 13:00:02  cf
+ *  Merged with latest utilities.
+ *
  *  Revision 1.12.10.2  2004/12/06 19:07:57  cf
  *  Removed unused variables.
  *  Removed option -c for skipping control info.
@@ -108,7 +111,7 @@ what you give them.   Help stamp out software-hoarding! */
  */
 
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdbond.c,v 1.13 2004/12/07 13:00:02 cf Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -627,7 +630,7 @@ main(int argc, char **argv)
    char         *bondlims = NULL, *anglims = NULL;
    char		*filename = NULL, *dump_name = NULL;
    char		*dumplims = NULL, *tempname;
-   char		dumpcommand[256];
+   char		*dumpcommand;
    int		dump_size;
    float	*dump_buf;
    FILE		*Fp = NULL, *Dp;
@@ -647,13 +650,14 @@ main(int argc, char **argv)
    int          blim[2], alim[2];         /* Min and max values for bonds and angles */
    ROOT         *root_bond = NULL;        /* Root of bond linked list */
    ROOT         *root_angle = NULL;       /* Root of angle linked list */
+   int		verbose = 0;
 
 #define MAXTRY 100
    control.page_length=1000000;
 
    comm = argv[0];
 
-   while( (c = getopt(argc, argv, "r:s:d:t:g:o:b:a:pxj") ) != EOF )
+   while( (c = getopt(argc, argv, "r:s:d:t:g:o:b:a:pxjv") ) != EOF )
       switch(c)
       {
        case 'r':
@@ -691,6 +695,8 @@ main(int argc, char **argv)
        case 'j': /* Calculate bonds and angles between c_of_ms */
 	 mflag = 1;
          break;
+       case 'v':
+         verbose++;
        default:
        case '?':
 	 errflg++;
@@ -700,7 +706,7 @@ main(int argc, char **argv)
    {
       fputs("Usage: mdbond [-s sys-spec-file|-r restart-file] ",stderr);
       fputs("[-d dump-file/s] [-t timeslice]] [-g species] ",stderr);
-      fputs("[-b bond-limits] [-a angle-limits] [-p] [-x] [-j] [-o output-file]\n",stderr);
+      fputs("[-b bond-limits] [-a angle-limits] [-p] [-x] [-j] [-v] [-o output-file]\n",stderr);
       exit(2);
    }
 
@@ -913,16 +919,23 @@ main(int argc, char **argv)
          error("malloc failed to allocate dump record buffer (%d bytes)",
             dump_size);
 #if defined (HAVE_POPEN)
-     sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s",
-        sys.nmols, sys.nmols_r, start, finish, inc, dump_name);
-   
+      sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s%s",
+         sys.nmols, sys.nmols_r, start, finish, inc, verbose?"-v ":" ", dump_name);
+                                                                                
+      if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
       if( (Dp = popen(dumpcommand,"r")) == 0)
-         error("Failed to execute \"dumpext\" command - \n%s",
-            strerror(errno));
+      {
+         if( !strcmp(strerror(errno),"Success") )
+            error("Failed to execute \"dumpext\" command\n");
+         else
+            error("Failed to execute \"dumpext\" command - \n%s",
+               strerror(errno));
+      }
 #else
       tempname = tmpnam((char*)0);
-      sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d -o %s %s",
-          sys.nmols,sys.nmols_r, start, finish, inc, tempname, dump_name);
+      sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d -o %s %s%s",
+         sys.nmols, sys.nmols_r, start, finish, inc, tempname, verbose?"-v ":" ", dump_name);
+      if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
       system(dumpcommand);
       if( (Dp = fopen(tempname,"rb")) == 0)
          error("Failed to open \"%s\"",tempname);

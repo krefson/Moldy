@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdshak.c,v 2.29 2004/12/07 13:00:02 cf Exp $";
 #endif
 
 #include "defs.h"
@@ -57,7 +57,7 @@ main(int argc, char **argv)
    char		*dumplims = NULL;
    char		*insert = NULL;
    char		*tempname;
-   char		dumpcommand[256];
+   char		*dumpcommand;
    int		dump_size;
    float	*dump_buf;
    FILE		*Fp = NULL, *Dp;
@@ -70,6 +70,7 @@ main(int argc, char **argv)
    int		av_convert;
    int		trajsw = 0;
    vec_mt       *prev_cofm = NULL;
+   int		verbose = 0;
    
 #define MAXTRY 100
    control.page_length=1000000;
@@ -92,7 +93,7 @@ main(int argc, char **argv)
    else
      outsw = OUTBIN;
 
-   while( (c = getopt(argc, argv, "o:r:s:d:t:i:yf:") ) != EOF )
+   while( (c = getopt(argc, argv, "o:r:s:d:t:i:yf:v") ) != EOF )
       switch(c)
       {
        case 'o':
@@ -141,6 +142,8 @@ main(int argc, char **argv)
 	  else if (!strcasecmp(optarg, "bin") )
 	     outsw = OUTBIN;
 	 break;
+       case 'v':
+         verbose++;
        default:
        case '?':
 	 errflg++;
@@ -151,7 +154,7 @@ main(int argc, char **argv)
       fprintf(stderr,
 	      "Usage: %s [-f out-type] [-y] [-s sys-spec-file|-r restart-file] ",
 	      comm);
-      fputs("[-d dump-files] [-t s[-f[:n]]] [-o output-file]\n", stderr);
+      fputs("[-d dump-files] [-t s[-f[:n]]] [-v] [-o output-file]\n", stderr);
       exit(2);
    }
 
@@ -288,18 +291,25 @@ main(int argc, char **argv)
 	 * and opening it if necessary.  Call output routine.
 	 */
 #if defined (HAVE_POPEN) 
-	sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %s %s",
-		sys.nmols,sys.nmols_r, dumplims, dump_name);
+	sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %s %s %s",
+		sys.nmols,sys.nmols_r, dumplims, dump_name, verbose?"-v ":" ");
 	if( (Dp = popen(dumpcommand,"r")) == 0)
 	   error("Failed to execute \"dumpext\" command - \n%s",
 		 strerror(errno));
 #else
 	tempname = tmpnam((char*)0);
-	sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %s -o %s %s",
-		sys.nmols,sys.nmols_r, dumplims, tempname, dump_name);
+	sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %s -o %s %s %s",
+		sys.nmols,sys.nmols_r, dumplims, tempname, dump_name, verbose?"-v ":" ");
 	system(dumpcommand);
-	if( (Dp = fopen(tempname,"rb")) == 0)
-	   error("Failed to open \"%s\"",tempname);
+        if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
+        if( (Dp = popen(dumpcommand,"r")) == 0)
+        {
+           if( !strcmp(strerror(errno),"Success") )
+              error("Failed to execute \"dumpext\" command\n");
+           else
+              error("Failed to execute \"dumpext\" command - \n%s",
+                 strerror(errno));
+        }
 #endif
 	for(irec = start; irec <= finish; irec+=inc)
 	{
