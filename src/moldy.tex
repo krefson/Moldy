@@ -1,4 +1,4 @@
-%MOLecular DYnamics simulation code, Moldy.
+%Molecular DYnamics simulation code, Moldy.
 %Copyright (C) 1988, 1992, 1993 Keith Refson
 % 
 %This program is free software; you can redistribute it and/or modify it
@@ -44,25 +44,28 @@
 %%%%%%%%%%% Use the "geometry" package to set page layout.      %%%%%%%%
 %%%%%%%%%%% Hard coded params are given as comments below if nec. %%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%\usepackage{geometry}
+\usepackage{geometry}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%% Dimensions and settings                                %%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\geometry{body={160mm,230mm},top=40mm,nohead}
 %% This gives the following settings on A4 paper.  For printing
 %% on US letter size, re-enable the \geometry and its \usepackage
-\textwidth  455.24408pt
-\textheight 654.41338pt
-\oddsidemargin  18.86191pt
-\evensidemargin -21.13809pt
-\topmargin  41.54103pt
-\headheight 0.0pt
-\headsep    0.0pt
+%\textwidth  455.24408pt
+%\textheight 654.41338pt
+%\oddsidemargin  18.86191pt
+%\evensidemargin -21.13809pt
+%\topmargin  41.54103pt
+%\headheight 0.0pt
+%\headsep    0.0pt
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% Needed for tables 3.1 and 3.2.  If you get rid of it %%%%%%%
 %%%%%%%%%%% edit the tabular header to excise the >{} descriptor.%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{array}
+\usepackage{longtable}
+\usepackage{afterpage}
+\usepackage{textcomp}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% Prettifies some script letters.  Omit if necessary. %%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -103,7 +106,6 @@
 %%%%%%%%%%% the AMS version plus the superfig/partfigure environments.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{amsmath}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% Specific customized macros for abstracting physical   %%%%%%
 %%%%%%%%%%%  font changes.                                        %%%%%%
@@ -118,7 +120,7 @@
 %%%%%%%%%%% No option defaults to ``hypertex'' using LaTeX and  %%%%%%%%
 %%%%%%%%%%% ``pdftex'' using pdflatex.                          %%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\usepackage{hyperref}
+\usepackage{hyperref}
 %
 % Comment this out for LaTeX2html translation
 %
@@ -144,7 +146,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.17 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.18 $ $}
 \newcommand{\moldyversion}{2.13}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -154,7 +156,9 @@
 
 \title{Moldy User's Manual}
 \author{Keith Refson\\Department of Earth Sciences\\Parks Road
-\\Oxford OX1 3PR\\keith@earth.ox.ac.uk\\}
+\\Oxford OX1
+3PR\\\htmladdnormallink{Keith.Refson@earth.ox.ac.uk}{mailto:Keith.Refson@earth.ox.ac.uk}\\} 
+
 \version{\RCSrevision for release \moldyversion}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -190,7 +194,7 @@ The initial implementation of the Nos\'{e}-Hoover and Gaussian
 thermostats was by Vladimir Murashov at Dalhousie University.
 Rafael R. Pappalardo contributed the modifications to ``mdshak'' to
 write XYZ format molecular graphics files. Craig Fisher contributed
-the ``msd'' and ``mdavpos'' programs.
+the ``msd'', ``mdavpos'', ``bdist'', ``mdbond'' and ``ransub'' programs.
 
 Thanks are due to Craig Fisher and Jos\'{e} Manuel Martinez Fernandez
 for diligent proofreading of several versions of the manual and many
@@ -504,7 +508,7 @@ present a problem to non ``predictor-corrector'' algorithms which are
 based on the assumption that the forces depend only on the
 co-ordinates.  Fincham has devised a scheme to allow integration of
 the rotational equations using Verlet-like
-algorithms\cite{fincham:81}, which is widely used despite the
+algorithms\cite{fincham:92}, which is widely used despite the
 potential problems caused by the low accuracy of the velocities being
 propagated into the dynamics.
 
@@ -1857,15 +1861,18 @@ A complete list of the parameters,
 their meanings and default values appears in
 table~\ref{tab:parameters}. 
 
-\begin{table}
-\begin{minipage}{\textwidth}
+\afterpage{%
+\begin{longtable}{|l|l|l|>{\saferagged}p{2.9in}|}%
 \caption{Control Parameters}
-\label{tab:parameters}
+\\\hline
+\textbf{name} & \textbf{type} &
+\textbf{default} & \textbf{function}  \endfirsthead%\hline\hline 
+\caption[]{Control Parameters (\emph{continued})}
+\\\hline
+\textbf{name} & \textbf{type} &
+\textbf{default} & \textbf{function}   \endhead\hline\hline
 \setlength{\rightskip}{0pt plus 2cm}
-\begin{tabular}{|l|l|l|>{\saferagged}p{2.9in}|}
-\hline
-\textbf{name} & \textbf{type}\footnote{See section~\ref{sec:control}} &
-\textbf{default} & \textbf{function} \\ \hline \hline
+\label{tab:parameters}
 \Lit{title} &                  character  & {\small Test Simulation} &
 A title to be printed on all output. \\
 \Lit{nsteps} &                 integer &                       0 &
@@ -1915,7 +1922,7 @@ External applied pressure (MPa). \\
 \Lit{strain-mask} &            integer &               200 &
 Bitmask controlling $\bm{h}$ matrix constraint. \\ \hline
 \Lit{alpha} &                  real &                  \emph{auto} &
-$\alpha$ parameter for Ewald sum. \\
+$\alpha$ parameter for Ewald sum. Set any negative value to disable Ewald sum.\\
 \Lit{k-cutoff} &               real &                  \emph{auto} &
 Reciprocal space cut off distance in \AA$^{-1}$. \\
 \Lit{cutoff} &                 real &                  \emph{auto} &
@@ -1928,17 +1935,6 @@ Include De Leeuw \& Perram term in Ewald sum. \\ \hline
 Period over which to calculate rolling averages. \\
 \Lit{print-interval} &         integer &               10 &
 How frequently to print normal output. \\ \hline
-\end{tabular}
-\end{minipage}
-\end{table}
-\begin{table}
-\begin{minipage}{\textwidth}
-\caption{Control Parameters (continued)}
-\setlength{\rightskip}{0pt plus 2cm}
-\begin{tabular}{|l|l|l|>{\saferagged}p{2.9in}|}
-\hline
-\textbf{name} & \textbf{type}\footnote{See section~\ref{sec:control}} &
-\textbf{default} & \textbf{function} \\ \hline \hline
 \Lit{begin-average} &          integer &               1001 &
 When to start accumulating the thermodynamic averages. \\
 \Lit{average-interval} &       integer &               5000 &
@@ -1991,9 +1987,8 @@ Unit of length for system specification file. \\
 Unit of time for system specification file. \\
 \Lit{charge-unit} &            real &                  1.60217733e-19 &
 Unit of charge for system specification file. \\ \hline
-\end{tabular}
-\end{minipage}
-\end{table}
+\end{longtable}%
+}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Setting up the System}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2015,6 +2010,7 @@ functions.  As for the control file, the input is case independent and
 free format, but line structured. Blank lines, spacing and comments
 are ignored.
 
+\pagebreak[3]
 The physical description consists of a series of entries, one for each
 molecular species, terminated by the keyword \Lit{end}. The entry
 for species $i$ should have the form
@@ -2103,7 +2099,7 @@ by means of the control file parameters \Lit{mass-unit},
 (which are themselves specified in SI units). All quantities read from
 the system specification file (dimensions as well as potentials) are
 taken to be in those units. Their default values are amu, \AA, 0.1ps
-and $q_{e}$, which means that the unit of energy is kJ mol$^{-1}$.  So
+and $q_{e}$, which means that the unit of energy is kJ\,mol$^{-1}$.  So
 to read in \AA, amu and kcal mol$^{-1}$, specify
 \Lit{time-unit=4.8888213e-14}.
 
@@ -2467,9 +2463,9 @@ square torques and total dipole moments are calculated.
 \subsection{Output units}
 All of the various forms of output use the same units, though for
 brevity they are not explicitly mentioned on the periodic output.
-Lengths are measured in \AA, energies are all expressed in kJ
-mol$^{-1}$, temperatures in Kelvin, pressure and stress in MPa, mean
-square forces and torques in N$^2$ mol$^{-1}$ and Nm$^2$
+Lengths are measured in \AA, energies are all expressed in
+kJ\,mol$^{-1}$, temperatures in Kelvin, pressure and stress in MPa,
+mean square forces and torques in N$^2$ mol$^{-1}$ and Nm$^2$
 mol$^{-1}$, charge in electron charges and dipole moments in Debye.
 Because energy is an extensive quantity the printed values refer to
 the \emph{whole system}.  (There is no practical way of expressing
@@ -2800,7 +2796,7 @@ to the very general nature of the potentials it is not possible to
 choose $r_c$ automatically so as to guarantee convergence of the
 non-electrostatic part. Although in many cases the automatic value
 will be adequate \Emph{it is the user's responsibility to ensure
-  that it is large enough}. If there are no charges in the system
+that it is large enough}. If there are no charges in the system
 specification file then $r_c$ is not set and an error message is
 issued.
 
@@ -2811,6 +2807,11 @@ potential energies correct to approximately 1 part in $10^{5}$.  For a
 simulation including ions - 1.1 Molal Magnesium Chloride solution -
 the same accuracy is attained with $\alpha = 0.45$\AA$^{-1}$, $r_{c} =
 9$\AA\ and $k_{c} = 3$\AA$^{-1}$.
+
+Setting a negative value for \Lit{control.alpha} has the effect of
+disabling the Ewald sum entirely.  Any Coulombic interactions are
+evaluated in real-space up to the limit set by the cutoff.  (This
+happens automatically if all charges are zero).
 
 The other relevant parameter is the switch \Lit{surface-dipole} which
 includes the dipole surface energy term of De Leeuw, Perram and
@@ -3010,23 +3011,84 @@ another host and transferred to the PC by disk or ftp.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Compilation}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{sec:compile}
 The source code of \moldy\  consists of 23 files of C programs (which have
 suffix ``\Fname{.c}'') and 8 header files (suffix ``\Fname{.h}'').
 To build \moldy, all of the \Fname{.c} files must be compiled and linked
 together to form an executable.  The method of doing this depends on
 the operating system of the target computer.
 \begin{description}
-\item[unix]  The ``make'' program is used and the make file is
-supplied in the distribution.  The \Fname{Makefile} supplied will attempt
-to compile using the command \Lit{cc -O -DUSE\_XDR} which will usually
-be sufficient to build a working executable on most operating
-systems.  However some systems may require extra libraries to
-be specified and it will usually be possible to build a faster-running
-executable by judicious use of optimization options. Options for many
-common compilers/operating systems are listed in commented-out form.
-To enable them, simply uncomment the appropriate lines in the makefile.
-Then just type \Lit{make} to compile and link \moldy\  and
-\Lit{make utilities} for the utility programs.
+\item[unix]  
+This version of Moldy uses the GNU autoconf system to configure for
+compilation.   In most cases it should be possible to do:
+
+\Lit{\% ./configure}\\
+\Lit{\% make}
+
+The ``configure'' script will determine the capabilities of the
+compiling system and create the files \Fname{config.h} and
+\Fname{Makefile} tailored to the system.  It has built in information
+about the compiler names and optimization options (it should recognise
+most major workstation types)\footnote{Since these date rapidly as
+  vendors improve their compilers and introduce new architectures
+  feedback from users on appropriate options is welcome and will be
+  included in future releases.}.  It should be able to determine the
+characteristics of an machine unknown to it and to create Makefile and
+config.h to build a working version.  In that case you may need to
+"hand-tune" compiler or optimization options, which may be specified
+by setting the OPT and OPT2 environment variables.
+
+You can set or change the default compiler or options by calling
+configure with the environment variables CC, CPPFLAGS, CFLAGS, OPT,
+OPT2, LDFLAGS or LIBS defined.  Any values you supply for these will
+override the built-in ones.  \emph{e.g.}
+
+
+\begin{tabbing}
+\Lit{\% env CC=gcc OPT=-O1 OPT2=-O4 ./configure} \=    \emph{(c-shell)}\\
+\Lit{\$ CC=gcc OPT=-O1 ./configure}      \>   \emph{(bourne-shell/korn-shell/bash)}
+\end{tabbing}
+
+OPT2 is used to compile only the most performance-critical modules and
+will usually select a very high level of optimization.  It should be
+safe to select an optimization which means ``treat all function
+arguments as restricted pointers which are not aliased to any other
+object''.  OPT is used for less performance-critical modules and may be
+set to a lower level of optimization than OPT2.
+
+There is just one other option to \Lit{configure},
+\Lit{--enable-parallel} which attempts to configure for building the
+parallel version.  The syntax is
+
+\Lit{--enable-parallel=}\textit{parsys}
+
+where \textit{parsys} is one of \Lit{mpi} \Lit{bsp} \Lit{shmem} or
+\Lit{tcgmsg}.  If \textit{parsys} is omitted the default is \Lit{mpi}.
+See the section~\ref{sec:spmdpar} on compiling for parallelism for a
+description of these libraries.
+
+This is all that is required for a parallel build if the include files
+for the parallel system are in a directory searched by the C compiler
+and the libraries can be found using \Lit{-l}\textit{parsys}.  The
+Cray T3D/T3E and SGI Power Challenge and Origin 2000 systems fall into
+this category.  Otherwise it may be necessary to specify these by
+setting the environment variables CPPFLAGS and LIBS, eg:
+
+\Lit{env CPPFLAGS=-I/usr/local/mpi/include 
+    LIBS="-L/usr/local/mpi/bin -lmpi" ./configure}
+
+Some parallel systems such as the MPICH implementation of MPI
+from Argonne National Laboratories supply a compiler script
+called, in this case ``mpicc''.  If you are using MPICH it is
+sufficient to do:
+
+\Lit{env CC=mpicc ./configure --enable-parallel}
+
+Configure assumes that ``mpicc'' invokes the system C compiler
+and adds the appropriate optimization flags.  Other cases where
+an alternate compiler specification is used are for the IBM SP2
+where the command is ``mpcc'' and for the Oxford bsp library
+which provides ``bspcc''.
 
 \item[VMS]  Simply type \Lit{@compile} to execute the command file
 \Fname{compile.com}. This will build \moldy\  and the utilities.
@@ -3042,22 +3104,24 @@ Then just type \Lit{make} to compile and link \moldy\  and
   files to link to build \moldy\ and the utilities.  \moldy\ has also
   been built using Watcom C.
   
-\item[Windows 95/NT] The most straightforward way to build \moldy\ is
-  to install one of the ports of the GNU gcc compiler such as the
-  Mingw32 or Cygnus versions.  The Mingw32 version is the more
-  straightforward and has the advantage over Cygnus that the
-  executable files do not depend on a DLL file and are therefore more
-  portable. Both are available over the internet via the URL
-  \Lit{\htmladdnormallink{http://www.fu.is.saga-u.ac.jp/\%7Ecolin/gcc.html}%
-{http://www.fu.is.saga-u.ac.jp/\%7Ecolin/gcc.html}} which contains links
-  to both distributions. (The mirror site in the USA
-  \Lit{\htmladdnormallink{http://www.geocities.com/Tokyo/Towers/6162/gcc.html}%
-{http://www.geocities.com/Tokyo/Towers/6162/gcc.html}} may be
-  faster).  Both ports contain the GNU ``make'' program and will work with
-  the supplied \Fname{Makefile}.  Simply edit \Fname{Makefile} and
-  uncomment the appropriate set of compiler options before invoking
-  \Fname{make}.
-  
+\item[Windows 95/98/NT] The most straightforward way to build \moldy\ is
+  to install one of the ports of the GNU gcc compiler such as Cygwin
+  or Mingw32.  Cygwin provides a full unix-like environment while
+  Mingw32 has the advantage that the executable files do not depend on
+  a DLL file and are therefore more portable.  On the other hand only
+  Cygwin has support for the XDR calls to produce portable restart and 
+  dump files (see section~\ref{sec:xdr}).  As of version B.20, Cygwin
+  incorporates mingw32 which can be selected using a command-line option.
+
+  Cygwin may be downloaded from the homepage at URL
+  \Lit{\htmladdnormallink{http://sourceware.cygnus.com/cygwin/}%
+  {http://sourceware.cygnus.com/cygwin/index.html}}.
+
+  The compilation procedure is exactly the same as under a unix
+  environment -- \Lit{configure} followed by \Lit{make}. \textbf{N.B.}
+  The executables so created must be run under either a Cygwin
+  ``bash'' shell or a MS-DOS window.  
+
   \moldy\ has also been successfully compiled using Watcom C and the
   development environment.  Consult the Makefile to see which objects
   to link to build \moldy\ and the utilities. It is also possible that
@@ -3074,16 +3138,10 @@ Then just type \Lit{make} to compile and link \moldy\  and
 As described in section~\ref{sec:xdr} binary restart and dump files
 may be written and read in a portable way using the Sun XDR calls.
 Since these are are not part of the ANSI C standard libraries, this
-code is conditionally included by defining the C preprocessor macro
-\Lit{USE\_XDR}.  Though non-standard, XDR is almost universally
-available on unix operating systems, so the makefile defines this by
-default, assuming the syntax of the compiler flag \Lit{-DUSE\_XDR}
-to do so.  If the XDR headers and libraries are not present on your
-system, then comment out the line reading \Lit{XDR=-DUSE\_XDR} at
-the top of the makefile to deactivate this feature.  On certain
-systems (\eg\ older versions of SGI IRIX and Sun Microsystems Solaris
-2.x) it may be necessary to include some additional library in the
-link, via the \Lit{LDFLAGS} make macro.
+code is conditionally included. On unix-like systems the ``configure''
+script detects the availability of the XDR headers and libraries.  If
+``configure'' is not usable the capabilities may be enabled by
+defining the C preprocessor macro \Lit{USE\_XDR}.
 
 \subsection{Parallel Version (Message Passing)}
 \label{sec:spmdpar}
@@ -3129,16 +3187,19 @@ Alternatively a port to another parallel interface should be quite
 straightforward, see section~\ref{sec:parport}.
 
 Once a suitable message-passing library is installed the procedure for
-building \moldy\ is quite simple.  The C preprocessor macro
-\Lit{SPMD} must be defined as well as one of \Lit{MPI},
-\Lit{TCGMSG}, \Lit{BSP} or \Lit{SHMEM}. This is usually done
-in the makefile by setting the Make macro \Lit{PARLIBC=-DSPMD
-  -DMPI}, for example.  This macro should also include a \Lit{-I}
-directive specifying the directory for the library's header files if
-these are not in the default path searched by the compiler.  The
-similar make macro \Lit{PARLIBL} should contain the linker
-directives necessary to link to the library itself. Examples are
-provided at the top of the supplied \Fname{Makefile}.
+building \moldy\ is as described in section~\ref{sec:compile}. 
+
+On a non unix-like system the configuration must be done ``by hand''
+using whatever build mechanism is available.  The C preprocessor macro
+\Lit{SPMD} must be defined as well as one of \Lit{MPI}, \Lit{TCGMSG},
+\Lit{BSP} or \Lit{SHMEM}. This is usually done in the makefile by
+setting the Make macro \Lit{PARLIBC=-DSPMD -DMPI}, for example.  This
+macro should also include a \Lit{-I} directive specifying the
+directory for the library's header files if these are not in the
+default path searched by the compiler.  The similar make macro
+\Lit{PARLIBL} should contain the linker directives necessary to link
+to the library itself. Examples are provided at the top of the
+supplied \Fname{Makefile}.
 
 This parallel implementation makes use of the \emph{replicated data}
 approach\cite{smith:91} whereby every processor has a complete copy of
@@ -3278,33 +3339,22 @@ C and assumes the library calls and header files defined for a hosted
 implementation of the standard.  It should therefore be possible to
 compile and run \moldy\ on any computer which has a good C compiler.
 
-There are two possible sources of difficulty in moving \moldy\ to a
-new machine. Though hosted ANSI standard C environments are now
-commonly available it may still be necessary to compile \moldy\ using
-a pre-ANSI compiler.  In that case some library functions and header
-files may not be present. Secondly, to make good use of vector or
-parallel architectures, compiler directives or calls to specialized
-library functions are usually required.  Replacement ANSI library
-functions are supplied in \Fname{ansi.c} for the VMS and unix (both
-Berkeley and AT\&T system V varieties) operating systems.  Different
-versions of a function are selected by the C preprocessor and
-conditionally compiled according to the pre-defined preprocessor
-symbols (see the documentation for your compiler).  For ease of
-portability \emph{all other system-dependent functions are in the
-  module \Fname{auxil.c}} and \emph{all preprocessor conditionals are in
-  the header file \Fname{defs.h}}.
+The ``configure'' script immensely eases portability on unix-like
+systems by detecting the capabilities of the compiler and the
+installed header files and library functions. The details are given
+below for completeness or in case of a configure failure or for a
+system where ``configure'' does not work.
 
-If the target machine has ANSI conformant C libraries, all that must
-be done is to define the preprocessor symbol \Lit{ANSI\_LIBS},
-either in \Fname{defs.h} or by using a compiler option \eg\ 
-\Lit{-DANSI\_LIBS}.  This is done automatically in \Fname{defs.h}
-for several machines known to have conformant environments.  If the
-target operating system is the system V variant of UNIX, the
-preprocessor symbol \Lit{USG} is defined automatically in
-\Fname{defs.h}.  It is possible that some environments may defeat the
-selection making it necessary to define it by hand, either in
-\Fname{defs.h} or by setting the compiler option \Lit{-DUSG} in
-the makefile.
+Though hosted ANSI standard C environments are now commonly available
+it may still be necessary to compile \moldy\ using a pre-ANSI
+compiler.  Replacement ANSI library functions are supplied in
+\Fname{ansi.c} for the VMS and unix operating systems.  For ease of
+portability \emph{all other system-dependent functions are in the
+  module \Fname{auxil.c}} and \emph{all preprocessor conditionals are
+  in the header file \Fname{defs.h}}. If the target machine has ANSI
+conformant C libraries, all that must be done is to define the
+preprocessor symbol \Lit{ANSI\_LIBS}, either in \Fname{defs.h} or by
+using a compiler option \eg\ \Lit{-DANSI\_LIBS}.
 
 \subsection{System Dependencies}
 In this section, details of system-dependent functions are described
@@ -3336,13 +3386,13 @@ for the major operating systems.
     portable \Lit{vprintf()}.  Use the preprocessor macros
     \Lit{HAVE\_VPRINTF} or \Lit{HAVE\_DOPRNT} to select which.
   \end{itemize}
-\item[Timing routines] The supplied \Lit{clock()} function on
+\item[Timing routines] The supplied \Lit{clock()} function on some
   32-bit UNIX systems resets to zero after 36 minutes.  Replacements,
-  called \Lit{cpu()} for system V and Berkeley UNIXes and
-  POSIX are supplied in \Fname{auxil.c}.  The function \Lit{rt\_clock()}
-  is also defined and returns the elapsed time in seconds.  For a
-  non-unix system \Lit{cpu()} and \Lit{rt\_clock()} simply call
-  the ANSI functions \Lit{clock()} and \Lit{time()}.
+  called \Lit{cpu()} for system V and Berkeley UNIXes and POSIX are
+  supplied in \Fname{auxil.c}.  The function \Lit{rt\_clock()} is also
+  defined and returns the elapsed time in seconds.  For a non-unix
+  system \Lit{cpu()} and \Lit{rt\_clock()} simply call the ANSI
+  functions \Lit{clock()} and \Lit{time()}.
 \item[File manipulation routines]
  \Fname{Auxil.c} contains the functions \Lit{replace()} and
   \Lit{purge()}.  \Lit{replace()} renames a file, making a
@@ -5209,7 +5259,7 @@ where the arguments have the following meanings
 \item[-s] read a system specification file.
 \item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
 \item[-d] read configurational data from a dump file given as a prototype name
-containing a printf() format string - see section 3.7.
+containing a printf() format string - see section~\ref{sec:dumping}.
 \item[-t] range of records in the dump file, specified in ``selector'' format, to
 average positions over.
 \item[-h] give the output in SCHAKAL format (default).
@@ -5218,7 +5268,169 @@ average positions over.
 \item[-o] name of optional output file. Defaults to standard output.
 \end{Argdescription}
 
-\bibliography{simulation,mypubs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Mdbond and bdist}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Mdbond is a utility for calculating the distances between the centres
+of mass of pairs of molecules, as well as angles between triplets of
+molecules within minimum and maximum values specified using options
+\Lit{-b} and \Lit{-a} (for bonds and angles, respectively). The
+utility calculates values for ALL pairs / triplets within the cutoffs,
+including those involving mirror atoms, so that maximum cutoffs
+greater than the simulation box lengths are possible.
+        
+Bond lengths are output in columnar format in increasing order with
+the number and species type of each pair of molecules given in the
+first two columns. The angle data are output after the bond data, also
+in columnar format. Each row contains the molecule numbers and species
+types for triplets \emph{i-j-k} , followed by the angle formed about
+molecule \emph{i} and the distances \emph{i-j} and \emph{i-k}.
+
+The command line options are:
+
+\begin{center}
+\Lit{mdbond}
+\Lit{[-s} \textit{system-specification}\Lit{]}
+\Lit{[-r} \textit{restart-file}\Lit{]}
+\Lit{[-d} \textit{dump-file-format}\Lit{]}
+\Lit{[-t} \textit{dump-range}\Lit{]} 
+\Lit{[-b} \textit{bond-limits}\Lit{]} 
+\Lit{[-a} \textit{angle-limits}\Lit{]} 
+\Lit{[-g} \textit{species-range}\Lit{]} 
+\Lit{[-c]}
+\Lit{[-o} \textit{output-file}\Lit{]}
+\end{center}
+
+where the arguments have the following meanings:
+\begin{Argdescription}
+\item[-s] read a system specification file.
+\item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
+\item[-d] read configurational data from a dump file given as a prototype name
+  containing a printf() format string - see section~\ref{sec:dumping}. 
+\item[-t] range of records in the dump file, specified in ``selector''
+  format, to average positions over.
+\item[-b] bond limits in tenths of Angstroms entered in form
+  ``minimum-maximum''. Limits may be entered as integers only, so
+  smallest difference is 0.1\AA. Defaults to 0.2 to 2\AA.
+\item[-a] angle limits in degrees entered in form ``minimum-maximum''.
+  Limits may be entered as integers only, so smallest difference is
+  1\textdegree. Defaults to 0 to 180\textdegree.
+\item[-g] range of species to be included, given in selector format
+  where 0 represents the first species. Defaults to all species.
+\item[-c] if reading system specification file, skip any preceding
+  control parameter info.
+\item[-o] name of optional output file. Defaults to standard output.
+\end{Argdescription}
+
+
+Species positions can be input using system specification, restart or dump
+files. If the latter case is chosen, the bond and angle data for each time
+slice are written consecutively to the same output file, with each set of
+data separated by a title indicating the number of the respective time
+slice.
+
+Bdist converts the data output from mdbond into a format suitable for
+plotting bond and angle distribution curves. The utility scans through the
+output file counting the number of bond lengths / angles within the
+specified intervals for different pairs / triplets of species types. The
+data is output in two columns, first for bonds and then for angles, with
+the mid-point of the bond/angle interval given in the first column and the
+number of bonds/angles within that interval in the second column. The
+utility is invoked on the command line by:
+
+\begin{center}
+\Lit{bdist}
+\Lit{[-i} \textit{input-file}\Lit{]}
+\Lit{[-b} \textit{bond-range}\Lit{]}
+\Lit{[-a} \textit{angle-range}\Lit{]}
+\Lit{[-o} \textit{output-file}\Lit{]}
+\end{center}
+
+where the options are:
+\begin{Argdescription}
+\item[-i] name of the input file.
+\item[-b] bond interval limits in tenths of Angstroms entered in form
+  ``minimum-maximum:increment''. Limits may be entered as integers
+  only, so smallest increment is 0.1\AA. Defaults to 0.2 to 2\AA with
+  a 0.5\AA increment.
+\item[-a] angle interval limits in degrees entered in form
+  ``minimum-maximum:increment''. Limits may be entered as integers only,
+  so smallest increment is 1\textdegree. Defaults to 0 to
+  180\textdegree\ with a 1\textdegree\ increment.
+\end{Argdescription}
+
+Note that if the mdbond output file to be analyzed contains
+multiple data sets (from reading dump files), the data for each time slice
+must be copied manually into separate files and the ``- Time Slice \# -''
+headings removed before bdist can be used.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Ransub}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+It is sometimes necessary to simulate a crystalline system in which one or
+more of the components have been randomly substituted onto lattice sites
+normally occupied by another species. For large numbers of substitutions,
+doing this by hand can be tedious, so the utility ransub has been provided
+to speed up the construction of system specification files in which
+``solute'' or ``dopant'' molecules are randomly distributed.
+        
+The command line options are:
+\begin{center}
+\Lit{ransub}
+\Lit{[-s} \textit{system-specification}\Lit{]}
+\Lit{[-r} \textit{restart-file}\Lit{]}
+\Lit{[-d} \textit{dump-file-format}\Lit{]}
+\Lit{[-t} \textit{dump-range}\Lit{]} 
+\Lit{[-m} \textit{solvent-species}\Lit{]} 
+\Lit{[-n} \textit{no. of substitutions}\Lit{]} 
+\Lit{[-u} \textit{solute-species}\Lit{]} 
+\Lit{[-w} \textit{mass}\Lit{]} 
+\Lit{[-q} \textit{charge}\Lit{]} 
+\Lit{[-z} \textit{symbol}\Lit{]} 
+\Lit{[-c]}
+\Lit{[-o} \textit{output-file}\Lit{]}
+\end{center}
+
+where the arguments have the following meanings:
+\begin{Argdescription}
+\item[-s] read a system specification file.
+\item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
+\item[-d] read configurational data from a dump file given as a prototype name
+  containing a printf() format string - see section~\ref{sec:dumping}. 
+\item[-t] range of records in the dump file, specified in ``selector''
+  format, to average positions over.
+\item[-m] the name of the species to be replaced, i.e. the ``solvent''
+  species.
+\item[-u] the name of the substituting or ``solute'' species.
+\item[-n] the number of molecules to be substituted.
+\item[-w] mass of the solute species. Defaults to same mass as the
+  first atom of the solvent species.
+\item[-q] charge of the solute species. Defaults to same charge as the
+  first atom of the solvent species.
+\item[-z] symbol of the solute species. Defaults to same symbol as the
+  first atom of the solvent species.
+\item[-c] if reading system specification file, skip any preceding
+  control parameter info.
+\item[-o] name of optional output file. System specification data
+  created from multiple time slices are written consecutively to the
+  same file.
+\end{Argdescription}
+
+If the species data come from a restart file, the user is prompted for
+the energy units to use when writing the potential parameters to the
+output.  \textbf{N.B.}. These may vary slightly from the original
+inputted parameters depending on the exact value of the time-unit used
+in the control file to specify energy units other than kJ\,mol$^{-1}$. See
+section~\ref{sec:sys-spec}.
+
+At present, ransub can only introduce monatomic solute species, but
+polyatomic species can easily be added manually by modifying the system
+specification file created by ransub. It is also possible to introduce
+randomly distributed vacancies by prefixing the solute name with ``\#''.
+
+\bibliography{abbrevjn,simulation,mypubs}
 \bibliographystyle{amsplain}
 
 \end{document}
