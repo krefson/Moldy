@@ -29,6 +29,11 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.24  2001/02/05 11:47:34  keith
+ *       Improved test of close site-site approaches to catch all intermolecular
+ *       ones.  The avoidance test for intramolecular approaches invalidated the
+ *       previous approach of only catching the first such close contact in a list.
+ *
  *       Revision 2.23  2000/12/08 12:28:21  keith
  *       Rewrote misleading intramolecular energy message
  *       Corrected (silent) bug in arglist of kernel in poteval()
@@ -228,7 +233,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.23 2000/12/08 12:28:21 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.24 2001/02/05 11:47:34 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -1438,7 +1443,12 @@ NOVECTOR
       imcell_offset=IMCELL_XTRA*IMCELL_L*IMCELL_L*ncells;
       ii0 = IMCELL_XTRA;
 #endif
-      pbclookup = arralloc(sizeof (int), 2, imcell_offset, NIMCELLS*ncells-1,0,1);
+      /*
+       * N.B.  Use alloc of int[2] rather than 2-D dope-vector array
+       *       for efficieny.
+       */
+      pbclookup = (int (*)[2])arralloc(2*sizeof(int), 1, 
+				       imcell_offset, NIMCELLS*ncells-1);
       
       icell4d=imcell_offset;
       for(ii = ii0; ii < IMCELL_L; ii++)
