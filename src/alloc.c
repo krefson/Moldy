@@ -18,6 +18,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.20  93/03/09  15:58:16  keith
+ * Changed all *_t types to *_mt for portability.
+ * Reordered header files for GNU CC compatibility.
+ * 
  * Revision 1.19  93/03/05  15:00:30  keith
  * Added generic type "word_t" for portability.
  * Moved include line for security in non-ansi gcc environments
@@ -95,7 +99,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.19 93/03/05 15:00:30 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.20 93/03/09 15:58:16 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
@@ -129,7 +133,19 @@ int	malloc_verify();
 int	malloc_debug();
 #endif
 /*============================================================================*/
-typedef double word_mt;
+/******************************************************************************
+ * word_mt								      *
+ * This is the core of the non-ANSI conformance of "arralloc" and *must* be   *
+ * right for portability.  Word_mt must be typed to the *smallest* size of    *
+ * object to be allocated.  On a word-addressed machine  it ought to be the   *
+ * smallest addressible object.  Char is only safe for byte-addressible       *
+ * architectures (with the exception of the Cray, which works).  Moldy doesn't*
+ * call it for anything smaller than an int, which being the "naturally" sized*
+ * object is the optimum.  If pointer representations of any actually required*
+ * object (ie NOT char) do differ then these functions will have to be        *
+ * rewritten.								      *
+ ******************************************************************************/
+typedef int word_mt;
 /******************************************************************************
  * talloc()	Call Calloc to allocate memory, test result and stop if failed*
  ******************************************************************************/
@@ -227,7 +243,7 @@ va_dcl
    ndim = va_arg(ap, int);
 #endif
 
-   if( size % sizeof(int) != 0 )  /* Code only works for 'word' objects */
+   if( size % sizeof(word_mt) != 0 )  /* Code only works for 'word' objects */
       message(NULLI, NULLP, FATAL, WDPTR, size);
    /*
     * Cycle over dims, checking bounds and accumulate # pointers & data items.
