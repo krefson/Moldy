@@ -209,7 +209,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.19.2.1.2.8 2000/12/07 15:58:33 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.19.2.2 2000/12/19 11:47:48 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -1333,11 +1333,17 @@ int		pbclookup[][2];
                dump_neighbour_list(jmax,jmin,isite,nab,pbctrans,site0, site1, site2,
                                    rx, ry, rz, r_sqr,id);
 #endif
-            if( (jsite = jmin+search_lt(jmax-jmin, r_sqr+jmin, 1, TOO_CLOSE))
-                < jmax )
-               if( molmap[isite] != molmap[nab[jsite]])
-                  message(NULLI, NULLP, WARNING, TOOCLS,
-                          isite, nab[jsite], sqrt(TOO_CLOSE));
+	    jsite = jmin;
+	    do {
+	       jsite += search_lt(jmax-jsite, r_sqr+jsite, 1, TOO_CLOSE);
+	       if( jsite < jmax )
+	       {
+		  if( molmap[isite] != molmap[nab[jsite]])
+		     message(NULLI, NULLP, WARNING, TOOCLS,
+			     isite, nab[jsite], sqrt(TOO_CLOSE));
+		  jsite++;
+	       }
+	    } while (jsite < jmax );
                
             if( control.strict_cutoff )
                for(jsite = jmin; jsite < jmax; jsite++)
