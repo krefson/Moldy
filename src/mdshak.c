@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdshak.c,v 2.10 1996/09/26 14:39:36 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdshak.c,v 2.11 1997/07/04 13:22:10 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -36,6 +36,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdshak.c,v 2
 #include <stdio.h>
 #include "structs.h"
 #include "messages.h"
+#include "ReadDCD.h"
 #if defined(ANSI) || defined(__STDC__)
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 #else
@@ -65,6 +66,7 @@ contr_mt		control;
 #define OUTBIN 2
 #define SHAK   0
 #define XYZ 1
+#define DCD 3
 /******************************************************************************
  * Dummies of 'moldy' routines so that mdshak may be linked with moldy library*
  ******************************************************************************/
@@ -416,6 +418,7 @@ char		*insert;
    (void)printf("END %d\n", n);
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
+   afree((gptr*) site);
 }
 /******************************************************************************
  * xyz_out().  Write a system configuration to stdout in the form of an    *
@@ -479,6 +482,58 @@ char		*insert;
 
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
+   afree((gptr*) site);
+}
+/******************************************************************************
+ * dcd_out().  Write a system configuration to stdout in the form of an    *
+ * DCD data file for the graphics program VMD                              *
+ ******************************************************************************/
+void
+dcd_out(n, irec, inc, system, species, site_info, insert)
+int	n, irec, inc;
+system_mt	*system;
+spec_mt		species[];
+site_mt		site_info[];
+char		*insert;
+{
+   double	**site = (double**)arralloc(sizeof(double),2,
+					    0,2,0,system->nsites-1);
+   float	**sitef = (float**)arralloc(sizeof(float),2,
+					    0,2,0,system->nsites-1);
+   spec_mt	*spec;
+   int		isite, is, i, imol, isitem;
+
+   isitem=0; 
+   for(spec = species; spec < species+system->nspecies; spec++)
+   {
+      make_sites(system->h, spec->c_of_m, spec->quat, spec->p_f_sites,
+		 spec->framework, site, spec->nmols, spec->nsites);
+
+      isite = 0;
+      for(imol = 0; imol < spec->nmols; imol++)
+      {
+	 for(is = 0; is < spec->nsites; is++)
+	 {
+	    if(fabs(site_info[spec->site_id[is]].mass) != 0)
+	    {
+	       for(i=0; i<3; i++)
+		  sitef[i][isitem] = site[i][isite];
+	       isitem++;
+	    }
+	    isite++;
+	 }
+      }
+   }
+/* On first call  write the DCD header.  Always write to stdout. */
+   if( n == 0 )
+      write_dcdheader(1, control.title, isitem, irec, 0, inc, control.step);
+   
+   write_dcdstep(1, isitem, sitef[0], sitef[1], sitef[2]);
+
+   if( ferror(stdout) )
+      error("Error writing output - \n%s\n", strerror(errno));
+   afree((gptr*)site);
+   afree((gptr*)sitef);
 }
 /******************************************************************************
  * atoms_out().  Write a system configuration to stdout in the form of an     *
@@ -523,6 +578,7 @@ char		*atom_sel;
    }
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
+   afree((gptr*) site);
 }
  /******************************************************************************
  * Centre_mass.  Shift system centre of mass to origin (in discrete steps),   *
@@ -579,8 +635,8 @@ vec_mt	s;
  * Translate system relative to either centre of mass of posn of framework.   *
  ******************************************************************************/
 void
-moldy_out(n, system, species, site_info, atom_sel, outsw, insert)
-int	n;
+moldy_out(n, irec, inc, system, species, site_info, atom_sel, outsw, insert)
+int	n, irec, inc;
 system_mt	*system;
 spec_mt		species[];
 site_mt		site_info[];
@@ -604,6 +660,9 @@ char		*insert;
    }
    switch (outsw)
    {
+   case DCD:
+      dcd_out(n, irec, inc, system, species, site_info, insert);
+      break;
     case SHAK:
       schakal_out(n, system, species, site_info, insert);
       break;
@@ -661,10 +720,12 @@ char	*argv[];
      outsw = SHAK;
    else if (strstr(comm, "mdxyz") )
      outsw = XYZ;
+   else if (strstr(comm, "mddcd") || strstr(comm, "mdvmd") )
+     outsw = DCD;
    else
      outsw = OUTBIN;
 
-   while( (c = getopt(argc, argv, "a:bo:cr:s:d:t:i:xh") ) != EOF )
+   while( (c = getopt(argc, argv, "a:bo:cr:s:d:t:i:xhv") ) != EOF )
       switch(c)
       {
        case 'a': 
@@ -702,6 +763,9 @@ char	*argv[];
        case 'h':
 	 outsw = SHAK;
 	 break;
+       case 'v':
+	 outsw = DCD;
+	 break;
        default:
        case '?':
 	 errflg++;
@@ -710,7 +774,7 @@ char	*argv[];
    if( errflg )
    {
       fprintf(stderr,
-	      "Usage: %s [-x] [-h] [-c] [-s sys-spec-file] [-r restart-file] ",
+	      "Usage: %s [-x|-v] [-h] [-c] [-s sys-spec-file] [-r restart-file] ",
 	      comm);
       fputs("[-d dump-files] [-t s[-f[:n]]] [-o output-file]\n", stderr);
       exit(2);
@@ -792,14 +856,14 @@ char	*argv[];
    {
     case 's':				/* Lattice_start file		      */
 	lattice_start(Fp, &sys, species, qpf);
-	moldy_out(1, &sys, species, site_info, atom_sel, outsw, insert);
+	moldy_out(1, 1, 1, &sys, species, site_info, atom_sel, outsw, insert);
       break;
     case 'r':				/* Restart file			      */
 	init_averages(sys.nspecies, restart_header.vsn,
 		      control.roll_interval, control.roll_interval,
 		      &av_convert);
 	read_restart(Fp, restart_header.vsn, &sys, av_convert);
-	moldy_out(1, &sys, species, site_info, atom_sel, outsw, insert);
+	moldy_out(1, 1, 1, &sys, species, site_info, atom_sel, outsw, insert);
       break;
     case 'd':				/* Dump dataset			      */
 	if( dump_name == 0 )
@@ -876,7 +940,7 @@ char	*argv[];
 
 	   dump_to_moldy(dump_buf, &sys);
 
-	   moldy_out(iout++, &sys, species, site_info, atom_sel, outsw, insert);
+	   moldy_out(iout++, irec, inc, &sys, species, site_info, atom_sel, outsw, insert);
 #ifdef DEBUG
 	   fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
 		   irec%header.maxdumps, dump_name);
