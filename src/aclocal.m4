@@ -37,11 +37,11 @@ done
 
 AC_DEFUN(AC_PROG_CC2,
 [AC_BEFORE([$0], [AC_PROG_CPP2])dnl
+AC_CHECK_PROG(CC, c89, c89, , , /usr/ucb/cc)
 AC_CHECK_PROG(CC, gcc, gcc)
-if test -z "$CC"; then
-  AC_CHECK_PROG(CC, cc, cc, , , /usr/ucb/cc)
-  test -z "$CC" && AC_MSG_ERROR([no acceptable cc found in \$PATH])
-fi
+AC_CHECK_PROG(CC, cc, cc, , , /usr/ucb/cc)
+
+test -z "$CC" && AC_MSG_ERROR([no acceptable cc found in \$PATH])
 
 AC_PROG_CC_WORKS
 AC_PROG_CC_GNU
@@ -58,9 +58,9 @@ dnl normal versions of a library), tasteless as that idea is.
   if test "$ac_test_CFLAGS" = set; then
     CFLAGS="$ac_save_CFLAGS"
   elif test $ac_cv_prog_cc_g = yes; then
-    CFLAGS="-g -O2"
+    CFLAGS="-g"
   else
-    CFLAGS="-O2"
+    CFLAGS=""
   fi
 else
   GCC=
