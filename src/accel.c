@@ -25,6 +25,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.11  1995/12/05 11:24:57  keith
+ *       Added new function "poteval" which calls "kernel" to evaluate
+ *       potential at single point and modified "distant_const" to
+ *       correctly evaluate long-range pressure correction.
+ *
  *       Revision 2.10  1995/12/04 11:45:49  keith
  *       Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
  *       Thanks to V. Murashov.
@@ -193,7 +198,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.10 1995/12/04 11:45:49 keith Exp keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.11 1995/12/05 11:24:57 keith Exp keith $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -387,6 +392,215 @@ spec_mp		species;
    }
    tfree((gptr*)temp_value);
 }
+
+/******************************************************************************
+ *   nhtherm Calculate acceleration term for Nose-hoover variable             *
+ *   Exact behaviour is controlled by flag "control.scale_options".	      *
+ *   This is a bit flag with the following meanings:			      *
+ *	bit 0:	scale temperature for each species separately.		      *
+ *	bit 1:  scale rotational and translational velocities separately      *
+ *      bit 2:	use rolling averages rather than instantaneous "temperatures" *
+ *	bit 3:  don't scale at all, but re-initialize from MB distribution.   *
+ ******************************************************************************/
+void
+nhtherm(sys, species)
+system_mp	sys;
+spec_mp		species;
+{
+   int             ispec;
+   int             nspecies = sys->nspecies;
+   int             tdof=0, rdof=0;
+   spec_mt	   *spec;
+   double 	   *temp_value = dalloc(2*nspecies);
+   double          rtemp_mass, ttemp_mass;
+   double          ttemp = 0.0, rtemp = 0.0;
+
+   for(ispec = 0; ispec < nspecies; ispec++)
+   {
+      temp_value[2*ispec  ] = value(tt_n,ispec);
+      temp_value[2*ispec+1] = value(rt_n,ispec);
+   }
+   /*
+    *  Get average of translational and rotational temps (per species)
+    */
+   if( ! (control.scale_options & 0x2) )
+   {   
+      for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+      {
+	 if( ! spec->framework )
+	    temp_value[2*ispec  ] = temp_value[2*ispec+1] = 
+	       (3*temp_value[2*ispec  ] + spec->rdof*temp_value[2*ispec+1]) /
+		  (3+spec->rdof);
+      }
+      ttemp_mass = rtemp_mass = control.ttmass;
+   }
+   else {
+	   ttemp_mass = control.ttmass;
+	   rtemp_mass = control.rtmass;
+	   /*
+	    * ttemp_mass and rtemp_mass are used here to make easier introduction
+	    * of different thermal masses for different species later on, provided such
+	    * necessity rises
+	    */
+	}
+	 
+   /*
+    *  Perform average over species if thermostatting together.
+    */
+   if( ! (control.scale_options & 0x1) )
+   {
+      for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+	 if( ! spec->framework )
+	 {
+	    ttemp += 3*spec->nmols*temp_value[2*ispec  ]; 
+	    tdof += 3*spec->nmols;
+	    rtemp += spec->rdof*spec->nmols*temp_value[2*ispec+1]; 
+	    rdof += spec->rdof*spec->nmols;
+	 }
+      ttemp /= tdof;
+      if( rdof > 0 )
+	 rtemp /= rdof;
+      for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+	 if( ! spec->framework )
+	 {
+	    temp_value[2*ispec  ] = ttemp;
+	    temp_value[2*ispec+1] = rtemp;
+	 }
+   }
+   /*
+    * It might be necessary to zero total momenta of species of each type
+    * if thermostating together
+    */
+
+   /*
+    *  Find alphadot for Nose-Hoover thermostat
+    */
+   for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+   {
+      if( ! spec->framework )
+      {
+	 sys->tadot[ispec] = 3*spec->nmols*kB / ttemp_mass 
+                              * (temp_value[2*ispec] - control.temp);
+	 sys->radot[ispec] = spec->rdof*spec->nmols*kB / rtemp_mass 
+                              * (temp_value[2*ispec+1] - control.temp);
+      }
+   }
+   tfree((gptr*)temp_value);
+}
+
+/******************************************************************************
+ *   gtherm Calculate acceleration term for Gaussian thermostat variable      *
+ *   Exact behaviour is controlled by flag "control.scale_options".	      *
+ *   This is a bit flag with the following meanings:			      *
+ *	bit 0:	scale temperature for each species separately.		      *
+ *	bit 1:  scale rotational and translational velocities separately      *
+ *      bit 2:	use rolling averages rather than instantaneous "temperatures" *
+ *	bit 3:  don't scale at all, but re-initialize from MB distribution.   *
+ ******************************************************************************/
+void
+gtherm(sys, species, force, torque)
+system_mp	sys;
+spec_mp		species;
+vec_mp		force[];
+vec_mp		torque[];
+{
+   int             j, ispec;
+   int             nspecies = sys->nspecies;
+   spec_mt	   *spec;
+   vec_mp	   vel_tmp = ralloc(sys->nmols);
+   quat_mp         qd_tmp;             /* Temporary for velocities   	      */
+   double 	   *temp_value = dalloc(2*nspecies);
+   double          ttemp = 0.0, rtemp = 0.0, alphat = 0.0, alphar = 0.0;
+
+      mat_vec_mul(sys->h, sys->velp, vel_tmp, sys->nmols);
+      for(ispec = 0, spec = species, j = 0; ispec < nspecies; ispec++, spec++)
+      {
+	 if( ! spec->framework )
+         {
+            sys->tap[ispec] = gaussiant(force[ispec], vel_tmp+j,  
+                                       spec->nmols);
+	    temp_value[2*ispec] = spec->mass *  gaussiant(vel_tmp+j, vel_tmp+j,
+                                       spec->nmols);
+                                           
+	    if (spec->rdof > 0)
+            {
+               qd_tmp = qalloc(spec->nmols);
+               q_conj_mul(spec->quat, spec->qdotp, qd_tmp, spec->nmols); 
+	       vscale(4*spec->nmols, 2.0, qd_tmp[0], 1);
+               sys->rap[ispec] = gaussianr1(torque[spec-species], qd_tmp[0],
+                                          spec->nmols);
+	       temp_value[2*ispec+1] = gaussianr2(qd_tmp[0],  
+                                                  spec->inertia, spec->nmols);
+               xfree(qd_tmp);
+            } 
+            else 
+            {
+               temp_value[2*ispec+1] = 0.0;
+               sys->rap[ispec] = 0.0;
+            }
+         }
+         j+= spec->nmols;
+      }
+   /*
+    *  Get average of translational and rotational alpha's (per species)
+    */
+      if( ! (control.scale_options & 0x2) )
+         for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+	    if( ! spec->framework )
+            {
+               sys->tap[ispec] = sys->rap[ispec] += sys->tap[ispec]; 
+	       temp_value[2*ispec] = temp_value[2*ispec+1] += 
+	                             temp_value[2*ispec];
+            }
+   /*
+    *  Perform average over species if thermostatting together.
+    */
+      if( ! (control.scale_options & 0x1) )
+      {
+         ttemp = 0.0;
+         rtemp = 0.0;
+         for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+	    if( ! spec->framework )
+	    {
+	       ttemp += temp_value[2*ispec  ]; 
+	       rtemp += temp_value[2*ispec+1]; 
+               alphat += sys->tap[ispec];
+               alphar += sys->rap[ispec];
+	    }
+         for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+         {
+	    if( ! spec->framework )
+	    {
+	       temp_value[2*ispec  ] = ttemp;
+	       temp_value[2*ispec+1] = rtemp;
+               sys->tap[ispec] = alphat;
+               sys->rap[ispec] = alphar;
+	    }
+	 }
+      }
+      /*
+       * It might be necessary to zero total momenta of species of each type
+       * if thermostating together
+       */
+
+   /*
+    * Finally find alpha = alpha1/alpha2
+    */
+      for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+	 if( ! spec->framework )
+	 {
+            if (temp_value[2*ispec] != 0.0)
+               sys->tap[ispec] /= temp_value[2*ispec];
+            else  sys->tap[ispec] = 0.0;
+                                       
+            if (temp_value[2*ispec+1] != 0.0)
+               sys->rap[ispec] /= temp_value[2*ispec+1];
+            else  sys->rap[ispec] = 0.0;
+                
+         }
+   xfree(vel_tmp);
+   tfree((gptr*)temp_value);
+}
 /******************************************************************************
  * Poteval	      Return potential evaluated at a single point.           *
  ******************************************************************************/
@@ -542,13 +756,6 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
    quat_mp         qd_tmp;             /* Temporary for velocities   	      */
    vec_mp          acc_tmp, vel_tmp;   /* Temporaries for iteration	      */
    int		   nsitesxf, nmolsxf;  /* Count of non-framework sites, mols. */
-   double 	   *temp_value = dalloc(2*nspecies);
-   double          rtemp_mass, ttemp_mass;
-   double          ttemp = 0.0, rtemp = 0.0, alphat = 0.0, alphar = 0.0;
-   int             tdof=0, rdof=0;
-#ifdef DEBUG10
-   FILE            *ftempr;            /* File for temperature data           */
-#endif
 /*
  * Initialisation of distant potential constant - executed first time only
  */
@@ -777,78 +984,7 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
  * Nose-Hoover thermostat added by VVMurashov , started on 20.10.95
  */
    if (control.const_temp == 1)
-   {
-      for(ispec = 0; ispec < nspecies; ispec++)
-      {
-	 temp_value[2*ispec  ] = value(tt_n,ispec);
-	 temp_value[2*ispec+1] = value(rt_n,ispec);
-      }
-   /*
-    *  Get average of translational and rotational temps (per species)
-    */
-      if( ! (control.scale_options & 0x2) )
-      {   
-         for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
-         {
-	    if( ! spec->framework )
-	       temp_value[2*ispec  ] = temp_value[2*ispec+1] = 
-	          (3*temp_value[2*ispec  ] + spec->rdof*temp_value[2*ispec+1]) /
-		     (3+spec->rdof);
-         }
-         ttemp_mass = rtemp_mass = 0.5*(control.ttmass + control.rtmass);
-      }
-      else {
-         ttemp_mass = control.ttmass;
-         rtemp_mass = control.rtmass;
-   /*
-    * ttemp_mass and rtemp_mass are used here to make easier introduction
-    * of different thermal masses for different species later on, provided such
-    * necessity rises
-    */
-      }
-	 
-   /*
-    *  Perform average over species if thermostatting together.
-    */
-      if( ! (control.scale_options & 0x1) )
-      {
-         for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
-	    if( ! spec->framework )
-	    {
-	       ttemp += 3*spec->nmols*temp_value[2*ispec  ]; 
-	       tdof += 3*spec->nmols;
-	       rtemp += spec->rdof*spec->nmols*temp_value[2*ispec+1]; 
-	       rdof += spec->rdof*spec->nmols;
-	    }
-         ttemp /= tdof;
-         if( rdof > 0 )
-	    rtemp /= rdof;
-         for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
-	    if( ! spec->framework )
-	    {
-	       temp_value[2*ispec  ] = ttemp;
-	       temp_value[2*ispec+1] = rtemp;
-	    }
-      }
-      /*
-       * It might be necessary to zero total momenta of species of each type
-       * if thermostating together
-       */
-
-   /*
-    *  Find alphadot for Nose-Hoover thermostat
-    */
-      for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
-      {
-	 if( ! spec->framework )
-	 {
-            sys->tadot[ispec] = (temp_value[2*ispec] - control.temp) /
-                                 ttemp_mass;
-            sys->radot[ispec] = (temp_value[2*ispec+1] - control.temp) /
-                                 rtemp_mass;
-         }
-      }
-   }   
+      nhtherm(sys, species);
 /*
  * Gaussian thermostat added by VVM , started on 3/11/95
  * General formular alpha = alpha1/alpha2, where alpha1 = SUM force*vel
@@ -856,106 +992,7 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
  * alpha1's and temp_value is used to store alpha2's temporarily.
  */
    if (control.const_temp == 2)
-   {
-      vel_tmp = ralloc(sys->nmols);
-      mat_vec_mul(sys->h, sys->velp, vel_tmp, sys->nmols);
-      for(ispec = 0, spec = species, j = 0; ispec < nspecies; ispec++, spec++)
-      {
-	 if( ! spec->framework )
-         {
-            sys->tap[ispec] = gaussiant(force[ispec], vel_tmp+j,  
-                                       spec->nmols);
-	    temp_value[2*ispec] = spec->mass *  gaussiant(vel_tmp+j, vel_tmp+j,
-                                       spec->nmols);
-                                           
-	    if (spec->rdof > 0)
-            {
-               qd_tmp = qalloc(spec->nmols);
-               q_conj_mul(spec->quat, spec->qdotp, qd_tmp, spec->nmols); 
-	       vscale(4*spec->nmols, 2.0, qd_tmp[0], 1);
-               sys->rap[ispec] = gaussianr1(torque[spec-species], qd_tmp[0],
-                                          spec->nmols);
-	       temp_value[2*ispec+1] = gaussianr2(qd_tmp[0],  
-                                                  spec->inertia, spec->nmols);
-               xfree(qd_tmp);
-            } 
-            else 
-            {
-               temp_value[2*ispec+1] = 0.0;
-               sys->rap[ispec] = 0.0;
-            }
-         }
-         j+= spec->nmols;
-      }
-   /*
-    *  Get average of translational and rotational alpha's (per species)
-    */
-      if( ! (control.scale_options & 0x2) )
-         for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
-	    if( ! spec->framework )
-            {
-               sys->tap[ispec] = sys->rap[ispec] += sys->tap[ispec]; 
-	       temp_value[2*ispec] = temp_value[2*ispec+1] += 
-	                             temp_value[2*ispec];
-            }
-   /*
-    *  Perform average over species if thermostatting together.
-    */
-      if( ! (control.scale_options & 0x1) )
-      {
-         ttemp = 0.0;
-         rtemp = 0.0;
-         for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
-	    if( ! spec->framework )
-	    {
-	       ttemp += temp_value[2*ispec  ]; 
-	       rtemp += temp_value[2*ispec+1]; 
-               alphat += sys->tap[ispec];
-               alphar += sys->rap[ispec];
-	    }
-         for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
-         {
-	    if( ! spec->framework )
-	    {
-	       temp_value[2*ispec  ] = ttemp;
-	       temp_value[2*ispec+1] = rtemp;
-               sys->tap[ispec] = alphat;
-               sys->rap[ispec] = alphar;
-	    }
-	 }
-      }
-      /*
-       * It might be necessary to zero total momenta of species of each type
-       * if thermostating together
-       */
-
-   /*
-    * Finally find alpha = alpha1/alpha2
-    */
-      for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
-	 if( ! spec->framework )
-	 {
-            if (temp_value[2*ispec] != 0.0)
-               sys->tap[ispec] /= temp_value[2*ispec];
-            else  sys->tap[ispec] = 0.0;
-                                       
-            if (temp_value[2*ispec+1] != 0.0)
-               sys->rap[ispec] /= temp_value[2*ispec+1];
-            else  sys->rap[ispec] = 0.0;
-                
-         }
-   xfree(vel_tmp);
-   }
-   tfree((gptr*)temp_value);
-#ifdef DEBUG10
-   if ((ftempr = fopen("temper.asc", "a"))==NULL)
-      printf("File for temperature data could not be opened\n");
-   fprintf(ftempr, "%4d ", control.istep);
-   for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
-      if( ! spec->framework )
-         fprintf(ftempr, " %12.4f %8.4f\n",value(tt_n,ispec),value(rt_n,ispec));
-   close(ftempr);
-#endif
+      gtherm(sys, species, force, torque);
 /*
  * Iterate velocity dependant parts with beeman step 2 until convergence
  */
