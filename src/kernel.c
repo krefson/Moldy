@@ -1,20 +1,25 @@
 /******************************************************************************
  * kernel	Functions to calculate the forces, potential and distant pot'l*
  *		correction for various potentials.  ALL POTENTIAL-DEPENDANT   *
- *		CODE is in this module, except for the name and # parameters  *
- *		which are defined in "types" and "npotp" in "input.c".	      *
+ *		CODE is in this module.					      *
  * dist_pot()		Return distant-potential correction		      *
  * kernel()		Calculate pe and forces				      *
+ * types[]		Array of names of potential function types.	      *
+ * npotp[]		Array containing number of parameters for each type.  *
+ * npott		size of above two arrays.			      *
  *		Since CRAY CC 4.0 won't vectorise library function calls, a   *
  *		FORTRAN equivalent to kernel() is provided in kernel.f. To    *
  *		use it, compile force.c with macro FKERNEL defined and link   *
  *		with it AND THIS MODULE.				      *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log:	kernel.c,v $
+ * Revision 1.1  89/04/20  16:00:45  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: kernel.c,v 1.1 89/04/20 16:00:45 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -27,6 +32,10 @@ static char *RCSid = "$Header$";
 #include "messages.h"
 /*========================== External function declarations ==================*/
 void message();
+/*========================== Potential type specification ====================*/
+char	*types[] = {"lennard-jones","buckingham","mcy"};
+int	npotp[]  = {2,		    3,	 	 4};
+int	npott=(sizeof npotp / sizeof(int));
 /*========================== Macros ==========================================*/
 
 #define E1	 0.254829592		/* Polynomial Constants used in	      */
