@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.16 2004/12/07 13:00:02 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.17 2005/01/11 17:06:27 kr Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,11 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.16 2004/12/
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.17  2005/01/11 17:06:27  kr
+ *  Fixed error which failed to pass correct file args to "dumpext".
+ *  Fixed real stinker of a buffer overflow on dumpcommand by making it dynamic.
+ *  Added some helpful messages on the "-v" output.
+ *
  *  Revision 1.16  2004/12/07 13:00:02  cf
  *  Merged with latest utilities.
  *
@@ -691,8 +696,8 @@ main(int argc, char **argv)
           256+strlen(dump_names));
 
 #if defined (HAVE_POPEN) 
-   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d %s %s",
-        sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, verbose?"-v":" ", dump_names);
+   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d %s%s",
+        sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, verbose?"-v ":" ", dump_names);
    if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
    
    if( (Dp = popen(dumpcommand,"r")) == 0)
@@ -700,8 +705,8 @@ main(int argc, char **argv)
             strerror(errno));
 #else
    tempname = tmpnam((char*)0);
-   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d -o %s %s %s",
-         sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, tempname, verbose?"-v":" ", dump_names);
+   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d -o %s %s%s",
+         sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, tempname, verbose?"-v ":" ", dump_names);
    if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
    system(dumpcommand);
    if( (Dp = fopen(tempname,"rb")) == 0)

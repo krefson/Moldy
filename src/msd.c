@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/msd.c,v 2.7 2004/12/07 13:00:01 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/msd.c,v 2.8 2005/01/11 17:56:46 kr Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,9 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/msd.c,v 2.7 2004/12/07 
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 2.8  2005/01/11 17:56:46  kr
+ *  Fix for dumpcommand buffer overrun.
+ *
  *  Revision 2.7  2004/12/07 13:00:01  cf
  *  Merged with latest utilities.
  *
@@ -835,8 +838,8 @@ main(int argc, char **argv)
       error("malloc failed to allocate dumpext command string buffer (%d bytes)",
           256+strlen(dump_names));
 #if defined (HAVE_POPEN) 
-   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s",
-      verbose?"-v":"", sys.nmols, sys.nmols_r, start, finish, inc, dump_names);
+   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s%s",
+      sys.nmols, sys.nmols_r, start, finish, inc, verbose?"-v ":" ", dump_names);
    
    if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
    if( (Dp = popen(dumpcommand,"r")) == 0)
@@ -849,8 +852,8 @@ main(int argc, char **argv)
    }
 #else
    tempname = tmpnam((char*)0);
-   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d -o %s %s",
-         sys.nmols, sys.nmols_r, start, finish, inc, tempname, dump_names);
+   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d -o %s %s%s",
+         sys.nmols, sys.nmols_r, start, finish, inc, tempname, verbose?"-v ":" ", dump_names);
    if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
    system(dumpcommand);
    if( (Dp = fopen(tempname,"rb")) == 0)
