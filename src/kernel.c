@@ -34,6 +34,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.14.2.4  2002/02/18 16:05:12  kr
+ *       Fixed dist-pot term to include all terms for Generic and Buckingham potentials.
+ *       This makes a difference for pathalogical cases like Floris ion-water potentials.
+ *       Renamed "hiw7+win" to "hiwfl+win" for compatibility with Rafael's version.
+ *
  *       Revision 2.14.2.4  2002/02/18 15:29:36  kr
  *       Fixed dist-pot term to include all terms for Generic and Buckingham potentials.
  *       This makes a difference for pathalogical cases like Floris ion-water potentials.
@@ -191,7 +196,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/kernel.c,v 2.15 2002/02/14 17:22:31 kr Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/kernel.c,v 2.14.2.4 2002/02/18 16:05:12 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -220,6 +225,8 @@ void	message(int *,...);		/* Write a warning or error message   */
 #define GENWIN 7	/* "generic" potential for multipurpose use. +        */
                         /* harmonic window potential                          */
 #define HIW7WIN 8       /* Version of HIW potential including r**-7 term      */
+#define GENPOT46 9	/* "generic" potential with Ewald summation           */
+			/* U= p0*exp(-p1*r) + p2/r^12 - p3/r^4 -p4/r^6 -p5/r^8*/
 
 const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 		              {"buckingham",3},
@@ -230,6 +237,7 @@ const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 		              {"morse",7},
 		              {"generic+win",8},
 			      {"hiwfl+win",6},
+		              {"generic46",6},
 		              {0,0}};	            /* MUST be null-terminated*/
 /*
  *  Array of dimensions of pot'l parameters.  Triplets contain powers
@@ -249,6 +257,7 @@ const dim_mt   pot_dim[][NPOTP]= {
    /* Generic+Win   */  {{1,2,-2},{0,-1,0},{1,14,-2},{1,6,-2},
                          {1,8,-2},{1,10,-2},{1,0,-2},{0,1,0}}, 
    /* HIW7+Win      */  {{1,6,-2},{1,8,-2},{1,9,-2},{1,14,-2},{1,0,-2},{0,1,0}},
+   /* Generic-4-6   */  {{1,2,-2},{0,-1,0},{1,14,-2},{1,6,-2},{1,8,-2},{1,10,-2}}, 
                                   };
 
 /*========================== Macros ==========================================*/
@@ -264,6 +273,28 @@ const dim_mt   pot_dim[][NPOTP]= {
 #define POLY5(t)   ((t)*(E1 + (t)*(E2 + (t)*(E3 + (t)*(E4 + (t)*E5)))))
 #define BPAR_TOL 1.0e-7
 /*============================================================================*/
+/******************************************************************************
+ *  mkpot46(). Build 2d potential perameter arrays for Ewald -4-6 sum.        *
+ *  The code depends on the potential type, hence inclusion here.             *
+ ******************************************************************************/
+void mkpot46(real **pot4, real **pot6, int max_id, int ptype, pot_mt *potpar)
+{
+   int id, jd;
+   switch(ptype)
+   {
+    default:
+      message(NULLI, NULLP, FATAL, UNKPTY, ptype);
+      /*FALLTHRU*/
+   case GENPOT46:
+      for( id = 1; id < max_id; id++)
+	 for( jd = 1; jd < max_id; jd++)
+	 {
+	    pot4[id][jd] = -potpar[id*max_id+jd].p[3];
+	    pot6[id][jd] = -potpar[id*max_id+jd].p[4];
+	 }
+   }
+   
+}
 /******************************************************************************
  *  dist_pot   return attractive part of potential integrated outside cutoff. *
  *  dist_pot = - int_{r_c}^{infty} r^2 U(r) dr                                *
@@ -305,6 +336,15 @@ double	dist_pot(real *potpar,          /* Array of potential parameters      */
        else
 	  return ( -potpar[2] / ( 9.0*CUBE(CUBE(cutoff))) + potpar[3] / cutoff 
 		   + potpar[4] / ( 3.0*CUBE(cutoff)) + potpar[5] / ( 5.0*SQR(cutoff)*CUBE(cutoff)));
+    case GENPOT46:
+       if( potpar[1] > BPAR_TOL ) 
+	  return ( - potpar[0] * exp(-potpar[1]*cutoff) *
+		   (SQR(cutoff)/potpar[1] + 2*cutoff/SQR(potpar[1]) + 2.0 / CUBE(potpar[1])) 
+		   -potpar[2] / ( 9.0*CUBE(CUBE(cutoff))) 
+		    + potpar[5] / ( 5.0*SQR(cutoff)*CUBE(cutoff)));
+       else
+	  return ( -potpar[2] / ( 9.0*CUBE(CUBE(cutoff))) 
+		    + potpar[5] / ( 5.0*SQR(cutoff)*CUBE(cutoff)));
 	  
     case MORPOT:
       if( potpar[5] != 0.0 )
@@ -336,20 +376,22 @@ void	kernel(int jmin,
 	       real *r_sqr,     /* Vector of site-site distances (**2).  (in) */
 	       real *nab_chg,   /* Vector of charges of neighbour sites. (in) */
 	       double chg,      /* Electric charge of reference site.    (in) */
-	       double norm,     
 	       double alpha,    /* Ewald parameter and 2*alpha/sqrt(pi). (in) */
+	       double alpha46,  /* Ewald parameter and 2*alpha/sqrt(pi). (in) */
 	       int ptype,       /* Index of potential type in potspec[]. (in) */ 
 	       real **pot)      /* Vectors of potential parameters.      (in) */
 {
    register real t, ar;			/* Argument of erfc() polynomial.     */
    register real r;			/* Site-site distance.		      */
    register real r_r, r_6_r, r_sqr_r, r_12_r,	/* Reciprocal powers of r.    */
-                 r_4_r, r_7_r, r_8_r;
-   register real erfc_term;		/* Intermediates in erfc calculation. */
+                 r_4_r, r_7_r, r_8_r, rsq;
+   register real erfc_term, arfac;      /* Intermediates in erfc calculation. */
    	    real ppe = 0.0;		/* Local accumulator of pot. energy.  */
    	    real exp_f1, exp_f2, exp_f3; /* Temporary for b*exp(-cr) etc      */
    register real rmr0, fwin;            /* Temporaries for window potential   */
    register int	jsite;			/* Loop counter for vectors.	      */
+	    double norm = 2.0*alpha/ROOTPI;   /* Coulombic prefactor*/
+	    double alpha46sq = SQR(alpha46);
    real *p0 = pot[0], *p1 = pot[1],     /* Local bases for arrays of pot'l    */
         *p2 = pot[2], *p3 = pot[3],     /* parameters.			      */
         *p4 = pot[4], *p5 = pot[5],
@@ -465,6 +507,45 @@ VECTORIZE
 
 	    ppe += t + exp_f1 + r_12_r -r_4_r - r_6_r - r_8_r;
 	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r - 4.0*r_4_r - 6.0*r_6_r 
+				      - 8.0*r_8_r + erfc_term)
+	                   + p1[jsite]*exp_f1 * r_r;
+	 }
+	 break;      
+       case GENPOT46:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+	 {
+	    /*
+	     * Calculate r and coulombic part
+	     */
+	    rsq = r_sqr[jsite];
+	    r       = sqrt(rsq);
+	    ar	    = alpha*r;
+	    t = 1.0/(1.0+PP*ar);
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+	    r_r	 = 1.0 / r;
+	    t = POLY5(t) * erfc_term * r_r;
+	    erfc_term = t + norm * erfc_term;
+	    r_sqr_r = SQR(r_r);
+            /*
+	     * Non-coulombic ie potential-specific part
+	     */
+	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
+	    r_4_r = SQR(r_sqr_r);
+	    r_6_r = r_sqr_r * r_4_r;
+	    r_8_r = p5[jsite] * SQR(r_4_r);
+	    r_12_r = p2[jsite] * SQR(r_6_r);
+	    r_4_r *= p3[jsite];
+	    r_6_r *= p4[jsite];
+	    /*
+	     * Ewald-like summation of r^-4 and r^-6
+	     */
+	    arfac = alpha46sq*rsq;
+	    exp_f2 = exp(-arfac);
+
+	    ppe += t + exp_f1 + r_12_r - ((1.0+arfac)*r_4_r + (1.0+arfac+0.5*SQR(arfac))*r_6_r)*exp_f2 - r_8_r;
+	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r 
+			   - ((4.0+2.0*arfac+2.0*SQR(arfac))*r_4_r+(6.0*(1.0+arfac)+3.0*SQR(arfac)+CUBE(arfac))*r_6_r)*exp_f2
 				      - 8.0*r_8_r + erfc_term)
 	                   + p1[jsite]*exp_f1 * r_r;
 	 }
@@ -690,6 +771,40 @@ VECTORIZE
 
 	    ppe += exp_f1 + r_12_r -r_4_r - r_6_r - r_8_r;
 	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r - 4.0*r_4_r - 6.0*r_6_r 
+				      - 8.0*r_8_r)
+	                   + p1[jsite]*exp_f1 * r_r;
+	 }
+	 break;      
+       case GENPOT46:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+	 {
+	    /*
+	     * Calculate r and coulombic part
+	     */
+	    rsq = r_sqr[jsite];
+	    r       = sqrt(rsq);
+	    r_r	 = 1.0 / r;
+	    r_sqr_r = SQR(r_r);
+            /*
+	     * Non-coulombic ie potential-specific part
+	     */
+	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
+	    r_4_r = SQR(r_sqr_r);
+	    r_6_r = r_sqr_r * r_4_r;
+	    r_8_r = p5[jsite] * SQR(r_4_r);
+	    r_12_r = p2[jsite] * SQR(r_6_r);
+	    r_4_r *= p3[jsite];
+	    r_6_r *= p4[jsite];
+	    /*
+	     * Ewald-like summation of r^-4 and r^-6
+	     */
+	    arfac = alpha46sq*rsq;
+	    exp_f2 = exp(-arfac);
+
+	    ppe += exp_f1 + r_12_r - ((1.0+arfac)*r_4_r + (1.0+arfac+0.5*SQR(arfac))*r_6_r)*exp_f2 - r_8_r;
+	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r 
+			   - ((4.0+4.0*arfac+2.0*SQR(arfac))*r_4_r+(6.0*(1.0+arfac)+3.0*SQR(arfac)+CUBE(arfac))*r_6_r)*exp_f2
 				      - 8.0*r_8_r)
 	                   + p1[jsite]*exp_f1 * r_r;
 	 }

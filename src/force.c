@@ -29,6 +29,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.27  2002/03/04 16:08:12  kr
+ *       Fixed a number of bugs in dumpext and dumpconv related to reading the
+ *       sysinfo section of the dump files.
+ *
  *       Revision 2.26  2001/02/22 10:30:16  keith
  *       Reinstated capability of "molecular" cutoffs.
  *
@@ -240,7 +244,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/force.c,v 2.26 2001/02/22 10:30:16 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/force.c,v 2.27 2002/03/04 16:08:12 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -830,7 +834,7 @@ void minimage(system_mt *system,        /* System struct                 (in) */
 
          hist(0,isite,r_sqr);
          kernel(0,isite,forceij,&ppe,r_sqr,chg,chg[is],
-                norm,control.alpha,system->ptype,potp[id[is]]);
+                control.alpha,control.alpha46,system->ptype,potp[id[is]]);
       }
       isite += spec->nsites;
    }
@@ -848,7 +852,6 @@ double poteval(real *potpar,            /* Array of potential parameters      */
 	       double chgsq)            /* Product of site charges            */
 {
    double pe = 0.0;
-   double norm = 2.0*control.alpha/sqrt(PI);
    real   chgsq_r = chgsq;
    real f,rr;
    real *pp[NPOTP];
@@ -858,7 +861,7 @@ double poteval(real *potpar,            /* Array of potential parameters      */
       pp[i] = potpar+i;
 
    rr = SQR(r);
-   kernel(0,1,&f,&pe,&rr,&chgsq_r,1.0,norm,control.alpha,ptype, pp);
+   kernel(0,1,&f,&pe,&rr,&chgsq_r,1.0,control.alpha,control.alpha46,ptype, pp);
    return pe;
 }
 /******************************************************************************
@@ -1171,7 +1174,7 @@ void force_inner(int ithread,
 #endif
                /*  Call the potential function kernel                            */
             kernel(jmin, jmax, forceij, pe, r_sqr, nab_chg, chg[isite],
-                   norm, control.alpha, system->ptype, nab_pot);
+                   control.alpha, control.alpha46, system->ptype, nab_pot);
 	    mk_forces(jmin, jmax,  rx, ry, rz, forceij, forcejx, forcejy, forcejz,
 		      site_force[0]+isite, site_force[1]+isite, site_force[2]+isite);
 #ifdef DEBUG5

@@ -37,6 +37,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.31  2002/02/27 17:48:34  kr
+ *      Reworked auto-setting of Ewald parameters.
+ *        Added new control parameter "ewald-accuracy" to refine auto-setting.
+ *        If cutoff > necessary, optimize execution time by decreasing alpha and k_cutoff
+ *          and moving more of calculation to real space
+ *
  *      Revision 2.30  2001/05/24 16:26:43  keith
  *      Updated program to store and use angular momenta, not velocities.
  *       - added conversion routines for old restart files and dump files.
@@ -318,7 +324,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/startup.c,v 2.30 2001/05/24 16:26:43 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/startup.c,v 2.31 2002/02/27 17:48:34 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -459,6 +465,8 @@ const match_mt	match[] = {
 {"ewald-accuracy",   "%lf",  "1.013e-5",     (gptr*)&control.ewald_accuracy},
 {"alpha",            "%lf",  "0.0",          (gptr*)&control.alpha},
 {"k-cutoff",         "%lf",  "0.0",          (gptr*)&control.k_cutoff},
+{"alpha46",          "%lf",  "0.0",          (gptr*)&control.alpha46},
+{"k-cutoff46",       "%lf",  "0.0",          (gptr*)&control.k_cutoff46},
 {"rdf-limit",        "%lf",  "10.0",         (gptr*)&control.limit},
 {"cpu-limit",        "%lf",  "1.0e20",       (gptr*)&control.cpu_limit},
 {"mass-unit",        "%lf",  AMUSTR,         (gptr*)&input_unit.m},

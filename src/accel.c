@@ -26,6 +26,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.39  2001/07/31 09:51:02  keith
+ *       Merged H0halfstep branch.
+ *       Calculates H_0 at half-step, which corresponds to on-step in VTV
+ *       ordering.
+ *       Now uses Nose's splitting integrator by default.
+ *
  *       Revision 2.39  2001/07/31 09:40:57  keith
  *       Merged H0halfstep branch.
  *       Calculates H_0 at half-step, which corresponds to on-step in VTV
@@ -340,7 +346,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.39 2001/07/31 09:40:57 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/accel.c,v 2.39 2001/07/31 09:51:02 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -753,6 +759,8 @@ eval_forces(system_mp sys,             /* Pointer to system info        (in) */
    int             i, j;
    double          vol = det(sys->h);
    int		   nsitesxf, nmolsxf;  /* Count of non-framework sites, mols. */
+   real		   **pot4=arralloc(sizeof(real), 2, 0, sys->max_id, 0, sys->max_id);
+   real		   **pot6=arralloc(sizeof(real), 2, 0, sys->max_id, 0, sys->max_id);
    static double   dist, distp;
    static boolean  init = true;
 
@@ -843,6 +851,12 @@ eval_forces(system_mp sys,             /* Pointer to system info        (in) */
    {
       ewald(site, site_force, sys, species, chg, pe + 1, stress);
    }
+   if (control.alpha46 > ALPHAMIN)
+   {
+      mkpot46(pot4,pot6,sys->max_id, sys->ptype, potpar);
+      ewald46(site, site_force, sys, species, pot4, pot6, pe + 1, stress);
+   }
+   
 /*
  *  Sum Pot, energies, forces and stress from each parallel invocation
  */
@@ -930,6 +944,8 @@ eval_forces(system_mp sys,             /* Pointer to system info        (in) */
    afree((gptr*)site_force);
    afree((gptr*)site_sp);
    afree((gptr*)force_sp);
+   afree((gptr*)pot4);
+   afree((gptr*)pot6);
    xfree(chg);
    xfree(c_of_m);
 }

@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.23  2001/03/02 11:43:30  keith
+ *       Corrected fix for cache re-use bug.  The fix meant cache was never re-used!
+ *
  *       Revision 2.22  2001/02/15 15:55:09  keith
  *       Fixed bug where qsincos  could incorrectly attempt to use
  *       cache coshxky etc on first iteration when unassigned.
@@ -248,7 +251,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.22 2001/02/15 15:55:09 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/ewald.c,v 2.23 2001/03/02 11:43:30 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -298,6 +301,11 @@ extern int		ithread, nthreads;
 #define moda(hmat) (hmat[0][0])
 #define modb(hmat) sqrt(SQR(hmat[0][1]) + SQR(hmat[1][1]))
 #define modc(hmat) sqrt(SQR(hmat[0][2]) + SQR(hmat[1][2]) + SQR(hmat[2][2]))
+
+#define FOURTH(x) SQR(SQR(x))
+#define SIXTH(x) CUBE(SQR(x))
+#define EIGTH(x) SQR(FOURTH(x))
+#define POTZERO_TOL 1.0e-16
 /*========================== Cache Parameters=================================*/
 /* The default values are for the Cray T3D but are probably good enough 
  *  for most other systems too. */
@@ -811,6 +819,393 @@ VECTORIZE
    }
    afree((gptr*)chx); afree((gptr*)cky); afree((gptr*)clz); 
    afree((gptr*)shx); afree((gptr*)sky); afree((gptr*)slz);
+   xfree(cshkl);
+   xfree(hkl);
+   /*   message(NULLI, NULLP, INFO, "Trig Caching: %d hits and %d misses", hits, misses);*/
+}
+/******************************************************************************
+ *  site_id_sort(). Construct permutation arrays for site list sorted by id.  *
+ ******************************************************************************/
+site_id_sort(system_mt *system, spec_mt *species, int* site_idx, int *site_permute)
+{
+   int id, imol, ims, is, js;
+   spec_mt *spec;
+
+   is = 0;
+   site_idx[0] = 0;
+   for ( id=1; id < system->max_id; id++)
+   {
+      js = 0;
+      for(spec = species; spec < &species[system->nspecies]; spec++)
+	 for(imol=0; imol<spec->nmols; imol++)
+	    for(ims=0; ims < spec->nsites; ims++)
+	    {
+	       if(spec->site_id[ims] == id)
+		  site_permute[is++] = js;
+	       js++;
+	    }
+      site_idx[id] = is;
+   }
+#ifdef DEBUG
+   {
+      int suma=0;
+      for(is = 0; is < system->nsites; is++)
+	 suma += site_permute[is];
+
+      fprintf(stderr,"Nsites = %d, n(n-1)/2 = %d, sum(site_permute) = %d\n",system->nsites,system->nsites*(system->nsites-1)/2,suma);
+   }
+#endif
+}
+/******************************************************************************
+ *  ewald46  Calculate reciprocal-space part of 1/r^4 and 1/r^6 forces	      *
+ ******************************************************************************/
+void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
+		real **site_force,      /* Site force arrays            (out) */ 
+		system_mp system,       /* System record                 (in) */
+		spec_mt *species,       /* Array of species records      (in) */
+		real  **pot4,           /* Potential parameters for r^-4 (in) */
+		real  **pot6,           /* Potential parameters for r^-6 (in) */
+		double *pe, 	        /* Potential energy             (out) */
+		real (*stress)[3])      /* Stress virial                (out) */
+{
+   mat_mt	hinvp;			/* Matrix of reciprocal lattice vects*/
+   int		h, k, l;		/* Recip. lattice vector indices     */
+   int		i, is, js, idi, idj, nid;	/* Counters.			     */
+   spec_mp	spec;			/* species[ispec]		     */
+   int		nsites = system->nsites;
+   double	struct_factor_4_sq, struct_factor_6_sq ;
+   double	pe_k,			/* Pot'l energy for current K vector */
+                coeff, coeff2;		/* 2/(e0V) * A(K) & similar	     */
+   double	alpha = control.alpha46;
+   double	*scoskr = arralloc(sizeof(double), 1, 0, system->max_id-1),
+                *ssinkr = arralloc(sizeof(double), 1, 0, system->max_id-1); /* Sum of sin/cos(K.r(i))          */
+   double	ksq,			/* Squared magnitude of K vector     */
+                kmod,
+      		kover2a,
+      		erfc_k2a,
+      		exp_k24a2,
+      		ak4, ak6,
+      		dak4dk, dak6dk,
+                kcsq = SQR(control.k_cutoff46);
+   double	kx,ky,kz,kzt;
+   vec_mt	kv;			/* (Kx,Ky,Kz)  			     */
+   real		force_comp, kv0, kv1, kv2, sfx, sfy;
+   struct	s_hkl *hkl, *phkl;
+   int		nhkl = 0, nhklp;
+   /*
+    * Maximum values of h, k, l  s.t. |k| < k_cutoff
+    */
+   int		hmax = floor(control.k_cutoff46/(2*PI)*moda(system->h)),
+                kmax = floor(control.k_cutoff46/(2*PI)*modb(system->h)),
+                lmax = floor(control.k_cutoff46/(2*PI)*modc(system->h));
+   /*
+    * Saved previous h and k to signal validity of coshxky, sinhxky caches.
+    */
+   int		hlast=-1000000,klast=-1000000;
+   /*
+    * lower and upper limits for parallel loops.   
+    */
+#if defined(SPMD) && defined(MPPMANY)
+   int  	nsnode = (nsites+nthreads-1)/nthreads;
+   int  	nsarr0 = nsnode * nthreads;
+   int  	ns0 = MIN(nsites, nsnode * ithread), 
+        	ns1 = MIN(nsites, nsnode * (ithread+1));
+#else	    
+   int		ns0 = 0, ns1 = nsites;
+   int		nsarr0 = nsites;
+#endif
+   /*
+    * Round up size of arrays to cache sub-multiple size.
+    */
+#if 1
+   int		nsarray = (nsarr0 - 1 | NCACHE - 1) + 1;
+#else
+   int		nsarray = nsarr0;
+#endif
+   /*
+    * Arrays for cos & sin (h x(i)), (k y(i)) and (l z(i)) eg chx[h][isite]
+    * and pointers to a particular h,k or l eg coshx[is] = chh[2][is]
+    */
+   real		**chx, **cky, **clz, **shx, **sky, **slz;
+   real		*cshkl;
+   real		*coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
+   real		*cos1x, *cos1y, *cos1z, *sin1x, *sin1y, *sin1z;
+   real		q;
+   real		*site_x = dalloc(nsarray),
+                *site_y = dalloc(nsarray),
+                *site_z = dalloc(nsarray),
+   		*site_fx = dalloc(nsarray),
+                *site_fy = dalloc(nsarray),
+                *site_fz = dalloc(nsarray);
+   static int	*site_idx;
+   static int   *site_permute;
+   int	        rel;
+   real		*coskr,		/* q(i) cos(K.R(i))	      */
+                *sinkr;		/* q(i) sin(K.R(i))	      */
+   real		*sinhxky, *coshxky;
+   double	vol = det(system->h);	/* Volume of MD cell		      */
+   static	double	self_energy,	/* Constant self energy term	      */
+                sheet_energy;	        /* Correction for non-neutral system. */
+   static	boolean init = true;	/* Flag for the first call of function*/
+
+   zero_real(site_fx, nsites);   zero_real(site_fy, nsites);   zero_real(site_fz, nsites);
+   /*
+    * Trig array set-up.  The precise storage layout is to avoid cache conflicts.
+    */
+   cshkl = allocate_arrays(nsarray, hmax, kmax, lmax,
+			   &chx, &cky, &clz, &shx, &sky, &slz,
+			   &cos1x, &cos1y, &cos1z, &sin1x, &sin1y, &sin1z, 
+			   &coskr, &sinkr,&sinhxky,&coshxky);
+   /*
+    * First call only - evaluate self energy term and store for subsequent calls
+    */
+   if(init)
+   {
+      double	sq4 = 0, sq6 = 0, sqq4 = 0, sqq6 = 0, intra, r, alphar, expar;
+      int	js, idi, idj, ni, nj;
+
+      site_idx = ialloc(system->max_id);
+      site_permute = ialloc(nsites);
+
+      site_id_sort(system, species, site_idx, site_permute);
+
+      self_energy = sheet_energy = 0;
+      spec = species; 
+      while( spec < species+system->nspecies && ! spec->framework)
+      {
+	 intra = 0.0;
+	 for(is = 0; is < spec->nsites; is++)
+	 {
+	    idi = spec->site_id[is];
+	    for(js = is+1; js < spec->nsites; js++)
+	    {
+	       idj = spec->site_id[js];
+	       r = DISTANCE(spec->p_f_sites[is], spec->p_f_sites[js]);
+	       alphar = alpha*r;
+	       expar=exp(-SQR(alphar));
+	       intra += pot4[idi][idj]
+		  *(1.0-(1.0+SQR(alphar))*expar)/FOURTH(r);
+	       intra += pot6[idi][idj]
+		  *(1.0-(1.0+SQR(alphar)+0.5*FOURTH(alphar))*expar)/SIXTH(r);
+	    }
+	 }
+	 self_energy += spec->nmols * intra;
+
+	 spec++;
+      }
+
+      for(idi=1; idi < system->max_id; idi++)
+      {
+	 ni = site_idx[idi] - site_idx[idi-1];
+         sq4 += ni*pot4[idi][idi];
+         sq6 += ni*pot6[idi][idi];
+         for(idj=1; idj < system->max_id; idj++)
+         {
+	    nj = site_idx[idj] - site_idx[idj-1];
+	    sqq4 += ni*nj*pot4[idi][idj];
+            sqq6 += ni*nj*pot6[idi][idj];
+         }
+      }
+
+      sheet_energy += PI32*(alpha*sqq4 + CUBE(alpha)/6.0*sqq6);
+      self_energy += 0.25*FOURTH(alpha)*sq4 + SIXTH(alpha)/12.0*sq6;
+      note("Ewald-4-6 G=0 term = %f kJ/mol",sheet_energy/vol*CONV_E);
+      note("Ewald-4-6 self-energy = %f kJ/mol",self_energy*CONV_E);
+   }
+
+   if( ithread == 0 )
+   {
+      *pe -= self_energy;		/* Subtract self energy term	      */
+      *pe += sheet_energy/vol;		/* Uniform charge correction	      */
+      for(i=0; i<3; i++)
+	 stress[i][i] += sheet_energy/vol;
+   }
+   
+   invert(system->h, hinvp);		/* Inverse of h is matrix of r.l.v.'s */
+   mat_sca_mul(2*PI, hinvp, hinvp);
+   /*
+    * Build array hkl[] of k vectors within cutoff. 
+    * N. B. This code presupposes upper-triangular H matrix.
+    */
+   hkl = aalloc(4*(hmax+1)*(kmax+1)*(lmax+1), struct s_hkl);
+   for(h = 0; h <= hmax; h++)
+      for(k = (h==0 ? 0 : -kmax); k <= kmax; k++)
+      {
+	 kx = h*astar[0] + k*bstar[0];
+	 ky = h*astar[1] + k*bstar[1];
+	 kzt = h*astar[2] + k*bstar[2];
+	 ksq = SQR(kx) + SQR(ky);
+	 for(l = (h==0 && k==0 ? 1 : -lmax); l <= lmax; l++)
+	 {
+	    kz = kzt + l*cstar[2];
+	    if( SQR(kz)+ksq < kcsq )
+	    {
+	       hkl[nhkl].h = h; hkl[nhkl].k = k; hkl[nhkl].l = l;
+	       hkl[nhkl].kx = kx;
+	       hkl[nhkl].ky = ky;
+	       hkl[nhkl].kz = kz;
+	       nhkl++;
+	    }
+	 }
+      }
+   if( init )
+      note("%d K-vectors included in reciprocal-space sum",nhkl);
+   init = false;
+
+   for(is=0; is < nsites; is++)
+   {
+      rel = site_permute[is];
+      site_x[is] = site[0][rel];
+      site_y[is] = site[1][rel];
+      site_z[is] = site[2][rel];
+   }
+   /*
+    * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
+    * Use addition formulae to get sin(h*astar*x)=sin(Kx*x) etc for each site
+    */
+   trig_recur(chx,shx,sin1x,cos1x,site_x,site_y,site_z,astar,hmax,ns0,ns1);
+   trig_recur(cky,sky,sin1y,cos1y,site_x,site_y,site_z,bstar,kmax,ns0,ns1);
+   trig_recur(clz,slz,sin1z,cos1z,site_x,site_y,site_z,cstar,lmax,ns0,ns1);
+#if defined(SPMD) && defined(MPPMANY)
+   par_collect_all(chx[0]+ns0, chx[0], nsnode, nsarray, hmax+1);
+   par_collect_all(shx[0]+ns0, shx[0], nsnode, nsarray, hmax+1);
+   par_collect_all(cky[0]+ns0, cky[0], nsnode, nsarray, kmax+1);
+   par_collect_all(sky[0]+ns0, sky[0], nsnode, nsarray, kmax+1);
+   par_collect_all(clz[0]+ns0, clz[0], nsnode, nsarray, lmax+1);
+   par_collect_all(slz[0]+ns0, slz[0], nsnode, nsarray, lmax+1);
+#endif
+   /*
+    * Start of main loops over K vector indices h, k, l between -*max, *max etc.
+    * To avoid calculating K and -K, only half of the K-space box is covered. 
+    * Points on the axes are included once and only once. (0,0,0) is omitted.
+    */
+   nhklp = (nhkl+nthreads-1)/nthreads;
+   for(phkl = hkl+ithread*nhklp; phkl < hkl+MIN((ithread+1)*nhklp,nhkl); phkl ++)
+   {
+      /*
+       * Calculate actual K vector and its squared magnitude.
+       */
+      h  = phkl->h;	    k     = phkl->k;  l     = phkl->l;
+      kv0 = kv[0] = phkl->kx; 
+      kv1 = kv[1] = phkl->ky; 
+      kv2 = kv[2] = phkl->kz;
+
+      ksq = SUMSQ(kv);
+      kmod = sqrt(ksq);
+      kover2a = kmod/(2*alpha);
+      erfc_k2a = erfc(kover2a);
+      exp_k24a2 = exp( - ksq/(4.0*SQR(alpha)));
+
+      /*
+       * Calculate pre-factors A(K) etc
+       */
+      ak4 = -0.5*PISQ*kmod*erfc_k2a + alpha*PI32*exp_k24a2;
+      dak4dk = -0.5*PISQ*erfc_k2a;
+      ak6 = PISQ/24.0*kmod*ksq*erfc_k2a + PI32/6.0*alpha*(SQR(alpha)-0.5*ksq)*exp_k24a2;
+      dak6dk = (1.0/24.0)*PI32*(3.0*ROOTPI*erfc_k2a*ksq - 6.0*alpha*kmod*exp_k24a2);
+      
+      /*
+       * Set pointers to array of cos (h*astar*x) (for efficiency & vectorisation)
+       */
+      coshx = chx[h];  cosky = cky[abs(k)]; coslz = clz[abs(l)];
+      sinhx = shx[h];  sinky = sky[abs(k)]; sinlz = slz[abs(l)];
+
+      /*
+       * Calculate q(i)*cos/sin(K.R(i)) by addition formulae. Note handling of
+       * negative k and l by using sin(-x) = -sin(x), cos(-x) = cos(x). For
+       * efficiency & vectorisation there is a loop for each case.
+       */
+      qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,
+	      coskr,sinkr,sinhxky, coshxky, h, k, l, hlast, klast, nsites);
+      hlast = h; klast = k;
+
+      for(idi=1; idi < system->max_id; idi++)
+      {
+	 nid = site_idx[idi] - site_idx[idi-1];
+	 js = site_idx[idi-1];
+	 scoskr[idi] = sum(nid, &coskr[js], 1);
+	 ssinkr[idi] = sum(nid, &sinkr[js], 1);
+      }
+     
+      /*
+       * Evaluate potential energy contribution for this K and add to total.
+       */
+      struct_factor_4_sq = 0.0; struct_factor_6_sq = 0.0; 
+      for(idi=1; idi < system->max_id; idi++)
+      {
+	 for(idj=1; idj < system->max_id; idj++)
+	 {
+	    if(fabs(pot4[idi][idj]) > POTZERO_TOL) 
+	    {
+	       struct_factor_4_sq += pot4[idi][idj]*(scoskr[idi]*scoskr[idj]+ssinkr[idi]*ssinkr[idj]);
+	       /*
+		* Evaluation of site forces. 
+		*/
+	       coeff = 2.0*ak4/vol;
+	       for(js = site_idx[idj-1]; js < site_idx[idj]; js++)
+	       {
+		  force_comp = coeff*(sinkr[js]*scoskr[idi]-coskr[js]*ssinkr[idi]);
+		  sfx =  site_fx[js] + kv0 * force_comp;
+		  sfy =  site_fy[js] + kv1 * force_comp;
+		  site_fz[js] +=       kv2 * force_comp;
+		  site_fx[js] = sfx;
+		  site_fy[js] = sfy;
+	       }
+	    }
+
+	    if(fabs(pot6[idi][idj]) > POTZERO_TOL) 
+	    {
+	       struct_factor_6_sq += pot6[idi][idj]*(scoskr[idi]*scoskr[idj]+ssinkr[idi]*ssinkr[idj]);
+	       /*
+		* Evaluation of site forces. 
+		*/
+	       coeff = 2.0*ak6/vol;
+	       for(js = site_idx[idj-1]; js < site_idx[idj]; js++)
+	       {
+		  force_comp = coeff*(sinkr[js]*scoskr[idi]-coskr[js]*ssinkr[idi]);
+		  sfx =  site_fx[js] + kv0 * force_comp;
+		  sfy =  site_fy[js] + kv1 * force_comp;
+		  site_fz[js] +=       kv2 * force_comp;
+		  site_fx[js] = sfx;
+		  site_fy[js] = sfy;
+	       }
+	    }
+	 }
+      }
+
+      pe_k = 2.0*(ak4*struct_factor_4_sq+ak6*struct_factor_6_sq)/vol;
+      *pe += pe_k;
+
+      /*
+       * Calculate contribution to stress tensor
+       */
+      coeff = 2.0*(dak4dk*struct_factor_4_sq+dak6dk*struct_factor_6_sq)/(kmod*vol);
+      stress[0][0] += pe_k + coeff * kv[0] * kv[0];
+      stress[0][1] +=        coeff * kv[0] * kv[1];
+      stress[0][2] +=        coeff * kv[0] * kv[2];
+      stress[1][1] += pe_k + coeff * kv[1] * kv[1];
+      stress[1][2] +=        coeff * kv[1] * kv[2];
+      stress[2][2] += pe_k + coeff * kv[2] * kv[2];
+   /*
+    * End of loop over K vectors.
+    */
+   }
+   /*
+    * Scatter/add forces to main force arrays
+    */
+   for(is=0; is < nsites; is++)
+   {
+      rel = site_permute[is];
+      site_force[0][rel] += site_fx[is];
+      site_force[1][rel] += site_fy[is];
+      site_force[2][rel] += site_fz[is];
+   }
+
+   afree((gptr*)chx); afree((gptr*)cky); afree((gptr*)clz); 
+   afree((gptr*)shx); afree((gptr*)sky); afree((gptr*)slz);
+   afree((gptr*)scoskr);    afree((gptr*)ssinkr);
+   xfree(site_x); xfree(site_y); xfree(site_z);
+   xfree(site_fx); xfree(site_fy); xfree(site_fz);
    xfree(cshkl);
    xfree(hkl);
    /*   message(NULLI, NULLP, INFO, "Trig Caching: %d hits and %d misses", hits, misses);*/
