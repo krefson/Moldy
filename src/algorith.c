@@ -17,6 +17,16 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	algorith.c,v $
+ * Revision 1.1.1.10  91/08/15  18:11:39  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
  * Revision 1.1.1.9  91/03/12  15:42:03  keith
  * Tidied up typedefs size_t and include file <sys/types.h>
  * Added explicit function declarations.
@@ -52,7 +62,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 1.1.1.11 91/08/14 14:23:15 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 1.1.1.10 91/08/15 18:11:39 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -89,14 +99,14 @@ void	message();			/* Error message and exit handler     */
  *  Apply each rotation to nvec/nquat vectors.                                *
  ******************************************************************************/
 void rotate(r_in, r_out, nvec, quat, nquat, inv_mat)
-vec_p		r_in,		/* Co-ordinates to be rotated [n][3] (in)     */
+vec_mp		r_in,		/* Co-ordinates to be rotated [n][3] (in)     */
 		r_out;		/* Resulting co-ordinates [n][3]    (out)     */
-quat_p		quat;		/* Quaternions for the rotation.     (in)     */
+quat_mp		quat;		/* Quaternions for the rotation.     (in)     */
 int		nvec,		/* Number of co-ordinates.           (in)     */
 		nquat;		/* Number of quaternions             (in)     */
 invrot		inv_mat;	/* Flag to do inverse rotations      (in)     */
 {
-   mat_t	rot;
+   mat_mt	rot;
    int		iquat;
 
    if(nvec % nquat != 0)
@@ -114,8 +124,8 @@ invrot		inv_mat;	/* Flag to do inverse rotations      (in)     */
  *  mean_square  Calculate the mean square of list of vectors for each cmpnt  *
  ******************************************************************************/
 void	mean_square(x, meansq, nmols)
-vec_t	x[];
-vec_t	meansq;
+vec_mt	x[];
+vec_mt	meansq;
 int	nmols;
 {
    int		i;
@@ -149,7 +159,7 @@ int	n;			/* Length ie v1[n], v2[n]		      */
  ******************************************************************************/
 void mol_force(site_force, force, nsites, nmols)
 real		**site_force;	/* Site forces [nsites*nmols][3]        (in)  */
-vec_p		force;		/* Centre of mass forces [nmols][3]    (out)  */
+vec_mp		force;		/* Centre of mass forces [nmols][3]    (out)  */
 int		nsites,		/* Number of sites on one molecule      (in)  */
 		nmols;		/* Number of molecules                  (in)  */
 {
@@ -165,13 +175,13 @@ int		nsites,		/* Number of sites on one molecule      (in)  */
  ******************************************************************************/
 void mol_torque(site_force, site, torque, quat, nsites, nmols)
 real		**site_force;	/* Principal frame site forces          (in)  */
-vec_p		site,		/* Principal frame site co-ordinates    (in)  */
+vec_mp		site,		/* Principal frame site co-ordinates    (in)  */
 		torque;		/* Molecular torques [nmols][3]        (out)  */
-quat_p		quat;		/* Molecular quaternions [nmols][4]     (in)  */
+quat_mp		quat;		/* Molecular quaternions [nmols][4]     (in)  */
 int		nsites,		/* Number of sites on one molecule      (in)  */
 		nmols;		/* Number of molecules                  (in)  */
 {
-   vec_p	princ_force = ralloc(nsites);
+   vec_mp	princ_force = ralloc(nsites);
    int	i, j, k, imol, isite;
    register     double torq;
 
@@ -202,20 +212,20 @@ VECTORIZE
  *  of mass co-ordinates.  Called once for each molecular species.            *
  ******************************************************************************/
 void make_sites(h, c_of_m_s , quat, p_f_sites, framework, site, nmols, nsites)
-mat_t		h;		/* Unit cell matrix h		     (in)     */
-vec_p		c_of_m_s,	/* Centre of mass co-ords [nmols][3] (in)     */
+mat_mt		h;		/* Unit cell matrix h		     (in)     */
+vec_mp		c_of_m_s,	/* Centre of mass co-ords [nmols][3] (in)     */
 		p_f_sites;	/* Principal-frame sites [nsites][3] (in)     */
 real		**site;		/* Sites [nmols*nsites][3]          (out)     */
 int		framework;	/* Flag to signal framework structure (in)    */
-quat_p		quat;		/* Quaternions [nmols][4]            (in)     */
+quat_mp		quat;		/* Quaternions [nmols][4]            (in)     */
 int		nmols,		/* Number of molecules                        */
 		nsites;		/* Number of sites on each molecule           */
 {
    int		imol, isite, i;	/* Counters				      */
-   vec_t	c_of_m;		/* Unscaled centre of mass co-ordinates       */
-   vec_t	*ssite = ralloc(nsites);
+   vec_mt	c_of_m;		/* Unscaled centre of mass co-ordinates       */
+   vec_mt	*ssite = ralloc(nsites);
    register double	t;
-   mat_t	hinv;
+   mat_mt	hinv;
    double	lx   = h[0][0], lxy  = h[0][1],
 		ly   = h[1][1], lxz  = h[0][2],
 		lz   = h[2][2], lyz  = h[1][2];
@@ -223,7 +233,7 @@ int		nmols,		/* Number of molecules                        */
 
    for(imol = 0; imol < nmols; imol++)
    {
-      mat_vec_mul(h,c_of_m_s+imol,(vec_p)c_of_m, 1);/* Get real c-of-m co-ords*/
+      mat_vec_mul(h,c_of_m_s+imol,(vec_mp)c_of_m, 1);/* Get real c-of-m co-ords*/
       if(quat)
       {
          rotate(p_f_sites,ssite,nsites,quat+imol,1,noinv);
@@ -256,7 +266,7 @@ int		nmols,		/* Number of molecules                        */
  *  number of molecules given the force.                                      *
  ******************************************************************************/
 void newton(force, acc, mass, nmols)
-vec_p		force,		/* Centre of mass forces [nmols][3]      (in) */
+vec_mp		force,		/* Centre of mass forces [nmols][3]      (in) */
 		acc;		/* Accelerations [nmols][3]             (out) */
 double		mass;		/* Molecular mass                        (in) */
 int		nmols;		/* Number of molecules                   (in) */
@@ -274,16 +284,16 @@ int		nmols;		/* Number of molecules                   (in) */
  * molecule.                                                                  *
  ******************************************************************************/
 void euler(torque, quat, qdot, qddot, inertia, nmols)
-vec_p		torque;		/* Space frame torques [nmols][3]        (in) */
-quat_p		quat, qdot,     /* Quaternions for this species and d/dt (in) */
+vec_mp		torque;		/* Space frame torques [nmols][3]        (in) */
+quat_mp		quat, qdot,     /* Quaternions for this species and d/dt (in) */
 		qddot;		/* Quaternion second derivatives        (out) */
-vec_t		inertia;	/* Principal moments of inertia          (in) */
+vec_mt		inertia;	/* Principal moments of inertia          (in) */
 int		nmols;		/* Number of molecules                   (in) */
 {
    /* The following two quantities, though vectors, are stored in the last 3  *
     * components of a quaternion array to allow easy application of the       *
     * quaternion multiplication in the equations of motion.                   */
-   quat_p	omega,		/* Principal frame angular velocities         */
+   quat_mp	omega,		/* Principal frame angular velocities         */
    		ang_acc=qalloc(nmols);	/* Principal frame ang accelerations  */
    register int	imol;
    int		i, j, k;
@@ -324,13 +334,13 @@ int		nmols;		/* Number of molecules                   (in) */
  *  Parinello M. and Rahman A. J. Appl. Phys. 52(12), 7182-7190 (1981)        *
  ******************************************************************************/
 void parinello(h, h_dot, vel, acc, acc_out, nmols)
-mat_t	h,			/* P and R's unit cell matrix            (in) */
+mat_mt	h,			/* P and R's unit cell matrix            (in) */
 	h_dot;			/* Derivative of h matrix                (in) */
-vec_p	vel,			/* Centre of mass scaled velocities      (in) */
+vec_mp	vel,			/* Centre of mass scaled velocities      (in) */
 	acc, acc_out;		/* C of M accelerations              (in/out) */
 int	nmols;			/* Size of vel and acc/ number molecules (in) */
 {
-   mat_t	h_tr,		/* Transpose of h			      */
+   mat_mt	h_tr,		/* Transpose of h			      */
    		h_tr_dot,	/* Transpose of h_dot			      */
    		h_tmp_1,	/* Store for intermediate terms		      */
    		h_tmp_2,	/* Store for intermediate terms		      */
@@ -338,7 +348,7 @@ int	nmols;			/* Size of vel and acc/ number molecules (in) */
    		G_inv,		/* Inverse of G				      */
    		G_dot,		/* Derivative of G			      */
    		G_i_d;		/* G_inv * G_dot			      */
-   vec_p	acc_corr=ralloc(nmols);	/* Correction term to accelerations   */
+   vec_mp	acc_corr=ralloc(nmols);	/* Correction term to accelerations   */
    int		i, imol;	/* Counters				      */
 
    transpose(h,h_tr);
@@ -362,13 +372,13 @@ int	nmols;			/* Size of vel and acc/ number molecules (in) */
  *  Trans_ke  calculate and return the translational kinetic energy           *
  ******************************************************************************/
 double	trans_ke(h, vel_s, mass, nmols)
-mat_t	h;			/* Unit cell matrix			 (in) */
-vec_t	vel_s[];		/* Scaled c of m velocities		 (in) */
+mat_mt	h;			/* Unit cell matrix			 (in) */
+vec_mt	vel_s[];		/* Scaled c of m velocities		 (in) */
 double	mass;			/* Mass of a molecule of this species	 (in) */
 int	nmols;			/* Number of molecules			 (in) */
 {
    double	ke;
-   vec_p	vel = ralloc(nmols);	/* Unscaled (real) velocities         */
+   vec_mp	vel = ralloc(nmols);	/* Unscaled (real) velocities         */
    
    mat_vec_mul(h, vel_s, vel, nmols);   /* Calculate unscaled velocities      */
 
@@ -382,13 +392,13 @@ int	nmols;			/* Number of molecules			 (in) */
  *  rot_ke  calculate and return the rotational kinetic energy                *
  ******************************************************************************/
 double	rot_ke(quat, qdot, inertia, nmols)
-quat_t	quat[],			/* Molecular quaternions		 (in) */
+quat_mt	quat[],			/* Molecular quaternions		 (in) */
 	qdot[];			/* Quaternion derivatives		 (in) */
-vec_t	inertia;		/* Principal moments of inertia		 (in) */
+vec_mt	inertia;		/* Principal moments of inertia		 (in) */
 int	nmols;			/* Number of molecules			 (in) */
 {
    double	ke = 0.0;
-   quat_p	omega_p = qalloc(nmols);   /* Principal angular velocities    */
+   quat_mp	omega_p = qalloc(nmols);   /* Principal angular velocities    */
    int		i;
    
    q_conj_mul(quat, qdot, omega_p, nmols); /* Calculate angular velocities    */
@@ -403,14 +413,14 @@ int	nmols;			/* Number of molecules			 (in) */
  * energy_dyad.  Calculate the dyadic sum m V V (dyad over V) for zero stress *
  ******************************************************************************/
 void energy_dyad(ke_dyad, h, vels, mass, nmols)
-mat_t	ke_dyad,			/* Dyad is accumulated here  (in/out) */
+mat_mt	ke_dyad,			/* Dyad is accumulated here  (in/out) */
 	h;				/* Unit cell matrix		(in)  */
-vec_p	vels;				/* Scaled velocities		(in)  */
+vec_mp	vels;				/* Scaled velocities		(in)  */
 double	mass;				/* Mass of particles		(in)  */
 int	nmols;				/* Number of molecules		(in)  */
 {
    int		i, j;				/* Counters		      */
-   vec_p	vel = ralloc(nmols);		/* Real velocities	      */
+   vec_mp	vel = ralloc(nmols);		/* Real velocities	      */
 
    mat_vec_mul(h, vels, vel, nmols);	/* Calculate unscaled velocities      */
 
@@ -426,7 +436,7 @@ int	nmols;				/* Number of molecules		(in)  */
  * Rahman   Calculate the unit cell matrix accelerations                      *
  ******************************************************************************/
 void rahman(stress_vir, h, hddot, ke_dyad, press, W, mask)
-mat_t	stress_vir,			/* Stress virial		      */
+mat_mt	stress_vir,			/* Stress virial		      */
 	h,				/* Unit cell matrix		      */
 	hddot,				/* Unit cell accelerations            */
 	ke_dyad;			/* Translational kinetic energy dyad  */
@@ -435,7 +445,7 @@ double	press,				/* Externally applied pressure	      */
 int	mask;				/* Mask constrained el's of h matrix  */
 {
    double	vol = det(h);		/* Unit cell volume		      */
-   mat_t	stress,			/* Stress tensor		      */
+   mat_mt	stress,			/* Stress tensor		      */
    		h_tr,			/* Transpose of h		      */
    		h_tr_inv,		/* Inverse of transpose of h	      */
    		sigma;			/* P & R sigma matrix 		      */
