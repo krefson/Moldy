@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/messages.h,v 2.24 2001/02/09 13:17:52 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/messages.h,v 2.25 2001/05/24 16:26:43 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -173,3 +173,4 @@ Gaussian thermostat would interfere with each other."
 #define RDFALT  "One of the RDF sampling parameters changed on restart\n     stored RDF data has been discarded"
 #define RDFDIS  "RDF output frequency parameters changed on restart\n     Excess stored RDF data may be discarded"
 #define DPSCHG  "Surface dipole term switched ON but some species are charged\n     Expect non-conservation of energy and large, impulsive forces!"
+#define FIXROL "Changing roll-interval when converting pre 2.19 restart file is not supported"

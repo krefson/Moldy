@@ -34,6 +34,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ *       Revision 2.19  2001/05/24 16:26:44  keith
+ *       Updated program to store and use angular momenta, not velocities.
+ *        - added conversion routines for old restart files and dump files.
+ *       Got rid of legacy 2.0 and lower restart file reading code.
+ *
  *       Revision 2.18  2001/05/18 17:10:57  keith
  *       Incorporated changes from Beeman branch 2.15e
  *       Specifically fixes for translational thermostat dof problem
@@ -188,7 +193,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.18 2001/05/18 17:10:57 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.19 2001/05/24 16:26:44 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -251,7 +256,7 @@ static
 av_info_t av_info[] = { {tke_n, "Trans KE",   CONV_E_N,	11, "%11.5g",-1, 0},
 			{rke_n, "Rot KE",     CONV_E_N,	11, "%11.5g",-1, 0},
 			{pe_n,  "Pot Energy", CONV_E_N,	11, "%11.5g",NPE,0},
-			{e_n,   "Tot Energy", CONV_E_N,	11, "%11.5g", 1, 0},
+			{e_n,   "Tot Energy", CONV_E_N,	11, "%11.5g", 2, 0},
 			{tt_n,  "TTemp",      CONV_T_N,	 6, "%6.1f", -1, 0},
 			{rt_n,  "RTemp",      CONV_T_N,	 6, "%6.1f", -1, 0},
 			{t_n,   "Temp",	      CONV_T_N,	 6, "%6.1f", 1,  0},
@@ -271,6 +276,7 @@ static  size_mt	av_mt_size;		/* Size of entry inaverages database  */
 static  av_head_mt  *av_head;
 static	av_mt	*av;			/* Dynamic array of averages structs  */
 static	int	navs = 0;		/* Size of array av                   */
+static  int	e_n_fill = 0;
 static	int	max_row = 0;		/* Largest number of components       */
 static  int	max_col = (int)press_n;	/* Number to print across page        */
 static  size_mt av_tmp_size;
@@ -278,6 +284,7 @@ static  gptr    *av_tmp;
 /*========================== Macros ==========================================*/
 #define NAVT			(int)end
 #define INC(av_mp)    (av_mp = (av_mt*)((double*)av_mp + av_mt_size/sizeof(double)))
+#define DEC(av_mp)    (av_mp = (av_mt*)((double*)av_mp - av_mt_size/sizeof(double)))
 /*============================================================================*/
 /******************************************************************************
  *  init_averages  Allocate space for and initialise the averages database.   *
@@ -294,12 +301,14 @@ void	init_averages(int nspecies, char *vsn, long int roll_interval,
 {
    av_mt		*av_mp;
    int		i, imult;
-   int		major, minor, cmajor=1, cminor=13;
+   int		major, minor;
 
-   for(i = 0; i < (int)end; i++)	/* cycle over enum types av_n         */
+   for(i = 0; i < NAVT; i++)	/* cycle over enum types av_n         */
    {
       if(av_info[i].mult < 0)		/* Set true multiplicity of each type */
          av_info[i].mult = -nspecies * av_info[i].mult;
+      if( i == e_n )
+	 e_n_fill = navs;
       navs += av_info[i].mult;		/* Count total			      */
       if(i < max_col && av_info[i].mult > max_row)
          max_row = av_info[i].mult;
@@ -307,18 +316,56 @@ void	init_averages(int nspecies, char *vsn, long int roll_interval,
    if( control.const_pressure > 0 )
    {
       if( control.const_temp > 0 )
-	 strcpy(av_info[3].name,"Gibbs En.");
+	 strcpy(av_info[3].name,"Energy E,G");
       else
-	 strcpy(av_info[3].name,"Enthalpy");
+	 strcpy(av_info[3].name,"Energy E,H");
    }
    else
    {
       if( control.const_temp > 0 )
-	 strcpy(av_info[3].name,"Free En.");
+	 strcpy(av_info[3].name,"Energy E,F");
       else
-	 strcpy(av_info[3].name,"Intl En.");
+	 strcpy(av_info[3].name,"Energy E");
    }
 
+   /*
+    * Do we have to do any conversion on averages read from restart file?
+    * We just allocate buffers and set flags here.
+    */
+   *av_convert = 0;
+   if( vsn )
+   {
+      /*
+       * First check whether restart was written by 2.19 or earlier.
+       */
+      if( sscanf(vsn, "%d.%d", &major, &minor) < 2 )
+	 message(NULLI, NULLP, FATAL, INRVSN, vsn);
+      if( major < 2 || (major==2 && minor <= 19 ) )
+      {
+	 av_tmp_size =  sizeof(av_head_mt) 
+	             + (navs-1)*(sizeof(av_mt)+(old_roll_interval-1)*sizeof(double));
+	 av_tmp = balloc(1,av_tmp_size);
+	 *av_convert = 1;
+      }
+      /*
+       * Has size of rolling average store changed?
+       */
+      if (roll_interval != old_roll_interval )
+      {
+	 if( *av_convert == 1 )
+	 {
+	    message(NULLI, NULLP, WARNING, FIXROL);
+	    roll_interval = control.roll_interval = old_roll_interval;
+	 }
+	 else
+	 {
+	    av_tmp_size =  sizeof(av_head_mt) 
+	       + navs*(sizeof(av_mt)+(old_roll_interval-1)*sizeof(double));
+	    av_tmp = balloc(1, av_tmp_size);
+	    *av_convert = 2;
+	 }
+      }
+   }
    /* Determine size of database, Allocate space and set pointers             */
    av_mt_size = sizeof(av_mt)+(roll_interval-1)*sizeof(double);
    av_size = sizeof(av_head_mt) + navs*av_mt_size;
@@ -337,35 +384,6 @@ void	init_averages(int nspecies, char *vsn, long int roll_interval,
 	 INC(av_mp);
       }
    } 
-   /*
-    * Do we have to do any conversion on averages read from restart file?
-    * We just allocate buffers and set flags here.
-    */
-   *av_convert = 0;
-   if( vsn )
-   {
-      /*
-       * First check whether restart was written by 1.13 or earlier.
-       */
-      if( sscanf(vsn, "%d.%d", &major, &minor) < 2 )
-	 message(NULLI, NULLP, FATAL, INRVSN, vsn);
-      if( major < cmajor || (major==cmajor && minor <= cminor ) )
-      {
-	 av_tmp_size = (navs+1)*sizeof(old_av_u_mt);
-	 av_tmp = balloc(1,av_tmp_size);
-	 *av_convert = 1;
-      }
-      /*
-       * Has size of rolling average store changed?
-       */
-      else if (roll_interval != old_roll_interval )
-      {
-	 av_tmp_size =  sizeof(av_head_mt) 
-	             + navs*(sizeof(av_mt)+(old_roll_interval-1)*sizeof(double));
-	 av_tmp = balloc(1, av_tmp_size);
-	 *av_convert = 2;
-      }
-   }
 }
 /******************************************************************************
  * convert_averages.  Update averages database if roll_interval changed or    *
@@ -377,39 +395,33 @@ void	convert_averages(long roll_interval, long old_roll_interval,
 {
    int iav, old_nroll, old_iroll, rbl;
    size_mt prev_av_mt_size;
-   old_av_u_mt *old_av_mp=(old_av_u_mt *)av_tmp;
    av_head_mt	*prev_av_head = (av_head_mt *)av_tmp;
    av_mt	        *av_mp, *prev_av_mp;
 
-   switch(av_convert)
+   if( av_convert == 1 )
    {
-    case 0:					/* No conversion needed       */
-      break;
-    case 1:					/* Convert from static scheme */
-      old_nroll = old_av_mp[0].cnt.roll;
-      old_iroll = control.istep % old_roll_interval;
-      av_head->nroll = MIN(old_nroll,roll_interval);
-      av_head->iroll = av_head->nroll % roll_interval;
-      av_head->nav   = old_av_mp[0].cnt.av;
-      rbl = MIN(old_iroll, av_head->nroll);
-      old_av_mp++;
       av_mp = av_info[0].p[0];
-      for(iav = 0; iav < navs; iav++)
+      prev_av_mp = (av_mt *)(prev_av_head+1);
+
+      for(iav = 0; iav < e_n_fill; iav++)
       {
-	 av_mp->value  = old_av_mp->av.value;
-	 av_mp->sum    = old_av_mp->av.sum;
-	 av_mp->sum_sq = old_av_mp->av.sum_sq;
-	 av_mp->mean   = old_av_mp->av.mean;
-	 av_mp->sd     = old_av_mp->av.sd;
-	 memcp(av_mp->roll+av_head->nroll-rbl, old_av_mp->av.roll+old_iroll-rbl,
-	       rbl*sizeof(double));
-	 memcp(av_mp->roll, old_av_mp->av.roll+old_nroll-av_head->nroll+rbl,
-	       (av_head->nroll-rbl)*sizeof(double));
+	 memcp(av_mp, prev_av_mp, av_mt_size);
 	 INC(av_mp);
-	 old_av_mp++;
+	 INC(prev_av_mp);
       }
-      break;
-    case 2:					/* Change roll_interval       */
+      memcp(av_mp, prev_av_mp, av_mt_size);
+      INC(av_mp);
+      for(iav++; iav < navs; iav++)
+      {
+	 memcp(av_mp, prev_av_mp, av_mt_size);
+	 INC(av_mp);
+	 INC(prev_av_mp);
+      }
+      control.reset_averages++;
+   }
+   
+   if( av_convert == 2 )
+   {
       prev_av_mt_size = sizeof(av_mt)+(old_roll_interval-1)*sizeof(double);
       old_nroll = prev_av_head->nroll;
       old_iroll = prev_av_head->iroll;
@@ -433,8 +445,7 @@ void	convert_averages(long roll_interval, long old_roll_interval,
 	 INC(av_mp);
 	 prev_av_mp = (av_mt*)((double*)prev_av_mp + prev_av_mt_size/sizeof(double));
       }
-      break;
-   }
+   } 
    /*
     *  Reset averages and counters to zero if a) requested
     *  or b) we have not yet reached begin_average. (The latter 
@@ -457,18 +468,17 @@ void	convert_averages(long roll_interval, long old_roll_interval,
  ******************************************************************************/
 gptr	*av_ptr(size_mt *size, int av_convert)
 {
-   switch(av_convert)
+   if(av_convert)
    {
-    case 0:
-      *size = av_size;
-      if(av_head != 0)
-	 return((gptr*)av_head);
-      break;
-    case 1:
-    case 2:
       *size = av_tmp_size;
       if(av_tmp != 0)
 	 return(av_tmp);
+   }
+   else
+   {
+      *size = av_size;
+      if(av_head != 0)
+	 return((gptr*)av_head);
    }
    message(NULLI, NULLP, FATAL, AVNOC, "av_ptr");
    return 0;						/* To satisfy lint    */
@@ -607,13 +617,14 @@ void	values(system_mt *system,        /* record of system info             */
    hkem3 = hkem1;
    hkem1 = hkep1;
    hkep1 = ke_cell(system->hmom, control.pmass);
-   if( skem1 < 0.0 )
+   if( hkem1 < 0.0 )
       hkem1 = hkem3 = hkem5 = hkep1;
    hke = KEINT(hkep1, hkem1, hkem3, hkem5);
 
    hpe = control.pressure*vol;
 
    add_average(CONV_E*(tot_ke+tot_pe+ske+gktls + hke + hpe), e_n, 0); 
+   add_average(CONV_E*(tot_ke+tot_pe), e_n, 1); 
 
    add_average(tot_ke/(0.5*kB*system->d_of_f), t_n, 0);
    for(i = 0; i < 3; i++)			/* Non-zero (upper triangle)  */

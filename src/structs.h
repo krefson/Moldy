@@ -19,9 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.19 2001/05/22 14:52:45 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.20 2001/05/24 16:26:44 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.20  2001/05/24 16:26:44  keith
+ * Updated program to store and use angular momenta, not velocities.
+ *  - added conversion routines for old restart files and dump files.
+ * Got rid of legacy 2.0 and lower restart file reading code.
+ *
  * Revision 2.19  2001/05/22 14:52:45  keith
  * Added control param "dont-use-symm-rot" to switch between rotational
  * leapfrog versions at runtime.
@@ -399,26 +404,6 @@ typedef struct dump_sysinfo_mt  /* Dump file system info format               */
 }       dump_sysinfo_mt;
 
 #define MAX_ROLL_INTERVAL       100
-typedef struct
-{   double      value,
-                sum,
-                sum_sq,
-                mean,
-                sd,
-                roll[MAX_ROLL_INTERVAL],
-                roll_mean,
-                roll_sd;
-} old_av_mt;
-
-typedef union
-{
-   old_av_mt            av;
-   struct
-   {    
-      int       av, roll;
-   }            cnt;
-} old_av_u_mt;
-
 typedef struct
 {       
    int          nav, 
