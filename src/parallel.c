@@ -91,7 +91,7 @@ extern int 	ithread, nthreads;
  * handle up to 44000 atomic sites in one go, and data for larger 
  * systems is parcelled up appropriately and sent in chunks.
  */
-#define NBUFMAX 1048576
+#define NBUFMAX 4194304
 static char tmpbuf[NBUFMAX];
 #endif
 #ifdef SHMEM
@@ -591,6 +591,134 @@ size_mt	size;
 int	ifrom;
 {
    MPI_Bcast(buf, n*size, MPI_BYTE, ifrom, MPI_COMM_WORLD);
+}
+#endif
+/******************************************************************************
+ * par_collect_all().  Global gather to all.                                  *
+ ******************************************************************************/
+#ifdef BSP
+void
+par_collect_all(send, recv, n, stride, nblk)
+real	*send, *recv;
+int	n, nblk, stride;
+{
+   int  i, right, left, iblk, ibeg;
+   real *recvbuf = (real*)tmpbuf;
+   int  nbuf = NBUFMAX/sizeof(real);
+
+   if(nblk*stride > nbuf)
+      message(NULLI, NULLP, FATAL, "Par_Collect_All: Buffer too small %d,%d\n",
+	      nblk*stride,nbuf);
+   
+   for(iblk = 0; iblk < nblk; iblk++)
+      memcp(recvbuf+ithread*n+iblk*stride, send+iblk*stride, n*sizeof(real));
+  
+   for (i=1; i<nthreads; i*=2) 
+   {
+      left  = (nthreads + ithread - i) % nthreads;
+      right = (ithread + i) % nthreads;
+      ibeg = ithread + 1 - i;
+      bspsstep(111);
+
+      if( ibeg >= 0 )
+	 for(iblk = 0; iblk < nblk; iblk++)
+	    bspstore(right, recvbuf+ibeg*n+iblk*stride, 
+		            recvbuf+ibeg*n+iblk*stride, i*n*sizeof(real));
+      else
+	 for(iblk = 0; iblk < nblk; iblk++)
+	 {
+	    bspstore(right, recvbuf+(ibeg+nthreads)*n+iblk*stride, 
+		            recvbuf+(ibeg+nthreads)*n+iblk*stride, 
+		            -ibeg*n*sizeof(real));
+	    bspstore(right, recvbuf+iblk*stride, 
+		            recvbuf+iblk*stride, (ithread+1)*n*sizeof(real));
+	 }
+      bspsstep_end(111);
+   }
+   memcp(recv, recvbuf, nblk*stride*sizeof(real));
+}
+#endif
+#ifdef SHMEM
+void
+par_collect_all(send, recv, n, stride, nblk)
+real	*send, *recv;
+int	n, nblk, stride;
+{
+   int  i, right, left, iblk, ibeg;
+   static long *recvbuf = 0;
+   static int  recvsize = 0;
+
+   if(sizeof(real) != sizeof(long) )
+      message(NULLI, NULLP, FATAL, "Par_collect_all - not implemented for single precision");
+   if(nblk*stride > recvsize)
+   {
+      if( recvbuf )
+	 shfree(recvbuf);
+      recvbuf = shmalloc(nblk*stride*sizeof(real));
+      if( recvbuf == 0)
+	 message(NULLI, NULLP, FATAL, "par_collect_all: Shmalloc failed");
+      recvsize = nblk*stride;
+   }
+   barrier();		/* Ensure all PEs ready to receive data */
+   
+   for(iblk = 0; iblk < nblk; iblk++)
+      memcp(recvbuf+ithread*n+iblk*stride, send+iblk*stride, n*sizeof(real));
+
+   for (i=1; i<nthreads; i*=2) 
+   {
+      left  = (nthreads + ithread - i) % nthreads;
+      right = (ithread + i) % nthreads;
+      ibeg = ithread + 1 - i;
+
+      if( ibeg >= 0 )
+	 for(iblk = 0; iblk < nblk; iblk++)
+	    shmem_put(recvbuf+ibeg*n+iblk*stride, 
+		      recvbuf+ibeg*n+iblk*stride, i*n, right);
+      else
+	 for(iblk = 0; iblk < nblk; iblk++)
+	 {
+	    shmem_put(recvbuf+(ibeg+nthreads)*n+iblk*stride, 
+		      recvbuf+(ibeg+nthreads)*n+iblk*stride, -ibeg*n, right);
+	    shmem_put(recvbuf+iblk*stride, 
+		      recvbuf+iblk*stride, (ithread+1)*n, right);
+	 }
+      barrier();	/* Synchronize before passing received data onwards */
+                        /* The shmem_quiet(3) man page assures us that      */
+      			/* it also waits for oustanding data to arrive.     */
+      shmem_udcflush();
+   }
+   memcp(recv, recvbuf, nblk*stride*sizeof(real));
+}
+#endif
+#ifdef MPI
+void
+par_collect_all(send, recv, n, stride, nblk)
+real	*send, *recv;
+int	n, nblk, stride;
+{
+   int i;
+   int  blens[2];
+   MPI_Datatype vtype, block, types[2];
+   MPI_Aint displs[2];
+
+   /*
+    * Use the defined datatypes of MPI to collect the whole array from
+    * distributed slices across processors.  The "vtype" vector defines
+    * the actual data, "nblk" blocks of "n" elements with a stride of "stride".
+    * "block" is a struct with identical data to "vtype" BUT with a upper
+    * bound of exactly 1 block.  This fools MPI_Allgather into assembling
+    * the scattered data into an interleaved array.
+    */
+   MPI_Type_vector(nblk, n, stride, M_REAL, &vtype);
+   blens[0]  = 1;     blens[1]  = 1;
+   types[0]  = vtype; types[1]  = MPI_UB;
+   displs[0] = 0;     displs[1] = n*sizeof(real);
+   MPI_Type_struct(2, blens, displs, types, &block);
+   MPI_Type_commit(&block);
+   
+   MPI_Allgather(send, 1, block, recv, 1, block, MPI_COMM_WORLD); 
+   MPI_Type_free(&vtype);
+   MPI_Type_free(&block);   
 }
 #endif
 /******************************************************************************
