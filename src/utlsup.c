@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/utlsup.c,v 1.15.8.3 2003/07/31 09:01:24 kr Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/utlsup.c,v 1.15.8.4 2004/03/01 04:44:11 moldydv Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -16,20 +16,18 @@ static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/utlsup.c,v 1.15.8.
 #   include     "xdr.h"
 #endif
 
-#define DATAREC "%d record%ssuccessfully read from %s"
-
-void mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
-void invert(real (*a)[3], real (*b)[3]);
-
 char	*comm;
+
 #ifdef USE_XDR
    XDR          xdrs;
 #endif
+
+void invert (real (*a)[3], real (*b)[3]);
+void mat_vec_mul (real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
 /******************************************************************************
  * Dummies of moldy routines so that utils may be linked with moldy library   *
- ******************************************************************************/
-/*VARARGS*/
-void 	init_rdf(void)
+ ******************************************************************************//*VARARGS*/
+void    init_rdf(void)
 {}
 /*VARARGS*/
 gptr *rdf_ptr(void)
@@ -41,15 +39,15 @@ int lines_left(void)
 {return 0;}
 void new_page(void)
 {}
-void	new_line(void)
+void    new_line(void)
 {
    (void)putchar('\n');
 }
 /*VARARGS*/
-void	banner_page(void)
+void    banner_page(void)
 {}
 /*VARARGS*/
-void	note(void)
+void    note(void)
 {}
 /******************************************************************************
  *  message.   Deliver error message to possibly exiting.  It can be called   *
@@ -612,4 +610,20 @@ int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_writ
       }
    }
    return errflg;
+}
+/******************************************************************************
+ *  check_control. Check if control info contained in input file.             *
+ ******************************************************************************/
+int check_control(FILE *file)
+{
+  int num_items;
+  char  line[LLEN], name[LLEN], value[LLEN];
+
+  get_line(line, LLEN, file, 1);
+  num_items = sscanf(line, " %[^= ] = %127[^#]", name, value);
+  rewind(file);
+  if( num_items == 2 )
+    return 1;
+  else
+    return 0;
 }
