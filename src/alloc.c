@@ -2,9 +2,26 @@
  * Alloc	Interface functions to dynamic store allocators.	      *
  * talloc()	Allocate storage and test for success or failure	      *
  * arralloc()	Allocate rectangular dope-vector (ie using pointers) array    *
+ *									      *
+ * N.B.         Portability.						      *
+ *    These functions make some assumptions which are not guaranteed by the   *
+ * ANSI standard.							      *
+ * 1)   Various other modules rely on talloc() setting the store to floating- *
+ *      point zero.  This may not be the same as binary zero.  In that case   *
+ *      the macros "ralloc" etc in "defs.h" will have to be converted into    *
+ *      functions here which do type-dependant initialisation to zero.        *
+ * 2)   arralloc() relies on a common format for pointers to different data   *
+ *      types.   It will not work (and cannot be made to work) on machines    *
+ *      for which this is false.  As a kludge, it could be fixed for 'double' *
+ *      only, which constitutes the vast majority of calls.  (The exception   *
+ *      is the struct type reloc_t in "force.c".			      *
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.4  90/01/15  17:22:25  keith
+ * New version of arralloc() orders memory so that pointers come FIRST.
+ * This means you can simply free() the pointer returned (if l.b. = 0).
+ * 
  * Revision 1.3  89/09/21  14:56:01  keith
  * Modified talloc() to return null rather than exit if 0 bytes requested.
  * 
@@ -16,7 +33,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/alloc.c,v 1.4 89/12/22 19:30:29 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.4 90/01/15 17:22:25 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
