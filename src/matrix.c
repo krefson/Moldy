@@ -10,10 +10,13 @@
  * invert()		Invert a 3x3 matrix				      *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log:	matrix.c,v $
+ * Revision 1.1  89/04/20  16:00:50  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/matrix.c,v 1.1 89/04/20 16:00:50 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -113,16 +116,12 @@ void transpose(a, b)
 mat_t	a,					/* Input matrix          (in) */
 	b;					/* Transposed matrix    (out) */
 {
-   register int	i, j;				/* Counters		      */
    register real tmp;
-   
-   for(i = 0; i < 3; i++)
-      for(j = i; j < 3; j++)
-      {
-         tmp     = a[i][j];
-         b[i][j] = a[j][i];
-         b[j][i] = tmp;
-      }
+
+   b[0][0] = a[0][0];	b[1][1] = a[1][1];	b[2][2] = a[2][2];
+   tmp = a[0][1];	b[0][1] = a[1][0];	b[1][0] = tmp;
+   tmp = a[0][2];	b[0][2] = a[2][0];	b[2][0] = tmp;
+   tmp = a[1][2];	b[1][2] = a[2][1];	b[2][1] = tmp;
 }
 /******************************************************************************
  *  Det.  Determinant of a 3 x 3 matrix   				      *
