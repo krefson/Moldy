@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.21  2000/11/08 18:38:43  keith
+ *      Adjusted degrees of freedom to be 3N_t + N_r - 3 because total momentum
+ *      is conserved.
+ *
  *      Revision 2.20  2000/11/06 16:02:06  keith
  *      First working version with a Nose-Poincare thermostat for rigid molecules.
  *
@@ -276,7 +280,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.20 2000/11/06 16:02:06 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.21 2000/11/08 18:38:43 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -662,6 +666,11 @@ void	initialise_sysdef(system_mp system, spec_mt *species, site_mt *site_info, q
    system->nsites  = 0;  system->nmols  = 0;
    system->nmols_r = 0;  system->d_of_f = 0;
 
+   system->ts = 1.0;
+   system->rs = 1.0;
+   system->tsmom = 0.0;
+   system->rsmom = 0.0;
+
    for (spec = species; spec < species+system->nspecies; spec++)
    {					/* Loop over molecular species       */
       system->nmols  += spec->nmols;
@@ -834,14 +843,6 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
 	 spec->quat = spec->avel = spec->avelp = 0;
       nmol_cum += spec->nmols;
    }
-   /*
-    * These may not be initialised if reading an old restart file,
-    * so zero them here for safety.
-    */
-   system->ts = 1.0;
-   system->rs = 1.0;
-   system->tsmom = 0.0;
-   system->rsmom = 0.0;
 }
 /******************************************************************************
  *  Interpolate_derivatives & interp.    Interp is a quadratic interpolation  *
