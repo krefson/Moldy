@@ -23,6 +23,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.5  89/10/16  15:47:37  keith
+ * Fixed DUMP_SIZE macro to be correct!
+ * 
  * Revision 1.4  89/07/05  18:42:06  keith
  * Eliminated 'dump-offset' - renumbering starts at 1 for new dump run.
  * 
@@ -40,7 +43,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/dump.c,v 1.4 89/07/05 18:42:06 keith Stab Locker: keith $";
+static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/dump.c,v 1.5 89/10/16 15:47:37 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -93,7 +96,9 @@ double		pe;
    		file_len;		/* Length of file		      */
    		boolean errflg = false;
    static	boolean init = true;
-   
+#define		NMUTATES 10   		/* Max number of mutation attempts.   */
+   int		nmutates = 0;   	/* Number of mutation attempts.	      */
+ 
    if( ! strchr(control.dump_file, '%') )
       	(void)strcat(control.dump_file, "%d");
    (void)sprintf(cur_file,  control.dump_file, filenum);
@@ -155,7 +160,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 1.4 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 1.5 $"+11,
 		                     sizeof dump_header.vsn-1);
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;
@@ -166,7 +171,8 @@ double		pe;
       while( (dumpf = fopen(cur_file, "r")) != 0 )
       {
 	 (void)fclose(dumpf);
-	 (void)mutate(control.dump_file);
+	 if( nmutates++ < NMUTATES || mutate(control.dump_file) == NULL)
+	    message(NULLI, NULLP, FATAL, MUFAIL, control.dump_file, nmutates);
 	 message(NULLI, NULLP, WARNING, DMPEXS, cur_file, control.dump_file);
 	 (void)sprintf(cur_file, control.dump_file, filenum);
       }
@@ -179,7 +185,9 @@ double		pe;
       while( dumpf = fopen(cur_file, "r"))
       {
 	 (void)fclose(dumpf);
-	 (void)mutate(strcpy(prev_file, control.dump_file));
+	 if( nmutates++ < NMUTATES || 
+	    mutate(strcpy(prev_file, control.dump_file)) == NULL)
+	    message(NULLI, NULLP, FATAL, MUFAIL, prev_file, nmutates);
 	 message(NULLI, NULLP, WARNING, DMPEXS, cur_file , prev_file);
 	 (void)sprintf(cur_file, prev_file, filenum);
       }
@@ -227,10 +235,13 @@ char	*name;
    while( begin > name && (pc_pos - begin) < N_MUTATE && isalnum(*(begin-1)) )
       begin--;
 
+   if(begin >= pc_pos)				/* No characters to mutate    */
+      return NULL;
+
    while( begin < pc_pos )
       *begin++ = alpha[(int)(mdrand() * 26.0)];
 
-   return(name);
+   return name;
 }
 /******************************************************************************
  *  dump_convert  format data and place in buffer for dumping to file         *
