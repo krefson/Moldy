@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 2.18 1999/07/22 13:22:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/molout.c,v 1.1 1999/10/11 14:03:51 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -41,7 +41,7 @@ void
 mat_vec_mul3(m, vec, number)
 int             number;         /* Number of vectors to be multiplied         */
 real            m[3][3];        /* Matrix                                     */
-real            **vec;          /* Output vector.  CAN BE SAME AS INPUT  (out)*/
+real            **vec;          /* Input vector.  Output vector same as input */
 {
    int i;
    register double        a0, a1, a2;
@@ -55,8 +55,7 @@ real            **vec;          /* Output vector.  CAN BE SAME AS INPUT  (out)*/
       vec[2][i] = m[2][0]*a0 + m[2][1]*a1 + m[2][2]*a2;
    }
 }
-
- /******************************************************************************
+/******************************************************************************
  * Centre_mass.  Shift system centre of mass to origin (in discrete steps),   *
  ******************************************************************************/
 static void
@@ -108,7 +107,7 @@ vec_mt	s;
    }
 }
 /******************************************************************************
- * shakal_out().  Write a system configuration to stdout in the form of an    *
+ * schakal_out().  Write a system configuration to stdout in the form of an   *
  * input data file for the graphics program SCHAKAL88.			      *
  ******************************************************************************/
 static void
@@ -334,7 +333,7 @@ site_mt		site_info[];
 	 }
       }
    }
-/* On first call  write the DCD header.  Always write to stdout. */
+/* On first call write the DCD header. Always write to stdout. */
    if( n == 0 )
       write_dcdheader(stdout, control.title, isitem, irec, 0, inc, control.step);
    
