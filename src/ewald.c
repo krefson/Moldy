@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.12  90/05/16  18:40:04  keith
+ * Renamed own freer from cfree to tfree.
+ * 
  * Revision 1.11  90/05/02  15:33:27  keith
  * Make declaration of saxpy() conditional along with use.
  * 
@@ -50,7 +53,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.11 90/05/02 15:33:27 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/stardent/moldy/RCS/ewald.c,v 1.12 90/05/16 18:40:04 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -153,15 +156,15 @@ mat_t		stress;			/* Stress virial		(out) */
 {
    mat_t	hinv;			/* Matrix of reciprocal lattice vects*/
    register	int	h, k, l;	/* Recip. lattice vector indices     */
-		int	i, j, is;	/* Counters.			     */
-		int	ispec, ssite;	/* Species counter		     */
+		int	i, j, is, ssite;/* Counters.			     */
    		spec_p	spec;		/* species[ispec]		     */
    register	int	nsites = system->nsites;
    register	real	pe_k,		/* Pot'l energy for current K vector */
 		        coeff, coeff2;	/* 2/(e0V) * A(K) & similar	     */
-   register	real	sqcoskr,sqsinkr;/* Sum q(i) sin/cos(K.r(i))          */
+   register	real	sqcoskr,sqsinkr,/* Sum q(i) sin/cos(K.r(i))          */
+   			sqcoskrn, sqsinkrn,
+			sqcoskrf, sqsinkrf;
 		double	ksq;		/* Squared magnitude of K vector     */
-		double	pe_local = 0.0;	/* Local accumulator for pot. energy */
    		double	kx,ky,kz;
    		vec_t	kv;		/* (Kx,Ky,Kz)  			     */
 #ifdef OLDEWALD
@@ -197,31 +200,24 @@ mat_t		stress;			/* Stress virial		(out) */
 #endif
    double	r_4_alpha = -1.0/(4.0 * control.alpha * control.alpha);
    double	vol = det(system->h);	/* Volume of MD cell		      */
-   static	double	self_energy;	/* Constant self energy term	      */
+   static	double	self_energy,	/* Constant self energy term	      */
+   			sheet_energy;	/* Correction for non-neutral system. */
    static	boolean init = true;	/* Flag for the first call of function*/
+   static	int	nsitesxf;	/* Number of non-framework sites.     */
 
 /*
  * First call only - evaluate self energy term and store for subsequent calls
+ * Self energy includes terms for non-framework sites only.
  */
    if(init)
    {
-      double	sqsq = 0, sq = 0, intra, r;
-      int	js;
-      self_energy = 0;
-      for(is = 0; is < nsites; is++)
-      {
-	 sq += chg[is];
-	 sqsq += SQR(chg[is]);
-      }
-      if( fabs(sq)*CONV_Q > 1.0e-5)
-      {
-	 self_energy += PI*SQR(sq) / (2.0*vol*SQR(control.alpha));
-	 message(NULLI, NULLP, WARNING, SYSCHG, sq*CONV_Q, self_energy*CONV_E);
-      }
+      double	sqsq = 0, sq = 0, sqxf, intra, r;
+      int	js, frame_flag;
 
-      self_energy += control.alpha / sqrt(PI) * sqsq;
+      self_energy = sheet_energy = 0;
       ssite = 0;
-      for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
+      spec = species; 
+      while( spec < species+system->nspecies && ! spec->framework)
       {
 	 intra = 0.0;
 	 for(is = 0; is < spec->nsites; is++)
@@ -233,12 +229,49 @@ mat_t		stress;			/* Stress virial		(out) */
 	    }
 	 self_energy += spec->nmols * intra;
 	 ssite += spec->nsites*spec->nmols;
+	 spec++;
       }
+      nsitesxf = ssite;
+      frame_flag = (spec != species+system->nspecies);
+
+      for(is = 0; is < nsitesxf; is++)
+      {
+	 sq += chg[is];
+	 sqsq += SQR(chg[is]);
+      }
+      self_energy += control.alpha / sqrt(PI) * sqsq;
+      /*
+       * Sqxf is total non-framework charge.  Calculate grand total in sq.
+       */
+      sqxf = sq;
+      for(; is < nsites; is++)
+	 sq += chg[is];
+      /*
+       *  Charged-system/uniform sheet correction terms (really in direct
+       *  space term but included here for convenience).
+       *  1) For charged framework only.
+       */
+      if( frame_flag )
+      {
+	 sheet_energy += PI*(sq-sqxf)*sqxf / (2.0*SQR(control.alpha));
+	 message(NULLI, NULLP, INFO, FRACHG, 
+		 sqxf*CONV_Q, sheet_energy/vol*CONV_E);
+      }
+      /* 
+       *  2) Case of entire system non-neutral.
+       */
+      if( fabs(sq)*CONV_Q > 1.0e-5)
+      {
+	 sheet_energy += intra = PI*SQR(sq) / (2.0*SQR(control.alpha));
+	 message(NULLI, NULLP, WARNING, SYSCHG, sq*CONV_Q, intra/vol*CONV_E);
+      }
+
       note("Ewald self-energy = %f Kj/mol",self_energy*CONV_E);
       init = false;
    }
-   *pe -= self_energy;			/* Subtract self energy term	      */
-      
+
+   *pe -= self_energy+sheet_energy/vol;	/* Subtract self energy term	      */
+
    invert(system->h, hinv);		/* Inverse of h is matrix of r.l.v.'s */
 
 /*
@@ -367,13 +400,20 @@ VECTORIZE
       qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,chg,
 	      qcoskr,qsinkr,k,l,nsites);
 #endif
-      sqcoskr = sum(nsites, qcoskr, 1);	 sqsinkr = sum(nsites, qsinkr, 1);
+      sqcoskrn = sum(nsitesxf, qcoskr, 1);
+      sqsinkrn = sum(nsitesxf, qsinkr, 1);
+      sqcoskrf = sum(nsites-nsitesxf, qcoskr+nsitesxf, 1);
+      sqsinkrf = sum(nsites-nsitesxf, qsinkr+nsitesxf, 1);
+      sqcoskr = sqcoskrn + sqcoskrf;
+      sqsinkr = sqsinkrn + sqsinkrf;
       
 /*
  * Evaluate potential energy contribution for this K and add to total.
+ * Exclude frame-frame interaction terms.
  */
-      pe_k = 0.5 * coeff * (SQR(sqcoskr) + SQR(sqsinkr));
-      pe_local += pe_k;
+      pe_k = 0.5 * coeff * (sqcoskrn*(sqcoskrn+sqcoskrf+sqcoskrf) +
+			    sqsinkrn*(sqsinkrn+sqsinkrf+sqsinkrf));
+      *pe += pe_k;
 
       sqsinkr *= coeff; sqcoskr *= coeff;
 /*
@@ -414,10 +454,8 @@ VECTORIZE
    }
 
 /*
- * End of loop over K vectors.  Add the Ewald potential energy to total.
+ * End of loop over K vectors.
  */
-   *pe += pe_local;
-   
    tfree((char*)chx); tfree((char*)cky); tfree((char*)clz); 
    tfree((char*)shx); tfree((char*)sky); tfree((char*)slz);
    tfree((char*)qcoskr); tfree((char*)qsinkr);
