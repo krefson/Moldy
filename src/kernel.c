@@ -14,6 +14,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 1.7  89/12/22  19:33:44  keith
+ * Added p0-p3 - temporaries for pot[0..3] pointers within loops.
+ * Some machines (eg stellar) generate better code this way.
+ * 
  * Revision 1.6  89/12/15  12:56:53  keith
  * Added conditional ionclusion of <fastmath.h> for stellar
  * 
@@ -35,7 +39,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore1/keith/md/moldy/RCS/kernel.c,v 1.6 89/12/15 12:56:53 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.8 90/05/01 17:26:03 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -98,46 +102,114 @@ int	ptype;				/* Potential type selector	      */
  *  kernel   Innermost loop of force calculation.  Takes a vector of squared  *
  *  atomic distances (r_sqr), charges (chg) , pot'l parameters (pot[which]),  *
  *  and returns a vector of forces (forceij) and the potential energy (pe)    *
- *  Norm is 2*pi/sqrt(alpha), ptype is potential type selector.		      *
  ******************************************************************************/
 void	kernel(j0, nnab, forceij, pe, r_sqr, nab_chg, chg, norm,
 	       alpha, ptype, pot)
-int	ptype, j0, nnab;
-double	*pe;
-double	norm, alpha, chg;
-real	forceij[], r_sqr[], nab_chg[];
-register real	*pot[];
+int	j0, nnab;		/* Lower and upper limits for vectors.   (in) */
+int	ptype;			/* Index of potential type in potspec[]. (in) */
+double	*pe;			/* Potential energy accumulator.     (in/out) */
+double	alpha, norm;		/* Ewald parameter and 2*alpha/sqrt(pi). (in) */
+double	chg;			/* Electric charge of reference site.    (in) */
+real	forceij[];		/* Vector of dU(r)/dr for each in r_sqr.(out) */
+real	r_sqr[];		/* Vector of site-site distances (**2).  (in) */
+real	nab_chg[];		/* Vector of charges of neighbour sites. (in) */
+real	*pot[];			/* Vectors of potential parameters.	 (in) */
 {
-   register real t, r, r_r, expa2r2, erfc_term, r_6_r;
-   real		ppe = 0.0,
-   		exp_f1, exp_f2,		/* Temporary for b*exp(-cr) etc      */
-   		r_sqr_r, r_12_r;	/* Powers of above                    */
-   register int	jsite;
-   real *p0 = pot[0], *p1 = pot[1], *p2 = pot[2], *p3 = pot[3];
+   register real t;			/* Argument of erfc() polynomial.     */
+   register real r;			/* Site-site distance.		      */
+   register real r_r, r_6_r, r_sqr_r, r_12_r;	/* Reciprocal powers of r.    */
+   register real erfc_term;		/* Intermediates in erfc calculation. */
+   	    real ppe = 0.0;		/* Local accumulator of pot. energy.  */
+   	    real exp_f1, exp_f2;	/* Temporary for b*exp(-cr) etc       */
+   register int	jsite;			/* Loop counter for vectors.	      */
+   real *p0 = pot[0], *p1 = pot[1],     /* Local bases for arrays of pot'l    */
+        *p2 = pot[2], *p3 = pot[3];     /* parameters.			      */
 
-   switch(ptype)
-   {
-    default:
-      message(NULLI, NULLP, FATAL, UNKPTY, ptype);
-    case LJPOT:
-      if(alpha > 0.0)
+   if(alpha > 0.0)
+      switch(ptype)
+      {
+       default:
+	 message(NULLI, NULLP, FATAL, UNKPTY, ptype);
+       case LJPOT:
 VECTORIZE
          for(jsite=j0; jsite < nnab; jsite++)
 	 {
+	    /*
+	     * Calculate r and coulombic part
+	     */
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = 1.0 / r;
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(alpha*r));
+	    t = 1.0/(1.0+PP*(alpha*r));
+	    t = POLY5(t) * erfc_term * r_r;
+	    erfc_term = t + norm * erfc_term;
 	    r_sqr_r = SQR(r_r);
+	    /*
+	     * Non-coulombic ie potential-specific part
+	     */
 	    r_6_r = SQR(p1[jsite])* r_sqr_r;
 	    r_6_r   = CUBE(r_6_r);
 	    r_12_r  = SQR(r_6_r);
-	    expa2r2 = nab_chg[jsite]* chg * exp(-SQR(alpha*r));
-	    t = 1.0/(1.0+PP*(alpha*r));
-	    erfc_term = POLY5(t) * expa2r2 * r_r;
-	    ppe += erfc_term + p0[jsite]*(r_12_r - r_6_r);
+	    ppe += t + p0[jsite]*(r_12_r - r_6_r);
 	    forceij[jsite] = r_sqr_r*(6.0*p0[jsite]*(2*r_12_r - r_6_r)
-				      + erfc_term + norm * expa2r2);
+				      + erfc_term);
 	 }
-      else
+	 break;
+       case E6POT:
+VECTORIZE
+         for(jsite=j0; jsite < nnab; jsite++)
+	 {
+	    /*
+	     * Calculate r and coulombic part
+	     */
+	    r       = sqrt(r_sqr[jsite]);
+	    r_r	 = 1.0 / r;
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(alpha*r));
+	    t = 1.0/(1.0+PP*(alpha*r));
+	    t = POLY5(t) * erfc_term * r_r;
+	    erfc_term = t + norm * erfc_term;
+	    r_sqr_r = SQR(r_r);
+	    /*
+	     * Non-coulombic ie potential-specific part
+	     */
+	    exp_f1 = p1[jsite] * exp(-p2[jsite] * r);
+	    r_6_r   = p0[jsite] * CUBE(r_sqr_r);
+	    ppe += t - r_6_r + exp_f1;
+	    forceij[jsite] = r_sqr_r*(-6.0* r_6_r+ erfc_term)
+	                             + p2[jsite]*exp_f1 * r_r;
+	 }
+	 break;
+       case MCYPOT:
+VECTORIZE
+         for(jsite=j0; jsite < nnab; jsite++)
+	 {
+	    /*
+	     * Calculate r and coulombic part
+	     */
+	    r       = sqrt(r_sqr[jsite]);
+	    r_r	 = 1.0 / r;
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(alpha*r));
+	    t = 1.0/(1.0+PP*(alpha*r));
+	    t = POLY5(t) * erfc_term * r_r;
+	    erfc_term = t + norm * erfc_term;
+	    r_sqr_r = SQR(r_r);
+            /*
+	     * Non-coulombic ie potential-specific part
+	     */
+	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
+	    exp_f2 = -p2[jsite] * exp(-p3[jsite]*r);
+	    ppe +=t + exp_f1 + exp_f2;
+	    forceij[jsite] = (p1[jsite]*exp_f1 + p3[jsite]*exp_f2) * r_r
+	    + erfc_term * r_sqr_r;
+	 }
+	 break;      
+      }
+   else
+      switch(ptype)
+      {
+       default:
+	 message(NULLI, NULLP, FATAL, UNKPTY, ptype);
+       case LJPOT:
 VECTORIZE
          for(jsite=j0; jsite < nnab; jsite++)
 	 {
@@ -148,25 +220,8 @@ VECTORIZE
 	    ppe += p0[jsite]*(r_12_r - r_6_r);
 	    forceij[jsite] = r_sqr_r*6.0*p0[jsite]*(2*r_12_r - r_6_r);
 	 }
-      break;
-    case E6POT:
-      if(alpha >= 0.0)
-VECTORIZE
-         for(jsite=j0; jsite < nnab; jsite++)
-	 {
-	    r       = sqrt(r_sqr[jsite]);
-	    r_r	 = 1.0 / r;
-	    r_sqr_r = SQR(r_r);
-	    r_6_r   = p0[jsite] * CUBE(r_sqr_r);
-	    expa2r2 = nab_chg[jsite]* chg * exp(-SQR(alpha*r));
-	    t = 1.0/(1.0+PP*(alpha*r));
-	    erfc_term = POLY5(t) * expa2r2 * r_r;
-	    exp_f1 = p1[jsite] * exp(-p2[jsite] * r);
-	    ppe += erfc_term - r_6_r + exp_f1;
-	    forceij[jsite] = r_sqr_r*(-6.0* r_6_r+ erfc_term + norm * expa2r2)
-	    + p2[jsite]*exp_f1 * r_r;
-	 }
-      else
+	 break;
+       case E6POT:
 VECTORIZE
          for(jsite=j0; jsite < nnab; jsite++)
 	 {
@@ -179,37 +234,19 @@ VECTORIZE
 	    forceij[jsite] = -r_sqr_r * 6.0 * r_6_r
 	                     + p2[jsite]*exp_f1 * r_r;
 	 }
-      
-      break;      
-    case MCYPOT:
-      if(alpha >= 0.0)
+	 break;
+       case MCYPOT:
 VECTORIZE
          for(jsite=j0; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
-	    r_r	 = 1.0 / r;
-	    r_sqr_r = SQR(r_r);
-	    expa2r2 = nab_chg[jsite]* chg * exp(-SQR(alpha*r));
-	    t = 1.0/(1.0+PP*(alpha*r));
-	    erfc_term = POLY5(t) * expa2r2 * r_r;
-	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
-	    exp_f2 = -p2[jsite] * exp(-p3[jsite]*r);
-	    ppe += erfc_term + exp_f1 + exp_f2;
-	    forceij[jsite] = (p1[jsite]*exp_f1 + p3[jsite]*exp_f2) * r_r
-	    + (erfc_term + norm * expa2r2) * r_sqr_r;
-	 }
-       else
-VECTORIZE
-         for(jsite=j0; jsite < nnab; jsite++)
-	 {
-	    r       = sqrt(r_sqr[jsite]);
-	    r_r	 = 1.0 / r;
 	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
 	    exp_f2 = -p2[jsite] * exp(-p3[jsite]*r);
 	    ppe += exp_f1 + exp_f2;
+	    r_r	 = 1.0 / r;
 	    forceij[jsite] = (p1[jsite]*exp_f1 + p3[jsite]*exp_f2) *r_r;
 	 }
-      break;      
-   }
+	 break; 
+      }     
    *pe += ppe;
 }
