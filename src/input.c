@@ -29,6 +29,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: input.c,v $
+ *       Revision 2.14  2000/12/06 17:45:30  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.13  2000/11/22 11:59:52  keith
  *       Freed memory used during lattice-start
  *
@@ -216,7 +223,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/input.c,v 2.13 2000/11/22 11:59:52 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/input.c,v 2.14 2000/12/06 17:45:30 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -261,7 +268,7 @@ char	*get_line(char *line, int len, FILE *file)
       s = fgets(line, len, file);		/* Read one line of input     */
       if(s == 0) break;			/* exit if end of file        */
       i = strlen(s) - 1;
-      while(i >= 0 && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
+      while(i >= 0 && isspace(s[i]))
          s[i--] = '\0';				/* Strip trailing white space */
    }
    while(*s == '\0' || *s == '#');		/* Repeat if blank or comment */
