@@ -120,9 +120,9 @@ for( M=L+1; M<N; M++ )
 	ALL=A[LL];
 	AMM=A[MM];
 	X=(ALL-AMM)/2.0;
-	Y=-ALM/sqrt(ALM*ALM+X*X);
+	Y= -ALM/sqrt(ALM*ALM+X*X);
 	if(X < 0.0)
-		Y=-Y;
+		Y= -Y;
 	SINX = Y / sqrt( 2.0 * (1.0 + sqrt( 1.0-Y*Y)) );
 	SINX2=SINX*SINX;
 	COSX=sqrt(1.0-SINX2);
