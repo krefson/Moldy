@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.16  1998/12/07 18:15:34  keith
+ *       Fixed bug which meant non-unix systems did not include <time.h>
+ *       and failed to compile as a result.
+ *
  *       Revision 2.15  1998/12/07 14:48:52  keith
  *       Optimized search_lt() for stride 1.
  *
@@ -271,7 +275,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2.15 1998/12/07 14:48:52 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2.16 1998/12/07 18:15:34 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -280,7 +284,6 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2
 #include 	"string.h"
 #include	<stdio.h>
 /*================= System Library include files - unix only ================*/
-#if defined(unix) || defined(__unix) || defined(__unix__)
 #if defined(HAVE_TIMES) && defined(HAVE_SYS_TIMES_H)
 #   include <sys/times.h>
 #else
@@ -289,19 +292,25 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2
 #   endif
 #endif
 
-#ifdef TIME_WITH_SYS_TIME
-#   include <sys/time.h>
-#   include "time.h"
-#else
-#   if HAVE_SYS_TIME_H
+#if defined(HAVE_GETTIMEOFDAY) && \
+     (defined(TIMES_RETURNS_STATUS) || \
+      !defined(HAVE_TIMES) || !defined(HAVE_SYS_TIMES_H))
+#   ifdef HAVE_SYS_TIME_H
 #      include <sys/time.h>
-#   else
-#      include "time.h"
+#      ifndef TIME_WITH_SYS_TIME
+#         define EXCLUDE_TIME_H
+#      endif 
 #   endif
 #endif
 
+#ifndef EXCLUDE_TIME_H
+#   include "time.h"
+#endif
+
 #ifndef CLK_TCK
-#   include <sys/param.h>
+#   ifdef HAVE_SYS_PARAM_H
+#      include <sys/param.h>
+#   endif
 #   ifdef HZ
 #      define CLK_TCK HZ
 #   else
@@ -311,9 +320,6 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2
 #if !defined(CLOCKS_PER_SEC) && defined(CLK_TCK)
 #   define  CLOCKS_PER_SEC CLK_TCK
 #endif
-#else /* We assume ANSI behaviour for non-unix systems */
-#   include <time.h>
-#endif /* unix */
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
