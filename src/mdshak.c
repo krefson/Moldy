@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 2.16 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 2.17 1998/12/14 15:33:51 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -177,7 +177,8 @@ va_dcl
 static char * mystrdup(s)
 char *s;
 {
-   char * t=malloc(strlen(s)+1);
+   char * t = NULL;
+   if(s) t=malloc(strlen(s)+1);
    return t?strcpy(t,s):0;
 }
 /******************************************************************************
@@ -817,7 +818,7 @@ char	*argv[];
 	 dump_name = optarg;
 	 break;
        case 't':
-	 dumplims = optarg;
+	 dumplims = mystrdup(optarg);
 	 break;
        case 'i':
 	 insert = optarg;
