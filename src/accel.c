@@ -26,6 +26,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.31  2001/02/19 19:36:44  keith
+ *       First working version of combined isothermic/isobaric ensemble.
+ *       (Previous version was faulty).
+ *       Also includes uniform-dilation, constant-pressure mode.
+ *
  *       Revision 2.30  2001/02/15 19:00:37  keith
  *       Tidied up code and corrected one error in combined barostat  and
  *       themostat.
@@ -295,7 +300,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.30 2001/02/15 19:00:37 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.31 2001/02/19 19:36:44 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -515,7 +520,7 @@ rescale(system_mp system, spec_mp species)
 #endif
       if( ! spec->framework )
       {
-	 scale = sqrt(control.temp / temp_value[2*ispec]);
+	 scale = sqrt(control.temp / temp_value[2*ispec])/system->ts;
 	 vscale(3 * spec->nmols,   scale, spec->mom[0], 1);
 	 if( spec->rdof > 0 )
 	 { 
@@ -525,6 +530,11 @@ rescale(system_mp system, spec_mp species)
 	 
       }
    }
+   /*
+    * Reset thermostat variable.  N.B need to recalculate H_0 in do_step()
+    */
+   system->ts = 1.0;
+   system->tsmom = 0.0;
    /* 
     * Subtract spurious net velocity introduced by scaling species
     * separately.  This will introduce an apparent error into the
