@@ -37,6 +37,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.20  2000/12/06 17:45:32  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.19  2000/11/06 16:02:06  keith
  *       First working version with a Nose-Poincare thermostat for rigid molecules.
  *
@@ -218,7 +225,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.19 2000/11/06 16:02:06 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.20 2000/12/06 17:45:32 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -512,7 +519,7 @@ void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
    format_long("Final step",control.nsteps);
    format_dbl("Size of step",control.step,TUNIT_N);
    format_dbl("CPU limit",control.cpu_limit,"s");
-   if(control.scale_interval > 0)
+   if(control.scale_interval > 0 && control.istep <= control.scale_end)
    {
       if( control.scale_options & 0x8 )
       {
@@ -544,7 +551,7 @@ void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
       format_long("No. steps between scalings",control.scale_interval);
       format_long("End scaling at step",control.scale_end);
    }
-   if((control.scale_interval > 0) || (control.const_temp == 1))
+   if((control.scale_interval > 0) || (control.const_temp != 0))
       format_dbl("Applied Temperature",control.temp,"K");
    if(control.const_temp)
    {
@@ -591,7 +598,7 @@ void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
       }
    }
 
-   if( control.rdf_interval > 0 )
+   if( control.rdf_interval > 0 && control.begin_rdf <= control.nsteps)
    {
       (void)printf(" Radial distribution functions will be calculated");
       new_line();
