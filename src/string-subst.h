@@ -1,7 +1,10 @@
 /*
- * $Header: /home/tigger/keith/md/RCS/string.h,v 1.2 89/06/09 12:18:51 keith Stab $
+ * $Header: /home/tigger/keith/md/RCS/string.h,v 1.3 89/11/20 12:05:01 keith Exp $
  *
  * $Log:	string.h,v $
+ * Revision 1.3  89/11/20  12:05:01  keith
+ * Added 'strdup'.
+ * 
  * Revision 1.2  89/06/09  12:18:51  keith
  * Recognised sysV and SysV macros
  * 
@@ -14,7 +17,7 @@
 
 #ifdef unix
 
-#if USG || sysV || SysV
+#if USG || sysV || SysV || cray
 #include	<string.h>
 #include	<memory.h>
 #else  /* BSD */
