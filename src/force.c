@@ -10,6 +10,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	force.c,v $
+ * Revision 1.5  89/06/22  15:44:23  keith
+ * Tidied up loops over species to use one pointer as counter.
+ * 
  * Revision 1.4  89/06/14  14:18:49  keith
  * Fixed #ifdef s for CRAY to handle case of UNICOS
  * Fix mistake in VCALLS conditional code.
@@ -27,7 +30,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: force.c,v 1.4 89/06/14 14:18:49 keith Exp $";
+static char *RCSid = "$Header: force.c,v 1.5 89/06/22 15:44:23 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -285,9 +288,6 @@ mat_t           stress;                 /* Stress virial                (out) */
                 nnab,	j0,		/* Number of sites in neighbour list  */
                 isite, jsite,           /* Site counter i,j                   */
    		i_id, jnab, lim, ipot;	/* Miscellaneous		      */
-#ifdef FKERNEL
-   int          nnab2;
-#endif
    short        ix, iy, iz;		/* 3-d cell indices for ref and neig. */
    int          nsites = system->nsites,/* Local copy to keep optimiser happy */
                 n_potpar = system->n_potpar,
@@ -461,11 +461,10 @@ VECTORIZE
 
             /*  Call the potential function kernel                            */
 #ifdef FKERNEL
-            nnab2 = nnab-j0;
-            KERNEL(&nnab2, forceij+j0, pe, r_sqr+j0, nab_chg+j0, chg+isite,
+            KERNEL(&j0, &nnab, forceij, pe, r_sqr, nab_chg, chg+isite,
 		   &norm, &control.alpha, &system->ptype, &nsites, nab_pot[0]);
 #else
-            kernel(nnab-j0, forceij+j0, pe, r_sqr+j0, nab_chg+j0, chg[isite],
+            kernel(j0, nnab, forceij, pe, r_sqr, nab_chg, chg[isite],
 		   norm, control.alpha, system->ptype, nab_pot);
 #endif
 #ifdef VCALLS

@@ -1,15 +1,18 @@
 c
-c $Header: kernel.f,v 1.1 89/04/11 15:06:45 keith Exp $
+c $Header: kernel.f,v 1.1 89/04/20 16:01:50 keith Exp $
 c
 c $Log:	kernel.f,v $
+c Revision 1.1  89/04/20  16:01:50  keith
+c Initial revision
+c 
 c Revision 1.1  89/04/11  15:06:45  keith
 c Initial revision
 c 
 c
-        subroutine kernel(nnab, forceij, pe, rsqr, nabchg, chg, norm,
+        subroutine kernel(j0, nnab, forceij, pe, rsqr, nabchg, chg, norm,
      +                    alpha, ptype, n, potpar)
            implicit real*8 (A-H,O-Z)
-           integer      nnab, ptype, n
+           integer      j0, nnab, ptype, n
            real*8 pe, norm, alpha, chg
            real*8 forceij(*), rsqr(*), nabchg(*), potpar(n,*)
 
@@ -30,7 +33,7 @@ C      Unknown potential type
 C      Lennard-Jones case
  1000      continue
            if(alpha .ge. 0.0) then
-              do 100 jsite = 1, nnab
+              do 100 jsite = j0+1, nnab
                  r     = sqrt(rsqr(jsite))
                  rr    = 1.0 / r
                  rsqrr = rr**2
@@ -45,7 +48,7 @@ C      Lennard-Jones case
      +                                   + erfcterm + norm * expa2r2)
  100          continue
            else
-              do 101 jsite = 1, nnab
+              do 101 jsite = j0+1, nnab
                  r     = sqrt(rsqr(jsite))
                  rr    = 1.0 / r
                  rsqrr = rr**2
@@ -60,7 +63,7 @@ C      Lennard-Jones case
 C      6-exp potential
  2000     continue
            if(alpha .ge. 0.0) then
-              do 200 jsite = 1, nnab
+              do 200 jsite = j0+1, nnab
                  r     = sqrt(rsqr(jsite))
                  rr    = 1.0 / r
                  rsqrr = rr**2
@@ -74,7 +77,7 @@ C      6-exp potential
      +                             *rsqrr + potpar(jsite,3) *expf1 * rr
  200          continue
            else
-              do 201 jsite = 1, nnab
+              do 201 jsite = j0+1, nnab
                  r     = sqrt(rsqr(jsite))
                  rr    = 1.0 / r
                  rsqrr = rr**2
@@ -88,7 +91,7 @@ C      6-exp potential
 C      MCY potential
  3000     continue
           if(alpha .gt. 0) then
-             do 300 jsite = 1, nnab
+             do 300 jsite = j0+1, nnab
                 r     = sqrt(rsqr(jsite))
                 rr    = 1.0 / r
                 rsqrr = rr**2
@@ -103,7 +106,7 @@ C      MCY potential
      +               + (erfcterm + norm * expa2r2) * rsqrr
  300         continue
           else
-             do 301 jsite = 1, nnab
+             do 301 jsite = j0+1, nnab
                 r     = sqrt(rsqr(jsite))
                 rr    = 1.0 / r
                 rsqrr = rr**2

@@ -1,9 +1,12 @@
 #ifndef lint
-static char *RCSid = "$Header: kernel_single.c,v 1.1 89/04/11 15:05:08 keith Exp $";
+static char *RCSid = "$Header: kernel_single.c,v 1.1 89/04/20 16:01:53 keith Exp $";
 #endif
 
 /*
  * $Log:	kernel_single.c,v $
+ * Revision 1.1  89/04/20  16:01:53  keith
+ * Initial revision
+ * 
  * Revision 1.1  89/04/11  15:05:08  keith
  * Initial revision
  * 
@@ -79,9 +82,9 @@ int	ptype;				/* Potential type selector	      */
  *  and returns a vector of forces (forceij) and the potential energy (pe)    *
  *  Norm is 2*pi/sqrt(alpha), ptype is potential type selector.		      *
  ******************************************************************************/
-void	kernel(nnab, forceij, pe, r_sqr, nab_chg, d_chg, d_norm,
+void	kernel(j0, nnab, forceij, pe, r_sqr, nab_chg, d_chg, d_norm,
 	       d_alpha, ptype, pot)
-int	ptype, nnab;
+int	ptype, j0, nnab;
 double	*pe;
 double	d_norm, d_alpha, d_chg;
 real	forceij[], r_sqr[], nab_chg[], **pot;
@@ -103,7 +106,7 @@ real	forceij[], r_sqr[], nab_chg[], **pot;
     case LJPOT:
       if(alpha > 0.0)
 VECTORIZE
-         for(jsite=0; jsite < nnab; jsite++)
+         for(jsite=j0; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = one / r;
@@ -120,7 +123,7 @@ VECTORIZE
 	 }
       else
 VECTORIZE
-         for(jsite=0; jsite < nnab; jsite++)
+         for(jsite=j0; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = one / r;
@@ -135,7 +138,7 @@ VECTORIZE
     case E6POT:
       if(alpha >= 0.0)
 VECTORIZE
-         for(jsite=0; jsite < nnab; jsite++)
+         for(jsite=j0; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = one / r;
@@ -151,7 +154,7 @@ VECTORIZE
 	 }
       else
 VECTORIZE
-         for(jsite=0; jsite < nnab; jsite++)
+         for(jsite=j0; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = one / r;
@@ -167,7 +170,7 @@ VECTORIZE
     case MCYPOT:
       if(alpha >= 0.0)
 VECTORIZE
-         for(jsite=0; jsite < nnab; jsite++)
+         for(jsite=j0; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = one / r;
@@ -183,7 +186,7 @@ VECTORIZE
 	 }
        else
 VECTORIZE
-         for(jsite=0; jsite < nnab; jsite++)
+         for(jsite=j0; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = one / r;

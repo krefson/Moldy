@@ -14,12 +14,15 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 1.2  89/06/20  18:22:31  keith
+ * Moved pot. par defs arrays 'types', 'npotp' and npott from input.c to kernel.c
+ * 
  * Revision 1.1  89/04/20  16:00:45  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: kernel.c,v 1.1 89/04/20 16:00:45 keith Exp $";
+static char *RCSid = "$Header: kernel.c,v 1.2 89/06/20 18:22:31 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -83,9 +86,9 @@ int	ptype;				/* Potential type selector	      */
  *  and returns a vector of forces (forceij) and the potential energy (pe)    *
  *  Norm is 2*pi/sqrt(alpha), ptype is potential type selector.		      *
  ******************************************************************************/
-void	kernel(nnab, forceij, pe, r_sqr, nab_chg, chg, norm,
+void	kernel(j0, nnab, forceij, pe, r_sqr, nab_chg, chg, norm,
 	       alpha, ptype, pot)
-int	ptype, nnab;
+int	ptype, j0, nnab;
 double	*pe;
 double	norm, alpha, chg;
 real	forceij[], r_sqr[], nab_chg[];
@@ -104,7 +107,7 @@ register real	*pot[];
     case LJPOT:
       if(alpha > 0.0)
 VECTORIZE
-         for(jsite=0; jsite < nnab; jsite++)
+         for(jsite=j0; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = 1.0 / r;
@@ -121,7 +124,7 @@ VECTORIZE
 	 }
       else
 VECTORIZE
-         for(jsite=0; jsite < nnab; jsite++)
+         for(jsite=j0; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = 1.0 / r;
@@ -136,7 +139,7 @@ VECTORIZE
     case E6POT:
       if(alpha >= 0.0)
 VECTORIZE
-         for(jsite=0; jsite < nnab; jsite++)
+         for(jsite=j0; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = 1.0 / r;
@@ -152,7 +155,7 @@ VECTORIZE
 	 }
       else
 VECTORIZE
-         for(jsite=0; jsite < nnab; jsite++)
+         for(jsite=j0; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = 1.0 / r;
@@ -168,7 +171,7 @@ VECTORIZE
     case MCYPOT:
       if(alpha >= 0.0)
 VECTORIZE
-         for(jsite=0; jsite < nnab; jsite++)
+         for(jsite=j0; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = 1.0 / r;
@@ -184,7 +187,7 @@ VECTORIZE
 	 }
        else
 VECTORIZE
-         for(jsite=0; jsite < nnab; jsite++)
+         for(jsite=j0; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = 1.0 / r;
