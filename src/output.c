@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ * Revision 2.7  1994/06/08  13:15:58  keith
+ * Changed all timestep-related parameters to type "long". This means
+ * that 16-bit DOS compilers can do more than 32767 timesteps.
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -155,7 +159,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/output.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/output.c,v 2.7 1994/06/08 13:15:58 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -170,6 +174,9 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/output.c,v 2.6 19
 #include	"stddef.h"
 #include 	"string.h"
 #include        <stdio.h>
+#ifdef		MPI
+#include	<mpi.h>
+#endif
 /*========================== Program include files ===========================*/
 #include "structs.h"
 #include "messages.h"
@@ -182,6 +189,7 @@ void	rmlockfiles();
 extern	      contr_mt 	control;	    /* Main simulation control parms. */
 extern	CONST match_mt	match[];	    /* Control file keyword table.    */
 extern  CONST pots_mt	potspec[];	    /* Potential type specification   */
+extern int ithread, nthreads;
 /*========================== External data definitions  ======================*/
 static  int	out_page = 1;		    /* Which page of output we are on */
 static  int	out_line = 999999;	    /* Which line of output           */
@@ -281,21 +289,28 @@ va_dcl
    sev   = va_arg(ap, int);
    format= va_arg(ap, char *);
 
-   (void)printf(sev_txt[sev]);
-   (void)vprintf(format, ap);
-   va_end(ap);
-   new_line();			/* To maintain pagination	      */
-
-   if(buff != NULL)                     /* null ptr means don't print buffer  */
+   if( ithread == 0 || abs(sev) == FATAL)
    {
-      (void)printf("     buffer contents=\"%s\"",buff);
-      new_line();
+      (void)printf(sev_txt[abs(sev)]);
+      (void)vprintf(format, ap);
+      new_line();		      /* To maintain pagination	      */
+
+      if(buff != NULL)                /* null ptr means don't print buffer  */
+      {
+	 (void)printf("     buffer contents=\"%s\"",buff);
+	 new_line();
+      }
    }
+   va_end(ap);
    if(sev >= ERROR && nerrs != NULL)
       (*nerrs)++;
    if(sev == FATAL)
-   {
       rmlockfiles();
+   if(abs(sev) == FATAL)
+   {
+#ifdef SPMD
+      par_abort(3);
+#endif
       exit(3);
    }
 }
@@ -320,6 +335,9 @@ va_dcl
    va_start(ap);
    text = va_arg(ap, char *);
 #endif
+
+   if( ithread > 0 )
+      return;
 
    (void)printf(" *I* "); 
    (void)vprintf( text, ap);  new_line();
