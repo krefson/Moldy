@@ -1,5 +1,5 @@
  *I* control file read in successfully
-	Tue Mar 19 15:15:10 1996	Water_test	Page 1
+	Wed Mar  7 10:45:28 2001	Water_test	Page 1
  *I* reading system specification file
  *W* no potential parameters given between sites 1 and 2
  *W* no potential parameters given between sites 1 and 3
@@ -7,7 +7,7 @@
  *W* no potential parameters given between sites 2 and 3
  *W* no potential parameters given between sites 3 and 3
  *I* system specification file successfully read in
-	Tue Mar 19 15:15:10 1996	Water_test	Page 2
+	Wed Mar  7 10:45:28 2001	Water_test	Page 2
 
 
 		#     # ####### #       ######  #     #
@@ -18,7 +18,7 @@
 		#     # #     # #       #     #    #   
 		#     # ####### ####### ######     #   
 
-		Version 2.10  (Exp ) 1996/03/06 18:16:21 
+		Version   (Exp ) 2000/12/11 12:33:24 
 
 		Keith Refson
 		Department of Earth Sciences
@@ -52,28 +52,31 @@
 	No. steps between scalings       = 10
 	End scaling at step              = 500
 	Applied Temperature              = 300 K
-	Tue Mar 19 15:15:10 1996	Water_test	Page 3
-	Interaction cut-off              = 6.25 A
+	Wed Mar  7 10:45:28 2001	Water_test	Page 3
+ Real-space cutoff will be applied to molecular centres of mass
+	Interaction cut-off (lazy)       = 6.25 A
 	Alpha parameter for Ewald sum    = 0.45 A(-1)
 	Reciprocal space cut-off         = 3 A(-1)
- New run entitled "Water_test" started Tue Mar 19 15:15:10 1996
+	De-Leeuw et al. surface dipole term included
+ New run entitled "Water_test" started Wed Mar  7 10:45:28 2001
  *I* Distant potential correction = -11.021253, Pressure correction = -18.948198
- *I* MD cell divided into 125 subcells (5x5x5)
+ *I* Intramolecular potential energy correction = -61762.1
  *I* Neighbour list contains 82 cells
+ *I* MD cell divided into 125 subcells (5x5x5)
  *I* Ewald self-energy = 794.119798 Kj/mol
  *I* 447 K-vectors included in reciprocal-space sum
-	Tue Mar 19 15:15:11 1996	Water_test	Page 4
+	Wed Mar  7 10:45:29 2001	Water_test	Page 4
     Trans KE      Rot KE  Pot Energy  Tot Energy  TTemp  RTemp   Temp h(1,*) h(2,*) h(3,*)     Stress     Stress     Stress
 ======== Timestep 10      Current values ==================================================================================
-      241.85      446.66     -47.024       393.4  303.0  559.6  431.3  12.41   0.00   0.00      -15.9        254       -172
-                             -248.09                                    0.00  12.41   0.00        254        107      -84.6
-                                                                        0.00   0.00  12.41       -172      -84.6      -33.9
+      241.85      446.66     -47.024       393.4  303.0  559.6  434.7  12.41   0.00   0.00      -15.5        255       -172
+                             -248.09                                    0.00  12.41   0.00        255        107      -84.7
+                                                                        0.00   0.00  12.41       -172      -84.7      -33.3
 -------- Rolling averages over last 10 timesteps --------------------------------------------------------------------------
-      238.28      323.42       35.98      393.33  298.5  405.2  351.9  12.41   0.00   0.00        177        322      -97.7
-                             -204.35                                    0.00  12.41   0.00        322        305      -41.8
-                                                                        0.00   0.00  12.41      -97.7      -41.8        152
+      238.28      323.42       35.98      393.33  298.5  405.2  354.6  12.41   0.00   0.00       99.5        283       -158
+                             -204.35                                    0.00  12.41   0.00        283        266      -62.9
+                                                                        0.00   0.00  12.41       -158      -62.9       94.1
 -------- Standard deviations ----------------------------------------------------------------------------------------------
-        1.78      64.953      42.932    0.099594    2.2   81.4   41.8   0.00   0.00   0.00        256        124        186
-                              23.783                                    0.00   0.00   0.00        124        173       70.6
-                                                                        0.00   0.00   0.00        186       70.6        208
- *I* Run used 1.08s of CPU time and 1.39s elapsed
+        1.78      64.953      42.932    0.099594    2.2   81.4   42.1   0.00   0.00   0.00       57.7       14.2       10.9
+                              23.783                                    0.00   0.00   0.00       14.2       86.5       13.6
+                                                                        0.00   0.00   0.00       10.9       13.6       65.9
+ *I* Run used 0.34s of CPU time and 0.35s elapsed

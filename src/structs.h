@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/md/moldy/RCS/structs.h,v 2.9 1996/09/25 18:11:24 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.9 1996/10/19 11:55:24 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.9  1996/10/19 11:55:24  keith
+ * Incorporated site-pbc branch "bekker" into main "Beeman" branch.
+ *
  * Revision 2.8  1996/01/15 15:25:28  keith
  * Corrected definition of thermostat dynamic vars.
  *
@@ -144,11 +147,11 @@ typedef struct                  /* Control parameters for simulation          */
                 nsteps;         /* Number of timesteps to execute             */
    double       step;           /* Value of timestep in program units         */
    boolean      print_sysdef,   /* Flag to print out system specification file*/
-                new_sysdef,     /* Read new sysdef instead of restart file one*/
-                const_pressure, /* Flag to turn on P&R CP method              */
-                reset_averages, /* Flag to set average counters to zero       */
-                scale_options,  /* Scale each species separately              */
-                surface_dipole, /* Flag surface dipole term in Ewald sum      */
+                new_sysdef;     /* Read new sysdef instead of restart file one*/
+   int          const_pressure; /* Flag to turn on P&R CP method              */
+   boolean      reset_averages; /* Flag to set average counters to zero       */
+   int          scale_options;  /* Scale each species separately              */
+   boolean      surface_dipole, /* Flag surface dipole term in Ewald sum      */
                 lattice_start;  /* Flag to read starting state from sysdef    */
    char         sysdef[L_name],         /* Name of system specification file  */
                 restart_file[L_name],   /* Name of restart configuration file */
@@ -159,7 +162,7 @@ typedef struct                  /* Control parameters for simulation          */
    int          spare[23];      /* Extra space for expansion (should be ODD)  */
    double       ttmass,         /* Nose-Hoover trans temp mass parameter      */
                 rtmass;         /* Nose-Hoover rotat temp mass parameter      */
-   int		pad;		/* To keep alignment of struct.		      */
+   boolean	molpbc;		/* Switch to molecular from site cutoff scheme*/
    int          const_temp;     /* Flag to turn on N&H CT method              */
    boolean      xdr_write,      /* Write restart, dump files in portable way. */
                 strict_cutoff;  /* Perform real-space cutoff rigorously       */

@@ -25,6 +25,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.19.2.4  2001/03/02 11:09:23  keith
+ *       Fixed minor lint message.
+ *
  *       Revision 2.19.2.3  2001/01/25 16:26:25  keith
  *       Added Wentzcovitch/Cleveland constant-pressure dynamics
  *       and univorm (Andersen) variant.
@@ -258,7 +261,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.19.2.3 2001/01/25 16:26:25 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.19.2.4 2001/03/02 11:09:23 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -953,7 +956,7 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
    {
       make_sites(sys->h, spec->c_of_m, spec->quat, spec->p_f_sites,
 		 site_sp[spec-species],spec->nmols,spec->nsites,
-		 SITEPBC);
+		 control.molpbc?MOLPBC:SITEPBC);
 #ifdef DEBUG1
    { int is;
      printf("%s co-ordinates\n",spec->name);

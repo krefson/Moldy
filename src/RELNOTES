@@ -1,3 +1,12 @@
+RELEASE_2.16d
+-------------
+* Fixed bug in Ewald sum on parallel machines which could cause crash.
+
+* Fixed bug in force.c which crashed on constant-pressure run.
+
+* Retrofitted molecular cutoff capability, selected by control parameter
+  "molecular-cutoff".  Updated some of the example files.
+
 RELEASE_2.16
 ------------
 * New version of real-space force calculation.  More elegant and more efficient.

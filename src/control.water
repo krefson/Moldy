@@ -3,6 +3,8 @@
 # The tips2.in potentials are in units of kcal/mol so this file should
 # set time-unit=4.8888213e-14 #Kcal mol-1 amu A
 #
+molecular-cutoff=1
+strict-cutoff=0
 title=Water_test
 surface-dipole=1
 #out-file=out.water.list

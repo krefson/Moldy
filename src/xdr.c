@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.13.2.1  2000/12/11 12:33:36  keith
+ *       Incorporated site-pbc branch "bekker" into main "Beeman" branch.
+ *
  *       Revision 2.13.4.1  2000/12/07 16:05:20  keith
  *       Mainly cosmetic minor modifications and added special comments to
  *       shut lint up.
@@ -96,7 +99,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.13.4.1 2000/12/07 16:05:20 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.13.2.1 2000/12/11 12:33:36 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -139,7 +142,7 @@ contr_mt *cp;
       xdr_vector(xdrs, (gptr*)cp->spare, 23, sizeof(int), (xdrproc_t)xdr_int) &&
       xdr_double(xdrs, &cp->ttmass) &&
       xdr_double(xdrs, &cp->rtmass) &&
-      xdr_int(xdrs, &cp->pad) &&
+      xdr_bool(xdrs, &cp->molpbc) &&
       xdr_int(xdrs, &cp->const_temp) &&
       xdr_bool(xdrs, &cp->xdr_write) &&
       xdr_bool(xdrs, &cp->strict_cutoff) &&

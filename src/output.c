@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.16.2.4  2001/03/07 09:56:26  keith
+ *       Fixed banner page printout to omit scaling messages when just switched off.
+ *
  *       Revision 2.16.2.3  2001/01/25 16:26:30  keith
  *       Added Wentzcovitch/Cleveland constant-pressure dynamics
  *       and univorm (Andersen) variant.
@@ -217,7 +220,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.16.2.3 2001/01/25 16:26:30 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.16.2.4 2001/03/07 09:56:26 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -638,6 +641,12 @@ restrt_mt	*restart_header;
       if(control.const_temp == 2)
          message(NULLI, NULLP, WARNING, GANDP);
    }
+   if( control.molpbc )
+      (void)printf(" Real-space cutoff will be applied to molecular centres of mass");
+   else
+      (void)printf(" Real-space cutoff will be applied to site co-ordinates");
+   new_line();
+
    if( control.strict_cutoff )
       format_dbl("Interaction cut-off (strict)",control.cutoff,LUNIT_N);
    else

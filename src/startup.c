@@ -37,6 +37,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.16.2.2  2001/01/25 16:26:30  keith
+ *      Added Wentzcovitch/Cleveland constant-pressure dynamics
+ *      and univorm (Andersen) variant.
+ *
+ *      Fixed bug in uniform(P-R) case which effectively made the mass
+ *      parameter W 3 times too small.
+ *
  *      Revision 2.16.2.1  2000/12/11 12:33:35  keith
  *      Incorporated site-pbc branch "bekker" into main "Beeman" branch.
  *
@@ -262,7 +269,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.16.2.1 2000/12/11 12:33:35 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.16.2.2 2001/01/25 16:26:30 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -341,6 +348,7 @@ const match_mt	match[] = {
 {"step",             "%lf",  "0.005",        (gptr*)&control.step},
 {"text-mode-save",   "%d",   "0",            (gptr*)&control.print_sysdef},
 {"new-sys-spec",     "%d",   "0",            (gptr*)&control.new_sysdef},
+{"molecular-cutoff", "%d",   "0",            (gptr*)&control.molpbc},
 {"scale-options"   , "%d",   "0",            (gptr*)&control.scale_options},
 {"therm-options"   , "%d",   "0",            (gptr*)&control.scale_options},
 {"surface-dipole",   "%d",   "0",            (gptr*)&control.surface_dipole},

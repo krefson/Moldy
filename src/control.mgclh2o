@@ -5,6 +5,7 @@ nsteps=1
 print-interval=1
 density=1
 cutoff=6.25
+molecular-cutoff=1
 k-cutoff = 3
 alpha = 0.45
 text-mode-save=1

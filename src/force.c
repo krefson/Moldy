@@ -29,6 +29,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.19.2.4  2001/02/19 12:30:50  keith
+ *       Fixed serious bug in allocation of "pbclookup" array which will
+ *       cause heap corruption and SEGVs on constant-pressure runs.
+ *
  *       Revision 2.19.2.3  2001/02/14 12:26:44  keith
  *       Added improved test for close approaches from main branch
  *
@@ -212,7 +216,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.19.2.3 2001/02/14 12:26:44 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.19.2.4 2001/02/19 12:30:50 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -622,9 +626,10 @@ int     icheck;
  *  Fill_cells.  Allocate all the sites to cells depending on their centre of *
  *  mass co-ordinate by binning.                                              *
  ******************************************************************************/
-static void    fill_cells(nmols, site, species, h, nx, ny, nz, 
+static void    fill_cells(nmols, c_of_m, site, species, h, nx, ny, nz, 
                           lst, cell, frame_type)
 int     nmols;                          /* Number of molecules           (in) */
+vec_mt (*c_of_m);			/* Centre of mass co-ords        (in) */
 real    **site;                         /* Atomic site co-ordinates      (in) */
 spec_mp species;                        /* Pointer to species array      (in) */
 mat_mt  h;                              /* Unit cell matrix              (in) */
@@ -653,18 +658,32 @@ int     *frame_type;                    /* Framework type counter        (out)*/
 
       if( spec->framework )
          (*frame_type)++;
-      for( is = 0; is < spec->nsites; is++)
+      if( ! control.molpbc || spec->framework )
       {
-	 ssite[0] = site[0][isite];
-	 ssite[1] = site[1][isite];
-	 ssite[2] = site[2][isite];
-	 mat_vec_mul(hinv, (vec_mt*)ssite, (vec_mt*)ssite, 1);
-	 icell = LOCATE(ssite, eps);
-	 list->isite = isite++;
-	 list->num   = 1;
-	 list->frame_type = *frame_type-1;
-	 list->next = cell[icell];
-	 cell[icell] = list++;
+	 for( is = 0; is < spec->nsites; is++)
+	 {
+	    ssite[0] = site[0][isite];
+	    ssite[1] = site[1][isite];
+	    ssite[2] = site[2][isite];
+	    mat_vec_mul(hinv, (vec_mt*)ssite, (vec_mt*)ssite, 1);
+	    icell = LOCATE(ssite, eps);
+	    list->isite = isite++;
+	    list->num   = 1;
+	    list->frame_type = *frame_type-1;
+	    list->next = cell[icell];
+	    cell[icell] = list++;
+	 }
+      }
+      else
+      {
+         icell = LOCATE(c_of_m[imol], eps);
+         list->isite = isite;
+         list->num   = spec->nsites;
+         list->frame_type = 0;
+         list->next = cell[icell];
+         cell[icell] = list++;
+         list->next = NULL;
+         isite += spec->nsites;
       }
    }
 }
@@ -718,8 +737,8 @@ int     *nabor;                         /* List of neighbour cells      (in) */
 cell_mt **cell;                         /* Head of cell list            (in) */
 int	pbclookup[][2];
 {
-   int  j0, jnab;                       /* Counters for cells etc            */
-   int  nnab = 0;                       /* Counter for size of nab           */
+   int  j0, jsite, jnab;                 /* Counters for cells etc            */
+   int  nnab=0;				 /* Counter for size of nab           */
    int  ftype;
    cell_mt      *cmol;                  /* Pointer to current cell element   */
    int icell_idx, jcell_idx, ktrans;
@@ -739,9 +758,12 @@ int	pbclookup[][2];
          {
             if( cmol->frame_type == ftype )
             {
-               nab[nnab] = cmol->isite;
-               pbctrans[nnab] = ktrans;
-               nnab++;
+               for(jsite = 0; jsite < cmol->num; jsite++)
+               {
+		  nab[nnab] = cmol->isite + jsite;
+		  pbctrans[nnab] = ktrans;
+		  nnab++;
+	       }
             }
             if(nnab > n_nab_sites) 
                message(NULLI,NULLP,FATAL,TONAB,nnab,n_nab_sites);
@@ -966,7 +988,7 @@ NOVECTOR
    cell = aalloc(ncells, cell_mt *);     
    for( icell=0; icell < ncells; icell++)
       cell[icell] = NULL;
-   fill_cells(system->nmols, site, species, system->h,
+   fill_cells(system->nmols, system->c_of_m, site, species, system->h,
               nx, ny, nz, c_ptr, cell, &n_frame_types);
    if( n_frame_types > 2 )
       message(NULLI, NULLP, FATAL,
@@ -1353,7 +1375,7 @@ int		pbclookup[][2];
 	       }
 	    } while (jsite < jmax );
                
-            if( control.strict_cutoff )
+            if( control.strict_cutoff && ! control.molpbc )
                for(jsite = jmin; jsite < jmax; jsite++)
                   if( r_sqr[jsite] > cutoffsq )
                      r_sqr[jsite] = cutoff100sq;
