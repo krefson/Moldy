@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: convert.c,v $
+ *       Revision 2.12  2000/11/09 16:25:48  keith
+ *       Fixed const argument consistency warning
+ *
  *       Revision 2.11  2000/04/27 17:57:06  keith
  *       Converted to use full ANSI function prototypes
  *
@@ -96,7 +99,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/convert.c,v 2.11 2000/04/27 17:57:06 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/convert.c,v 2.12 2000/11/09 16:25:48 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -105,9 +108,6 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/convert.c,v 2.
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
-#ifdef lint
-#define const /**/
-#endif
 /*========================== External data references ========================*/
 extern	      contr_mt	control;            /* Main simulation control parms. */
 extern  const dim_mt	pot_dim[][NPOTP];    /* Pot'l dimension specification */

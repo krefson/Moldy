@@ -27,6 +27,16 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  * $Log: main.c,v $
+ * Revision 2.16  2000/11/15 17:51:59  keith
+ * Changed format of dump files.
+ * Added second struct with sufficient information
+ * about the simulation that most utility programs
+ * (namely those which do not need site co-ordinates)
+ * should not need to read sys-spec or restart files.
+ *
+ * New options "-c -1" to dumpext prints header info.
+ * -- dumpanal removed.
+ *
  * Revision 2.15  2000/04/27 17:57:09  keith
  * Converted to use full ANSI function prototypes
  *
@@ -174,7 +184,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.15 2000/04/27 17:57:09 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.16 2000/11/15 17:51:59 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -255,7 +265,9 @@ int main(int argc, char **argv)
    int		backup_restart;
    static mat_mt	stress_vir;
    static double	pe[NPE];
+#ifdef SPMD
    double t0, t00;
+#endif
    double	delta_cpu = 0.0, cpu_base = cpu();
    double	rt = rt_clock();
    vec_mt	(*meansq_f_t)[2];

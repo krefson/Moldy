@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.23  2000/11/16 10:54:19  keith
+ *      Corrected bad declaration of struct mol_mt in structs.h
+ *      Removed obsolete "acceleration interpolation" from startup.
+ *
  *      Revision 2.22  2000/11/13 11:57:40  keith
  *      Fixed bug in initialization of thermostat dynamic variables, which resulted
  *       in a failure to restart on a multiprocessor.
@@ -284,34 +288,42 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.22 2000/11/13 11:57:40 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.23 2000/11/16 10:54:19 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
 #include	<math.h>
 #include 	"string.h"
-#include	"stddef.h"
 #include	"stdlib.h"
 #include	<stdio.h>
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+gptr            *talloc(int n, size_mt size, int line, char *file);
 void            tfree(gptr *p);	       /* Free allocated memory	      	      */
 void		read_control(FILE *file, const match_mt *match);
-void		read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_info, pot_mp *pot_ptr);
-void		lattice_start(FILE *file, system_mp system, spec_mp species, quat_mt (*qpf));
+void		read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, 
+			    site_mp *site_info, pot_mp *pot_ptr);
+void		lattice_start(FILE *file, system_mp system, spec_mp species, 
+			      quat_mt (*qpf));
 void		conv_control(const unit_mt *unit, boolean direction);
-void		conv_potentials(const unit_mt *unit_from, const unit_mt *unit_to, pot_mt *potpar, int npotpar, int ptype, site_mt *site_info, int max_id);
-void		init_averages(int nspecies, char *vsn, long int roll_interval, long int old_roll_interval, int *av_convert);
-void		convert_averages(long int roll_interval, long int old_roll_interval, int av_convert);
+void		conv_potentials(const unit_mt *unit_from, const unit_mt *unit_to, 
+				pot_mt *potpar, int npotpar, int ptype, 
+				site_mt *site_info, int max_id);
+void		init_averages(int nspecies, char *vsn, long int roll_interval, 
+			      long int old_roll_interval, int *av_convert);
+void		convert_averages(long int roll_interval, long int old_roll_interval, 
+				 int av_convert);
 void		init_rdf(system_mp system);
 void		re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr);
-void		re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr);
-void		read_restart(FILE *restart, char *vsn, system_mp system, int av_convert);
-void		banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header);
+void		re_re_sysdef(FILE *restart, char *vsn, system_mp system, 
+			     spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr);
+void		read_restart(FILE *restart, char *vsn, system_mp system, 
+			     int av_convert);
+void		banner_page(system_mp system, spec_mt *species, 
+			    restrt_mt *restart_header);
 void		zero_real(real *r, int n);
 void		eigens(real *A, real *RR, real *E, int N);
 void		transpose(real (*a)[3], real (*b)[3]);
@@ -585,7 +597,6 @@ void	thermalise(system_mp system, spec_mt *species)
 {
    int		imol, i;		/* Counters for species, molecules etc*/
    spec_mp	spec;			/* Pointer to species[ispec]	      */
-   double	omega_sq;		/* |omega|squared / 4		      */
    double	root_ktm, root_kti[3];	/* Gaussian widths of MB distribution */
    double	total_mass = 0;
    vec_mt	momentum;	      	/* Whole system momentum	      */
@@ -649,11 +660,8 @@ void	thermalise(system_mp system, spec_mt *species)
  *  frame.								      *
  ******************************************************************************/
 #define LTR(i,j) (((i)*(i)+(i))/2+(j))
-void	initialise_sysdef(system_mp system, spec_mt *species, site_mt *site_info, quat_mt (*qpf))
-         	       
-       		          
-       		            
-       		      			/* Quaternion rotation to princ.frame*/
+void	initialise_sysdef(system_mp system, spec_mt *species, 
+			  site_mt *site_info, quat_mt (*qpf))
 {
    vec_mt	c_of_m;			/* Co-ordinates of centre of mass    */
    vec_mt	dipole;			/* Molecular dipole moment	     */
@@ -859,11 +867,10 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
  *  of freedom.  The number of sites can change subject to c).                *
  ******************************************************************************/
 static
-void	check_sysdef(FILE *restart, char *vsn, system_mp system, spec_mt *species)
-    		         		/* Restart file pointer		      */
-                                        /* restart file version.              */
-         	       			/* NEW 'system' struct		      */
-       	          		        /* NEW 'species' struct array	      */
+void	check_sysdef(FILE *restart,     /* Restart file pointer               */
+		     char *vsn,         /* restart file version.              */
+		     system_mp system,  /* NEW 'system' struct                */
+		     spec_mt *species)  /* NEW 'species' struct array         */
 {
    system_mt	sys_tmp;		/* Local temporaries of system,       */
    spec_mp	spec_tmp, spec;		/* species, site_info and potpar      */
@@ -899,7 +906,8 @@ void	check_sysdef(FILE *restart, char *vsn, system_mp system, spec_mt *species)
  ******************************************************************************/
 #define LOGACC   11.5 /* p =11.5 <=> acc = 10^-5 */
 #define TRoverTF 5.5  /* Ratio of indiv. interaction times - approx */
-void      init_cutoffs(double *alpha, double *cutoff, double *k_cutoff, real (*h)[3], int nsites)
+void      init_cutoffs(double *alpha, double *cutoff, double *k_cutoff, 
+		       real (*h)[3], int nsites)
 {
    double max_cutoff = MIN3(h[0][0], h[1][1], h[2][2]);
    double vol = det(h);
@@ -999,20 +1007,19 @@ void validate_control(void)
  *  mass & moments of inertia and evaluation of 'whole system' quantities eg  *
  *  number of molecules.  						      *
  ******************************************************************************/
-void	start_up(char *contr_name, char *out_name, system_mp system, spec_mp *species, site_mp *site_info, pot_mp *potpar, restrt_mt *restart_header, int *backup_restart)
-    		            		/* Name of control file "" for stdin  */
-   		          		/* Name of output file "" for stdout  */
-         	       			/* Pointer to system struct	      */
-       		         		/* Pointer to species array	      */
-       		           		/* Pointer to site_info array	      */
-      		        		/* Pointer to pot'l parameter array   */
-         	                	/* Pointer to restart hdr info (out)  */
-   		                	/* (ptr to) flag said purpose   (out) */
+void start_up(char *contr_name,         /* Name of control file "" for stdin  */
+	      char *out_name, 		/* Name of output file "" for stdout  */
+	      system_mp system, 	/* Pointer to system struct           */
+	      spec_mp *species, 	/* Pointer to species array           */
+	      site_mp *site_info, 	/* Pointer to site_info array         */
+	      pot_mp *potpar, 		/* Pointer to pot'l parameter array   */
+	      restrt_mt *restart_header,/* Pointer to restart hdr info (out)  */
+	      int *backup_restart)	/* (ptr to) flag said purpose   (out) */
 {
    FILE		*contr_file,		/* File pointer for control read      */
    		*sysdef,		/* File pointer for sysdef file read  */
-   		*backup = NULL,		/* File pointer for backup file read  */
-   		*restart = NULL,	/* File pointer for restart file read */
+   		*backup = 0,		/* File pointer for backup file read  */
+   		*restart = 0,	/* File pointer for restart file read */
    		*lock;			/* File pointer for lockfile	      */
    double	old_step;		/* Timestep read from restart file    */
    long		old_dump_interval;	/* To check if altered on restart     */
@@ -1030,7 +1037,7 @@ void	start_up(char *contr_name, char *out_name, system_mp system, spec_mp *speci
    contr_mt	backup_control;		/* Control struct from backup file    */
    quat_mt	*qpf=0;			/* Quat of rotation to princ. frame   */
    int		av_convert;		/* Flag for old-fmt averages in restrt*/
-   int		i;
+
    *backup_restart = 0;
    (void)memst(restart_header,0,sizeof(*restart_header));
 
@@ -1039,7 +1046,7 @@ void	start_up(char *contr_name, char *out_name, system_mp system, spec_mp *speci
    else					/* Open named file for reading control*/
    {
       contr_file = fopen(contr_name,"r");
-      if(contr_file == NULL)
+      if(contr_file == 0)
          message(NULLI, NULLP, FATAL, OCFAIL, contr_name, strerror(errno));
    }
    pos = ftell(contr_file);		/* Current file pos needed for cray   */
@@ -1050,7 +1057,7 @@ void	start_up(char *contr_name, char *out_name, system_mp system, spec_mp *speci
 
    if(control.restart_file[0] != '\0')	/* Open restart file, get backup name */
    {
-      if((restart = fopen(control.restart_file,"rb")) == NULL)
+      if((restart = fopen(control.restart_file,"rb")) == 0)
          message(NULLI, NULLP, FATAL, ORFAIL, control.restart_file, 
 		 strerror(errno));
       re_re_header(restart, restart_header, &control);
@@ -1123,11 +1130,11 @@ void	start_up(char *contr_name, char *out_name, system_mp system, spec_mp *speci
     *  Check for the existance of a backup file and restart from it.
     */
    if( control.backup_file[0] != '\0' &&
-      ( backup = fopen(control.backup_file,"rb")) != NULL )  /* Backup exists */
+      ( backup = fopen(control.backup_file,"rb")) != 0 )  /* Backup exists */
    {
       re_re_header(backup, &backup_header, &backup_control);
       if(restart && (backup_header.timestamp < restart_header->timestamp))
-         backup = NULL;			/* Backup older than restart-don't use*/
+         backup = 0;			/* Backup older than restart-don't use*/
    }
 
    if( backup )
@@ -1169,7 +1176,7 @@ void	start_up(char *contr_name, char *out_name, system_mp system, spec_mp *speci
       else				/* Sys def'n is in separate file      */
       {					/* Open system specification file     */
          sysdef = fopen(control.sysdef,"r");
-         if(sysdef == NULL)
+         if(sysdef == 0)
             message(NULLI, NULLP, FATAL, ODFAIL,control.sysdef,strerror(errno));
       }
 					/* Read system specification file     */
@@ -1248,7 +1255,7 @@ void	start_up(char *contr_name, char *out_name, system_mp system, spec_mp *speci
          else				/* Sys def'n is in separate file      */
          {				/* Open system specification file     */
             sysdef = fopen(control.sysdef,"r");
-            if( sysdef == NULL )
+            if( sysdef == 0 )
                message(NULLI,NULLP,FATAL,OSFAIL,control.sysdef,strerror(errno));
          }
 	 /* Read in and set up new system spec (just as in case of new run)   */
@@ -1308,11 +1315,11 @@ void	start_up(char *contr_name, char *out_name, system_mp system, spec_mp *speci
    if( out_name[0] != '\0' )	/* Open output file (or use stdout)   */
    {
       (void)fflush(stdout);		/* Purge buffer before opening file   */
-      if( freopen(out_name, "a", stdout) == NULL )
+      if( freopen(out_name, "a", stdout) == 0 )
          message(NULLI, NULLP, FATAL, OOFAIL, out_name, strerror(errno));
    }
    if( ithread == 0 )
       banner_page(system, *species, restart_header);
-   if( qpf != NULL )
+   if( qpf != 0 )
       xfree(qpf);
 }

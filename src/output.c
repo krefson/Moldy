@@ -37,6 +37,16 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.19  2000/11/06 16:02:06  keith
+ *       First working version with a Nose-Poincare thermostat for rigid molecules.
+ *
+ *       System header updated to include H_0.
+ *       Dump performs correct scaling  of angular velocities, but dumpext still
+ *          needs to be updated to read this.
+ *       XDR functions corrected to work with new structs.
+ *       Parallel broadcast of config also updated.
+ *       Some unneccessary functions and code deleted.
+ *
  *       Revision 2.18  2000/10/20 15:15:48  keith
  *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
  *
@@ -208,7 +218,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.18 2000/10/20 15:15:48 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.19 2000/11/06 16:02:06 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -216,18 +226,21 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.1
 #include 	<stdarg.h>
 #include 	<math.h>
 #include 	"stdlib.h"
-#include	"stddef.h"
 #include 	"string.h"
 #include        <stdio.h>
 /*========================== Program include files ===========================*/
 #include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
-void	conv_potentials(const unit_mt *unit_from, const unit_mt *unit_to, pot_mt *potpar, int npotpar, int ptype, site_mt *site_info, int max_id);
-void	conv_control(const unit_mt *unit, boolean direction);			/* Unit conversion for 'control'      */
+void	conv_potentials(const unit_mt *unit_from, const unit_mt *unit_to, 
+			pot_mt *potpar, int npotpar, int ptype, 
+			site_mt *site_info, int max_id);
+void	conv_control(const unit_mt *unit, boolean direction);
+					/* Unit conversion for 'control'      */
 char	*atime(void);			/* Current date and time in ASCII     */
-char	*cctime(time_mt *timeloc);			/* Convert long time to ASCII.	      */
+char	*cctime(time_mt *timeloc); /* Convert long time to ASCII.	      */
 void	rmlockfiles(void);
+void    par_abort(int);
 /*========================== External data references ========================*/
 extern	      contr_mt 	control;	    /* Main simulation control parms. */
 extern	const match_mt	match[];	    /* Control file keyword table.    */
@@ -240,7 +253,7 @@ static  int	out_line = 999999;	    /* Which line of output           */
 #define		S_USED		0x01
 /*========================== Special Control output cases ====================*/
 static        int	one=1;
-extern	      unit_mt	prog_unit;
+extern const  unit_mt	prog_unit;
 extern	      unit_mt	input_unit;
 static	const match_mt	special[] = {
         {"lattice-start",	"%d", "",	(gptr*)&one},
@@ -319,14 +332,14 @@ void	message(int *nerrs, ...)
       (void)vprintf(format, ap);
       new_line();		      /* To maintain pagination	      */
 
-      if(buff != NULL)                /* null ptr means don't print buffer  */
+      if(buff != 0)                /* null ptr means don't print buffer  */
       {
 	 (void)printf("     buffer contents=\"%s\"",buff);
 	 new_line();
       }
    }
    va_end(ap);
-   if(sev >= ERROR && nerrs != NULL)
+   if(sev >= ERROR && nerrs != 0)
       (*nerrs)++;
    if(sev == FATAL)
       rmlockfiles();
@@ -396,7 +409,8 @@ static void	format_dbl(char *text, double value, char *units)
 /******************************************************************************
  *   Format_vec     Print the name and value of some parameter in same format *
  ******************************************************************************/
-static void	format_vec(char *text, double value1, double value2, double value3, char *units)
+static void	format_vec(char *text, double value1, double value2, 
+			   double value3, char *units)
 {
    (void)printf("\t%-32s = %g %g %g %s",
 		 text,value1,value2,value3,units);
@@ -620,12 +634,11 @@ void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
  *  read_sysdef can interpret.                                                *
  ******************************************************************************/
 static
-void    print_sysdef(FILE *file, system_mp system, spec_mt *species, site_mp site_info, pot_mt *potpar)
-    		      
-                                        /* Pointer to system array (in main)  */
-                                        /* Pointer to species array           */
-                                       /* pointer to site_info array         */
-                                        /* Potential parameter array          */
+void    print_sysdef(FILE *file,       
+		     system_mp system,  /* Pointer to system array (in main)  */
+		     spec_mt *species,  /* Pointer to species array           */
+		     site_mp site_info, /* pointer to site_info array         */ 
+		     pot_mt *potpar)    /* Potential parameter array          */
 {
    spec_mp      spec;
    int  isite, idi, idj, idij, ip;
@@ -665,12 +678,11 @@ void    print_sysdef(FILE *file, system_mp system, spec_mt *species, site_mp sit
  * format.  Control parameters system definition and 'lattice start' are      *
  * output allowing a portable restart.					      *
  ******************************************************************************/
-void	print_config(char *save_name, system_mp system, spec_mp species, site_mp site_info, pot_mp potpar)
-    		           		/* Name of save file to be written    */
-         	       			/* Pointer to system array (in main)  */
-       		        		/* Pointer to be set to species array */
-       		          		/* To be pointed at site_info array   */
-      		       			/* To be pointed at potpar array      */
+void	print_config(char *save_name,   /* Name of save file to be written    */
+		     system_mp system,  /* Pointer to system array (in main)  */ 
+		     spec_mp species,   /* Pointer to be set to species array */
+		     site_mp site_info, /* To be pointed at site_info array   */
+		     pot_mp potpar)     /* To be pointed at potpar array      */
 {
    FILE 	*out;
    const match_mt	*match_p, *cur, *special_p;
@@ -687,7 +699,7 @@ void	print_config(char *save_name, system_mp system, spec_mp species, site_mp si
    conv_potentials(&prog_unit, &input_unit, potpar, system->n_potpar,
                          system->ptype, site_info, system->max_id);
 
-   if( (out = fopen(save_name, "w")) == NULL )
+   if( (out = fopen(save_name, "w")) == 0 )
       message(NULLI, NULLP, FATAL, OSFAIL, save_name);
 
    for( match_p = match; match_p->key; match_p++)

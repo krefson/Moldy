@@ -26,6 +26,16 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.27  2000/11/15 17:51:57  keith
+ *       Changed format of dump files.
+ *       Added second struct with sufficient information
+ *       about the simulation that most utility programs
+ *       (namely those which do not need site co-ordinates)
+ *       should not need to read sys-spec or restart files.
+ *
+ *       New options "-c -1" to dumpext prints header info.
+ *       -- dumpanal removed.
+ *
  *       Revision 2.26  2000/11/08 18:36:24  keith
  *       Moved calculation of H0 from beginning to midpoint.  This gives a much more
  *       accurate value -- any error will bias the temperature.
@@ -271,20 +281,18 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.26 2000/11/08 18:36:24 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.27 2000/11/15 17:51:57 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
 #include	<math.h>
 #include	"string.h"
-#include	"stddef.h"
 #if defined(DEBUG10) || defined(DEBUG2) || defined(DEBUG_THERMOSTAT)
 #include	<stdio.h>
 #endif
 /*========================== program include files ===========================*/
 #include "structs.h"
-#include "messages.h"
 /*========================== External function declarations ==================*/
 gptr   *talloc(int n, size_mt size, int line, char *file); 
                               /* Interface to memory allocator       */
@@ -307,8 +315,6 @@ void   mol_force(real **site_force, vec_mp force, int nsites, int nmols);
                                       /* Calculate molecular from site force */
 void   mol_torque(real **site_force, vec_mp site, vec_mp torque, quat_mp quat, 
        	   int nsites, int nmols);    /* Calculate torques from site forces  */
-void   newton(vec_mp force, vec_mp acc, double mass, int nmols); 
-				      /* Calculate accelerations from forces */
 void   parinello(mat_mt, mat_mt, vec_mp vel, vec_mp acc,
        	  vec_mp acc_out, int nmols); /* Get correction to c/m acceleration  */
 void   rahman(mat_mt stress_vir, mat_mt, mat_mt, 
@@ -343,21 +349,12 @@ double roll_av(av_n type, int comp); /* Return thermodynamic average	     */
 double vdot(int n, real *x, int ix, real *y, int iy); /* Fast  dot product   */
 double sum(int n, double *x, int ix); /* Fast sum */
 void   vscale(int n, double s, real *x, int ix); /* Vector by const multiply */
-double vec_dist(real *v1, real *v2, int n); /* normalised vector distance    */
 void   thermalise(system_mp system, spec_mt *species);	      
                                       /* Randomize velocities to given temp  */
 double trans_ke(mat_mt, vec_mt (*vel_s), real s, double mass, int nmols);
                                      /* Compute translational kinetic energy */
 double rot_ke(quat_mt (*omega_p), real s, real *inertia, int nmols); 
                                     /* Compute rotational kinetic energy     */
-void   hoover_tr(double alpha, vec_mp accel_in, vec_mp accel_out, vec_mp vel, 
-       	  int nmols);		       /* Corrects forces due to thermostat  */
-void   hoover_rot(double alpha, real *inertia, vec_mp force_in, 
-       	   vec_mp force_out, quat_mp omega, int nmols); 
-                                      /* Corrects forces due to thermostat   */
-double gaussiant(vec_mp vec1, vec_mp vec2, int nmols); /* Return Force*vel   */
-double gaussianr1(vec_mp vec1, quat_mp vec2, int nmols); /* Return Torque*av */
-double gaussianr2(quat_mp omega, real *inertia, int nmols); /* Return av*I*av*/
 void   q_conj_mul(quat_mp p, quat_mp q, quat_mp r, int n);   
                                       /* Quat. conjugated x by quat. dot     */
 void   inhibit_vectorization(void);       /* Self-explanatory dummy          */
@@ -369,7 +366,6 @@ void   par_dsum(double *buf, int n);
 #endif 
 gptr   *arralloc(size_mt,int,...);	/* Array allocator		      */
 void   note(char *, ...);		/* Write a message to the output file */
-void   message(int *, ...);		/* Write a warning or error message   */
 /*========================== External data references ========================*/
 extern contr_mt control;                    /* Main simulation control parms. */
 extern int 	ithread, nthreads;
@@ -567,7 +563,8 @@ rescale(system_mp system, spec_mp species)
  *  If Iflag == 0, return potential correction, == 1, pressure correction.    *
  ******************************************************************************/
 static double 
-distant_const(system_mp system, spec_mt *species, pot_mt *potpar, double cutoff, int iflag)
+distant_const(system_mp system, spec_mt *species, pot_mt *potpar, 
+	      double cutoff, int iflag)
 {
    int             isite, id, jd;		/* Counters		      */
    spec_mp         spec;	       		/* pointer to current species */
@@ -1038,6 +1035,6 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    xfree(force);
    xfree(torque);
    xfree(force_base);
-   if (torque_base != NULL)
+   if (torque_base != 0)
       xfree(torque_base);
 }

@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.19  2000/10/20 15:15:46  keith
+ *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
+ *
  *       Revision 2.18.2.1  2000/10/20 11:47:04  keith
  *       Added || RNG mods of 2.15
  *
@@ -288,7 +291,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.18.2.1 2000/10/20 11:47:04 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.19 2000/10/20 15:15:46 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -482,7 +485,7 @@ VECTORIZE
    }
    return(dot);
 }
-double sum(register int n, register double *x, register int ix)
+double sum(register int n, register real *x, register int ix)
 {
    register double	sa=0.0,sb=0.0,sc=0.0,sd=0.0,s1=0.0,s2=0.0,s3=0.0,s4=0.0;
    int i;
@@ -706,7 +709,7 @@ double rt_clock(void)
 
 double rt_clock(void)
 {
-   return time((time_t *)0);
+   return (double)time((time_t *)0);
 }
 #   endif
 #endif
@@ -716,7 +719,7 @@ double rt_clock(void)
  ******************************************************************************/
 char	*cctime(time_mt *timeloc)
 {
-   time_t  loc = *timeloc;
+   time_t  loc = (time_t)*timeloc;
    char	*p = ctime(&loc);
    *strchr(p, '\n') = '\0';
    return(p);
@@ -726,7 +729,7 @@ char	*cctime(time_mt *timeloc)
  ******************************************************************************/
 char	*atime(void)
 {
-   time_mt t = time((time_t*)0);
+   time_mt t = (time_mt)time((time_t*)0);
    return(cctime(&t));
 }
 /******************************************************************************
@@ -763,7 +766,7 @@ int	replace(char *file1, char *file2)
    char *backup = aalloc(strlen(file2)+2, char);
    (void)strcat(strcpy(backup, file2), "%");
 
-   f = rename(file2, backup);		/* Backup old version - ignore failure*/
+   (void)rename(file2, backup);		/* Backup old version - ignore failure*/
    f = rename(file1, file2);		/* Rename old version to new	      */
    xfree(backup);
    return(f);

@@ -19,20 +19,16 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdshak.c,v 2.23 2000/11/09 16:54:13 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdshak.c,v 2.24 2000/12/06 10:47:32 keith Exp $";
 #endif
 
 #include "defs.h"
 #include <stdarg.h>
 #include <errno.h>
-#include <math.h>
 #include "stdlib.h"
-#include "stddef.h"
 #include "string.h"
 #include <stdio.h>
 #include "structs.h"
-#include "messages.h"
-#include "ReadDCD.h"
 #include "utlsup.h"
 int	getopt(int, char *const *, const char *);
 /*======================== Global vars =======================================*/
@@ -66,7 +62,7 @@ main(int argc, char **argv)
    int		iout = 0;
    int		outsw=0;
    char		*filename = NULL, *dump_name = NULL;
-   char		*dumplims = NULL, *atom_sel = NULL;
+   char		*dumplims = NULL;
    char		*insert = NULL;
    char		*tempname;
    char		dumpcommand[256];
@@ -100,12 +96,9 @@ main(int argc, char **argv)
    else
      outsw = OUTBIN;
 
-   while( (c = getopt(argc, argv, "a:d:o:cr:s:d:t:i:hxbvpyg") ) != EOF )
+   while( (c = getopt(argc, argv, "d:o:cr:s:d:t:i:hxbvpyg") ) != EOF )
       switch(c)
       {
-       case 'a': 
-	 atom_sel = optarg;
-	 break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error("failed to open file \"%s\" for output", optarg);

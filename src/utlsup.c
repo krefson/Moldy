@@ -1,13 +1,11 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/utlsup.c,v 1.7 2000/11/09 16:54:14 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/utlsup.c,v 1.8 2000/12/06 10:47:32 keith Exp $";
 #endif
 
 #include "defs.h"
 #include <stdarg.h>
-#include <errno.h>
 #include <math.h>
 #include "stdlib.h"
-#include "stddef.h"
 #include "string.h"
 #include <stdio.h>
 #include "structs.h"
@@ -45,7 +43,7 @@ void	banner_page(system_mt *sys, spec_mt *spec, restrt_mt *rh)
 {}
 /*ARGSUSED*/
 /*VARARGS1*/
-void	note(char *s)
+void	note(char *s, ...)
 {}
 
 /******************************************************************************

@@ -29,6 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.21  2000/10/20 15:15:47  keith
+ *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
+ *
  *       Revision 2.20.2.2  2000/10/20 13:59:32  keith
  *       Incorporated new neightbour list stuff into accel.c.
  *       Removed old "poteval" from accel.c.  Now use one in
@@ -214,7 +217,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.20.2.2 2000/10/20 13:59:32 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.21 2000/10/20 15:15:47 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -222,7 +225,6 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.20
 #include        <math.h>
 #include        "stddef.h"
 #include        "string.h"
-#include        <assert.h>
 /*========================== Program include files ===========================*/
 #include        "structs.h"
 #include        "messages.h"
@@ -620,7 +622,7 @@ static void    fill_cells(int nmols,         /* Number of molecules      (in) */
 			  cell_mt **cell,    /* Array of cells           (out)*/
 			  int *frame_type)   /* Framework type counter   (out)*/
 {
-   int icell, imol, im=0, is, isite = 0;
+   int icell, imol, im, is, isite = 0;
    double eps = 8.0*precision();
    spec_mp spec = species;
    cell_mt *list = lst;
@@ -702,12 +704,11 @@ int site_neighbour_list(int *nab,          /* Array of sites in list    (out) */
 			int (*pbclookup)[2]) /* 3D index lookup table    (in) */
 {
    int  j0, jnab;                        /* Counters for cells etc            */
-   int  nnab = 0;                        /* Counter for size of nab           */
+   int  nnab=0;				 /* Counter for size of nab           */
    int  ftype;
    cell_mt      *cmol;                   /* Pointer to current cell element   */
    int icell_idx, jcell_idx, ktrans;
 
-   nnab = 0;
    icell_idx = NCELL_IDX(ix+IMCELL_XTRA*nx,iy+IMCELL_XTRA*ny,iz+IMCELL_XTRA*nz);
  
    for(ftype = 0; ftype < n_frame_types; ftype++) /* Do Framework types first */
@@ -880,6 +881,7 @@ void mk_r_sqr(int jmax, int pbctrans[], rvec_mt reloc_v[],
 
 /******************************************************************************
  * mk_forces().  Compute vector forces on site i and neighbour sites          *
+ *     Expanded using temporary vars to permit optimization.		      *
  ******************************************************************************/
 void mk_forces(int jmin, int jmax,  real rx[], real ry[], real rz[], real forceij[],
 	       real forcejx[], real forcejy[], real forcejz[],
@@ -912,6 +914,7 @@ void mk_forces(int jmin, int jmax,  real rx[], real ry[], real rz[], real forcei
  * scatter_forces().  Add forces on sites in neighbour list to main force     *
  *     array.  Also compute Bekker's "g" forces, ie forces on each pbc image  *
  *     surrounding the main MD cell.                                          *
+ *     Expanded using temporary vars to permit optimization.		      *
  ******************************************************************************/
 void scatter_forces(int nnab, int nab[], int pbctrans[], real gforce[NIMCELLS][3],
 		    real forcejx[], real forcejy[], real forcejz[], 
@@ -1025,7 +1028,6 @@ void force_inner(int ithread,
       ix = icell/ (ny*nz);
       iy = icell/nz - ny*ix;
       iz = icell - nz*(iy + ny*ix);
-      nnab = 0;
 #ifdef DEBUG3
       printf("Working on cell %4d (%d,%d,%d) (sites %4d to %4d)\n", icell,
              ix,iy,iz,cell[icell]->isite,cell[icell]->isite+cell[icell]->num-1);
@@ -1126,9 +1128,6 @@ void force_inner(int ithread,
                printf("PE = %f\n",pe[0]);
 #endif
          }
-#if defined(__stdc__) || defined(__STDC__)
-#pragma novector
-#endif
       }
       scatter_forces(nnab, nab, pbctrans, gforce, forcejx, forcejy, forcejz,
 		     site_force[0], site_force[1], site_force[2]);

@@ -43,6 +43,16 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.18  2000/11/15 17:51:58  keith
+ *       Changed format of dump files.
+ *       Added second struct with sufficient information
+ *       about the simulation that most utility programs
+ *       (namely those which do not need site co-ordinates)
+ *       should not need to read sys-spec or restart files.
+ *
+ *       New options "-c -1" to dumpext prints header info.
+ *       -- dumpanal removed.
+ *
  *       Revision 2.17  2000/11/13 16:01:23  keith
  *       Changed dump format to contain principle-frame angular velocities.
  *       Adapted mdvaf.c to calculate angular acf's too - added "-a" flag.
@@ -202,7 +212,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.18 2000/11/13 16:01:23 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.18 2000/11/15 17:51:58 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -262,6 +272,7 @@ int close_dump(FILE *dumpf)
    return fclose(dumpf);
 }
 
+/*ARGSUSED3*/
 size_mt	dump_curpos(size_mt sysinfo_size, int dump_size, 
 		    int ndumps, int nspecies,  boolean xdr_write)
 {
@@ -274,6 +285,7 @@ size_mt	dump_curpos(size_mt sysinfo_size, int dump_size,
       return sizeof(dump_mt) + sysinfo_size + ndumps*dump_size*sizeof(float);
 }
 
+/*ARGSUSED2*/
 static
 void dump_setpos(FILE *dumpf, size_mt file_pos, boolean xdr_write)
 {
@@ -297,7 +309,9 @@ int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_writ
 		     int sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
 {
    int      errflg = true;	/* Provisionally !!   */
+#ifdef USE_XDR
    char     vbuf[sizeof hdr_p->vsn + 1];
+#endif
    int	    vmajor,vminor;
 
    *xdr_write = false;
@@ -397,6 +411,7 @@ void write_dump_header(FILE *dumpf, char *cur_file, dump_mt *dump_header,
    }
 }
 
+/*ARGSUSED4*/
 static
 void write_dump_record(gptr *dump_buf, FILE *dumpf, size_mt dump_size, 
 		       char *cur_file, boolean xdr_write)
@@ -424,7 +439,7 @@ void	dump(system_mp system, spec_mt *species,
 	     mat_mt stress, double pe, 
 	     restrt_mt *restart_header, int backup_restart)
 {
-   FILE		*dumpf=NULL;		/* File pointer to dump files	      */
+   FILE		*dumpf;			/* File pointer to dump files	      */
    dump_mt	dump_header,		/* Header record proforma	      */
    		hdr_tmp;
    char		cur_file[L_name],	/* Names of current and previous      */
@@ -439,7 +454,7 @@ void	dump(system_mp system, spec_mt *species,
 				      system->nmols, system->nmols_r);
                                         /* Size in floats of each dump record */
    float	*dump_buf=aalloc(dump_size,float);      /* For converted data */
-   long		file_pos=0,		/* Offset within file of current rec. */
+   long		file_pos,		/* Offset within file of current rec. */
    		file_len;		/* Length of file		      */
    boolean      errflg = false;
    spec_mt	*spec;
@@ -720,7 +735,7 @@ static void	dump_convert(float *buf, system_mp system, vec_mt (*force),
 	 real_to_float(torque[0], buf, 3*nmols_r);
 	 buf += 3*nmols_r;
       }
-      real_to_float(stress[0], buf, 9);		buf += 9;
+      real_to_float(stress[0], buf, 9);		/* buf += 9;*/
    }
    xfree(scale_buf);
 }

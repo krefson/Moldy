@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: alloc.c,v $
+ *       Revision 2.13  2000/10/20 15:15:46  keith
+ *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
+ *
  *       Revision 2.12  2000/04/27 17:57:05  keith
  *       Converted to use full ANSI function prototypes
  *
@@ -165,23 +168,22 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/alloc.c,v 2.11.2.1 2000/08/11 17:40:03 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/alloc.c,v 2.13 2000/10/20 15:15:46 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
 #include "messages.h"
-#ifdef DEBUGY
+/*========================== Library include files ===========================*/
+#include <stdarg.h>
+#include "stdlib.h"
+#if defined(DEBUGX) || defined (DEBUGY)
 #include <stdio.h>
 #endif
-/*========================== Library include files ===========================*/
-#   include <stdarg.h>
-#include "stdlib.h"
-#include "stddef.h"
+#ifdef DEBUGZ
 #include "string.h"
-#ifdef DEBUGX
-#include <stdio.h>
 #endif
 #ifdef DBMALLOC
+#include	"stddef.h"
 typedef size_mt size_t;
 #include <dbmalloc.h>
 #endif
@@ -191,7 +193,7 @@ void	inhibit_vectorization(void);		/* Self-explanatory dummy     */
 int	malloc_verify();
 int	malloc_debug();
 #endif
-void	note(char *, ...);			/* Write a message to the output file */
+void	note(char *, ...);		/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
 /*============================================================================*/
 /******************************************************************************
@@ -209,7 +211,9 @@ void	message(int *, ...);		/* Write a warning or error message   */
  * Wide_mt is the widest type for alignment purposes.  Try double.	      *
  ******************************************************************************/
 typedef int word_mt;
+#ifdef ALLOC_SEPARATELY
 typedef double wide_mt;
+#endif
 /******************************************************************************
  * talloc()	Call Calloc to allocate memory, test result and stop if failed*
  ******************************************************************************/
@@ -232,7 +236,7 @@ gptr	*talloc(int n, size_mt size, int line, char *file)
    fprintf(stderr,"Alloc: %16s line %3d: %d x %lu bytes (%p to %p)\n", 
 	   file, line, n, size, p, p+n*size);
 #endif
-   if(p == NULL && (n*size != 0))
+   if(p == 0 && (n*size != 0))
      message(NULLI, NULLP, FATAL, NOMEM, line, file,
 	     (int)n, (unsigned long)size);
 #ifdef DEBUGZ

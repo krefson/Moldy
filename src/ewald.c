@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.20  2000/04/27 17:57:07  keith
+ *       Converted to use full ANSI function prototypes
+ *
  *       Revision 2.19  1998/12/03 15:45:17  keith
  *       Hand unrolled stress loops to avoid attempts by compilers to optimise
  *       loops with 1 or 2 iterations.
@@ -234,7 +237,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/ewald.c,v 2.19 1998/12/03 15:45:17 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.20 2000/04/27 17:57:07 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -255,18 +258,22 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/ewald.c,v 2
 #include 	"structs.h"
 #include 	"messages.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+gptr            *talloc(int n, size_mt size, int line, char *file);
+                                       /* Interface to memory allocator       */
 void            tfree(gptr *p);	       /* Free allocated memory	      	      */
-void            afree(gptr *pp);	       /* Free allocated array	      	      */
-double	err_fn(double x);			/* Error function		      */
-double	det(real (*a)[3]);				/* Determinant of 3x3 matrix	      */
-void	invert(real (*a)[3], real (*b)[3]);			/* Inverts a 3x3 matrix		      */
-void	mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);			/* Multiplies a 3x3 matrix by 3xN vect*/
-void	mat_sca_mul(register real s, real (*a)[3], real (*b)[3]);			/* Multiplies a 3x3 matrix by scalar  */
-void	transpose(real (*a)[3], real (*b)[3]);			/* Transposes a 3x3 matrix	      */
-void    zero_real(real *r, int n);            	/* Initialiser                        */
-void    zero_double(double *r, int n);          	/* Initialiser                        */
-double	sum(register int n, register double *x, register int ix);				/* Sum of elements of 'real' vector   */
+void            afree(gptr *pp);       /* Free allocated array	      	      */
+double	err_fn(double x);              /* Error function		      */
+double	det(real (*a)[3]);	       /* Determinant of 3x3 matrix	      */
+void	invert(real (*a)[3], real (*b)[3]);/* Inverts a 3x3 matrix	      */
+void	mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
+                                        /* Multiplies a 3x3 matrix by 3xN vect*/
+void	mat_sca_mul(register real s, real (*a)[3], real (*b)[3]);
+					/* Multiplies a 3x3 matrix by scalar  */
+void	transpose(real (*a)[3], real (*b)[3]); /* Transposes a 3x3 matrix     */
+void    zero_real(real *r, int n);      /* Initialiser                        */
+void    zero_double(double *r, int n); 	/* Initialiser                        */
+double	sum(register int n, register double *x, register int ix);
+					/* Sum of elements of 'real' vector   */
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 void	note(char *,...);		/* Write a message to the output file */
 void	message(int *,...);		/* Write a warning or error message   */
@@ -303,10 +310,14 @@ extern int		ithread, nthreads;
  *****************************************************************************/
 /*   static int hits=0, misses=0;*/
 static
-void      qsincos(real *coshx, real *sinhx, real *cosky, real *sinky, real *coslz, real *sinlz, real *qcoskr, real *qsinkr, real *coshxky, real *sinhxky, int h, int k, int l, int nsites)
+void      qsincos(real *coshx, real *sinhx, real *cosky, 
+		  real *sinky, real *coslz, real *sinlz, 
+		  real *qcoskr, real *qsinkr, 
+		  real *coshxky, real *sinhxky, 
+		  int h, int k, int l, int nsites)
 {
    int is;
-   real qckr, chxky, shxky;
+   real qckr, chxky;
    static int hlast=-1000000,klast=-1000000;
    
    if( h != hlast || k != klast ) 
@@ -355,7 +366,11 @@ void      qsincos(real *coshx, real *sinhx, real *cosky, real *sinky, real *cosl
  * Use addition formulae to get sin(h*astar*x)=sin(Kx*x) etc for each site    *
  ******************************************************************************/
 static
-void trig_recur(real **chx, real **shx, real *sin1x, real *cos1x, real *site0, real *site1, real *site2, real *kstar, int hmax, int ns0, int ns1)
+void trig_recur(real **chx, real **shx, 
+		real *sin1x, real *cos1x, 
+		real *site0, real *site1, real *site2, 
+		real *kstar, 
+		int hmax, int ns0, int ns1)
 {
    int h, is;
    real *coshx, *sinhx, *cm1, *sm1, coss, kr;
@@ -403,7 +418,13 @@ void trig_recur(real **chx, real **shx, real *sin1x, real *cos1x, real *site0, r
  * offsets of the arrays.  This is to avoid cache conflicts.                  *
  * Revert to bog-standard method for MSDOS				      *
  ******************************************************************************/
-static real*  allocate_arrays(int nsarray, int hmax, int kmax, int lmax, real ***chx, real ***cky, real ***clz, real ***shx, real ***sky, real ***slz, real **cos1x, real **cos1y, real **cos1z, real **sin1x, real **sin1y, real **sin1z, real **qcoskr, real **qsinkr, real **coshxky, real **sinhxky)
+static real*  allocate_arrays(int nsarray, int hmax, int kmax, int lmax, 
+			      real ***chx, real ***cky, real ***clz, 
+			      real ***shx, real ***sky, real ***slz, 
+			      real **cos1x, real **cos1y, real **cos1z, 
+			      real **sin1x, real **sin1y, real **sin1z, 
+			      real **qcoskr, real **qsinkr, 
+			      real **coshxky, real **sinhxky)
 {
    int h, k,l; 
    real *csp, *base;
@@ -455,7 +476,7 @@ static real*  allocate_arrays(int nsarray, int hmax, int kmax, int lmax, real **
    *cos1z = csp;  csp += nsarray + NLINE;
    *sin1x = csp;  csp += nsarray;
    *sin1y = csp;  csp += nsarray;
-   *sin1z = csp;  csp += nsarray;
+   *sin1z = csp;  /*csp += nsarray;*/
 #else
    *chx = (real**)arralloc((size_mt)sizeof(real),2, 0, hmax, 0, nsarray-1);
    *cky = (real**)arralloc((size_mt)sizeof(real),2, 0, kmax, 0, nsarray-1);
@@ -468,7 +489,7 @@ static real*  allocate_arrays(int nsarray, int hmax, int kmax, int lmax, real **
 
    csp = base = dalloc(2*nsarray);
    *qcoskr = csp; csp += nsarray;
-   *qsinkr = csp; csp += nsarray;
+   *qsinkr = csp; /*csp += nsarray;*/
 #endif
 
    return base;
@@ -476,18 +497,17 @@ static real*  allocate_arrays(int nsarray, int hmax, int kmax, int lmax, real **
 /******************************************************************************
  *  Ewald  Calculate reciprocal-space part of coulombic forces		      *
  ******************************************************************************/
-void	ewald(real **site, real **site_force, system_mp system, spec_mt *species, real *chg, double *pe, real (*stress)[3])
-    		       			/* Site co-ordinate arrays	 (in) */
-                		/* Site force arrays		(out) */
-         	       			/* System record		 (in) */
-       	          			/* Array of species records	 (in) */
-    		      			/* Array of site charges	 (in) */
-      		    			/* Potential energy		(out) */
-      		       			/* Stress virial		(out) */
+void	ewald(real **site,              /* Site co-ordinate arrays       (in) */
+	      real **site_force,        /* Site force arrays            (out) */ 
+	      system_mp system,         /* System record                 (in) */
+	      spec_mt *species,         /* Array of species records      (in) */
+	      real *chg, 	        /* Array of site charges         (in) */
+	      double *pe, 	        /* Potential energy             (out) */
+	      real (*stress)[3])        /* Stress virial                (out) */
 {
    mat_mt	hinvp;			/* Matrix of reciprocal lattice vects*/
    int		h, k, l;		/* Recip. lattice vector indices     */
-   int		i, j, is, ssite;	/* Counters.			     */
+   int		i, is, ssite;		/* Counters.			     */
    spec_mp	spec;			/* species[ispec]		     */
    int		nsites = system->nsites;
    double	pe_k,			/* Pot'l energy for current K vector */

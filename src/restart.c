@@ -31,6 +31,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.17  2000/11/10 12:16:28  keith
+ *       Tidied up some dubious cases to get rid of compiler warnings.
+ *       Updated configure scripts -- fix for non-pgcc linux case.
+ *       Got rid of redundant Makefile.w32 and Makefile.mak
+ *       make -f xmakefile Makefile.in now works under Linux
+ *
  *       Revision 2.16  2000/10/20 15:15:48  keith
  *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
  *
@@ -184,7 +190,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/restart.c,v 2.16 2000/10/20 15:15:48 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/restart.c,v 2.17 2000/11/10 12:16:28 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -198,7 +204,8 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/restart.c,v 2.
 #include	"messages.h"
 #include	"xdr.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+gptr            *talloc(int n, size_mt size, int line, char *file);
+				       /* Interface to memory allocator       */
 void            tfree(gptr *p);	       /* Free allocated memory	      	      */
 int		replace(char *file1, char *file2);
 gptr		*av_ptr(size_mt *size, int av_convert);
@@ -258,6 +265,7 @@ size_mt xdr_cnext(xfp_mt xfp)
  *   expected value.  Finally call fread to read in this data and check for   *
  *   error and end of file						      *
  ******************************************************************************/
+/*ARGSUSED4*/
 static
 void	cread(xfp_mt xfp, gptr *ptr, size_mt size, int nitems, xdrproc_t proc)
 {
@@ -331,6 +339,7 @@ void	xdr_cread(xfp_mt xfp, gptr *ptr, size_mt size, int nitems, xdrproc_t proc)
 /******************************************************************************
  *  cwrite.  opposite of cread.  write the length followed by the data	      *
  ******************************************************************************/
+/*ARGSUSED4*/
 static
 void	cwrite(xfp_mt xfp, gptr *ptr, size_mt size, int nitems, xdrproc_t proc)
 {
@@ -386,7 +395,9 @@ void	xdr_cwrite(xfp_mt xfp, gptr *ptr, size_mt size, int nitems, xdrproc_t proc)
 static   XDR		xdrs;
 void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr)
 {
+#ifdef USE_XDR
    char         vbuf[sizeof header->vsn + 1];
+#endif
    int		vmajor,vminor;
    xfp_mt	xfp;
    xfp.xp =     &xdrs;
@@ -437,7 +448,8 @@ void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr)
  *  conv_potsize    Convert potential parameters array if NPOTP has changed   *
  ******************************************************************************/
 static
-void conv_potsize(pot_mt *pot, size_mt old_pot_size, int old_npotp, int npotpar, int npotrecs)
+void conv_potsize(pot_mt *pot, size_mt old_pot_size, int old_npotp, 
+		  int npotpar, int npotrecs)
 {
    int		i;
    char		*tmp_pot;
@@ -462,13 +474,12 @@ void conv_potsize(pot_mt *pot, size_mt old_pot_size, int old_npotp, int npotpar,
  *  structures system and species and arrays site_info and potpar (allocating *
  *  space) and read in the supplied values.  				      *
  ******************************************************************************/
-void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr)
-    		         		/* File pointer to read info from     */
-    		     			/* Version string file written with */
-         	       			/* Pointer to system array (in main)  */
-       		          		/* Pointer to be set to species array */
-       		           		/* To be pointed at site_info array   */
-      		         		/* To be pointed at potpar array      */
+void	re_re_sysdef(FILE *restart,     /* File pointer to read info from     */
+		     char *vsn, 	/* Version string file written with   */  
+		     system_mp system, 	/* Pointer to system array (in main)  */
+		     spec_mp *spec_ptr, /* Pointer to be set to species array */
+		     site_mp *site_info,/* To be pointed at site_info array   */ 
+		     pot_mp *pot_ptr)	/* To be pointed at potpar array      */
 {
    spec_mp	spec;
    size_mt	old_pot_size;
@@ -522,7 +533,9 @@ void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr,
       old_npotp = ((long)cnext(xfp)/ n_pot_recs - (long)sizeof(pot_mt))/
                        (long)sizeof(real) + NPOTP;
    old_pot_size = sizeof(pot_mt) + (old_npotp - NPOTP) * sizeof(real);
-   *pot_ptr = (pot_mt*)aalloc(n_pot_recs*MAX(sizeof(pot_mt),old_pot_size), char);
+   *pot_ptr = (pot_mt*)aalloc((n_pot_recs+1)*
+			      MAX(sizeof(pot_mt),old_pot_size)/sizeof(pot_mt), 
+			      pot_mt);
    xdr_set_npotpar(old_npotp);		/* Pass npotpar to xdr_pot. Ugh! */
    cread(xfp,  (gptr*)*pot_ptr, old_pot_size, n_pot_recs, xdr_pot);
    conv_potsize(*pot_ptr, old_pot_size, old_npotp, system->n_potpar, n_pot_recs);
@@ -530,11 +543,10 @@ void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr,
 /******************************************************************************
  *  read_restart.   read the dynamic simulation variables from restart file.  *
  ******************************************************************************/
-void	read_restart(FILE *restart, char *vsn, system_mp system, int av_convert)
-    		         
-    		     			/* Version string file written with */
-         	       
-   		            
+void	read_restart(FILE *restart,       /* Open file descriptor to read from*/
+		     char *vsn,		  /* Version string file written with */
+		     system_mp system,    /* Pointer to main system struct    */
+		     int av_convert)      /* Whether averages need conversion.*/
 {
    gptr		*ap;			/* Pointer to averages database       */
    size_mt	asize;			/* Size of averages database	      */
@@ -599,13 +611,12 @@ void	read_restart(FILE *restart, char *vsn, system_mp system, int av_convert)
  *  the 'restart_header' and 'control' structs, the system-specification      *
  *  (system species, site_info and potpar data) and the dynamic variables.    *
  ******************************************************************************/
-void	write_restart(char *save_name, restrt_mt *header, system_mp system, spec_mp species, site_mp site_info, pot_mp potpar)
-    		           		/* Name of save file to be written    */
-         	        		/* Restart header struct.	      */
-         	       			/* Pointer to system array (in main)  */
-       		        		/* Pointer to be set to species array */
-       		          		/* To be pointed at site_info array   */
-      		       			/* To be pointed at potpar array      */
+void	write_restart(char *save_name,  /* Name of save file to be written    */
+		      restrt_mt *header,/* Restart header struct.             */ 
+		      system_mp system, /* Pointer to system array (in main)  */
+		      spec_mp species, 	/* Pointer to be set to species array */
+		      site_mp site_info,/* To be pointed at site_info array   */ 
+		      pot_mp potpar)	/* To be pointed at potpar array      */
 {
    spec_mp	spec;
    gptr		*ap;			/* Pointer to averages database       */
@@ -618,7 +629,7 @@ void	write_restart(char *save_name, restrt_mt *header, system_mp system, spec_mp
    XDR		xdrsw;
    xfp_mt	xfp;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.16 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.17 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    save = fopen(control.temp_file, "wb");

@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/molout.c,v 1.5 2000/04/27 17:57:10 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/molout.c,v 1.6 2000/12/06 10:47:34 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -7,11 +7,9 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/molout.c,v 1.5
 #include <errno.h>
 #include <math.h>
 #include "stdlib.h"
-#include "stddef.h"
 #include "string.h"
 #include <stdio.h>
 #include "structs.h"
-#include "messages.h"
 #include "ReadDCD.h"
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 
@@ -100,7 +98,8 @@ void	shift(vec_mt (*r), int nmols, real *s)
  * input data file for the graphics program SCHAKAL88.			      *
  ******************************************************************************/
 static void
-schakal_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char *insert, int n)
+schakal_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, 
+	    char *insert, int n)
 {
    double	**site = (double**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
@@ -155,7 +154,8 @@ schakal_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, c
  * Brookhaven Protein Data Bank (pdb) file                                    *
  ******************************************************************************/
 static void
-pdb_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char *insert, int intyp)
+pdb_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, 
+	char *insert, int intyp)
 {
    double	**site = (double**)arralloc(sizeof(double),2,
                                             0,2,0,system->nsites-1);
@@ -227,7 +227,8 @@ pdb_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char 
  * input data file for the graphics program XYZ (rasmol -xyz file)	      *
  ******************************************************************************/
 static void
-xyz_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char *insert)
+xyz_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, 
+	char *insert)
 {
    double	**site = (double**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
@@ -283,7 +284,8 @@ xyz_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char 
  * DCD data file for the graphics program VMD                              *
  ******************************************************************************/
 static void
-dcd_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, int n, int irec, int inc)
+dcd_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, 
+	int n, int irec, int inc)
 {
    double	**site = (double**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
@@ -368,7 +370,8 @@ atoms_out(system_mt *system, mat_mp h, spec_mt *species)
  * SERC Daresbury Lab's Cambridge Structure Search and Retrieval (cssr) file  *
  ******************************************************************************/
 static void
-cssr_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char *insert, int intyp)
+cssr_out(system_mt *system, mat_mp h, spec_mt *species, 
+	 site_mt *site_info, char *insert, int intyp)
 {
    double	**site = (double**)arralloc(sizeof(double),2,
                                             0,2,0,system->nsites-1);
@@ -448,7 +451,8 @@ cssr_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char
  * Translate system relative to either centre of mass of posn of framework.   *
  ******************************************************************************/
 void
-moldy_out(int n, int irec, int inc, system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, int outsw, int intyp, char *insert)
+moldy_out(int n, int irec, int inc, system_mt *system, mat_mp h, 
+	  spec_mt *species, site_mt *site_info, int outsw, int intyp, char *insert)
 {
    spec_mp	spec, frame_spec  = NULL;
    vec_mt	c_of_m;

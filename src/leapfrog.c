@@ -35,6 +35,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: leapfrog.c,v $
+ *       Revision 2.5  2000/11/09 16:54:12  keith
+ *       Updated utility progs to be consistent with new dump format
+ *
  *       Revision 2.4  2000/11/06 16:02:06  keith
  *       First working version with a Nose-Poincare thermostat for rigid molecules.
  *
@@ -57,13 +60,13 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.4 2000/11/06 16:02:06 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.5 2000/11/09 16:54:12 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
 #include <math.h>
-#ifdef DEBUG_THERMOSTAT
+#ifdef DEBUG_THERMOSTAT1
 #   define DEBUG
 #endif
 #ifdef DEBUG

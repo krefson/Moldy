@@ -34,6 +34,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ *       Revision 2.15  2000/11/13 12:25:06  keith
+ *       Applied same "midpoint" value of "s" for calculating rot. KE as for trans KE.
+ *         - seems to make little or no difference to accuracy of conserved H.
+ *
  *       Revision 2.14  2000/11/08 18:37:39  keith
  *       Now prints "correct" names for energy function.  Previous version of
  *       this overwrote string constant!
@@ -168,7 +172,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.14 2000/11/08 18:37:39 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.15 2000/11/13 12:25:06 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -177,28 +181,30 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.1
 /*========================== Library include files ===========================*/
 #include	<math.h>
 #include	"string.h"
-#include	"stddef.h"
 #include	<stdio.h>
 /*========================== External function declarations ==================*/
 void	mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
-void	q_conj_mul(quat_mp p, quat_mp q, quat_mp r, int n);			/* Quaternion multiply conjugated     */
-double	det(real (*a)[3]);				/* Determinant of 3x3 matrix	      */
-double	vdot(int n, real *x, int ix, real *y, int iy);				/* Vector dot product		      */
-double	sum(register int n, register double *x, register int ix);				/* Vector sum			      */
+void	q_conj_mul(quat_mp p, quat_mp q, quat_mp r, int n);
+					/* Quaternion multiply conjugated     */
+double	det(real (*a)[3]);		/* Determinant of 3x3 matrix	      */
+double	vdot(int n, real *x, int ix, real *y, int iy); /* Vector dot product  */
+double	sum(register int n, register double *x, register int ix); /* Vect. sum*/
 void	zero_real(real *r, int n);
 void	zero_double(double *r, int n);
 void	zero_dbls(double *r, size_mt n);
-void	energy_dyad(real (*ke_dyad)[3], real (*h)[3], real s, vec_mp vels, double mass, int nmols);
+void	energy_dyad(mat_mt ke_dyad, mat_mt h, real s, 
+		    vec_mp vels, double mass, int nmols);
 double	trans_ke(real (*h)[3], vec_mt (*vel_s), real s, double mass, int nmols);
 double	rot_ke(quat_mt (*omega_p), real, real *inertia, int nmols);
-double	precision(void);			/* Machine precision constant	      */
+double	precision(void);		/* Machine precision constant	      */
 char	*atime(void);
 void	new_line(void);
 void	new_lins(int n);
 void	new_page(void);
-gptr    *talloc(int n, size_mt size, int line, char *file);		       /* Interface to memory allocator       */
+gptr    *talloc(int n, size_mt size, int line, char *file);
+				       /* Interface to memory allocator       */
 void    tfree(gptr *p);		       /* Free allocated memory	      	      */
-int	lines_left(void);		       /* on current page of output	      */
+int	lines_left(void);		/* on current page of output	      */
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
 /*========================== External data references ========================*/
@@ -225,24 +231,24 @@ typedef struct
 } av_info_t;
 /*========================== Global variables ================================*/
 static
-av_info_t av_info[] = { {tke_n, "Trans KE",   CONV_E_N,	11, "%11.5g",-1, NULL},
-			{rke_n, "Rot KE",     CONV_E_N,	11, "%11.5g",-1, NULL},
-			{pe_n,  "Pot Energy", CONV_E_N,	11, "%11.5g",NPE,NULL},
-			{e_n,   "Tot Energy", CONV_E_N,	11, "%11.5g", 1, NULL},
-			{tt_n,  "TTemp",      CONV_T_N,	 6, "%6.1f", -1, NULL},
-			{rt_n,  "RTemp",      CONV_T_N,	 6, "%6.1f", -1, NULL},
-			{t_n,   "Temp",	      CONV_T_N,	 6, "%6.1f", 1,  NULL},
-			{h0_n,  "h(1,*)",     LUNIT_N,	 6, "%6.2f", 3,  NULL},
-			{h1_n,  "h(2,*)",     LUNIT_N,	 6, "%6.2f", 3,  NULL},
-			{h2_n,  "h(3,*)",     LUNIT_N,	 6, "%6.2f", 3,  NULL},
-			{stress0_n,"Stress",  CONV_P_N,	10, "%10.3g",3,  NULL},
-			{stress1_n,"Stress",  CONV_P_N,	10, "%10.3g",3,  NULL},
-			{stress2_n,"Stress",  CONV_P_N,	10, "%10.3g",3,  NULL},
-			{press_n,"Pressure",  CONV_P_N,	10, "%10.3g",1,  NULL},
-			{vir_n, "Virial",     CONV_E_N,	11, "%11.5g",1,  NULL},
-			{msqf_n,"<F**2>",     CONV_F_N,	10, "%10.5g",-3, NULL},
-			{msqt_n,"<N**2>",     CONV_N_N,	10, "%10.5g",-3, NULL},
-			{dip_n, "Dip Mom",    CONV_D_N,	 8, "%8.2g", 3,  NULL}};
+av_info_t av_info[] = { {tke_n, "Trans KE",   CONV_E_N,	11, "%11.5g",-1, 0},
+			{rke_n, "Rot KE",     CONV_E_N,	11, "%11.5g",-1, 0},
+			{pe_n,  "Pot Energy", CONV_E_N,	11, "%11.5g",NPE,0},
+			{e_n,   "Tot Energy", CONV_E_N,	11, "%11.5g", 1, 0},
+			{tt_n,  "TTemp",      CONV_T_N,	 6, "%6.1f", -1, 0},
+			{rt_n,  "RTemp",      CONV_T_N,	 6, "%6.1f", -1, 0},
+			{t_n,   "Temp",	      CONV_T_N,	 6, "%6.1f", 1,  0},
+			{h0_n,  "h(1,*)",     LUNIT_N,	 6, "%6.2f", 3,  0},
+			{h1_n,  "h(2,*)",     LUNIT_N,	 6, "%6.2f", 3,  0},
+			{h2_n,  "h(3,*)",     LUNIT_N,	 6, "%6.2f", 3,  0},
+			{stress0_n,"Stress",  CONV_P_N,	10, "%10.3g",3,  0},
+			{stress1_n,"Stress",  CONV_P_N,	10, "%10.3g",3,  0},
+			{stress2_n,"Stress",  CONV_P_N,	10, "%10.3g",3,  0},
+			{press_n,"Pressure",  CONV_P_N,	10, "%10.3g",1,  0},
+			{vir_n, "Virial",     CONV_E_N,	11, "%11.5g",1,  0},
+			{msqf_n,"<F**2>",     CONV_F_N,	10, "%10.5g",-3, 0},
+			{msqt_n,"<N**2>",     CONV_N_N,	10, "%10.5g",-3, 0},
+			{dip_n, "Dip Mom",    CONV_D_N,	 8, "%8.2g", 3,  0}};
 static  size_mt	av_size;		/* Size of averages database          */
 static  size_mt	av_mt_size;		/* Size of entry inaverages database  */
 static  av_head_mt  *av_head;
@@ -254,7 +260,7 @@ static  size_mt av_tmp_size;
 static  gptr    *av_tmp;
 /*========================== Macros ==========================================*/
 #define NAVT			(int)end
-#define INC(av_mp)    (av_mp = (av_mt*)((char*)av_mp + av_mt_size))
+#define INC(av_mp)    (av_mp = (av_mt*)((double*)av_mp + av_mt_size/sizeof(double)))
 /*============================================================================*/
 /******************************************************************************
  *  init_averages  Allocate space for and initialise the averages database.   *
@@ -408,7 +414,7 @@ void	convert_averages(long roll_interval, long old_roll_interval,
 	       (av_head->nroll-rbl)*sizeof(double));
 
 	 INC(av_mp);
-	 prev_av_mp = (av_mt*)((char*)prev_av_mp + prev_av_mt_size);
+	 prev_av_mp = (av_mt*)((double*)prev_av_mp + prev_av_mt_size/sizeof(double));
       }
       break;
    }
@@ -438,25 +444,24 @@ gptr	*av_ptr(size_mt *size, int av_convert)
    {
     case 0:
       *size = av_size;
-      if(av_head != NULL)
+      if(av_head != 0)
 	 return((gptr*)av_head);
       break;
     case 1:
     case 2:
       *size = av_tmp_size;
-      if(av_tmp != NULL)
+      if(av_tmp != 0)
 	 return(av_tmp);
    }
    message(NULLI, NULLP, FATAL, AVNOC, "av_ptr");
-   return(NULL);					/* To satisfy lint    */
+   return 0;						/* To satisfy lint    */
 }
 /******************************************************************************
  * add_average  update the averages database with new datum                   *
  ******************************************************************************/
-static void	add_average(double datum, av_n type, int offset)
-      	      				/* Datum to store and accumulate sums */
-    	     				/* What kind (ie where to store)      */
-   	       				/* Sub-type or which component        */
+static void	add_average(double datum,/* Datum to store and accumulate sums*/ 
+			    av_n type, 	 /* What kind (ie where to store)     */
+			    int offset)	 /* Sub-type or which component       */
 {
    av_mt		*av_mp;
    if(offset < 0 || offset > av_info[(int)type].mult - 1)
@@ -587,7 +592,6 @@ void	values(system_mt *system,        /* record of system info             */
    for (spec = species; spec < &species[system->nspecies]; spec++)
       energy_dyad(ke_dyad, system->h, system->ts, spec->vel, spec->mass, spec->nmols);
 
-   k = 0;
    for(i = 0; i < 3; i++)
    {
       for(j = i; j < 3; j++)
@@ -608,7 +612,8 @@ void	values(system_mt *system,        /* record of system info             */
       for(i = 0; i < 3; i++)
       {
          add_average(CONV_F*CONV_F*meansq_f_t[ispec][0][i], msqf_n, k);
-         add_average(CONV_N*CONV_N*meansq_f_t[ispec][1][i], msqt_n, k++);
+         add_average(CONV_N*CONV_N*meansq_f_t[ispec][1][i], msqt_n, k);
+	 k++;
       }
 
    for(i = 0; i < 3; i++)
@@ -732,7 +737,7 @@ void	averages(void)
 		bottom = -32.0*sqrt((double)av_head->nav)*precision();
    av_mt	*av_mp;
 
-   if(av_head == NULL)
+   if(av_head == 0)
       message(NULLI, NULLP, FATAL, AVNOC, "averages");
 
    if(av_head->nav == 0)
@@ -748,7 +753,6 @@ void	averages(void)
    (void)printf( "   Averages over last %d timesteps",av_head->nav);
    new_line();
 
-   av_mp = av;
    for(iav = 0; iav < NAVT; iav++)
    {
       for(i = 0; i < av_info[iav].mult; i++)

@@ -29,6 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: input.c,v $
+ *       Revision 2.13  2000/11/22 11:59:52  keith
+ *       Freed memory used during lattice-start
+ *
  *       Revision 2.12  2000/04/27 17:57:08  keith
  *       Converted to use full ANSI function prototypes
  *
@@ -213,7 +216,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/input.c,v 2.12 2000/04/27 17:57:08 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/input.c,v 2.13 2000/11/22 11:59:52 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -221,16 +224,16 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/input.c,v 2.12
 #include	<ctype.h>
 #include	<math.h>
 #include 	"string.h"
-#include	"stddef.h"
 #include	<stdio.h>
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+gptr            *talloc(int n, size_mt size, int line, char *file);
+                                       /* Interface to memory allocator       */
 void            tfree(gptr *p);	       /* Free allocated memory	      	      */
 void		q_mul_1(real *p, real *q, real *r);
-void    	zero_real(real *r, int n);            /* Initialiser                        */
+void    	zero_real(real *r, int n); /* Initialiser                     */
 void		message(int *, ...);	/* Write a warning or error message   */
 /*========================== External data references ========================*/
 extern	      contr_mt	control;	/* Main simulation control record     */
@@ -251,18 +254,18 @@ extern	const pots_mt	potspec[];	/* Potential type specification       */
 static
 char	*get_line(char *line, int len, FILE *file)
 {
-   char	*s, *t;
+   char	*s;
    int  i;
    do
    {
       s = fgets(line, len, file);		/* Read one line of input     */
-      if(s == NULL) break;			/* exit if end of file        */
+      if(s == 0) break;			/* exit if end of file        */
       i = strlen(s) - 1;
       while(i >= 0 && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
          s[i--] = '\0';				/* Strip trailing white space */
    }
    while(*s == '\0' || *s == '#');		/* Repeat if blank or comment */
-   if(s == NULL)
+   if(s == 0)
       *line = '\0';				/* Return null at eof         */
    return(line);
 }
@@ -312,12 +315,11 @@ void sort_species(spec_mt *species, int nspecies)
  *  largest site identifier index in order to allocate the dynamic arrays.    *
  *  Pass 2 does the actual reading and checking.                              *
  ******************************************************************************/
-void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_info, pot_mp *pot_ptr)
-    		      			/* File pointer to read info from     */
-         	       			/* Pointer to system array (in main)  */
-       		         		/* Pointer to be set to species array */
-       		           		/* To be pointed at site_info array   */
-      		         		/* To be pointed at potpar array      */
+void	read_sysdef(FILE *file,         /* File pointer to read info from     */
+		    system_mp system, 	/* Pointer to system array (in main)  */
+		    spec_mp *spec_pp, 	/* Pointer to be set to species array */
+		    site_mp *site_info, /* To be pointed at site_info array   */
+		    pot_mp *pot_ptr)	/* To be pointed at potpar array      */
 {
    int		nspecies = 0,		/* Number of distinct species         */
    		max_id = 0,		/* Largest site identifier index      */
@@ -354,7 +356,7 @@ void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_i
       nsites = aalloc(1, struct list_mt); 	/* Make new list element      */
       last->p = nsites;				/* Link it in		      */
       last = nsites;				/* Backwards pointer for link */
-      nsites->p=NULL; nsites->n=0;
+      nsites->p=0; nsites->n=0;
       while(sscanf(get_line(line,LLEN,file), "%d", &id) > 0)
       {						/* Loop, reading and parsing  */
          nsites->n++;				/* for integer ie new site id.*/
@@ -438,12 +440,14 @@ void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_i
               else
                  (void)strcpy(s_ptr->name, name);
               s_ptr->flag |= S_NAME;
+	      /*FALLTHRU*/
            case 6:				/* Site charge supplied.      */
               if(s_ptr->flag & S_CHARGE && charge != s_ptr->charge)
                  message(&nerrs,line,ERROR,CCONF,id, s_ptr->charge);
               else
                  s_ptr->charge = charge;
               s_ptr->flag |= S_CHARGE;
+	      /*FALLTHRU*/
            case 5:				/* Site mass supplied.        */
               if(s_ptr->flag & S_MASS && mass != s_ptr->mass)
                  message(&nerrs,line,ERROR,MCONF,id, s_ptr->mass);
@@ -452,6 +456,7 @@ void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_i
               else
                  s_ptr->mass = mass;
               s_ptr->flag |= S_MASS;
+	      /*FALLTHRU*/
            case 4:				/* All site co-ordinates      */
 	      for( i = 0; i < 3; i++ )
 	         spec->p_f_sites[isite][i] = p_f_sites[i];
@@ -557,15 +562,14 @@ void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_i
  *    species  x  y  z  q0  q1  q2  q3                                        *
  * 'species'  is the name,  x, y, z are FRACTIONAL co-ords and 4 quaternions. *
  ******************************************************************************/
-void	lattice_start(FILE *file, system_mp system, spec_mp species, quat_mt (*qpf))
-    	       				/* File to read info from	      */
-                 			/* System info struct		      */
-       	        			/* Array of species info structs      */
-       	      				/* Princ frame rotation quaternion    */
+void	lattice_start(FILE *file,       /* File to read info from             */
+		      system_mp system, /* System info struct                 */ 
+		      spec_mp species,  /* Array of species info structs      */
+		      quat_mt (*qpf))   /* Princ frame rotation quaternion    */
 {
    typedef struct init_s {int species;  struct init_s *next;
                   double r[3], q[4];} init_mt; 	/* For linked list of coords  */
-   init_mt	*cur, *next, *init = NULL;		/* Current and header of list */
+   init_mt	*cur, *next, *init = 0;		/* Current and header of list */
    double	a, b, c, calpha, cbeta, cgamma;	/* Unit cell lengths, angles  */
    int		ix, iy, iz, nx, ny, nz;		/* Number of unit cells in MDC*/
    spec_mp	spec;
@@ -647,7 +651,7 @@ void	lattice_start(FILE *file, system_mp system, spec_mp species, quat_mt (*qpf)
    if(nerrs > 0)				/* Is file all correct?       */
       message(NULLI, NULLP, FATAL, INITER, nerrs,(nerrs>1)?'s':' ');
 
-   for(cur = init; cur != NULL; cur = cur->next)
+   for(cur = init; cur != 0; cur = cur->next)
    {
       spec = species + cur->species;
       for(ix = 0; ix < nx; ix++)
@@ -667,7 +671,7 @@ void	lattice_start(FILE *file, system_mp system, spec_mp species, quat_mt (*qpf)
 	       nmols[cur->species]++;
 	    }
    }
-   for(cur = init; cur != NULL; cur = next)
+   for(cur = init; cur != 0; cur = next)
    {
       next = cur -> next;
       xfree(cur);

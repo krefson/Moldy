@@ -218,15 +218,15 @@ print:		$(CFILES) $(HFILES) $(AHFILES)
 		touch print
 
 lint:		
-		$(LINT) $(XDR) $(LFLAGS) $(CFILES) -lm
+		$(LINT) $(XDR) $(CFLAGS) $(LFLAGS) $(CFILES) $(LIBS)
 
 lint-utils2:		
-		$(LINT) $(XDR) $(LFLAGS) mdshak.c $(SHAKC) -lm
-		$(LINT) $(XDR) $(LFLAGS) msd.c $(SHAKC) -lm
-		$(LINT) $(XDR) $(LFLAGS) mdbond.c $(SHAKC) -lm
-		$(LINT) $(XDR) $(LFLAGS) mdavpos.c $(SHAKC) -lm
-		$(LINT) $(XDR) $(LFLAGS) ransub.c $(SHAKC) -lm
-		$(LINT) $(XDR) $(LFLAGS) mdvaf.c $(SHAKC) -lm
+		$(LINT) $(XDR) $(CFLAGS) $(LFLAGS) mdshak.c $(SHAKC) $(LIBS)
+		$(LINT) $(XDR) $(CFLAGS) $(LFLAGS) msd.c $(SHAKC) $(LIBS)
+		$(LINT) $(XDR) $(CFLAGS) $(LFLAGS) mdbond.c $(SHAKC) $(LIBS)
+		$(LINT) $(XDR) $(CFLAGS) $(LFLAGS) mdavpos.c $(SHAKC) $(LIBS)
+		$(LINT) $(XDR) $(CFLAGS) $(LFLAGS) ransub.c $(SHAKC) $(LIBS)
+		$(LINT) $(XDR) $(CFLAGS) $(LFLAGS) mdvaf.c $(SHAKC) $(LIBS)
 
 lint-utils:	lint-utils2
 		for file in moldyext.c dumpconv.c dumpext.c manalyze.c bdist.c;do\

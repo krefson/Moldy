@@ -22,6 +22,16 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.26  2000/11/06 16:02:06  keith
+ *       First working version with a Nose-Poincare thermostat for rigid molecules.
+ *
+ *       System header updated to include H_0.
+ *       Dump performs correct scaling  of angular velocities, but dumpext still
+ *          needs to be updated to read this.
+ *       XDR functions corrected to work with new structs.
+ *       Parallel broadcast of config also updated.
+ *       Some unneccessary functions and code deleted.
+ *
  *       Revision 2.25  2000/10/20 15:15:48  keith
  *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
  *
@@ -95,11 +105,12 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2.25 2000/10/20 15:15:48 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2.26 2000/11/06 16:02:06 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
 #include	"structs.h"
+#include	"stdlib.h"
 #include	"messages.h"
 /*========================== system  include files ===========================*/
 #include	<signal.h>
@@ -130,11 +141,16 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2
 #endif
 #endif
 /*========================== External function declarations ==================*/
-gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+gptr            *talloc(int n, size_mt size, int line, char *file);
+void            tfree(gptr *p);  
 gptr		*av_ptr(size_mt *size, int av_convert);
 gptr            *rdf_ptr(int *);
-void		init_averages(int nspecies, char *vsn, long int roll_interval, long int old_roll_interval, int *av_convert);
+void		init_averages(int nspecies, char *vsn, long int roll_interval, 
+			      long int old_roll_interval, int *av_convert);
 void		allocate_dynamics(system_mp system, spec_mt *species);
+void		init_rdf(system_mp system);
+unsigned long	getseed(void);
+void		smdrand(long unsigned int seed);
 extern int 	ithread, nthreads;
 /*====================== Utilities for interface functions ===================*/
 #ifdef TCGMSG
@@ -386,7 +402,7 @@ par_isum(int *buf, int n)
    if(n > tmpsize)
    {
       if( tmpbuf )
-	 free(tmpbuf);
+	 xfree(tmpbuf);
       tmpbuf = aalloc(n, int);
       tmpsize = n;
    }
@@ -578,7 +594,7 @@ par_rsum(real *buf, int n)
    if(n > tmpsize)
    {
       if( tmpbuf )
-	 free(tmpbuf);
+	 xfree(tmpbuf);
       tmpbuf = dalloc(n);
       tmpsize = n;
    }
@@ -598,7 +614,7 @@ par_dsum(double *buf, int n)
    if(n > tmpsize)
    {
       if( tmpbuf )
-	 free(tmpbuf);
+	 xfree(tmpbuf);
       tmpbuf = aalloc(n, double);
       tmpsize = n;
    }
@@ -867,7 +883,6 @@ par_collect_all(real *send, real *recv, int n, int stride, int nblk)
 void
 par_collect_all(real *send, real *recv, int n, int stride, int nblk)
 {
-   int i;
    int  blens[2];
    MPI_Datatype vtype, block, types[2];
    MPI_Aint displs[2];
@@ -1049,15 +1064,15 @@ par_abort(int code)
 /******************************************************************************
  *  copy_sysdef                                                            *
  ******************************************************************************/
-void	copy_sysdef(system_mp system, spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr)
-         	       			/* Pointer to system array (in main)  */
-       		          		/* Pointer to be set to species array */
-       		           		/* To be pointed at site_info array   */
-      		         		/* To be pointed at potpar array      */
+/*ARGSUSED*/
+void	copy_sysdef(system_mp system,   /* Pointer to system array (in main)  */
+		    spec_mp *spec_ptr,  /* Pointer to be set to species array */
+		    site_mp *site_info, /* To be pointed at site_info array   */ 
+		    pot_mp *pot_ptr)    /* To be pointed at potpar array      */
 {
+#ifdef SPMD
    spec_mp	spec;
    int		n_pot_recs;
-#ifdef SPMD
    /*
     * Fetch "system" struct
     */
@@ -1089,19 +1104,20 @@ void	copy_sysdef(system_mp system, spec_mp *spec_ptr, site_mp *site_info, pot_mp
     */
    n_pot_recs = SQR(system->max_id);
    if( ithread > 0 )
-      *pot_ptr = (pot_mt*)aalloc(n_pot_recs*sizeof(pot_mt), char);
+      *pot_ptr = aalloc(n_pot_recs, pot_mt);
    par_broadcast((gptr*)*pot_ptr, n_pot_recs, sizeof(pot_mt), 0);
 #endif
 }
 /******************************************************************************
  *  copy_dynamics()							      *
  ******************************************************************************/
+/*ARGSUSED*/
 void	copy_dynamics(system_mp system)
 {
+#ifdef SPMD
    gptr		*ap;			/* Pointer to averages database       */
    size_mt	asize;			/* Size of averages database	      */
 
-#ifdef SPMD
    par_broadcast((gptr*)system->c_of_m,3*system->nmols, sizeof(real), 0);
    par_broadcast((gptr*)system->vel,   3*system->nmols, sizeof(real), 0);
    par_broadcast((gptr*)system->velp,  3*system->nmols, sizeof(real), 0);
@@ -1130,14 +1146,16 @@ void	copy_dynamics(system_mp system)
  *               This is for parallel implementations and allows "start_up"   *
  *		 to be called on one processor.                               *
  ******************************************************************************/
-void replicate(contr_mt *control, system_mt *system, spec_mt **spec_ptr, site_mt **site_info, pot_mt **pot_ptr, restrt_mt *restart_header)
+/*ARGSUSED*/
+void replicate(contr_mt *control, system_mt *system, spec_mt **spec_ptr, 
+	       site_mt **site_info, pot_mt **pot_ptr, restrt_mt *restart_header)
 {
+#ifdef SPMD
    int av_convert;
    int jran;
    /*
     *  Fetch the top-level structs
     */
-#ifdef SPMD
    par_broadcast((gptr*)control, 1, sizeof *control, 0);
    par_broadcast((gptr*)restart_header, 1, sizeof *restart_header, 0);
    /*

@@ -26,6 +26,16 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.18  2000/11/15 17:52:00  keith
+ *       Changed format of dump files.
+ *       Added second struct with sufficient information
+ *       about the simulation that most utility programs
+ *       (namely those which do not need site co-ordinates)
+ *       should not need to read sys-spec or restart files.
+ *
+ *       New options "-c -1" to dumpext prints header info.
+ *       -- dumpanal removed.
+ *
  *       Revision 2.17  2000/11/09 16:28:03  keith
  *       Updated dump file format for new Leapfrog dynamics\nAdded #molecules etc to dump header format
  *
@@ -111,7 +121,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.17 2000/11/09 16:28:03 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.18 2000/11/15 17:52:00 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -124,8 +134,10 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.17 2
 
 bool_t xdr_real(XDR *xdrs, real *rp)
 {
+   /*CONSTCOND*/
    if( sizeof(real) == sizeof(double) )
       return xdr_double(xdrs, (double*)rp);
+   /*CONSTCOND*/
    else if( sizeof(real) == sizeof(float) )
       return xdr_float(xdrs, (float*)rp);
    else
@@ -353,20 +365,35 @@ xdr_vector(xdrs, basep, nelem, elemsize, xdr_elem)
 #endif
 #else
 
+/*ARGSUSED*/
 bool_t xdr_averages(XDR *xdrs, gptr *ap){return 0;}
+/*ARGSUSED*/
 bool_t xdr_contr(XDR *xdrs, contr_mt *cp){return 0;}
+/*ARGSUSED*/
 bool_t xdr_dump(XDR *xdrs, dump_mt *sp){return 0;}
+/*ARGSUSED*/
 bool_t xdr_dump_sysinfo(XDR *xdrs, dump_sysinfo_mt *sp){return 0;}
+/*ARGSUSED*/
 bool_t xdr_pot(XDR *xdrs, pot_mt *sp){return 0;}
+/*ARGSUSED*/
 bool_t xdr_real(XDR *xdrs, real *rp){return 0;}
+/*ARGSUSED*/
 bool_t xdr_restrt(XDR *xdrs, restrt_mt *sp){return 0;}
+/*ARGSUSED*/
 bool_t xdr_site(XDR *xdrs, site_mt *sp){return 0;}
+/*ARGSUSED*/
 bool_t xdr_species(XDR *xdrs, spec_mt *sp){return 0;}
+/*ARGSUSED*/
 bool_t xdr_system(XDR *xdrs, system_mt *sp){return 0;}
+/*ARGSUSED*/
 bool_t xdr_system_2(XDR *xdrs, system_mt *sp){return 0;}
+/*ARGSUSED*/
 void   xdr_set_av_size_conv(size_mt size, int av_conv);
+/*ARGSUSED*/
 void   xdr_set_npotpar(int npotpar);
 
+/*ARGSUSED*/
 bool_t	xdr_bool (void) {return 0;}
+/*ARGSUSED*/
 bool_t	xdr_int (void) {return 0;}
 #endif

@@ -29,6 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: rdf.c,v $
+ *       Revision 2.11  2000/10/20 15:15:48  keith
+ *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
+ *
  *       Revision 2.9.2.1  2000/09/01 11:23:39  keith
  *       Fixed to cope with site-id's with no corresponding sites, ie gaps
  *       in list.  Used to generate NaN or divide-by-zero.
@@ -157,7 +160,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/rdf.c,v 2.9.2.1 2000/09/01 11:23:39 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/rdf.c,v 2.11 2000/10/20 15:15:48 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -172,10 +175,11 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/rdf.c,v 2.9.2.
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+gptr            *talloc(int n, size_mt size, int line, char *file);
+				       /* Interface to memory allocator       */
 void            tfree(gptr *p);	       /* Free allocated memory	      	      */
-double	det(real (*a)[3]);
-void	invert(real (*a)[3], real (*b)[3]);
+double	det(mat_mt);
+void	invert(mat_mt, mat_mt);
 void	new_line(void);
 void	put_line(int c);
 double	precision(void);
@@ -199,8 +203,7 @@ gptr *rdf_ptr(int *size)
 /******************************************************************************
  *  rdf_init.  Prepare to bin rdf's.  Allocate memory and pointers	      *
  ******************************************************************************/
-void	init_rdf(system_mp system)
-         	       				/* System info struct	      */
+void	init_rdf(system_mp system)		/* System info struct	      */
 {
    int		max_id = system->max_id;
    int		idi, idj;
@@ -222,10 +225,9 @@ void	init_rdf(system_mp system)
 /******************************************************************************
  *  rdf_calc.  Calculate site pair distances and bin for RDF.                 *
  ******************************************************************************/
-void	rdf_calc(real **site, system_mp system, spec_mt *species)
-    		       				/* Site co-ordinate array     */
-         	       				/* System info struct	      */
-       	          			/* Species info struct array  */
+void	rdf_calc(real **site,                   /* Site co-ordinate array     */
+		 system_mp system,              /* System info struct         */ 
+		 spec_mt *species)              /* Species info struct array  */
 {
    spec_mp	spec;
    register double	t;
