@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 2.1 93/07/19 13:27:15 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 2.1 93/08/18 20:54:03 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 2.1  93/08/18  20:54:03  keith
+ * Tidied up clashes over ABS, MIN, MAX macros.
+ * 
  * Revision 2.1  93/07/19  13:27:15  keith
  * Added XDR capability for backup and dump files.
  * 
@@ -127,11 +130,21 @@ what you give them.   Help stamp out software-hoarding!  */
  * Version ID strings
  */
 #define          REVISION         "$Revision: 2.1 $"
-#define		 REVISION_DATE    "$Date: 93/07/19 13:27:15 $"
+#define		 REVISION_DATE    "$Date: 93/08/18 20:54:03 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
  ******************************************************************************/
+/*
+ * See if we can detect IBM RS6000. No preprocessor by default, so
+ * user MUST user "-DRS6000" on command line".
+ * _ALL_SOURCE is necessary to make XDR stuff work.
+ */
+#ifdef RS6000
+#   define __unix__
+#   define _ALL_SOURCE
+#   define ANSI_LIBS
+#endif
 /*
  *  Set symbol USG to identify system V variant of unix, BSD for Berkeley.
  */

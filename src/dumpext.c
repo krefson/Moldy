@@ -25,15 +25,10 @@ what you give them.   Help stamp out software-hoarding!  */
 #include 	<stdio.h>
 #include	"structs.h"
 #ifdef USE_XDR
-#ifdef sun
-#   define free xxfree
 #   include	"xdr.h"
-#   undef free
-#else
-#   include	"xdr.h"
-#endif
 #endif
 
+extern	char * strdup();
 /******************************************************************************
  * strstr replacement for pre-ANSI machines which don't have it.              *
  ******************************************************************************/

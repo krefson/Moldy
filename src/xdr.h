@@ -26,12 +26,23 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	xdr.h,v $
+ * Revision 2.2  93/09/06  14:42:47  keith
+ * Fixed portability problems/bugs in XDR code.
+ * 
  * Revision 2.1  93/07/19  13:29:47  keith
  * Support for XDR backup/dump routines.
  * 
  */
 /*========================== Library include files ===========================*/
 #ifdef USE_XDR
+
+#ifdef sun
+#   define free xxfree
+#endif
+#ifdef RS6000
+#   define malloc xxmalloc
+#endif
+
 #ifdef vms
 #include	"rpc_types.h"
 #include	"rpc_xdr.h"
@@ -40,6 +51,13 @@ what you give them.   Help stamp out software-hoarding!  */
 #include	<rpc/types.h>
 #include	<rpc/xdr.h>
 #endif
+#ifdef sun
+#   undef free
+#endif
+#ifdef RS6000
+#   undef  malloc
+#endif
+
 #else
 typedef	char XDR;
 typedef int bool_t;
