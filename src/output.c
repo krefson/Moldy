@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.26  2002/09/19 09:26:29  kr
+ *       Tidied up header declarations.
+ *       Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *       Revision 2.25  2002/02/27 17:48:34  kr
  *       Reworked auto-setting of Ewald parameters.
  *         Added new control parameter "ewald-accuracy" to refine auto-setting.
@@ -245,7 +249,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/output.c,v 2.25 2002/02/27 17:48:34 kr Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/output.c,v 2.26 2002/09/19 09:26:29 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -506,16 +510,20 @@ void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
    for(spec = species; spec < &species[system->nspecies]; spec++)
    {
       (void)printf(" %s", spec->name); new_line();
-      format_int("Number of molecules",spec->nmols);
+      if( spec->charge == 0.0 )
+         format_int("Number of molecules",spec->nmols);
+      else
+         format_int("Number of ions",spec->nmols);
       format_int("Number of sites",spec->nsites);
       format_dbl("Mass",spec->mass,MUNIT_N);
-      format_dbl("Electric Charge", spec->charge*CONV_Q,CONV_Q_N);
+      format_dbl("Electric charge", spec->charge*CONV_Q,CONV_Q_N);
       if(spec->nsites > 1 )
 	 format_dbl("Dipole moment",spec->dipole*CONV_D,CONV_D_N);
       if(spec->rdof == 0)
       {
 	 (void)printf(
-	     "\t%s molecule has no rotational degrees of freedom", spec->name);
+	     "\t%s %s has no rotational degrees of freedom", spec->name, (spec->charge==0)?
+                     "molecule":"ion");
 	 new_line();
       }
       else
