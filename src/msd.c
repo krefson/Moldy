@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.22 1999/11/01 17:25:43 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.24 1999/11/15 11:50:39 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.2
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 1.24  1999/11/15 11:50:39  keith
+ *  Extended msd with spatial selection abilities of mdavpos.
+ *
  *  Revision 1.23  1999/11/15  17:16:13  craig
  *  Extended position limits to apply to msd as well as traj calcs.
  *
@@ -312,6 +315,7 @@ int             nmsd, sp_range[3];
 
    for(spec = species+sp_range[0]; spec <= species+sp_range[1]; spec += sp_range[2])
    {
+       printf("# ");
        puts(spec->name);
        for( imsd = 0; imsd < nmsd; imsd++)
        {
