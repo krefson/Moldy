@@ -27,6 +27,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  * $Log: main.c,v $
+ * Revision 2.12  1996/09/03 15:01:12  keith
+ * Added test for divergent parallel trajectories.
+ *
+ * Revision 2.11  1996/03/19 15:48:56  keith
+ * Timing message now printed on thread zero only.
+ *
  * Revision 2.11  1996/03/19 15:48:22  keith
  * *** empty log message ***
  *
@@ -156,7 +162,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/main.c,v 2.11 1996/03/19 15:48:22 keith Exp $";
+static char *RCSid = "$Header: /home/rahman/keith/moldy/src/RCS/main.c,v 2.12 1996/09/03 15:01:12 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -173,6 +179,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/main.c,v 2.1
 void	start_up();
 void	do_step();
 void	values();
+double	value();
 void	averages();
 void	output();
 void	rescale();
@@ -191,6 +198,7 @@ void    par_sigintreset();
 void    par_finish();
 void    par_isum();
 void    par_imax();
+void    par_broadcast();
 void    replicate();
 #endif
 #if defined(ANSI) || defined(__STDC__)
@@ -244,6 +252,7 @@ char	*argv[];
    int		backup_restart;
    static mat_mt	stress_vir;
    static double	pe[NPE];
+   double t0, t00;
    double	delta_cpu = 0.0, cpu_base = cpu();
    double	rt = rt_clock();
    vec_mt	(*meansq_f_t)[2];
@@ -370,13 +379,24 @@ char	*argv[];
 	 }
       }
       if(delta_cpu == 0.0) delta_cpu = cpu() - cpu_base;/* Time for a timestep*/
-      /*
-       * Better make sure every process wants to stop at the same time!
-       */
       if(  cpu()-cpu_base+delta_cpu >= control.cpu_limit )
 	 sig_flag++; 	/* Cheat */
 #ifdef SPMD
+      /*
+       * Better make sure every process wants to stop at the same time!
+       */
       par_imax(&sig_flag);
+      /*
+       * Vital consistency check that all threads are absolutely in sync.
+       * Use Temperature as it's a function of all KEs & therefore trajs.
+       */
+      if( control.istep%10 == 0)
+      {
+	 t0 = t00 = value(t_n,0);
+	 par_broadcast(&t0, 1, sizeof(double), 0);
+	 if( t0 != t00)
+	    message(NULLI, NULLP, FATAL, DESYNC, ithread, t0, t00);
+      }
 #endif
    }					/* End of main MD timestep loop	      */
    
