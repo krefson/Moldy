@@ -14,6 +14,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 1.4  89/10/12  16:42:37  keith
+ * Eleminated a few inefficiencies in non-coulombic LJ and MCY loops.
+ * 
  * Revision 1.3  89/07/04  18:42:07  keith
  * Fixed error in kernel and force which led to sites being allocated the
  * wrong potential parameters.  Needed extra parameter to kernel.
@@ -26,7 +29,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/kernel.c,v 1.3 89/07/04 18:42:07 keith Stab $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/kernel.c,v 1.4 89/10/12 16:42:37 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -35,14 +38,15 @@ static char *RCSid = "$Header: /home/tigger/keith/md/RCS/kernel.c,v 1.3 89/07/04
 #include <math.h>
 #endif
 /*========================== Program include files ===========================*/
-#include "defs.h"
+#include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
 void message();
 /*========================== Potential type specification ====================*/
-char	*types[] = {"lennard-jones","buckingham","mcy"};
-int	npotp[]  = {2,		    3,	 	 4};
-int	npott=(sizeof npotp / sizeof(int));
+pots_t	potspec[]  = {{"lennard-jones",2},
+		      {"buckingham",3},
+                      {"mcy",4}};
+int	npott=(sizeof potspec / sizeof(pots_t));
 /*========================== Macros ==========================================*/
 
 #define E1	 0.254829592		/* Polynomial Constants used in	      */
