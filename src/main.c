@@ -7,6 +7,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.18  92/06/12  12:55:58  keith
+ * Mods to make it work on VMS again.  Ugh.
+ * 
  * Revision 1.17  92/06/11  20:31:49  keith
  * Added file locking against multiple runs using same dump or backup files.
  * 
@@ -74,7 +77,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.17 92/06/11 20:31:49 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.18 92/06/12 12:55:58 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -139,7 +142,7 @@ char	*argv[];
 {
    system_t	system;
    spec_t	*species;
-   site_t	*site_info;
+   asite_t	*site_info;
    pot_t	*potpar;
    mat_t	stress_vir;
    double	pe[NPE];

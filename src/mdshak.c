@@ -282,7 +282,7 @@ schakal_out(n, system, species, site_info, insert)
 int	n;
 system_t	*system;
 spec_t		species[];
-site_t		site_info[];
+asite_t		site_info[];
 char		*insert;
 {
    double	**site = (double**)arralloc(sizeof(double),2,
@@ -389,7 +389,7 @@ moldy_out(n, system, species, site_info, insert)
 int	n;
 system_t	*system;
 spec_t		species[];
-site_t		site_info[];
+asite_t		site_info[];
 char		*insert;
 {
    spec_p	spec, frame_spec  = NULL;
@@ -443,7 +443,7 @@ char	*argv[];
    restrt_t	restart_header;
    system_t	system;
    spec_t	*species;
-   site_t	*site_info;
+   asite_t	*site_info;
    pot_t	*potpar;
    quat_t	*qpf;
    contr_t	control_junk;

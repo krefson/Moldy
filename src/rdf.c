@@ -8,6 +8,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.15  92/09/22  14:48:13  keith
+ * Tidied up calls to improve "lint" rating.
+ * 
  * Revision 1.14  92/06/26  17:03:25  keith
  * Got rid of assumption that memory returned by talloc() or
  * arralloc() is zeroed.  This enhances ANSI compatibility.
@@ -67,7 +70,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.14 92/06/26 17:03:25 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.15 92/09/22 14:48:13 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -196,7 +199,7 @@ VECTORIZE
 void	print_rdf(system, species, site_info)
 system_t	*system;
 spec_t		species[];
-site_t		site_info[];
+asite_t		site_info[];
 {
    int		idi, idj, col, ibin, is;
    int		*nfrac = ialloc(system->max_id);  /* Per site count of system*/

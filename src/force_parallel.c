@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.28 92/09/22 14:55:09 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.29 92/10/01 18:07:19 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -365,8 +365,8 @@ double  cutoff;
             if(dist < SQR(cutoff))
             {
 	       for(i=0; i<=1; i++)
-		  for(j=-1; j<=1; j++)
-		     for(k=-1; k<=1; k++)
+		  for(j = -1; j <= 1; j++)
+		     for(k = -1; k <= 1; k++)
 			cellmap[ix+i][iy+j][iz+k] = 1;
 
 #ifdef DEBUG1

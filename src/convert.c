@@ -3,6 +3,16 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	convert.c,v $
+ * Revision 1.3  91/08/15  18:11:49  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
  * Revision 1.2  90/05/21  15:29:28  keith
  * Moved definition of struct pot_dim[][] from convert.c to kernel.c.
  * 
@@ -11,7 +21,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/convert.c,v 1.3 91/08/14 14:23:25 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/convert.c,v 1.3 91/08/15 18:11:49 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -74,7 +84,7 @@ unit_p		unit_from, unit_to;	/* Values of units for conversion     */
 pot_t		potpar[];		/* Array of potpar records[max_id**2] */
 int		npotpar;		/* Number of 'active' parameters      */
 int		ptype;			/* Potential type		      */
-site_t		site_info[];		/* Site specification array[max_id]   */
+asite_t		site_info[];		/* Site specification array[max_id]   */
 int		max_id;			/* How many site id's		      */
 {
    int		idi, idj, ip;		/* Counters for id's and potpar	      */
