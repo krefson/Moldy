@@ -19,9 +19,44 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/md/moldy/RCS/defs.h,v 2.11 1996/11/05 16:50:29 keith Exp $
+ * $Header: /home/eeyore_data/keith/moldy/src/RCS/defs.h,v 2.12.1.5 1998/12/14 15:48:01 keith Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.12.1.5  1998/12/14 15:48:01  keith
+ * Picky picky picky
+ *
+ * Revision 2.12.1.5  1998/12/14 15:42:45  craig
+ * Pressure units changed from "Mpa" to "MPa"
+ *
+ * Revision 2.12.1.4  1998/12/03 15:47:26  keith
+ * Added cache line size tuned for Cray T3E and SGI Origin 2000.
+ *
+ * Revision 2.12.1.3  1998/05/07 17:06:11  keith
+ * Reworked all conditional compliation macros to be
+ * feature-specific rather than OS specific.
+ * This is for use with GNU autoconf.
+ *
+ * Revision 2.12.1.2  1998/01/27 15:44:56  keith
+ * Restructured configuration macros to be more rational.  There should
+ * now be V. few refs to OS or machine-specific macros in actual code.
+ * Standardised on __unix__, __WIN32__, vms variants of macros.
+ *
+ * New macros HAVE_GETOPS, ALLOC_SEPARATELY, ALLOC_ALIGN.
+ * Changed HAS_POPEN to HAVE_POPEN
+ *
+ * Revision 2.12.1.1  1998/01/15 12:05:37  keith
+ * Changed to "HAVE_POPEN" macro from system-specifics.
+ * Defined HAVE_POPEN for unix and VMS only so far.
+ *
+ * Corrected __sgi__ macro to __sgi.
+ *
+ * Revision 2.13  1998/01/09 11:36:01  keith
+ * Changed to "HAVE_POPEN" macro from system-specifics.
+ * Defined HAVE_POPEN for unix and VMS only so far.
+ *
+ * Revision 2.12  1997/10/15 14:07:15  keith
+ * Null update for version release.
+ *
  * Revision 2.11  1996/11/05 16:50:29  keith
  * Release for 2.11.
  * Added ANSI_LIBS for Sun Solaris2
@@ -69,7 +104,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Got rid of all global (external) data items except for
  * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
+ * (pot_dim, potspec, prog_unit) are declared with const
  * qualifier macro which evaluates to "const" or nil
  * depending on ANSI/K&R environment.
  * Also moved as many "write" instantiations of "control"
@@ -78,7 +113,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Declared as "static"  all functions which should be.
  *
- * Added CONST qualifier to (re-)declarations of ANSI library
+ * Added const qualifier to (re-)declarations of ANSI library
  * emulation routines to give reliable compilation even
  * without ANSI_LIBS macro. (#define's away for K&R
  * compilers)
@@ -86,7 +121,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Now recognises _UNICOS macro and defines "unix".
  * Specific MSDOS file names added on __MSDOS__ macro.
- * Evaluates CONST macro to const or nil depending on
+ * Evaluates const macro to const or nil depending on
  * ANSI/KR environment.
  * Added size_mt typedef (ulong) for interfacing with lib fns.
  *
@@ -220,140 +255,28 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 2.11 $"
-#define		 REVISION_DATE    "$Date: 1996/11/05 16:50:29 $"
+#define          REVISION         "$Revision: 2.12.1.5 $"
+#define		 REVISION_DATE    "$Date: 1998/12/14 15:48:01 $"
 #define		 REVISION_STATE   "$State: Exp $"
-/******************************************************************************
- *  Configurational information.  Edit this to tailor to your machine	      *
- ******************************************************************************/
-/*
- * See if we can detect IBM RS6000.
- * _ALL_SOURCE is necessary to make XDR stuff work.
- */
-#ifdef _AIX
-#   define __unix__
-#   define ANSI_LIBS
-#   ifndef _ALL_SOURCE
-#      define _ALL_SOURCE
-#   endif
-#endif
-/*
- * To allow XDR stuff to work on HP.  Surely there's a more general
- * way of doing this? I think that HPs header files are broken.
- */
-#if defined(__hpux) && ! defined(__convex_spp)
-#define _HPUX_SOURCE
+
+#ifdef HAVE_CONFIG_H
+#   include "config.h"
+#else
+#   include "defconf.h"
 #endif
 
-#if (defined(__unix__) || defined(__unix) || defined(_unix_) || defined(_unix) || defined(_UNICOS)) && !defined(unix)
-#   define unix
-#endif
-#ifdef __vms
-#   ifndef vms
-#      define vms
-#   endif
-#   ifndef VMS
-#      define VMS
-#   endif
-#endif
-#ifdef ardent
-#   define ARDENT
-#   define NEED_XDR_VECTOR
-#endif
-/*
- * Define operating-system dependant default filenames
- */
-#if defined(__MSDOS__) || defined(__WATCOMC__)
+#include <errno.h>
+
+#ifndef BACKUP_FILE
 #   define BACKUP_FILE	"MDBCK"
+#endif
+#ifdef TEMP_FILE
 #   define TEMP_FILE	"MDTEMPX"
-#   define LOCKEX		"$LK"
-#endif
-#ifdef vms
-#   define BACKUP_FILE	"MDBACKUP.DAT"
-#   define TEMP_FILE	"MDTEMPXXXX.DAT"
-#   define LOCKEX		"$LCK"
-#endif
-#ifdef CMS
-#   define BACKUP_FILE	"MDBACKUP MOLDY A1"
-#   define TEMP_FILE	"MDTEMP XXXXXXXX A1"
-#endif
-#ifdef unix
-#   define LOCKEX		".lck"
 #endif
 #ifndef LOCKEX
-#   define LOCKEX		"LK"
+#   define LOCKEX	"LK"
 #endif
-/*
- * Set ANSI_LIBS only if you have the standard ANSI headers and libraries
- */
-#ifdef _CRAY
-#ifndef CRAY
-#   define CRAY
-#endif
-#endif
-#if defined(CRAY)	/* scc compiler comes with libraries*/
-#   define ANSI_LIBS
-#endif
-#ifdef __linux__
-#   define ANSI_LIBS
-#endif
-#ifdef __osf__
-#   define ANSI_LIBS
-#endif
-#ifdef __sgi__
-#   define ANSI_LIBS
-#endif
-#if defined(__sun) && defined(__SVR4) /* Solaris 2 libraries are ANSI */
-#   define ANSI_LIBS
-#endif
-/*
- * New convex compiler is ANSI, but doesn't define __STDC__ or  convexvc.
- * It has a silly macro __stdc__ which we will use instead.  convexvc
- * may not be necessary as <fastmath.h> is no longer required.  But there
- * is still veclib.
- */
-#if defined(__convexc__)
-#   if defined(__stdc__) /* Anything but "-pcc" mode */
-#      define ANSI
-#      define ANSI_LIBS
-#   endif
-#endif
-#if defined(vms)
-#   define ANSI
-#   define ANSI_LIBS
-#endif
-#if defined(__MSDOS__) || defined(__WATCOMC__)
-#   define ANSI
-#   define ANSI_LIBS
-#endif
-/*
- * Set HAVE_VPRINTF if this function is in target machine's library.
- */
-#ifdef ANSI_LIBS			/* ANSI has it			*/
-#define HAVE_VPRINTF
-#endif
-#if defined(sun) || defined(stellar) || defined(titan) /* So do these     */
-#define HAVE_VPRINTF
-#endif
-#if defined(cray) && (defined(unix) || defined(__unix__)) /* ie UNICOS   	*/
-#define HAVE_VPRINTF
-#endif
-/*
- *  Otherwise does machine have _doprnt?
- */
-#if defined(convex) || defined(sequent)
-#define HAVE_DOPRNT
-#endif
-/*
- *  Get rid of "const" keyword for non-ANSI compilers.
- */
-#if defined(__STDC__) ||  defined(ANSI)
-#   define CONST const
-#   define VOLATILE volatile
-#else
-#   define CONST /* */
-#   define VOLATILE /* */
-#endif
+
 /*
  * Hardware configuration.  Specify cache-tuning params NCACHE and NLINE
  * NCACHE is minimum size of "sites" arrays and should be a sub-multiple
@@ -370,64 +293,34 @@ what you give them.   Help stamp out software-hoarding!  */
  * 512/4 works well on HP/PA/IBM RISC/POWER/SPARC/ALPHA/MIPS so use as
  * default.  Hardware-specific values could be set here conditionally.
  */
-#define NCACHE 256
-#define NLINE 4
+#ifndef NLINE
+#   ifdef _CRAYT3E
+#      define NLINE 8
+#   endif
+#   if __mips == 4 
+#      define NLINE 16
+#   endif
+#endif
+#ifndef NCACHE
+#   define NCACHE 256
+#endif
+#ifndef NLINE
+#   define NLINE 4
+#endif
 /* 
  * Vectorisation directive translation.  N.B. Most preprocessors munge 
  * directives so the #define must substitute the preprocessor OUTPUT.
  */
-#if defined(_CRAY1)	/* This seems to be defined for all CRI PVP systems */
-#   ifdef __STDC__
-#      define VECTORIZE
-#      define NOVECTOR
-#   else
-#      define VECTORIZE ## ivdep
-#      define NOVECTOR  ## novector
-#   endif
-#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
-#else
-#if defined(__convexc__) && ! defined(__convex_spp)
-#   define VECTORIZE ;/* $dir no_recurrence */;
-#   define NOVECTOR  ;/* $dir scalar */;
-#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
-#else
-#ifdef stellar
-#   define VECTORIZE __dir NO_RECURRENCE :
-#   define NOVECTOR  __dir SCALAR :
-#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
-#else
-#ifdef ardent
-#   define VECTORIZE # pragma ivdep
-#   define NOVECTOR  # pragma novector
-#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
-#else
-#   define VECTORIZE /* Canny  vectorise on this machine!*/
-#   define NOVECTOR  /* */
-#endif
-#endif
-#endif
-#endif
-/*
- *  Set symbol USG to identify system V variant of unix, BSD for Berkeley.
- */
-#include <errno.h>
-/*
- * Berkeley error numbers appear to be very regular, so the following is
- * pretty likely to get it right.  If it doesn't, do the define by hand.
- * BSD is used to signal use of getrusage() rather than times() (unix only)
- * and absence of mem*() and strchr() functions from library.
- */
-#if defined(unix) && !defined(USG)
-#if EWOULDBLOCK==35 && EINPROGRESS==36 && EALREADY==37
-# define BSD
-#else
-# define USG
-#endif
+#ifndef VECTORIZE
+#   define VECTORIZE
+#   define NOVECTOR
 #endif
 /******************************************************************************
  *  End of machine/OS configuration.					      *
  ******************************************************************************/
+#ifndef NPOTP
 #define NPOTP 7                 /* Must be number of doubles in pot_mt       */
+#endif
 
 #ifndef SEEK_END
 #define	SEEK_SET	0
@@ -505,7 +398,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #define CONV_TM		0.01
 #define	CONV_E_N	"kJ/mol"
 #define	CONV_T_N	"K"
-#define	CONV_P_N	"Mpa"
+#define	CONV_P_N	"MPa"
 #define	CONV_F_N	"N**2/mol"
 #define	CONV_N_N	"(Nm)**2/mol"
 #define	CONV_D_N	"D"
@@ -518,10 +411,10 @@ what you give them.   Help stamp out software-hoarding!  */
 typedef	unsigned long int time_mt;/* Larger than any possible time_t */
 typedef unsigned long size_mt;    /* Wide type for passing sizeof	      */
 
-#if (defined(ANSI) || defined(__STDC__)) && !defined(VMS)
-typedef void	gptr;
-#else
+#ifdef HAVE_VOID_PTRS
 typedef char	gptr;
+#else
+typedef void	gptr;
 #endif
 
 typedef	double			real;
@@ -550,7 +443,7 @@ typedef vec_mt	*mat_mp;
 #define	xfree( ptr )	tfree( (gptr *) (ptr) )
 #define lsizeof         (size_mt)sizeof
 
-#ifdef ANSI_LIBS
+#ifdef STDC_HEADERS
 #   define memcp(s1,s2,n) (void)memcpy( (gptr*)(s1), (gptr*)(s2), (size_mt)(n))
 #   define memst(s,c,n)   (void)memset( (gptr*)(s), (c), (size_mt)(n))
 #else
