@@ -383,34 +383,35 @@ system_mt	*system;
 real		range[3][2];
 int		*range_flag;
 {
-   double	box[3];
+   double	box[3], blimit;
    mat_mp	h = system->h;
    int		i;
 
    for( i=0; i<3; i++)
    {
        box[i] = sqrt(SQR(h[0][i]) + SQR(h[1][i]) + SQR(h[2][i]));
+       blimit = MAX3(box[0], box[1], box[2]);
 
        if( range_flag[i])
           switch(i)
           {
            case 0:
-             range[i][0] = get_real("Enter x minimum: ", -1*box[i],box[i]);
-             range[i][1] = get_real("Enter x maximum: ", range[i][0],2*box[i]);
+             range[i][0] = get_real("Enter x minimum: ", -1.0*blimit,blimit);
+             range[i][1] = get_real("Enter x maximum: ", range[i][0],2.0*blimit);
              break;
            case 1:
-             range[i][0] = get_real("Enter y minimum: ", -1*box[i],box[i]);
-             range[i][1] = get_real("Enter y maximum: ", range[i][0],2*box[i]);
+             range[i][0] = get_real("Enter y minimum: ", -1.0*blimit,blimit);
+             range[i][1] = get_real("Enter y maximum: ", range[i][0],2.0*blimit);
              break;
            case 2:
-             range[i][0] = get_real("Enter z minimum: ", -1*box[i],box[i]);
-             range[i][1] = get_real("Enter z maximum: ", range[i][0],2*box[i]);
+             range[i][0] = get_real("Enter z minimum: ", -1.0*blimit,blimit);
+             range[i][1] = get_real("Enter z maximum: ", range[i][0],2.0*blimit);
              break;
           }    
        else
        {
-          range[i][0] = -1*box[i];
-          range[i][1] = box[i];
+          range[i][0] = -1.0*blimit;
+          range[i][1] = blimit;
        }
    }
    return 0;

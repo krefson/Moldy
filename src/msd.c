@@ -35,6 +35,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.2
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 1.23  1999/11/15  17:16:13  craig
+ *  Extended position limits to apply to msd as well as traj calcs.
+ *
  *  Revision 1.22  1999/11/12  11:37:51  craig
  *  Fixed bug in species number iteration.
  *
@@ -245,14 +248,15 @@ int		nslices, sp_range[3];
  * msd_calc. Calculate msds from trajectory array		       *
  ***********************************************************************/    
 void
-msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, traj_cofm, msd)
+msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, range, traj_cofm, msd)
 spec_mt		species[];
 vec_mt		**traj_cofm;
 real            ***msd;
 int		sp_range[3];
+real            range[3][2];
 int             mstart, mfinish, minc, max_av, it_inc;
 {
-   int it, irec, totmol, imsd, ispec, imol, nmols, i;
+   int it, irec, totmol, imsd, ispec, imol, nmols, cmols, i;
    spec_mp      spec;
    double       msdtmp, stmp;
    vec_mt	*tct0, *tct1;
@@ -266,6 +270,7 @@ int             mstart, mfinish, minc, max_av, it_inc;
 	 imsd = (irec-mstart)/minc;
 	 tct0 = traj_cofm[it];
 	 tct1 = traj_cofm[it+irec];
+
 	 for(i=0; i<3; i++)
 	 {
 	    totmol=0;
@@ -274,12 +279,19 @@ int             mstart, mfinish, minc, max_av, it_inc;
 	    {
 	       nmols = spec->nmols;
 	       msdtmp = 0.0;
+               cmols= 0;
 	       for( imol = 0; imol < nmols; totmol++, imol++)
 	       {
-		  stmp = tct1[totmol][i] - tct0[totmol][i] ;
-		  msdtmp += SQR(stmp);
+                  if( tct0[totmol][0] >= range[0][0] && tct0[totmol][0] <= range[0][1] &&
+                     tct0[totmol][1] >= range[1][0] && tct0[totmol][1] <= range[1][1] &&
+                        tct0[totmol][2] >= range[2][0] && tct0[totmol][2] <= range[2][1])
+                        {
+		           stmp = tct1[totmol][i] - tct0[totmol][i] ;
+		           msdtmp += SQR(stmp);
+                           cmols++;
+                        }
 	       }
-	       msd[imsd][ispec][i] += msdtmp / nmols;
+	       msd[imsd][ispec][i] += (cmols == 0 ? 0 : msdtmp / cmols);
 	    }
 	 }
       }
@@ -710,7 +722,7 @@ char	*argv[];
          zero_real(msd[0][0],nmsd*nspecies*3);
 
   /* Calculate and print msd values */
-     msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, traj_cofm, msd);
+     msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, range, traj_cofm, msd);
      msd_out(species, msd, max_av, nmsd, sp_range);
    }
    else /* Otherwise output trajectories in selected format */
