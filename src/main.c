@@ -27,6 +27,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  * $Log: main.c,v $
+ * Revision 2.14.2.1  2000/12/11 12:33:29  keith
+ * Incorporated site-pbc branch "bekker" into main "Beeman" branch.
+ *
  * Revision 2.14.4.1  2000/12/07 15:58:33  keith
  * Mainly cosmetic minor modifications and added special comments to
  * shut lint up.
@@ -175,7 +178,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.14.4.1 2000/12/07 15:58:33 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.14.2.1 2000/12/11 12:33:29 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -442,8 +445,13 @@ char	*argv[];
 	 (void)remove(control.backup_file);		/* Get rid of backup */
 
       rmlockfiles();
+#ifdef SPMD
+      printf(" *I* Run used %.2fs of CPU time and %.2fs elapsed on %d processors\n", 
+	     cpu()-cpu_base, rt_clock()-rt, nthreads);
+#else
       printf(" *I* Run used %.2fs of CPU time and %.2fs elapsed\n", 
 	     cpu()-cpu_base, rt_clock()-rt);
+#endif
    }
 #ifdef SPMD
    par_finish();
