@@ -43,6 +43,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.27  2002/09/19 09:26:27  kr
+ *       Tidied up header declarations.
+ *       Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *       Revision 2.26  2002/03/04 16:08:12  kr
  *       Fixed a number of bugs in dumpext and dumpconv related to reading the
  *       sysinfo section of the dump files.
@@ -244,7 +248,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/dump.c,v 2.26 2002/03/04 16:08:12 kr Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/dump.c,v 2.27 2002/09/19 09:26:27 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -514,7 +518,7 @@ void	dump(system_mp system, spec_mt *species,
    boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.26 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.27 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    if( ! strchr(control.dump_file, '%') )
@@ -672,7 +676,9 @@ void	dump(system_mp system, spec_mt *species,
 	 (void)close_dump(dumpf);
 	 
 	 if( nmutates++ >= NMUTATES || mutate(control.dump_file) == NULL)
-	    message(NULLI, NULLP, FATAL, MUFAIL, control.dump_file, nmutates);
+	    message(NULLI, NULLP, FATAL, MUFAIL, control.dump_file, nmutates,
+                 (nmutates==1?")":"s)"));
+	 message(NULLI, NULLP, WARNING, DMPEXS, cur_file, control.dump_file);
 	 message(NULLI, NULLP, WARNING, DMPEXS, cur_file, control.dump_file);
 	 (void)sprintf(cur_file, control.dump_file, filenum);
       }

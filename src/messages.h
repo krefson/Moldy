@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header$
+ * $Header: /usr/users/moldy/CVS/moldy/src/messages.h,v 2.31 2002/09/26 14:03:08 moldydv Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -141,7 +141,7 @@ rotational degrees of freedom (%d vs %d)"
 #define DMPEXS	"File \"%s\" exists - Dumps will be written to \"%s\""
 #define DOERRW	"Failed to open dump file \"%s\" for writing\n    -  %s"
 #define DWERR	"Write to dump file \"%s\" failed\n    -  %s"
-#define MUFAIL  "Unable to mutate dump file name \"%s\" (in %d attempts)\n"
+#define MUFAIL  "Unable to mutate dump file name \"%s\" (in %d attempt%s\n"
 #define UNKEY   "Unknown keyword \"%s\""
 #define	SYSCHG	"System has net electric charge of %.2g - \
 correction of %g kJmol(-1) added to self energy"
