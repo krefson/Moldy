@@ -8,6 +8,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.11  90/10/23  20:13:18  keith
+ * Added dummy function call to inhibit vectorization.
+ * This allows use of 'ivdep' compiler options and also
+ * works round certain bugs in cray's scc compiler.
+ * 
  * Revision 1.10  90/05/16  18:40:38  keith
  * Renamed own freer from cfree to tfree.
  * 
@@ -43,7 +48,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.10 90/05/16 18:40:38 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.11 90/10/23 20:13:18 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -56,7 +61,8 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.10 90/0
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 /*========================== External function declarations ==================*/
-void    tfree();
+char            *talloc();	       /* Interface to memory allocator       */
+void            tfree();	       /* Free allocated memory	      	      */
 double	det();
 void	invert();
 void	new_line();
@@ -127,7 +133,7 @@ spec_t	species[];			/* Species info struct array  */
       for(imol = 0; imol < spec->nmols; imol++)
       {
          (void)memcpy((char*)id_ptr, (char*)spec->site_id, 
-		      (int)spec->nsites*sizeof(int));
+		      spec->nsites*sizeof(int));
          id_ptr += spec->nsites;
       }
 

@@ -1,7 +1,11 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.12 90/09/05 10:30:57 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.13 90/09/28 13:29:45 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.13  90/09/28  13:29:45  keith
+ * Inserted braces around VECTORIZE directives and changed include files
+ * for STARDtardent 3000 series (via cond. comp symbol "ardent").
+ * 
  * Revision 1.12  90/09/05  10:30:57  keith
  * Support for cray scc added - directives and ANSI_LIBS macro set.
  * 
@@ -51,8 +55,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.12 $"
-#define		 REVISION_DATE    "$Date: 90/09/05 10:30:57 $"
+#define          REVISION         "$Revision: 1.13 $"
+#define		 REVISION_DATE    "$Date: 90/09/28 13:29:45 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -223,7 +227,7 @@ typedef quat_t	*quat_p;
 typedef real    mat_t[3][3];
 typedef vec_t	*mat_p;
 
-char	*talloc();
+#include "stddef.h"
 #define aalloc(n, type) (type *)talloc((long)n,sizeof(type),__LINE__, __FILE__)
 #define ialloc(n) aalloc(n, int)
 #define dalloc(n) aalloc(n, real)

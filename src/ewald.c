@@ -3,6 +3,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.16  91/02/07  16:52:18  keith
+ * Rewrote trig identity loops for better vectorization on Titan.
+ * Finally deleted ancient commented-out code (#if OLDEWALD and VCALLS).
+ * 
  * Revision 1.15  90/09/28  13:29:15  keith
  * Inserted braces around VECTORIZE directives and changed include files
  * for STARDtardent 3000 series (via cond. comp symbol "ardent").
@@ -64,7 +68,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.16 91/02/07 15:41:52 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.16 91/02/07 16:52:18 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -81,7 +85,8 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.16 91
 #include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
-void	tfree();
+char            *talloc();	       /* Interface to memory allocator       */
+void            tfree();	       /* Free allocated memory	      	      */
 double	err_fn();			/* Error function		      */
 double	det();				/* Determinant of 3x3 matrix	      */
 void	invert();			/* Inverts a 3x3 matrix		      */

@@ -18,6 +18,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.13  91/03/07  17:52:32  keith
+ * Macros in support of parallel version for titan added.
+ * 
  * Revision 1.12  90/10/23  20:13:14  keith
  * Added dummy function call to inhibit vectorization.
  * This allows use of 'ivdep' compiler options and also
@@ -61,7 +64,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.13 91/02/21 15:27:38 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.13 91/03/07 17:52:32 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
@@ -71,6 +74,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.13 91
 #endif
 #include "stddef.h"
 #include "stdlib.h"
+#include "string.h"
 #ifdef PARALLEL
 # ifdef ardent
 #  include <thread.h>

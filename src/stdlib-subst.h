@@ -4,6 +4,9 @@
 #ifdef ANSI_LIBS
 #   include <stdlib.h>
 #else
+
+#  include "stddef.h"
+
    extern int atoi ();
    extern char * calloc ();
    extern void free ();

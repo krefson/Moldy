@@ -7,6 +7,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.14  91/02/21  15:27:19  keith
+ * Mods for parallel version for titan added
+ * 
  * Revision 1.13  90/05/16  14:20:04  keith
  * *** empty log message ***
  * 
@@ -54,9 +57,10 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.13 90/05/16 14:20:04 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.14 91/02/21 15:27:19 keith Exp $";
 #endif
 /*========================== System include files ============================*/
+#include	<stdio.h>
 #include	<signal.h>
 #ifdef  SIGCPULIM			/* Alternative name to SIGXCPU.	      */
 #define SIGXCPU SIGCPULIM
@@ -80,6 +84,8 @@ double	cpu();
 void	write_restart();
 void	purge();
 double  rt_clock();
+char            *talloc();	       /* Interface to memory allocator       */
+void            tfree();	       /* Free allocated memory	      	      */
 /*========================== External data definition ========================*/
 contr_t		control;
 unit_t		input_unit;

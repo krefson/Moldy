@@ -14,6 +14,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	values.c,v $
+ * Revision 1.8  90/05/16  18:40:53  keith
+ * Renamed own freer from cfree to tfree.
+ * 
  * Revision 1.7  90/05/16  14:20:40  keith
  * *** empty log message ***
  * 
@@ -37,7 +40,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.7 90/05/16 14:20:40 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.8 90/05/16 18:40:53 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -62,6 +65,8 @@ char	*atime();
 void	new_line();
 void	new_lins();
 void	new_page();
+char            *talloc();	       /* Interface to memory allocator       */
+void            tfree();	       /* Free allocated memory	      	      */
 /*========================== External data references ========================*/
 extern	contr_t	control;
 extern	int	out_line, out_page;	/* Current line and page in output    */

@@ -14,6 +14,10 @@ LDFLAGS= $(LDFLAGS0) -g
 #CFLAGS= -g -O2 -va -na  $(CFLAGS0)
 #CFLAGS2= +CaliasFreePointers
 #LDFLAGS= $(LDFLAGS0) -g -z 
+#  **** Titan ****
+#CFLAGS= -O2 -vector_c -vreport -fast $(CFLAGS0)
+#CFLAGS2=  -safe=ptrs
+#LDFLAGS= $(LDFLAGS0) 
 #  **** convex ****
 #CC=	vc
 #CFLAGS= -g -O2 -va -na  $(CFLAGS0)
@@ -78,7 +82,7 @@ mdshak:		mdshak.o $(SHAKOBJS)
 utilities:	$(UTILS) mdshak
 
 protoize:	$(CFILES) $(HFILES)
-		protoize $(CFILES)
+		protoize -k $(CFILES)
 
 proto-mdshak:	mdshak.c $(SHAKC)
 		protoize mdshak.c $(SHAKC)

@@ -11,6 +11,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 1.9  91/02/19  14:51:31  keith
+ * Minor changes to get rid of misleading compiler warnings.
+ * 
  * Revision 1.8  90/08/24  17:47:26  keith
  * Made 'reset-averages' parameter actually do something.
  * 
@@ -36,7 +39,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/data/keith/moldy/RCS/restart.c,v 1.8 90/08/24 17:47:26 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.9 91/02/19 14:51:31 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -46,6 +49,8 @@ static char *RCSid = "$Header: /usr/data/keith/moldy/RCS/restart.c,v 1.8 90/08/2
 #include	"structs.h"
 #include	"messages.h"
 /*========================== External function declarations ==================*/
+char            *talloc();	       /* Interface to memory allocator       */
+void            tfree();	       /* Free allocated memory	      	      */
 int		replace();
 void		message();
 void		note();
@@ -80,7 +85,7 @@ int	nitems;
    if(stored_size != (long)size * nitems)
       message(NULLI,NULLP,FATAL,REFORM, ftell(file),
               stored_size, (long)size * nitems);
-   (void)fread(ptr, (unsigned)size, nitems, file);
+   (void)fread(ptr, size*sizeof(char), nitems, file);
    if(ferror(file))
       message(NULLI,NULLP,FATAL,REREAD,ferror(file),ftell(file));
    else if(feof(file))
@@ -116,7 +121,7 @@ int	nitems;
 {
    long       length = (long)size*nitems;
    (void)fwrite((char*)&length, sizeof length, 1, file);
-   (void)fwrite(ptr, (unsigned)size, nitems, file);
+   (void)fwrite(ptr, size*sizeof(char), nitems, file);
    if(ferror(file))
       message(NULLI,NULLP,FATAL,REWRT,ferror(file));
 }
@@ -239,7 +244,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
 
    control.reset_averages = 0;		/* This flag never propagated.	      */
    (void)memcpy((char*)&save_header, (char*)&restart_header, sizeof(restrt_t));
-   (void)strncpy(save_header.vsn, "$Revision: 1.8 $"+11,
+   (void)strncpy(save_header.vsn, "$Revision: 1.9 $"+11,
 		                  sizeof save_header.vsn-1);
    save_header.prev_timestamp = restart_header.timestamp;
    save_header.timestamp = time((time_t*)0);		/* Update header      */
