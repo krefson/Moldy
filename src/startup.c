@@ -37,6 +37,16 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.20  2000/11/06 16:02:06  keith
+ *      First working version with a Nose-Poincare thermostat for rigid molecules.
+ *
+ *      System header updated to include H_0.
+ *      Dump performs correct scaling  of angular velocities, but dumpext still
+ *         needs to be updated to read this.
+ *      XDR functions corrected to work with new structs.
+ *      Parallel broadcast of config also updated.
+ *      Some unneccessary functions and code deleted.
+ *
  *      Revision 2.19  2000/05/23 15:23:08  keith
  *      First attempt at a thermostatted version of the Leapfrog code
  *      using either a Nose or a Nose-Poincare thermostat
@@ -266,7 +276,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.19 2000/05/23 15:23:08 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.20 2000/11/06 16:02:06 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -747,6 +757,8 @@ void	initialise_sysdef(system_mp system, spec_mt *species, site_mt *site_info, q
    printf(" *D* Totals: nsites = %d, nmols = %d, nmols_r = %d, dof = %d\n",
           system->nsites, system->nmols, system->nmols_r, system->d_of_f);
 #endif
+
+   system->d_of_f -= 3;			/* Since total linear momentum = 0    */
    
    flag = false;			/* Test to see if any charges present */
    for(id = 1; id < system->max_id; id++)
