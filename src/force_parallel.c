@@ -72,12 +72,12 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.31 93/03/05 15:02:14 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.32 93/03/09 16:00:00 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
-#ifdef  convexvc
+#ifdef  stellar
 #include 	<fastmath.h>
 #else
 #include 	<math.h>
@@ -155,6 +155,26 @@ static          int nx = 0, ny = 0, nz = 0, onx = 0, ony = 0, onz = 0;
 #define modb(hmat) sqrt(SQR(hmat[0][1]) + SQR(hmat[1][1]) + SQR(hmat[2][1]))
 #define modc(hmat) sqrt(SQR(hmat[0][2]) + SQR(hmat[1][2]) + SQR(hmat[2][2]))
 /*============================================================================*/
+/******************************************************************************
+ * spxpy    Sparse add for force.c.  N.B.  MUST NOT BE VECTORIZED as ix may   *
+ *          contain duplicate entries.  This occurs if a site interacts with  *
+ *          more than one periodic copy of another site.                      *
+ ******************************************************************************/
+static void spxpy(n, sx, sy, ix)
+int	n, ix[];
+real	sx[], sy[];
+{
+   int i;
+NOVECTOR
+#ifdef __STDC__
+#pragma novector
+#endif
+   for( i = 0; i < n; i++)
+   {
+      sy[ix[i]] += sx[i];
+   }
+}
+
 /******************************************************************************
  *  cellbin.    Safe binning function for putting molecules/sites into cells. *
  *  Any error at the boundaries is disasterous and hard to detect.            *
