@@ -23,6 +23,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.7  90/04/17  10:49:47  keith
+ * Corrected test for dump and restart consistency.
+ * 
  * Revision 1.6  90/04/09  14:49:33  keith
  * Now tests for failure of mutate() and gives up rather than lloping.
  * 
@@ -46,7 +49,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.6 90/04/09 14:49:33 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.8 90/04/25 17:04:57 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -163,7 +166,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 1.6 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 1.8 $"+11,
 		                     sizeof dump_header.vsn-1);
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;
@@ -174,7 +177,7 @@ double		pe;
       while( (dumpf = fopen(cur_file, "r")) != 0 )
       {
 	 (void)fclose(dumpf);
-	 if( nmutates++ < NMUTATES || mutate(control.dump_file) == NULL)
+	 if( nmutates++ >= NMUTATES || mutate(control.dump_file) == NULL)
 	    message(NULLI, NULLP, FATAL, MUFAIL, control.dump_file, nmutates);
 	 message(NULLI, NULLP, WARNING, DMPEXS, cur_file, control.dump_file);
 	 (void)sprintf(cur_file, control.dump_file, filenum);
@@ -188,7 +191,7 @@ double		pe;
       while( dumpf = fopen(cur_file, "r"))
       {
 	 (void)fclose(dumpf);
-	 if( nmutates++ < NMUTATES || 
+	 if( nmutates++ >= NMUTATES || 
 	    mutate(strcpy(prev_file, control.dump_file)) == NULL)
 	    message(NULLI, NULLP, FATAL, MUFAIL, prev_file, nmutates);
 	 message(NULLI, NULLP, WARNING, DMPEXS, cur_file , prev_file);
