@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 2.18 1999/07/22 13:22:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/utlsup.c,v 1.1 1999/10/11 14:02:01 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -19,8 +19,10 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 
 
 void mat_vec_mul();
 void invert();
+
+char	*comm;
 /******************************************************************************
- * Dummies of moldy routines so that mdavpos may be linked with moldy library *
+ * Dummies of moldy routines so that utils may be linked with moldy library   *
  ******************************************************************************/
 void 	init_rdf()
 {}
@@ -43,7 +45,7 @@ void	note()
 
 /******************************************************************************
  *  message.   Deliver error message to possibly exiting.  It can be called   *
- *             BEFORE output file is opened, in which case outt to stderr.    *
+ *             BEFORE output file is opened, in which case output to stderr.  *
  ******************************************************************************/
 #ifdef HAVE_STDARG_H
 #   undef  va_alist
@@ -74,7 +76,7 @@ va_dcl
    sev   = va_arg(ap, int);
    format= va_arg(ap, char *);
 
-   (void)fprintf(stderr, "mdavpos: ");
+   (void)fprintf(stderr,"%s: ",comm);
    (void)vfprintf(stderr, format, ap);
    va_end(ap);
    fputc('\n',stderr);
@@ -91,7 +93,7 @@ va_dcl
 }
 
 /******************************************************************************
- *  message.   Deliver error message to possibly exiting.                     *
+ *  error.   Deliver error message to possibly exiting.                       *
  ******************************************************************************/
 #ifdef HAVE_STDARG_H
 #undef  va_alist
@@ -115,13 +117,16 @@ va_dcl
    format= va_arg(ap, char *);
 #endif
 
-   (void)fprintf(stderr, "mdavpos: ");
+   (void)fprintf(stderr, "%s: ",comm);
    (void)vfprintf(stderr, format, ap);
    fputc('\n',stderr);
    va_end(ap);
 
    exit(3);
 }
+/******************************************************************************
+ * mystrdup().  Routine for copying one string to another.                    *
+ ******************************************************************************/
 char * mystrdup(s)
 char *s;
 {
@@ -327,25 +332,27 @@ system_mt *system;
    mat_vec_mul(hinv, system->c_of_m, system->c_of_m, system->nmols);
 }
 /******************************************************************************
- * traj_con().  Connect molecular c_of_m's into continuous trajectories       * 
+ * traj_con().  Connect molecular c_of_m`s into continuous trajectories      *
  ******************************************************************************/
 void
-traj_con(system, species, prev_slice)
-system_mt	*system;
-spec_mt		species[];
-spec_mt		prev_slice[];
+traj_con(system, prev_cofm, n)
+system_mt       *system;
+vec_mt          *prev_cofm;
+int		n;
 {
-   spec_mt	*spec;
-   int		i, imol;
+    int		i, imol;
 
-   for(spec = species; spec < species+system->nspecies; prev_slice++, spec++) 
-      for( imol=0; imol<spec->nmols; imol++)
-        for (i = 0; i < 3; i++)
-             spec->c_of_m[imol][i] = spec->c_of_m[imol][i] - floor(
-                (spec->c_of_m[imol][i]-prev_slice->c_of_m[imol][i])+0.5);
+    for( imol = 0; imol < system->nmols; imol++ )
+       for( i = 0; i < 3; i++)
+       {
+          if( n > 0 ) 
+              system->c_of_m[imol][i] = system->c_of_m[imol][i]
+                     - floor(system->c_of_m[imol][i]-prev_cofm[imol][i]+0.5);
+          prev_cofm[imol][i] = system->c_of_m[imol][i];
+       }
 }
 /******************************************************************************
- * traj_con().  Connect molecular c_of_m`s into continuous trajectories       * 
+ * traj_con2().  Connect molecular c_of_m`s into continuous trajectories      * 
  ******************************************************************************/
 void
 traj_con2(species, prev_cofm, traj_cofm, sp_range)
