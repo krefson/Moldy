@@ -11,6 +11,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 1.12  91/08/16  15:59:48  keith
+ * Checked error returns from fread, fwrite, fseek and fclose more
+ * rigourously.   Called strerror() to report errors.
+ * 
  * Revision 1.11  91/08/15  18:12:14  keith
  * Modifications for better ANSI/K&R compatibility and portability
  * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
@@ -53,7 +57,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.12 91/08/16 15:26:07 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.12 91/08/16 15:59:48 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -71,7 +75,7 @@ void            tfree();	       /* Free allocated memory	      	      */
 int		replace();
 void		message();
 void		note();
-char		*av_ptr();
+gptr		*av_ptr();
 char		*atime();
 char		*cctime();
 /*========================== External data references ========================*/
