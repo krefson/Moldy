@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.3  90/04/26  15:29:48  keith
+ * Changed declaration of arralloc back to char*
+ * 
  * Revision 1.2  90/04/25  10:37:06  keith
  * Fixed bug which led to ihkl[] accessing outside bounds of chx[] etc arrays
  * when in const-pressure mode and MD cell expanded between steps.
@@ -39,7 +42,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.2 90/04/25 10:37:06 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.4 90/05/02 15:27:36 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -62,10 +65,13 @@ void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
 void	transpose();			/* Transposes a 3x3 matrix	      */
 void	mat_sca_mul();			/* Multiplies 3x3 matrix by scalar    */
 double	sum();				/* Sum of elements of 'real' vector   */
+#ifdef VCALLS
 void	saxpy();			/* A*x+y, x, y are long vectors	      */
+#endif
 char	*arralloc();			/* Allocates a dope vector array      */
 void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
+void	ewald_inner();			/* Inner loop forward reference       */
 /*========================== External data references ========================*/
 extern	contr_t	control;		/* Main simulation control record     */
 /*========================== Macros ==========================================*/
@@ -190,9 +196,6 @@ mat_t		stress;			/* Stress virial		(out) */
 	       nhkl++;
 	    }
 	 }
-   if( (hkl = (struct _hkl *)realloc((char*)hkl, (size_t)
-				     nhkl*sizeof *hkl)) == 0)
-      message(NULLI, NULLP, FATAL, "Realloc fails in Ewald");
 
    *pe -= self_energy;			/* Subtract self energy term	      */
       
@@ -353,6 +356,7 @@ VECTORIZE
  *  accumulated where specified by the arguments so it is the callers	     *
  *  responsibility to provide a separte area and accumulate the grand totals *
  *****************************************************************************/
+void
 ewald_inner(ithread, nthreads, nhkl, hkl, nsites, chx, cky, clz, shx, sky, slz,
 	    chg, vol, r_4_alpha, stress, pe, site_force)
 int ithread, nthreads, nhkl;

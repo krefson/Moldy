@@ -9,7 +9,9 @@
  *		module (kernel.c) for ease of modification.		      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	force_parallel.c,v $
+ * Revision 1.3  90/03/29  15:44:51  keith
+ * Merged force.c revisions 1.8.1.11-1.8.1.13
+ * 
  * Revision 1.2  90/03/09  17:30:29  keith
  * Modified FKERNEL ifdefs for UNICOS.
  * 
@@ -70,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.2 90/03/09 17:30:29 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.4 90/05/02 15:28:39 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -84,14 +86,12 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,
 #include "messages.h"
 /*========================== Library declarations ============================*/
 void    cfree();
-char	*realloc();
 /*========================== External function declarations ==================*/
 void    note();                         /* Make a note in output file         */
 char    *arralloc();                    /* General purpose array allocator    */
 int     search_lt();			/* Search a vector for el. < scalar   */
 double  vdot();                         /* Vector dot product                 */
 double  sum();                          /* Sum a vector                       */
-void    scatter();                      /* Interface to CRAY scatter routine  */
 void    gather();                       /* Interface to CRAY gather routine   */
 void	gatheri();			/* Integer gather		      */
 int	wheneq();			/* Array indexer		      */
@@ -102,6 +102,7 @@ void	mat_vec_mul();			/* Matrix by vector multiplier        */
 void	spaxpy();			/* Scattered vector add		      */
 void	transpose();			/* Generate 3x3 matrix transpose      */
 void    zero_real();                    /* Initialiser                        */
+void	force_inner();			/* Inner loop forward reference       */
 /*========================== External data references ========================*/
 extern  contr_t control;
 /*========================== Structs local to module =========================*/
@@ -228,10 +229,6 @@ double  cutoff;
 #endif
             }
          }
-   			/* Return unused storage to heap		*/
-   if( (nabor=(ivec_t *)realloc((char*)nabor, (size_t)inabor*sizeof(ivec_t)))
-      == NULL)
-      message(NULLI,NULLP, FATAL,"Realloc fails in neighbour_list()");
    note(NABORS,2 * inabor);
    *nnabor = inabor;
    return(nabor);
@@ -610,6 +607,7 @@ VECTORIZE
  *  in MD cell with stride = nomber of processors available.  Should be       *
  *  called once for each parallel thread.				      *
  ******************************************************************************/
+void
 force_inner(ithread, nthreads, site, chg, potp, id, n_nab_sites, n_nabors, 
 	    nabor, cell, reloc, n_frame_types, system,
 	    stress, pe, site_force)
