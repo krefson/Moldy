@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/molout.c,v 1.12.8.3 2003/08/01 00:44:01 moldydv Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/molout.c,v 1.12.8.4 2003/11/28 09:35:26 moldydv Exp $";
 #endif
 
 #include "defs.h"
@@ -174,6 +174,7 @@ static void xtl_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site
    gamma = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/a/b);
 
    printf("TITLE %s\n",control.title);
+   puts("DIMENSION 3");
    printf("CELL \n%f %f %f %f %f %f\n", a, b, c, alpha, beta, gamma);
    printf("SYMMETRY  NUMBER 1  LABEL P1\n");
    printf("SYM MAT  1.0  0.0  0.0  0.0  1.0  0.0  0.0  0.0  1.0 0.0000 0.0000 0.0000\n");
