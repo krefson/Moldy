@@ -207,7 +207,7 @@ int	bflg, nmols, xdr;
    dump_mt	header;
    float	*buf = (float*)calloc(4*nmols,sizeof(float));/* nmols > nmols_r */
    long		dump_base;
-   int		icpt, nitems;
+   int		icpt, start, nitems;
    list_mt	*mol;
    int		errflg = 0;
 #ifdef USE_XDR
@@ -276,10 +276,11 @@ int	bflg, nmols, xdr;
 	    if( cpt[icpt].mols )
 	       for(mol = molecules; mol != 0; mol = mol->next)
 	       {
-		  nitems = (mol->i + mol->num) * cpt[icpt].ncpt;
-		  if( nitems > cpt[icpt].size )
-		     nitems = cpt[icpt].size;
-		  put(buf+mol->i*cpt[icpt].ncpt, nitems, bflg);
+		  start  = mol->i   * cpt[icpt].ncpt;
+		  nitems = mol->num * cpt[icpt].ncpt;
+		  if( start+nitems > cpt[icpt].size )
+		     nitems = cpt[icpt].size - start;
+		  put(buf+start, nitems, bflg);
 	       }
 	    else
 	       put(buf, cpt[icpt].size, bflg);
