@@ -17,6 +17,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	output.c,v $
+ * Revision 1.6  89/07/04  18:46:01  keith
+ * Print_config() added. Prints control, sys-spec and configurational info
+ * which can be reread as a lattice start, for portable restart.
+ * 
  * Revision 1.4  89/06/20  18:30:36  keith
  * moved print_sysdef() from input.c to output.c
  * made definitions of 'types[]' and 'npotp[]' external (in kernel).
@@ -34,19 +38,22 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: output.c,v 1.5 89/06/23 15:36:42 keith Exp $";
+static char *RCSid = "$Header: output.c,v 1.7 89/08/10 17:19:48 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
+#include <stdio.h>
 #if ANSI || __STDC__
 #include <stdarg.h>
 #else
 #include <varargs.h>
 #endif
 #include <math.h>
+#include "string.h"
 /*========================== Program include files ===========================*/
 #include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
+void	conv_control();			/* Unit conversion for 'control'      */
 char	*atime();			/* Current date and time in ASCII     */
 char	*cctime();			/* Convert long time to ASCII.	      */
 /*========================== External data references ========================*/
@@ -263,7 +270,6 @@ void	banner_page(system, species)
 system_p	system;
 spec_t	species[];
 {
-   int		ispec;
    spec_p	spec;
    mat_p	h = system->h;
    char		version[132], *vsn=version;
@@ -289,7 +295,7 @@ spec_t	species[];
 		    control.sysdef);
    new_line();
 
-   for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
+   for(spec = species; spec < &species[system->nspecies]; spec++)
    {
       (void)printf(" %s", spec->name); new_line();
       format_int("Number of molecules",spec->nmols);
@@ -396,9 +402,9 @@ site_p          site_info;              /* pointer to site_info array         */
 pot_t           potpar[];               /* Potential parameter array          */
 {
    spec_p       spec;
-   int  ispec, isite, idi, idj, idij, ip;
+   int  isite, idi, idj, idij, ip;
    int  n_potpar = npotp[system->ptype];
-   for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
+   for(spec = species; spec < &species[system->nspecies]; spec++)
    {
       (void)fprintf(file, " %-16s  %d\n", spec->name, spec->nmols);
       for(isite=0; isite < spec->nsites; isite++)
@@ -421,7 +427,7 @@ pot_t           potpar[];               /* Potential parameter array          */
          {
             (void)fprintf(file, " %6d %6d", idi, idj);
             for(ip = 0; ip < n_potpar; ip++)
-               (void)fprintf(file, "%9g",potpar[idij].p[ip]);
+               (void)fprintf(file, " %9g",potpar[idij].p[ip]);
             (void)fputc('\n',file);
          }
       }
@@ -445,6 +451,14 @@ pot_p		potpar;			/* To be pointed at potpar array      */
    int		imol, code, i, j, k;
    double	cell_length[3], cell_angle[3];
    mat_p	h = system->h;
+   contr_t	save_control;
+
+   /*
+    * Convert 'control' to input units for correct rereading.
+    * Save current values and restore afterwards.
+    */
+   (void)memcpy((char*)&save_control, (char*)&control, sizeof control);
+   conv_control(&prog_unit, false);
 
    if( (out = fopen(save_name, "w")) == NULL )
       message(NULLI, NULLP, FATAL, OSFAIL, save_name);
@@ -511,6 +525,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
       message(NULLI,NULLP,FATAL,REWRT,ferror(out));
 
    (void)fclose(out);
+   (void)memcpy((char*)&control, (char*)&save_control, sizeof control);
 }
 
 	 
