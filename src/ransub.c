@@ -27,6 +27,10 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.16  2002/09/19 09:26:30  kr
+ *  Tidied up header declarations.
+ *  Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *  Revision 1.15  2002/09/18 09:59:18  kr
  *  Rolled in several changes by Craig Fisher:
  *  Ransub can now read polyatomic species
@@ -127,7 +131,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/ransub.c,v 1.15 2002/09/18 09:59:18 kr Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/ransub.c,v 1.16.2.1 2002/09/20 15:41:08 kr Exp $";
 #endif  
 
 #include "defs.h"
@@ -368,7 +372,8 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    int          max_id = system->max_id;
    int          dflag = 0;
    quat_mt      quaternion;
-   vec_mp       site[dopant->nsites];
+   boolean	quat_valid = 1;
+   vec_mt       *site = ralloc(dopant->nsites);
    vec_mt       pf_cofm, pf_origin;
    vec_mt       spec_origin;
    mat_mt       rot_mat;
@@ -505,14 +510,14 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
             for( i=0; i < 4; i++)
                quaternion[i] = spec->quat[imol][i];
          else
-            *quaternion = NULL;
+ 	    quat_valid = false;
 
          if( molname != NULL && !strcmp(strlower(spec->name), molname) && dopant->nmols > 0 ) /* Species being replaced */
          {
             if( positions[ipos] == imol )  /* Match species position with list of substituted positions */
             {
                specname = dopant->name;
-               if( *quaternion != NULL)
+               if( quat_valid)
                {
                   q_to_rot(quaternion, rot_mat);
                   mat_vec_mul(rot_mat, (vec_mt*)spec->p_f_sites[0], (vec_mt*)spec_origin, 1);
@@ -529,7 +534,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
 
                if( site_info[0].pad )  /* Place dopant pf origin at solvent pf origin */
                {
-                  if( *quaternion != NULL)
+                  if( quat_valid)
                   {
                      q_to_rot(quaternion, rot_mat);
                      mat_vec_mul(rot_mat, (vec_mt*)pf_cofm, (vec_mt*)pf_origin, 1);
@@ -545,7 +550,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
                      spec->c_of_m[imol][i] += (pf_origin[i] + spec_origin[i]);  /* Shift c_of_m to dopant's pf origin */
                }
                if( dopant->nsites == 1 )
-                   *quaternion = NULL;
+		  quat_valid = false;
 
                ipos++;
             }
@@ -556,7 +561,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
            (void)printf("%9g ",
               spec->c_of_m[imol][i]+0.5 - floor(spec->c_of_m[imol][i]+0.5));
 
-         if( *quaternion != NULL )                       /* Write quaternions if polyatomic */
+         if( quat_valid )                       /* Write quaternions if polyatomic */
             (void)printf("%9g %9g %9g %9g",quaternion[0],quaternion[1],
                         quaternion[2],quaternion[3]);
          (void)putchar('\n');
@@ -564,6 +569,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    }
    (void)printf("end\n");
 
+   afree(site);
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
 }
