@@ -5,6 +5,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	accel.c,v $
+ * Revision 1.3  89/05/22  18:37:04  keith
+ * Added option to scale velocities of each species separately
+ * 
  * Revision 1.2  89/04/20  17:49:08  keith
  * Added code for surface dipole part of Ewald sum (After De Leeuw et al).
  * 
@@ -13,10 +16,11 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: accel.c,v 1.3 89/05/22 14:04:42 keith Exp $";
+static char *RCSid = "$Header: accel.c,v 1.4 89/06/09 14:25:35 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<math.h>
+#include	"string.h"
 /*========================== program include files ===========================*/
 #include "structs.h"
 /*========================== Library declarations ============================*/
@@ -45,7 +49,6 @@ void            mat_vec_mul();	       /* 3 x 3 Matrix by Vector multiplier   */
 void            mean_square();	       /* Caluculates mean square of args     */
 void            rdf_calc();	       /* Accumulate and bin rdf	      */
 double 		value();	       /* Return thermodynamic average	      */
-void            vcopy();	       /* Vector copy.			      */
 double          vdot();		       /* Fast vector dot product	      */
 void            vscale();	       /* Vector by constant multiply	      */
 double          vec_dist();	       /* normalised vector distance	      */
@@ -54,6 +57,7 @@ void            note();		       /* Write message to output file	      */
 extern contr_t  control;
 /*========================== Macros ==========================================*/
 #define	CONVRG	1.0e-7
+#define	vcopy(v1,v2,n) (void)memcpy((char*)(v1),(char*)(v2),(n)*sizeof(real))
 /*============================================================================*/
 /******************************************************************************
  *   Scale_spec	rescale for an individual species			      *
@@ -384,7 +388,7 @@ mat_t           stress;		       /* Virial part of stress	(out) */
 	    if (spec->rdof > 0)
 	       euler(torque[ispec], spec->quat, spec->qdotp,
 		     spec->qddot, spec->inertia, spec->nmols);
-	 vcopy(4 * sys->nmols_r, sys->qdotp[0], 1, qd_tmp[0], 1);
+	 vcopy(qd_tmp[0], sys->qdotp[0], 4 * sys->nmols_r);
 	 beeman_2(sys->qdot[0], sys->qdotp[0], sys->qddot[0], sys->qddoto[0],
 		  sys->qddotvo[0], 4 * sys->nmols_r);
       } while (vec_dist(qd_tmp[0], sys->qdotp[0], 4 * sys->nmols_r) > CONVRG);
@@ -403,7 +407,7 @@ mat_t           stress;		       /* Virial part of stress	(out) */
       {
 	 parinello(sys->h, sys->hdotp, sys->velp, sys->acc, acc_tmp,
 		   sys->nmols);
-	 vcopy(3 * sys->nmols, sys->velp[0], 1, vel_tmp[0], 1);
+	 vcopy(vel_tmp[0], sys->velp[0], 3 * sys->nmols);
 	 beeman_2(sys->vel[0], sys->velp[0], acc_tmp[0], sys->acco[0],
 		  sys->accvo[0], 3 * sys->nmols);
       } while (vec_dist(vel_tmp[0], sys->velp[0], 3 * sys->nmols) > CONVRG);
