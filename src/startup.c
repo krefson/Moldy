@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.31.2.2  2002/09/19 10:56:32  kr
+ *      Tidied up header declarations.
+ *      Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *      Revision 2.31.2.1  2002/03/13 10:27:52  kr
  *      Trial version incorporating reciprocal-space summation for r^-2 and r^-6
  *      interactions.  This version implements a new potential "genpot46" to activate.
@@ -328,7 +332,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/startup.c,v 2.31.2.1 2002/03/13 10:27:52 kr Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS//moldy/src/startup.c,v 2.31.2.2 2002/09/19 10:56:32 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -1068,6 +1072,12 @@ void validate_control(void)
       message(&nerrs, NULLP, ERROR, INVVLF, control.k_cutoff, "k-cutoff");
    if( control.cutoff < 0.0 )
       message(&nerrs, NULLP, ERROR, INVVLF, control.cutoff, "cutoff");
+/* alpha46==0 and 9<= ptype <= 11 -> test has been moved to other place, 
+      pjm, 21.1.03 */
+   if( control.alpha46 < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, control.alpha46, "alpha46");
+   if( control.k_cutoff46 < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, control.k_cutoff46, "k-cutoff46");
    if( control.limit <= 0.0 )
       message(&nerrs, NULLP, ERROR, INVVLF, control.limit, "rdf-limit");
    if( control.subcell < 0.0 )
@@ -1307,6 +1317,9 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
       allocate_dynamics(system, *species);	/* Allocate dynamic arrays    */
 
       smdrand(control.seed);			/* Seed random number generato*/
+      if( control.alpha46 == 0.0 && (system->ptype >8) && (system->ptype<12))
+       message(NULLI, NULLP, WARNING, EW46WR, "alpha46");
+
       if( control.lattice_start )		/* Choose startup method      */
 	 lattice_start(sysdef, system, *species, qpf); /* Lattice - from file */
       else	
@@ -1383,6 +1396,10 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
 #ifdef	DEBUG
          printf(" *D* Read and converted new system specification\n");
 #endif
+	 /* Now that we know potential type ptype, perform check. pjm, 21.1.03 */
+      if( control.alpha46 == 0.0 && (system->ptype >8) && (system->ptype<12))
+       message(NULLI, NULLP, WARNING, EW46WR, "alpha46");
+
 	 qpf = qalloc(system->nspecies);
          initialise_sysdef(system, *species, *site_info, qpf);
 	 /* Consistent with saved one?*/
