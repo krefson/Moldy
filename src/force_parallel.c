@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.8 90/10/18 18:00:49 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.9 90/10/25 18:53:59 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -277,7 +277,7 @@ cell_t  *cell[];                        /* Array of cells (assume zeroed)(out)*/
 int	*frame_type;			/* Framework type counter	 (out)*/
 {
    int icell, imol, im=0, is, isite = 0;
-   double eps = precision();
+   double eps = 8.0*precision();
    vec_t ssite;
    mat_t hinv;
 
