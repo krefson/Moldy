@@ -31,8 +31,6 @@ what you give them.   Help stamp out software-hoarding!  */
 #include        "utlsup.h"
 #include	"messages.h"
 
-int		getopt(int, char *const *, const char *);
-
 #ifdef USE_XDR
    XDR          xdrs;
 #endif
@@ -377,7 +375,7 @@ main(int argc, char **argv)
    int		offset, icpt;
    int		idump0;
    int		xdr = 0;
-   int                verbose = 0;
+   int		verbose = 0;
    dump_sysinfo_mt *dump_sysinfo;
    size_mt	sysinfo_size;
    
@@ -451,8 +449,7 @@ main(int argc, char **argv)
 	 }	 
 	 break;
        case 'v':
-       verbose++;
-         break;
+         verbose++;
        case '?': 
        case 'h':
 	 errflg++;
@@ -468,7 +465,7 @@ main(int argc, char **argv)
    {
       fprintf(stderr,
 	   "Usage: dumpext [-Rn] [-Qn] [-b] [-c cpt]\
- [-t timeslices] [-m molecules] [-o output-file] dumpfiles\n");
+ [-t timeslices] [-m molecules] [-v] [-o output-file] dumpfiles\n");
       exit(2);
    }
    /*
@@ -487,7 +484,7 @@ main(int argc, char **argv)
       fprintf(stderr,"\t%-32s %d\n","All data components",0);
       for(icpt = 0; icpt < NCPT; icpt++)
 	 fprintf(stderr,"\t%-32s %d\n",cpt[icpt].name,icpt+1);
-      xcpt=get_int("Quantity index (0-13)? ",-1,NCPT);
+      xcpt=get_int("Quantity index (0-12)? ",-1,NCPT);
    }
    /*
     *  Generate list of dump files if required
@@ -535,7 +532,7 @@ main(int argc, char **argv)
 	 fprintf(stderr, "Failed to open dump file \"%s\"\n", dump_name);
 	 exit(2);
       } else if (verbose) {
-       fprintf(stderr, "Checking dump file \"%s\"\n", dump_name);
+        fprintf(stderr,"Checking dump file \"%s\"\n", dump_name);
       }
 
       /*
@@ -587,9 +584,9 @@ main(int argc, char **argv)
          fprintf(stderr,"Dump headers don't match: file\"%s\"\n", dump_name);
 	 exit(2);
       } else if (verbose) {
-      fprintf(stderr,"Dump file \"%s\" contains slices %ld to %ld\n",dump_name,
+        fprintf(stderr,"Dump file \"%s\" contains slices %ld to %ld\n",dump_name,
               header.istep/header.dump_interval,header.istep/header.dump_interval+header.ndumps-1);
-      };
+      }
 
       (void)close_dump(dump_file);
 
@@ -629,7 +626,7 @@ main(int argc, char **argv)
 
    if( xcpt > 0 && ! (1 << (xcpt-1) & level_mask[proto_header.dump_level]) )
    {
-      fprintf(stderr,"Sorry the component requested (%s)",cpt[xcpt-1].name);
+      fprintf(stderr,"The component requested (%s)",cpt[xcpt-1].name);
       fprintf(stderr," is not contained in a dump of level %d\n",
 	      header.dump_level);
       exit(2);

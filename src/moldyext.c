@@ -27,8 +27,6 @@ what you give them.   Help stamp out software-hoarding!  */
 #include "structs.h"
 #include "utlsup.h"
 
-int	getopt(int, char *const *, const char *);
-
 #define NSIGNAL 8
 #define buf_inc 128
 

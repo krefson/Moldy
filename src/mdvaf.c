@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/mdvaf.c,v 1.13.10.2 2003/07/31 02:52:45 moldydv Exp $";
+static char *RCSid = "$Header$";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -32,7 +32,21 @@ static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/mdvaf.c,v 1.13.10.2 2
  *		nb. mdvaf time intervals taken relative to extracted dump slices.     *
  ************************************************************************************** 
  *  Revision Log
- *  $Log: mdvaf.c,v $
+ *  $Log$
+ *  Revision 1.13.10.5  2004/12/07 11:03:37  cf
+ *  Added read_dump_header and made static.
+ *  Added verbose option for dumpext.
+ *
+ *  Revision 1.13.10.4  2004/12/07 10:35:56  cf
+ *  Incorporated Keith's corrections and additions.
+ *
+ *  Revision 1.13.10.3  2004/12/06 19:08:50  cf
+ *  Removed unused variables.
+ *  Removed option -c for skipping control info.
+ *  Formatted output to be similar to msd.
+ *  Choice of angular or linear velocities clearer.
+ *  Automatically calculates x,y,z components.
+ *
  *  Revision 1.13.10.2  2003/07/31 02:52:45  moldydv
  *  System info now read from dump header, not sys-spec or restart files.
  *  Updated function descriptions to reflect this.
@@ -101,26 +115,13 @@ static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/mdvaf.c,v 1.13.10.2 2
 #include "structs.h"
 #include "messages.h"
 #include "utlsup.h"
-gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
+#ifdef USE_XDR
+#   include     "xdr.h"
+   XDR          xdrs;
+#endif
 
-char	*strlower(char *s);
-void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, 
-                    site_mp *site_info, pot_mp *pot_ptr);
-void	initialise_sysdef(system_mp system, spec_mt *species, site_mt *site_info, 
-                          quat_mt (*qpf));
-void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr);
-void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr, 
-                     site_mp *site_info, pot_mp *pot_ptr);
-void	allocate_dynamics(system_mp system, spec_mt *species);
-void	read_restart(FILE *restart, char *vsn, system_mp system, int av_convert);
-void	init_averages(int nspecies, char *vsn, long int roll_interval, 
-   long int old_roll_interval, int *av_convert);
-int	getopt(int, char *const *, const char *);
-void	tfree(gptr *p);
-extern  int optind;
-/*======================== Global vars =======================================*/
+/*======================== Global variables ==================================*/
 int ithread=0, nthreads=1;
-contr_mt                control;
 
 #define VAF  0
 #define VTF  1
@@ -149,15 +150,120 @@ double vdotf(int n, float *x, int ix, float *y, int iy)
    }
    return(dot);
 }
+/******************************************************************************
+ *  read_dump_header. Read the header of a moldy dump file.                   *
+ ******************************************************************************/
+static
+int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_write,
+                size_mt sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
+{
+   int      errflg = true;      /* Provisionally !!   */
+   char     vbuf[sizeof hdr_p->vsn + 1];
+   int      vmajor,vminor;
+
+   *xdr_write = false;
+#ifdef USE_XDR
+   /*
+    * Attempt to read dump header in XDR format
+    */
+   if( xdr_dump(&xdrs, hdr_p) )
+   {
+      strncpy(vbuf,hdr_p->vsn,sizeof hdr_p->vsn);
+      vbuf[sizeof hdr_p->vsn] = '\0';
+      if( strstr(vbuf,"(XDR)") )
+      {
+         errflg = false;
+         *xdr_write = true;
+      }
+   }
+#endif
+   /*
+    * If we failed, try to read header as native struct image.
+    */
+   if( ! *xdr_write )
+   {
+      if( fseek(dumpf, 0L, 0) )
+         message(NULLI, NULLP, WARNING, SEFAIL, fname, strerror(errno));
+      else if( fread((gptr*)&*hdr_p, sizeof(dump_mt), 1, dumpf) == 0 )
+         message(NULLI, NULLP, WARNING, DRERR, fname, strerror(errno));
+      else
+         errflg = false;
+   }
+   if( ! errflg )
+   {
+      /*
+       * Parse header version
+       */
+      errflg = true;
+      if( sscanf(hdr_p->vsn, "%d.%d", &vmajor, &vminor) < 2 )
+         message(NULLI, NULLP, WARNING, INDVSN, hdr_p->vsn);
+      if( vmajor < 2 || vminor <= 17)
+         message(NULLI, NULLP, WARNING, OLDVSN, hdr_p->vsn);
+      else
+         errflg = false;
+   }
+   if( errflg ) return errflg;
+
+   if( dump_sysinfo == 0)
+      return errflg;
+   else if ( sysinfo_size == sizeof(dump_sysinfo_mt) )
+   {
+      /*
+       * Now check for sysinfo and read fixed part of it.  This is needed to
+       * determine species count to read the whole thing.
+       */
+#ifdef USE_XDR
+      if( *xdr_write ) {
+         if( ! xdr_dump_sysinfo_hdr(&xdrs, dump_sysinfo) )
+            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+         errflg = false;
+      } else
+#endif
+      {
+         if( fread((gptr*)dump_sysinfo,sizeof(dump_sysinfo_mt), 1, dumpf) == 0)
+            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+         errflg = false;
+      }
+   }
+   else
+   {
+      /*
+       * Now check for sysinfo and read it all.  N.B.  Buffer must be
+       * allocated to full expected size by prior call to read_dump_header.
+       */
+#ifdef USE_XDR
+      if( *xdr_write ) {
+         if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo, vmajor, vminor) )
+            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+      if (sizeof(dump_sysinfo_mt)
+          + sizeof(mol_mt) * (dump_sysinfo->nspecies-1) > sysinfo_size)
+      {
+         /*
+          * We have already overrun the end of the "dump_sysinfo" buffer.
+          * Perhaps we can exit gracefully before crashing?
+          */
+         message(NULLI, NULLP, FATAL, RDHERR,  sizeof(dump_sysinfo_mt)
+                 + sizeof(mol_mt) * (dump_sysinfo->nspecies-1), sysinfo_size);
+      }
+         errflg = false;
+      } else
+#endif
+      {
+         if( fread((gptr*)dump_sysinfo, sysinfo_size, 1, dumpf) == 0)
+            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+         errflg = false;
+      }
+   }
+   return errflg;
+}
 /***********************************************************************
  * vaf_calc. Calculate vaf from velocity array		               *
  ***********************************************************************/    
 void
 vaf_calc(spec_mt *species, char *spec_mask, int nspecies, int vstart, int vfinish,
-	 int vinc, int max_av, int it_inc, float (**vel)[3], float **vaf, int aflg, 
-	 int cptflg)
+	 int vinc, int max_av, int it_inc, float (**vel)[3], float **vaf, int aflg)
 {
-   int it, irec, totmol, ivaf, ispec, icpt, nspec;
+   register int i, it, irec, totmol, ivaf, ispec;
    spec_mp      spec;
    float	(*vel0)[3], (*vel1)[3];
 
@@ -172,24 +278,18 @@ vaf_calc(spec_mt *species, char *spec_mask, int nspecies, int vstart, int vfinis
 	 vel1 = vel[it+irec];
          totmol=0; ispec=0;
 	 for( spec = species; spec < species+nspecies; spec++, ispec++)
-            if( spec_mask[ispec] )
-            {
-               if( cptflg ) 
-	       {
-	          for(icpt=0; icpt < 3; icpt++)
-	          {
-	             if( aflg == 0 || spec->rdof > 0)
-	             {
-		        vaf[ivaf][3*ispec+icpt] += vdotf(spec->nmols, vel0[0]+icpt, 
-					   3, vel1[0]+icpt, 3)/ spec->nmols;
-   	             }
-	          }
-	       } else {
-	           if( aflg == 0 || spec->rdof > 0)
-		       vaf[ivaf][ispec] += vdotf(3*spec->nmols, vel0[0], 1, 
-					  vel1[0], 1) / spec->nmols;
-	       }
-            }
+           {
+           if( spec_mask[ispec] )
+              if( aflg == 0 || spec->rdof > 0)
+                 for(i=0; i < 3; i++)
+	            vaf[ivaf][3*ispec+i] += vdotf(spec->nmols, vel0[totmol]+i, 
+				   3, vel1[totmol]+i, 3)/spec->nmols;
+           if( aflg && spec->rdof > 0 ) 
+              totmol+=spec->nmols;
+           else
+              if( !aflg ) 
+                 totmol+=spec->nmols;
+           }
       }
 }
 /***********************************************************************
@@ -197,9 +297,9 @@ vaf_calc(spec_mt *species, char *spec_mask, int nspecies, int vstart, int vfinis
  ***********************************************************************/    
 void
 vtf_calc(spec_mt *species, char *spec_mask, int nspecies, int vstart, int vfinish, int vinc, 
-	 int max_av, int it_inc, float (**vel)[3], float **vtf)
+	 int max_av, int it_inc, float (**vel)[3], float **vtf, int aflg)
 {
-   int it, irec, totmol, ivtf, ispec, imol, i, nspec;
+   register int it, irec, totmol, ivtf, ispec, imol, i;
    spec_mp      spec;
    float	(*vel0)[3], (*vel1)[3];
    float	vtftmp0[3], vtftmp1[3];
@@ -216,26 +316,28 @@ vtf_calc(spec_mt *species, char *spec_mask, int nspecies, int vstart, int vfinis
          totmol=0; ispec=0;
 	 for( spec = species; spec < species+nspecies; spec++, ispec++ )
             if( spec_mask[ispec] )
-            {
-               for( i = 0; i < 3; i++)
-                  vtftmp0[i] = vtftmp1[i] = 0;
-	       for( imol = 0; imol < spec->nmols; totmol++, imol++)
+               if( aflg == 0 || spec->rdof > 0)
+               {
                   for( i = 0; i < 3; i++)
-                  {
-                     vtftmp0[i] += spec->charge*vel0[totmol][i];
-                     vtftmp1[i] += spec->charge*vel1[totmol][i];
-                  }
-	       vtf[ivtf][ispec] += DOTPROD(vtftmp0,vtftmp1);
-            }
+                     vtftmp0[i] = vtftmp1[i] = 0.0;
+	          for( imol = 0; imol < spec->nmols; totmol++, imol++)
+                     for( i = 0; i < 3; i++)
+                     {
+                        vtftmp0[i] += spec->charge*vel0[totmol][i];
+                        vtftmp1[i] += spec->charge*vel1[totmol][i];
+                     }
+	          vtf[ivtf][ispec] += DOTPROD(vtftmp0,vtftmp1);
+               }
      }
 }
 /******************************************************************************
  * vaf_out().  Output routine for displaying vaf results                      *
  ******************************************************************************/
 void
-vaf_out(spec_mt *species, float **vaf, int max_av, int nvaf, char *spec_mask, int nspecies, int aflg, int cptflg)
+vaf_out(spec_mt *species, float **vaf, int max_av, int nvaf, char *spec_mask, int nspecies, int aflg, float tstep, int outsw)
 {
-   int          ispec=0, ivaf;
+   register int i, ispec=0, ivaf;
+   float	total;
    spec_mp      spec;
 
    for( spec=species; spec < species+nspecies; spec++, ispec++)
@@ -243,20 +345,30 @@ vaf_out(spec_mt *species, float **vaf, int max_av, int nvaf, char *spec_mask, in
       {
          if( aflg == 0 || spec->rdof > 0)
          {
-            (void)printf("# %s\n",spec->name); 
+            (void)printf("#\n# %s\n",spec->name); 
+            (void)printf("#     t    ");
+            if( outsw )
+              (void)printf("        VTF\n");
+            else
+              (void)printf("        X(t)           Y(t)           Z(t)          VAF(t)\n");
             for( ivaf = 0; ivaf < nvaf; ivaf++)
             {
-	       if( cptflg ) 
-	       {
-	         vaf[ivaf][3*ispec] /= max_av;
-	         vaf[ivaf][3*ispec+1] /= max_av;
-	         vaf[ivaf][3*ispec+2] /= max_av;
-	         (void)printf("%6d %10.7f %10.7f %10.7f\n",ivaf, vaf[ivaf][3*ispec],
-			vaf[ivaf][3*ispec+1],vaf[ivaf][3*ispec+2]);
-      	       } else {
-	         vaf[ivaf][ispec] /= max_av;
-	         (void)printf("%10.7f\n",vaf[ivaf][ispec]);
-	       }
+              if( outsw )
+              {
+                 vaf[ivaf][ispec] /= max_av;
+                 (void)printf("%10.3f %14.7f\n", ivaf*tstep, vaf[ivaf][ispec]);
+              }
+              else
+              {
+                 total = 0.0;
+                 for( i=0; i<3; i++)
+                 {
+	            vaf[ivaf][3*ispec+i] /= max_av;
+                    total += vaf[ivaf][3*ispec+i];
+                 }
+	            (void)printf("%10.3f %14.7f %14.7f %14.7f %14.7f\n", ivaf*tstep, vaf[ivaf][3*ispec],
+	 		vaf[ivaf][3*ispec+1],vaf[ivaf][3*ispec+2], total);
+              }
             }
          }
       }
@@ -273,45 +385,40 @@ vaf_out(spec_mt *species, float **vaf, int max_av, int nvaf, char *spec_mask, in
 int
 main(int argc, char **argv)
 {
-   int	aflg = 0,c, cflg = 0, cptflg = 0;
+   int	aflg = 0,c;
    extern char	*optarg;
    int		errflg = 0;
-   int		intyp = 0;
    int		start, finish, inc;
    int		vstart, vfinish, vinc;
    int		nslices;
-   int		dflag, iflag, sflag, vflag;
+   int		dflag, iflag, vflag;
    int		outsw;
    int		verbose = 0;
    int		irec, ispec, it_inc = 1;
-   char         *filename = NULL, *dump_base = NULL;
+   char         *dump_base = NULL;
    char         *dump_name = NULL, *dump_names = NULL;
    char         *dumplims = NULL;
-   char		*vaflims = NULL;
    char		*tempname;
+   char		*vaflims = NULL;
    char		dumpcommand[256];
    int		dump_size;
    float	*dump_buf;
-   FILE         *Fp, *Dp, *dump_file;
+   FILE         *Dp, *dump_file;
    dump_mt      dump_header;
    dump_sysinfo_mt *dump_sysinfo;
    size_mt      sysinfo_size;
    system_mt    sys;
    spec_mt      *species, *spec;
-   site_mt      *site_info;
-   pot_mt       *potpar;
    float        (**vel)[3];
-   quat_mt	*qpf;
-   contr_mt	control, control_junk;
    int          nvaf, max_av, nspecies;
    float        **vaf;
-   char         *spec_list = "1-50";
-   char         spec_mask[MAX_SPECIES];
+   char         *spec_list = NULL;
+   char         *spec_mask = NULL;
    int          arglen, ind, genflg;
    int          xdr = 0;
+   float	vaf_step = 0.0;
 
 #define MAXTRY 100
-   control.page_length=1000000;
 
    comm = argv[0];
    if( strstr(comm, "mdvtf") )
@@ -320,43 +427,39 @@ main(int argc, char **argv)
      outsw = VAF;
 
 
-   while( (c = getopt(argc, argv, "3acd:t:l:i:g:o:qv") ) != EOF )
+   while( (c = getopt(argc, argv, "ad:t:l:i:g:o:qv") ) != EOF )
       switch(c)
       {
-       case '3':
-	 cptflg++;
-	 break;
-       case 'a':
+       case 'a':  /* Calculate angular velocity function */
 	 aflg++;
 	 break;
-       case 'c':
-         cflg++;
-         break;
-       case 'd':
+       case 'd':  /* Name of dump file */
 	 dump_base = optarg;
 	 break;
-       case 't':
+       case 't':  /* Dump file limits */
 	 dumplims = mystrdup(optarg);
          break;
-       case 'l':
+       case 'l':  /* Limits for vtf/vaf calculation */
 	 vaflims = mystrdup(optarg);
          break;
-       case 'g':
+       case 'g':  /* Species selection */
          spec_list = optarg;
 	 break;
-       case 'i':
+       case 'i':  /* Time increment */
 	 it_inc = atoi(optarg);
 	 break;
-       case 'q':
-	 outsw = VTF;
+       case 'q':  /* Calculate vtf rather than vaf */
+         if( outsw == VAF)
+	   outsw = VTF;
+         else
+           outsw = VAF;
 	 break;
-       case 'o':
+       case 'o':  /* Name of output file */
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error("failed to open file \"%s\" for output", optarg);
 	 break;
        case 'v':
-	 verbose++;
-	 break;
+         verbose++;
        default:
        case '?':
 	 errflg++;
@@ -364,14 +467,11 @@ main(int argc, char **argv)
 
    if( errflg )
    {
-      fprintf(stderr,"Usage: %s [-a] [-c] ",comm);
-      fputs("-d dump-files -t s[-f[:n]] [-v s[-f[:n]]] ",stderr);
-      fputs("[-g s[-f[:n]]] [-i init-inc] [-q] [-o output-file]\n",stderr);
+      fprintf(stderr,"Usage: %s [-a] [-q] ",comm);
+      fputs("-d dump-files -t s[-f[:n]] [-l s[-f[:n]]] ",stderr);
+      fputs("[-g s[-f[:n]]] [-i init-inc] [-v] [-o output-file]\n",stderr);
       exit(2);
    }
-
-   if( tokenise(mystrdup(spec_list), spec_mask, MAX_SPECIES) == 0 )
-       error("Invalid species specification \"%s\": usage eg 1,3,5-9,4",spec_list);
 
    /* Prepare dump file name for reading */
    genflg = 0;
@@ -434,6 +534,13 @@ main(int argc, char **argv)
       + sizeof(mol_mt) * (dump_sysinfo->nspecies-1);
    (void)free(dump_sysinfo);
 
+   /* Check dump file contains necessary data */
+   if( !(dump_header.dump_level & 2) )
+     {
+     printf("Velocities not contained in a dump of level %d\n", dump_header.dump_level);
+     exit(2);
+     }
+
    /*
     * Allocate space for and read dump sysinfo.
     */
@@ -465,6 +572,15 @@ main(int argc, char **argv)
    }
 
    allocate_dynamics(&sys, species);
+
+/* Check species selection list */
+   spec_mask = (char*)calloc(sys.nspecies+1,sizeof(char));
+
+   if( spec_list == NULL)
+     sprintf(spec_list,"1-%d",sys.nspecies);
+
+   if( tokenise(mystrdup(spec_list), spec_mask, sys.nspecies) == 0 )
+      error("invalid species specification \"%s\" - choose from species 1 to %d",spec_list,sys.nspecies);
 
   /*
    *  Ensure that the dump limits start, finish, inc are set up,
@@ -527,13 +643,13 @@ main(int argc, char **argv)
          if( (vstart*inc > finish-start) || (vfinish*inc > finish-start))
          {
             vflag++;
-            fputs("VAF interval exceeds dump range\n",stderr);
+            fprintf(stderr,"%s interval exceeds dump range\n",(outsw?"VTF":"VAF"));
          }
          if( vflag )
          {
             (void)free(vaflims);
             vaflims = NULL;
-            fputs("Please specify VAF intervals in form", stderr);
+            fprintf(stderr,"Please specify %s intervals in form", (outsw?"VTF":"VAF"));
             fputs(" start-finish:increment\n", stderr);
             vaflims = get_str("s-f:n? ");
          }
@@ -557,20 +673,16 @@ main(int argc, char **argv)
    dump_size = 3*(aflg?sys.nmols_r:sys.nmols)*sizeof(float);
 
   /* Allocate memory for velocity data and zero */
-   vel = (float (**)[3])arralloc(sizeof(float[3]),2,0,nslices-1,0,sys.nmols-1);
-   zero_float(vel[0][0], nslices*sys.nmols*3);
+   vel = (float (**)[3])arralloc(sizeof(float[3]),2,0,nslices-1,0,(aflg?sys.nmols_r:sys.nmols)-1);
+   zero_float(vel[0][0], nslices*(aflg?sys.nmols_r:sys.nmols)*3);
 
    if( (dump_buf = (float*)malloc(dump_size)) == 0)
       error("malloc failed to allocate dump record buffer (%d bytes)",
           dump_size);
 #if defined (HAVE_POPEN) 
-   sprintf(dumpcommand,"dumpext %s -R%d -Q%d -b -c %d -t %d-%d:%d %s",
-	   verbose?"-v":"",
-	   sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, dump_names);
-
-   if ( verbose ) {
-     fprintf(stderr, "About to execute command \"%s\"\n",dumpcommand);
-   }
+   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d %s",
+      verbose?"-v":"", sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, dump_names);
+   
    if( (Dp = popen(dumpcommand,"r")) == 0)
         error("Failed to execute \'dumpext\" command - \n%s",
             strerror(errno));
@@ -610,19 +722,20 @@ main(int argc, char **argv)
   /* Calculate vaf parameters */
      nvaf = (vfinish-vstart)/vinc+1; /* No of vaf time intervals */
      max_av = (nslices - vfinish)/it_inc; /* Max no of vaf calcs to average over */
+     vaf_step = dump_sysinfo->deltat*inc*it_inc;
 
      if (max_av < 1)
-          max_av = 1;
+        max_av = 1;
 
      vaf = (float**)arralloc(sizeof(float),2,0,nvaf-1,0,
-			     cptflg?3*nspecies-1:nspecies-1);
-     zero_float(vaf[0],nvaf*(cptflg?3*nspecies:nspecies));
+                             outsw?nspecies-1:3*nspecies-1);
+     zero_float(vaf[0],nvaf*(outsw?nspecies:3*nspecies));
 
   /* Calculate and print vaf/vtf values */
      if( outsw )
-        vtf_calc(species, spec_mask, nspecies, vstart, vfinish, vinc, max_av, it_inc, vel, vaf);
+        vtf_calc(species, spec_mask, nspecies, vstart, vfinish, vinc, max_av, it_inc, vel, vaf, aflg);
      else
-        vaf_calc(species, spec_mask, nspecies, vstart, vfinish, vinc, max_av, it_inc, vel, vaf, aflg, cptflg);
-     vaf_out(species, vaf, max_av, nvaf, spec_mask, nspecies, aflg, cptflg);
+        vaf_calc(species, spec_mask, nspecies, vstart, vfinish, vinc, max_av, it_inc, vel, vaf, aflg);
+     vaf_out(species, vaf, max_av, nvaf, spec_mask, nspecies, aflg, vaf_step, outsw);
    return 0;    
 }

@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = no-dependencies dist-zip 
 
-HFILES= structs.h defs.h messages.h xdr.h  list.h utlsup.h ReadDCD.h defconf.h specdata.h sginfo.h
+HFILES= structs.h defs.h messages.h xdr.h  list.h utlsup.h ReadDCD.h defconf.h specdata.h sginfo.h readers.h
 
 UTILC = algorith.c alloc.c auxil.c ansi.c convert.c eigens.c kernel.c input.c list.c matrix.c quaterns.c restart.c startup.c values.c xdr.c ReadDCD.c utlsup.c molout.c
 
@@ -162,14 +162,14 @@ output.o: output.c defs.h config.h structs.h messages.h
 parallel.o: parallel.c defs.h config.h structs.h messages.h
 quaterns.o: quaterns.c defs.h config.h
 ransub.o: ransub.c readers.c defs.h config.h structs.h messages.h utlsup.h \
-        specdata.h
+        specdata.h readers.h
 restart.o: restart.c defs.h config.h structs.h messages.h xdr.h
 sgclib.o: sgclib.c sginfo.h
 sgio.o: sgio.c sginfo.h
 spgrexp.o: spgrexp.c sginfo.h specdata.h messages.h defs.h config.h
 startup.o: startup.c defs.h config.h structs.h messages.h
 syswrite.o: syswrite.c readers.c defs.h config.h structs.h messages.h utlsup.h \
-        sginfo.h specdata.h
+        sginfo.h specdata.h readers.h
 transparse.o: transparse.c sginfo.h
 utlsup.o: utlsup.c defs.h config.h structs.h messages.h specdata.h
 values.o: values.c defs.h config.h structs.h messages.h

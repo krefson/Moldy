@@ -3,8 +3,6 @@
  * Paul Davies, "The Indispensable Guide to C", Addison-Wesley, UK, 1995
  */
 
-#include <stdlib.h> 
-
 #define   NEW(x)      (x *)malloc(sizeof(x))
 #define   VALID(x)   ((*x) != NULL)
 #define   NUM(x)     ((*x)->num)

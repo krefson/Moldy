@@ -2,7 +2,9 @@
  * list         Routines for creating and handling linked lists, from                 *
  *              Paul Davies, "The Indispensable Guide to C", Addison-Wesley, UK, 1995 *
  **************************************************************************************/
+
 #include <stdio.h>
+#include <stdlib.h>
 #include "list.h"
 
 /*

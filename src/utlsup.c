@@ -14,22 +14,17 @@ static char *RCSid = "$Header$";
 #include "specdata.h"
 #ifdef USE_XDR
 #   include     "xdr.h"
-#endif
-
-#define DATAREC "%d record%ssuccessfully read from %s"
-
-void mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
-void invert(real (*a)[3], real (*b)[3]);
-
-char	*comm;
-#ifdef USE_XDR
    XDR          xdrs;
 #endif
+
+char	*comm;
+
+void invert (real (*a)[3], real (*b)[3]);
+void mat_vec_mul (real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
 /******************************************************************************
  * Dummies of moldy routines so that utils may be linked with moldy library   *
- ******************************************************************************/
-/*VARARGS*/
-void 	init_rdf(void)
+ ******************************************************************************//*VARARGS*/
+void    init_rdf(void)
 {}
 /*VARARGS*/
 gptr *rdf_ptr(void)
@@ -41,15 +36,15 @@ int lines_left(void)
 {return 0;}
 void new_page(void)
 {}
-void	new_line(void)
+void    new_line(void)
 {
    (void)putchar('\n');
 }
 /*VARARGS*/
-void	banner_page(void)
+void    banner_page(void)
 {}
 /*VARARGS*/
-void	note(void)
+void    note(void)
 {}
 /******************************************************************************
  *  message.   Deliver error message to possibly exiting.  It can be called   *
@@ -509,107 +504,18 @@ int rewind_dump(FILE *dumpf, int xdr)
    return fseek(dumpf, 0L, SEEK_SET);
 }
 /******************************************************************************
- *  read_dump_header. Read the header of a moldy dump file.                   *
+ *  check_control. Check if control info contained in input file.             *
  ******************************************************************************/
-int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_write,
-		size_mt sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
+int check_control(FILE *file)
 {
-   int      errflg = true;      /* Provisionally !!   */
-   char     vbuf[sizeof hdr_p->vsn + 1];
-   int      vmajor,vminor;
+  int num_items;
+  char  line[LLEN], name[LLEN], value[LLEN];
 
-   *xdr_write = false;
-#ifdef USE_XDR
-   /*
-       * Attempt to read dump header in XDR format
-       */
-   if( xdr_dump(&xdrs, hdr_p) )
-   {
-      strncpy(vbuf,hdr_p->vsn,sizeof hdr_p->vsn);
-      vbuf[sizeof hdr_p->vsn] = '\0';
-      if( strstr(vbuf,"(XDR)") )
-      {
-         errflg = false;
-         *xdr_write = true;
-      }
-   }
-#endif
-   /*
-    * If we failed, try to read header as native struct image.
-    */
-   if( ! *xdr_write )
-   {
-      if( fseek(dumpf, 0L, 0) )
-         message(NULLI, NULLP, WARNING, SEFAIL, fname, strerror(errno));
-      else if( fread((gptr*)&*hdr_p, sizeof(dump_mt), 1, dumpf) == 0 )
-         message(NULLI, NULLP, WARNING, DRERR, fname, strerror(errno));
-      else
-         errflg = false;
-   }
-   if( ! errflg )
-   {
-      /*
-       * Parse header version
-       */
-      errflg = true;
-      if( sscanf(hdr_p->vsn, "%d.%d", &vmajor, &vminor) < 2 )
-         message(NULLI, NULLP, WARNING, INDVSN, hdr_p->vsn);
-      if( vmajor < 2 || vminor <= 17)
-         message(NULLI, NULLP, WARNING, OLDVSN, hdr_p->vsn);
-      else
-         errflg = false;
-   }
-   if( errflg ) return errflg;
-
-   if( dump_sysinfo == 0)
-      return errflg;
-   else if ( sysinfo_size == sizeof(dump_sysinfo_mt) )
-   {
-      /*
-       * Now check for sysinfo and read fixed part of it.  This is needed to
-       * determine species count to read the whole thing.
-       */
-#ifdef USE_XDR
-      if( *xdr_write ) {
-         if( ! xdr_dump_sysinfo_hdr(&xdrs, dump_sysinfo) )
-            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
-         errflg = false;
-      } else
-#endif
-      {
-         if( fread((gptr*)dump_sysinfo,sizeof(dump_sysinfo_mt), 1, dumpf) == 0)
-            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
-         errflg = false;
-      }
-   }
-   else
-   {
-      /*
-       * Now check for sysinfo and read it all.  N.B.  Buffer must be
-       * allocated to full expected size by prior call to read_dump_header.
-       */
-#ifdef USE_XDR
-      if( *xdr_write ) {
-         if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo, vmajor, vminor) )
-            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
-      if (sizeof(dump_sysinfo_mt)
-          + sizeof(mol_mt) * (dump_sysinfo->nspecies-1) > sysinfo_size)
-      {
-         /*
-          * We have already overrun the end of the "dump_sysinfo" buffer.
-          * Perhaps we can exit gracefully before crashing?
-          */
-         message(NULLI, NULLP, FATAL, RDHERR,  sizeof(dump_sysinfo_mt)
-                 + sizeof(mol_mt) * (dump_sysinfo->nspecies-1), sysinfo_size);
-      }
-         errflg = false;
-      } else
-#endif
-      {
-         if( fread((gptr*)dump_sysinfo, sysinfo_size, 1, dumpf) == 0)
-            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
-         errflg = false;
-      }
-   }
-   return errflg;
+  get_line(line, LLEN, file, 1);
+  num_items = sscanf(line, " %[^= ] = %127[^#]", name, value);
+  rewind(file);
+  if( num_items == 2 )
+    return 1;
+  else
+    return 0;
 }

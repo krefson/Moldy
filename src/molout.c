@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/molout.c,v 1.13 2004/11/22 18:21:10 kr Exp $";
+static char *RCSid = "$Header$";
 #endif
 
 #include "defs.h"
@@ -12,17 +12,12 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/molout.c,v 1.13 2004/11
 #include "structs.h"
 #include "ReadDCD.h"
 #include "utlsup.h"
-gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 
-void	invert(real (*a)[3], real (*b)[3]);
 void	make_sites(real (*h)[3], vec_mp c_of_m_s, 
 		   quat_mp quat, vec_mp p_f_sites, 
 		   real **site, int nmols, int nsites, int pbc);
-void    error(char *format, ...);
 void    afree(gptr *p);
-char    *atime(void);
-/*======================== Global vars =======================================*/
-extern contr_mt		control;
+
 /******************************************************************************
  ******************************************************************************/
 void 
@@ -96,7 +91,7 @@ static void
 schakal_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, 
 	    char *insert, int n)
 {
-   real	        **site = (real**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
    spec_mt	*spec;
    double	a, b, c, alpha, beta, gamma;
@@ -151,7 +146,7 @@ schakal_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info,
  ******************************************************************************/
 static void xtl_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char *insert, int intyp)
 {
-   real 	**site = (real**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
    double	qconv;	/* Variable for converting charge from program units */
    spec_mt	*spec;
@@ -221,7 +216,7 @@ static void
 pdb_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, 
 	char *insert, int intyp)
 {
-   real	        **site = (real**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
                                             0,2,0,system->nsites-1);
    mat_mt	hinv;
    spec_mt	*spec;
@@ -301,7 +296,7 @@ static void
 xyz_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, 
 	char *insert)
 {
-   real	        **site = (real**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
    spec_mt	*spec;
    int		imol, isite, is;
@@ -358,7 +353,7 @@ static void
 dcd_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, 
 	int n, int irec, int inc)
 {
-   real	        **site = (real**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
    float	**sitef = (float**)arralloc(sizeof(float),2,
 					    0,2,0,system->nsites-1);
@@ -404,7 +399,7 @@ dcd_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info,
 static void
 atoms_out(system_mt *system, mat_mp h, spec_mt *species)
 {
-   real 	**site = (real**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
    spec_mt	*spec;
    float	fsite[3];
@@ -444,7 +439,7 @@ static void
 cssr_out(system_mt *system, mat_mp h, spec_mt *species, 
 	 site_mt *site_info, char *insert, int intyp)
 {
-   real 	**site = (real**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
                                             0,2,0,system->nsites-1);
    mat_mt       hinv;
    spec_mt	*spec;
@@ -528,7 +523,7 @@ cssr_out(system_mt *system, mat_mp h, spec_mt *species,
 static void
 arc_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, int intyp, int n)
 {
-   real         **site = (real**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
                                             0,2,0,system->nsites-1);
    spec_mt      *spec;
    double       a,b,c, alpha, beta, gamma;
@@ -536,7 +531,7 @@ arc_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, int i
    char         atom_name[5], name_charge[7], *elem_sym;
    double       atom_charge;
    int          imol, isite, divd;
-   int          i, is, ispec=1;
+   int          is, ispec=1;
 
    a = sqrt(SQR(h[0][0]) + SQR(h[1][0]) + SQR(h[2][0]));
    b = sqrt(SQR(h[0][1]) + SQR(h[1][1]) + SQR(h[2][1]));

@@ -27,7 +27,22 @@ what you give them.   Help stamp out software-hoarding! */
  *              of molecules within same bond cutoffs                                 *
  ************************************************************************************** 
  *  Revision Log
- *  $Log: mdbond.c,v $
+ *  $Log$
+ *  Revision 1.12.10.2  2004/12/06 19:07:57  cf
+ *  Removed unused variables.
+ *  Removed option -c for skipping control info.
+ *
+ *  Revision 1.12.10.1  2003/07/29 09:34:38  moldydv
+ *  Three new options added:
+ *  -j calculate bonds and angles between molecule's centres of mass only.
+ *  -x don't include right angles in output.
+ *  -p apply pbc's to include all bonds/angles in range. Default is now contents of single box only.
+ *  Species now specified with -g in 'true' selector format.
+ *
+ *  Revision 1.12  2002/09/19 09:26:29  kr
+ *  Tidied up header declarations.
+ *  Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *  Revision 1.11  2000/12/06 10:47:33  keith
  *  Fixed call of make_sites() in utlsup.c to be compatible with new version.
  *  Tidied up declarations and added lint flags to reduce lint noise.
@@ -93,7 +108,7 @@ what you give them.   Help stamp out software-hoarding! */
  */
 
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/mdbond.c,v 1.11 2000/12/06 10:47:33 keith Exp $";
+static char *RCSid = "$Header$";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -108,17 +123,20 @@ static char *RCSid = "$Header: /home/kr/CVS/moldy/src/mdbond.c,v 1.11 2000/12/06
 #include "list.h"
 #include "utlsup.h"
 
+void    make_sites(real (*h)[3], vec_mp c_of_m_s,
+                   quat_mp quat, vec_mp p_f_sites,
+                   real **site, int nmols, int nsites, int pbc);
+
+/*======================== Global variables ==================================*/
+int ithread=0, nthreads=1;
+
 /*
  * Default limits for bond intervals and angle intervals - integers only
  */
 #define BOND_MIN  2
-#define BOND_MAX  20          /* Interparticle distances in tenths of Angstroms */
-
+#define BOND_MAX  20        /* Interparticle distances in tenths of Angstroms */
 #define ANGLE_MIN  0
-#define ANGLE_MAX  180        /* Angle intervals in degrees */
-
-#define DOTPROD(x,y)   ((x[0]*y[0])+(x[1]*y[1])+(x[2]*y[2])) 
-
+#define ANGLE_MAX  180      /* Angle intervals in degrees */
 /*
  * Structures for bond and angle data. 
  */
@@ -143,11 +161,6 @@ typedef struct
    double	length2;
    double	value;
 } ANGLE;
-
-int	getopt(int, char *const *, const char *);
-/*======================== Global vars =======================================*/
-int ithread=0, nthreads=1;
-contr_mt	control;
 
 /******************************************************************************
  * morethan_BOND(). Compare distances stored in BOND structure types          *
@@ -196,11 +209,14 @@ NODE *morethan_ANGLE(ROOT **root, ANGLE *data)
 /******************************************************************************
  * angle_calc(). Calculate angle (in degrees) between two vectors             *
  ******************************************************************************/
-double angle_calc(real *vec1, real *vec2, double a, double b)
+double angle_calc(real *vec1, real *vec2)
 {
-double    dp, angle;
+double    dp, angle;                    /* Dot product and angle     */
+double	  a2, b2;			/* Distances a and b */
 
-   dp = DOTPROD(vec1,vec2)/a/b;
+   a2 = DOTPROD(vec1,vec1);
+   b2 = DOTPROD(vec2,vec2);
+   dp = DOTPROD(vec1,vec2)/sqrt(a2*b2);
 
    if( dp <= -1.0)
       return(180.00);
@@ -216,228 +232,341 @@ double    dp, angle;
  * bond_calc().  Read file and determine bonds and angles within limits       *
  ******************************************************************************/
 void
-bond_calc(system_mt *system, spec_mt *species, site_mt *site_info, ROOT **broot, ROOT **aroot, int *sp_range, int *blim, int *alim)
+bond_calc(system_mt *system, spec_mt *species, site_mt *site_info, ROOT **broot,
+       	  ROOT **aroot, char *spec_mask, int *blim, int *alim, int pbc, int mflag)
 {
    BOND		*bond;
    ANGLE        *angle;
    spec_mt	*spec1, *spec2, *spec3;
-   double	dist1, dist2;
-   double	tmp_angle;
+   register double	dist1, dist2;
+   register double	tmp_angle;
    vec_mt	point1, point2, point3;
    vec_mt	vec1, vec2;
    vec_mt	shift, frac;
    vec_mt	shift2, frac2;
    vec_mt	a, min, max;
-   int		i, j, k, u;
-   int		nmoli, nmolj, nmolk;
-   int		flag;
+   register int		i, j, k, u;
+   register int		is, js, ks;
+   register int		nspec1, nspec2, nspec3;
+   register int		nmoli, nmolj, nmolk;
+   register int		flag;
+   register int	        nsites1, nsites2, nsites3=0;
    NODE		*node;
    mat_mp	h = system->h;
+   double       **site1 = (double**)arralloc(sizeof(double),2,
+                           0,2,0,system->nsites-1);
+   double       **site2 = (double**)arralloc(sizeof(double),2,
+                           0,2,0,system->nsites-1);
+   double       **site3 = (double**)arralloc(sizeof(double),2,
+                           0,2,0,system->nsites-1);
 
 /* Determine no of cells to search through */
    for( u = 0; u < 3; u++)
    {
       a[u] = sqrt(SQR(h[0][u]) + SQR(h[1][u]) + SQR(h[2][u]));
-      max[u] = ceil(blim[1]/10.0/a[u]);
+      max[u] = (pbc ? ceil(blim[1]/10.0/a[u]): 0.0);
       min[u] = -1.0 * max[u];
    }
 
 /* Scan through selected species and determine distances and angles within limits */
    nmoli = 0;
 
-   for(spec1 = species+sp_range[0]; spec1 <= species+sp_range[1]; spec1 += sp_range[2])
-     for(i=0; i < spec1->nmols; i++)
+   for(spec1 = species, nspec1 = 0; spec1 < species+system->nspecies; spec1++, nspec1++)
+     if( spec_mask[nspec1] )
      {
-        nmoli++;
-        nmolj = 0;
+	if( !mflag )
+	   nsites1 = 1;
+	else
+        {
+           make_sites(system->h, spec1->c_of_m, spec1->quat, spec1->p_f_sites,
+                      site1, spec1->nmols, spec1->nsites, pbc?0:1);
+           nsites1 = spec1->nsites;
+	}
+	
+        for(i=0; i < spec1->nmols; i++)
+        {
+           nmoli++;
+           nmolj = 0;
 
-        for(spec2 = species+sp_range[0]; spec2 <= spec1; spec2 += sp_range[2])
-           for(j=0; j < (spec2==spec1?i:spec2->nmols); j++)
-           {
-              nmolj++;
-              flag = 0;
-
-              for(u = 0; u < 3; u++)
-                 point1[u] = spec1->c_of_m[i][u];
-
-              for( frac[0] = min[0]; frac[0] <= max[0]; frac[0]++) 
-              for( frac[1] = min[1]; frac[1] <= max[1]; frac[1]++) 
-              for( frac[2] = min[2]; frac[2] <= max[2]; frac[2]++) 
+           for(spec2 = species, nspec2 = 0; spec2 <= spec1; spec2++, nspec2++)
+              if( spec_mask[nspec2] )
               {
-                  mat_vec_mul(h, &frac, &shift, 1);
+	         if( !mflag )
+	            nsites2 = 1;
+	         else
+                 {
+                    make_sites(system->h, spec2->c_of_m, spec2->quat, spec2->p_f_sites,
+                               site2, spec2->nmols, spec2->nsites, pbc?0:1);
+                    nsites2 = spec2->nsites;
+              	 }
 
-                  for( u = 0; u < 3; u++)
-                     point2[u] = spec2->c_of_m[j][u] + shift[u]; 
+	         for(j=0; j < (spec2==spec1?i:spec2->nmols); j++)
+                 {
+                    nmolj++;
+                    flag = 0;
 
-                  dist1 = DISTANCE(point2, point1);
+                    for(is = 0; is < nsites1; is++)
+	            {
+		       if( !mflag )
+                          for(u = 0; u < 3; u++)
+		             point1[u] = spec1->c_of_m[i][u];
+		       else
+                          for(u = 0; u < 3; u++)
+                             point1[u] = site1[u][i*nsites1+is];
 
-                  if( (dist1 >= blim[0]/10.0) && (dist1 <= blim[1]/10.0) )
-                  { 
-                      flag = 1;
-                      bond = NEW(BOND); /* Create new bond record */
-                      strncpy((bond->atom1),site_info[spec2->site_id[0]].name, 3);
-                      strncpy((bond->atom2),site_info[spec1->site_id[0]].name, 3);
-                      bond->number1 = nmolj;
-                      bond->number2 = nmoli;
-	              bond->length = dist1;
-	  	      node = morethan_BOND(broot,bond);
-                      if( node == NULL )
-                      {
-                         if( insert_data(broot,bond,1) < 0 )
-                            error("Error creating first node in bond list - \n%s\n",strerror(errno));
-                      }
-                      else
-                      {
-                         if( insert_at_position(broot,node,bond,0) < 0 )
-                            error("Error inserting node in bond list - \n%s\n",strerror(errno));
-                      }
+                       for( frac[0] = min[0]; frac[0] <= max[0]; frac[0]++) 
+                       for( frac[1] = min[1]; frac[1] <= max[1]; frac[1]++) 
+                       for( frac[2] = min[2]; frac[2] <= max[2]; frac[2]++) 
+                       {
+                          mat_vec_mul(h, &frac, &shift, 1);
 
-                      nmolk = nmolj;
+                          for(js = 0; js < nsites2; js++)
+		          {
+		             if( !mflag )
+                                for(u = 0; u < 3; u++)
+		                   point2[u] = spec2->c_of_m[j][u] + shift[u];
+		             else
+                                for(u = 0; u < 3; u++)
+                                   point2[u] = site2[u][j*nsites2+js] + shift[u]; 
 
-                      /* Calculate angle about spec1 molecule */
-                      for(spec3 = spec2; spec3 <= species+sp_range[1]; spec3 += sp_range[2])
-                         for( k=(spec3==spec2?j+1:0); k < spec3->nmols; k++)
-                         {
-                            nmolk++;
+                             dist1 = DISTANCE(point2, point1);
 
-                            if( (nmolk != nmoli) && (nmolj != nmoli) )
-                            {
-                               for( frac2[0] = min[0]; frac2[0] <= max[0]; frac2[0]++) 
-                               for( frac2[1] = min[1]; frac2[1] <= max[1]; frac2[1]++) 
-                               for( frac2[2] = min[2]; frac2[2] <= max[2]; frac2[2]++) 
-                               {
-                                  mat_vec_mul(h, &frac2, &shift2, 1);
-
-                                  for( u = 0; u < 3; u++)
-                                     point3[u] = spec3->c_of_m[k][u] + shift2[u]; 
-
-                                  dist2 = DISTANCE(point3, point1);
-
-                                  if( (dist2 >= blim[0]/10.0 ) && (dist2 <= blim[1]/10.0) )
-                                  {
-                                     for(u = 0; u < 3; u++)
-                                     {
-                                        vec1[u] = point2[u] - point1[u];  /* Vector between atoms 2 and 1 */
-                                        vec2[u] = point3[u] - point1[u];  /* Vector between atoms 3 and 1 */
-                                     }
-                                     tmp_angle = angle_calc(vec1, vec2, dist1, dist2);
-                          
-                                     if( (tmp_angle >= alim[0]) && (tmp_angle <= alim[1]) )
-                                     {
-                                        angle = NEW(ANGLE); /* Create new angle record */
-                                        strncpy((angle->atom1),site_info[spec1->site_id[0]].name, 3);
-                                        strncpy((angle->atom2),site_info[spec2->site_id[0]].name, 3);
-                                        strncpy((angle->atom3),site_info[spec3->site_id[0]].name, 3);
-                                        angle->number1 = nmoli;
-                                        angle->number2 = nmolj;
-                                        angle->number3 = nmolk;
-                                        angle->length1 = dist1;
-		                        angle->length2 = dist2;
-		                        angle->value = tmp_angle;
-		                        node = morethan_ANGLE(aroot,angle);
-                                        if( node == NULL )
-                                        {
-                                          if( insert_data(aroot,angle,1) < 0 )
-                                             error("Error creating first node in angle list - \n%s\n",strerror(errno));
-                                        }
-                                        else
-                                        {
-                                          if( insert_at_position(aroot,node,angle,0) < 0 )
-                                             error("Error inserting node in angle list - \n%s\n",strerror(errno));
-                                        }
-                                     }
-                                  }
-                               }
-                            }
-                         }
-                  }
-              }
-              if( flag )           /* Calculate angle about spec2 molecule */ 
-              {
-                 nmolk = nmoli;
-                 for(u = 0; u < 3; u++)
-                     point2[u] = spec2->c_of_m[j][u];
-
-                 for(spec3 = spec1; spec3 <= species+sp_range[1]; spec3 += sp_range[2])
-                    for( k=(spec3==spec1?i+1:0); k < spec3->nmols; k++)
-                    {
-                        nmolk++;
-
-                        if( (nmolk != nmolj) && (nmoli != nmolj) )
-                        {
-                            for( frac[0] = min[0]; frac[0] <= max[0]; frac[0]++) 
-                            for( frac[1] = min[1]; frac[1] <= max[1]; frac[1]++) 
-                            for( frac[2] = min[2]; frac[2] <= max[2]; frac[2]++) 
-                            {
-                                mat_vec_mul(h, &frac, &shift, 1);
- 
-                                for( u = 0; u < 3; u++)
-                                   point1[u] = spec1->c_of_m[i][u] + shift[u]; 
- 
-                                dist1 = DISTANCE(point1, point2);
-  
-                                if( (dist1 >= blim[0]/10.0 ) && (dist1 <= blim[1]/10.0) )
+                             if( (dist1 >= blim[0]/10.0) && (dist1 <= blim[1]/10.0) )
+                             { 
+                                flag = 1;
+                                bond = NEW(BOND); /* Create new bond record */
+		                if( !mflag && spec2->nsites > 1 )
+                                   strncpy((bond->atom1),spec2->name, 2);
+				else
+                                   strncpy((bond->atom1),site_info[spec2->site_id[js]].name, 3);
+		                if( !mflag && spec1->nsites > 1 )
+                                   strncpy((bond->atom2),spec1->name, 2);
+				else
+                                   strncpy((bond->atom2),site_info[spec1->site_id[is]].name, 3);
+                                bond->number1 = nmolj;
+                                bond->number2 = nmoli;
+                                bond->length = dist1;
+  	                        node = morethan_BOND(broot,bond);
+                                if( node == NULL )
                                 {
-                                    for( frac2[0] = min[0]; frac2[0] <= max[0]; frac2[0]++) 
-                                    for( frac2[1] = min[1]; frac2[1] <= max[1]; frac2[1]++) 
-                                    for( frac2[2] = min[2]; frac2[2] <= max[2]; frac2[2]++) 
-                                    {
-                                        mat_vec_mul(h, &frac2, &shift2, 1);
-
-                                        for( u = 0; u < 3; u++)
-                                           point3[u] = spec3->c_of_m[k][u] + shift2[u]; 
-   
-                                        dist2 = DISTANCE(point3, point2);
-   
-                                        if( (dist2 >= blim[0]/10.0 ) && (dist2 <= blim[1]/10.0) )
-                                        {
-                                            for(u = 0; u < 3; u++)
-                                            {
-                                                vec1[u] = point1[u] - point2[u];  /* Vector between atoms 1 and 2 */
-                                                vec2[u] = point3[u] - point2[u];  /* Vector between atoms 3 and 2 */
-                                            }
-   
-                                            tmp_angle = angle_calc(vec1, vec2, dist1, dist2);
-                           
-                                            if( (tmp_angle >= alim[0]) && (tmp_angle <= alim[1]) )
-                                            {
-                                                angle = NEW(ANGLE);  /* Calculate new angle record */
-                                                strncpy((angle->atom1),site_info[spec2->site_id[0]].name, 3);
-                                                strncpy((angle->atom2),site_info[spec1->site_id[0]].name, 3);
-                                                strncpy((angle->atom3),site_info[spec3->site_id[0]].name, 3);
-                                                angle->number1 = nmolj;
-                                                angle->number2 = nmoli;
-                                                angle->number3 = nmolk;
-                                                angle->length1 = dist1;
-                                                angle->length2 = dist2;
-		                                angle->value = tmp_angle;
-		                                node = morethan_ANGLE(aroot,angle);
-                                                if( node == NULL )
-                                                {
-                                                  if( insert_data(aroot,angle,1) < 0 )
-                                                     error("Error creating first node in angle list - \n%s\n",strerror(errno));
-                                                }
-                                                else
-                                                {
-                                                  if( insert_at_position(aroot,node,angle,0) < 0 )
-                                                     error("Error inserting node in angle list - \n%s\n",strerror(errno));
-                                                }
-                                            }
-                                        }
-                                    }
+                                   if( insert_data(broot,bond,1) < 0 )
+                                      error("Error creating first node in bond list - \n%s\n",strerror(errno));
                                 }
-                            }
-                        }
-                    }
-              }
-           }
+                                else
+                                {
+                                   if( insert_at_position(broot,node,bond,0) < 0 )
+                                      error("Error inserting node in bond list - \n%s\n",strerror(errno));
+                                }
+
+                                nmolk = nmolj;
+
+                                /* Calculate angle about spec1 molecule */
+                                for(spec3 = spec2, nspec3 = 0; spec3 < species+system->nspecies; spec3++, nspec3++)
+	                           if( spec_mask[nspec3] )
+		                   {
+	                              if( !mflag )
+	                                 nsites3 = 1;
+	                              else
+                                      {
+                                         make_sites(system->h, spec3->c_of_m, spec3->quat, spec3->p_f_sites,
+                                                 site3, spec3->nmols, spec3->nsites, pbc?0:1);
+                                         nsites3 = spec3->nsites;
+              	                      }
+
+                                      for( k=(spec3==spec2?j+1:0); k < spec3->nmols; k++)
+                                      {
+                                         nmolk++;
+
+                                         if( (nmolk != nmoli) && (nmolj != nmoli) )
+                                         {
+                                            for( frac2[0] = min[0]; frac2[0] <= max[0]; frac2[0]++) 
+                                            for( frac2[1] = min[1]; frac2[1] <= max[1]; frac2[1]++) 
+                                            for( frac2[2] = min[2]; frac2[2] <= max[2]; frac2[2]++) 
+                                            {
+                                               mat_vec_mul(h, &frac2, &shift2, 1);
+					 
+                                               for(ks = 0; ks < nsites3; ks++)
+		                               {
+		                                  if( !mflag )
+                                                     for(u = 0; u < 3; u++)
+		                                        point3[u] = spec3->c_of_m[k][u] + shift2[u];
+		                                  else
+                                                     for(u = 0; u < 3; u++)
+                                                        point3[u] = site3[u][k*nsites3+ks] + shift2[u]; 
+
+                                                  dist2 = DISTANCE(point3, point1);
+
+                                                  if( (dist2 >= blim[0]/10.0 ) && (dist2 <= blim[1]/10.0) )
+                                                  {
+                                                     for(u = 0; u < 3; u++)
+                                                     {
+                                                        vec1[u] = point2[u] - point1[u];  /* Vector between atoms 2 and 1 */
+                                                        vec2[u] = point3[u] - point1[u];  /* Vector between atoms 3 and 1 */
+                                                     }
+                                                     tmp_angle = angle_calc(vec1, vec2);
+                       
+                                                     if( (tmp_angle >= alim[0]) && (tmp_angle <= alim[1]) )
+                                                     {
+                                                        angle = NEW(ANGLE); /* Create new angle record */
+		                                        if( !mflag && spec1->nsites > 1)
+                                                           strncpy((angle->atom1),spec1->name, 2);
+						        else
+                                                           strncpy((angle->atom1),site_info[spec1->site_id[is]].name, 3);
+		                                        if( !mflag && spec2->nsites > 1)
+                                                           strncpy((angle->atom2),spec2->name, 2);
+						        else
+                                                           strncpy((angle->atom2),site_info[spec2->site_id[js]].name, 3);
+		                                        if( !mflag && spec3->nsites > 1)
+                                                           strncpy((angle->atom3),spec3->name, 2);
+						        else
+                                                           strncpy((angle->atom3),site_info[spec3->site_id[ks]].name, 3);
+                                                        angle->number1 = nmoli;
+                                                        angle->number2 = nmolj;
+                                                        angle->number3 = nmolk;
+                                                        angle->length1 = dist1;
+                                                        angle->length2 = dist2;
+	                                                angle->value = tmp_angle;
+	                                                node = morethan_ANGLE(aroot,angle);
+                                                        if( node == NULL )
+	                       	                        {
+                                                           if( insert_data(aroot,angle,1) < 0 )
+                                                              error("Error creating first node in angle list - \n%s\n",strerror(errno));
+			 	 	                }
+                                                        else
+                                                        {
+                                                           if( insert_at_position(aroot,node,angle,0) < 0 )
+                                                              error("Error inserting node in angle list - \n%s\n",strerror(errno));
+                                                        }
+                                                     }
+					          }
+                                               }
+                                            }
+			                 }
+			              }
+		                   }
+		             }  
+		          }
+		       }
+	            }
+                    if( flag )           /* Calculate angle about spec2 molecule */ 
+                    {
+                       nmolk = nmoli;
+                       for(js = 0; js < nsites2; js++)
+		       {
+		          if( !mflag )
+                             for(u = 0; u < 3; u++)
+		                point2[u] = spec2->c_of_m[j][u];
+		          else
+                             for(u = 0; u < 3; u++)
+                                point2[u] = site2[u][j*spec2->nsites+js]; 
+
+                          for(spec3 = spec1, nspec3 = 0; spec3 < species+system->nspecies; spec3++, nspec3++)
+		             if( spec_mask[nspec3] )
+                                for( k=(spec3==spec1?i+1:0); k < spec3->nmols; k++)
+                                {
+                                   nmolk++;
+
+                                   if( (nmolk != nmolj) && (nmoli != nmolj) )
+                                   {
+                                      for( frac[0] = min[0]; frac[0] <= max[0]; frac[0]++) 
+                                      for( frac[1] = min[1]; frac[1] <= max[1]; frac[1]++) 
+                                      for( frac[2] = min[2]; frac[2] <= max[2]; frac[2]++) 
+                                      {
+                                         mat_vec_mul(h, &frac, &shift, 1);
+ 
+                                         for(is = 0; is < nsites1; is++)
+	                                 {
+		                            if( !mflag )
+                                               for(u = 0; u < 3; u++)
+		                                  point1[u] = spec1->c_of_m[i][u] + shift[u];
+		                            else
+                                               for(u = 0; u < 3; u++)
+                                                  point1[u] = site1[u][i*nsites1+is] + shift[u];
+
+                                            dist1 = DISTANCE(point1, point2);
+
+                                            if( (dist1 >= blim[0]/10.0 ) && (dist1 <= blim[1]/10.0) )
+                                            {
+                                               for( frac2[0] = min[0]; frac2[0] <= max[0]; frac2[0]++) 
+                                               for( frac2[1] = min[1]; frac2[1] <= max[1]; frac2[1]++) 
+                                               for( frac2[2] = min[2]; frac2[2] <= max[2]; frac2[2]++) 
+                                               {
+                                                  mat_vec_mul(h, &frac2, &shift2, 1);
+
+                                                  for(ks = 0; ks < nsites3; ks++)
+		                                  {
+		                                     if( !mflag )
+                                                        for(u = 0; u < 3; u++)
+		                                           point3[u] = spec3->c_of_m[k][u] + shift2[u];
+		                                     else
+                                                        for(u = 0; u < 3; u++)
+                                                           point3[u] = site3[u][k*nsites3+ks] + shift2[u]; 
+   
+                                                     dist2 = DISTANCE(point3, point2);
+   
+                                                     if( (dist2 >= blim[0]/10.0 ) && (dist2 <= blim[1]/10.0) )
+                                                     {
+                                                        for(u = 0; u < 3; u++)
+                                                        {
+                                                           vec1[u] = point1[u] - point2[u];  /* Vector between atoms 1 and 2 */
+                                                           vec2[u] = point3[u] - point2[u];  /* Vector between atoms 3 and 2 */
+                                                        }
+   
+                                                        tmp_angle = angle_calc(vec1, vec2);
+
+                                                        if( (tmp_angle >= alim[0]) && (tmp_angle <= alim[1]) )
+                                                        {
+                                                           angle = NEW(ANGLE);  /* Calculate new angle record */
+		                                           if( !mflag && spec2->nsites > 1)
+                                                              strncpy((angle->atom1),spec2->name, 2);
+						           else
+                                                              strncpy((angle->atom1),site_info[spec2->site_id[js]].name, 3);
+		                                           if( !mflag && spec1->nsites > 1)
+                                                              strncpy((angle->atom2),spec1->name, 2);
+						           else
+                                                              strncpy((angle->atom2),site_info[spec1->site_id[is]].name, 3);
+		                                           if( !mflag && spec3->nsites > 1)
+                                                              strncpy((angle->atom3),spec3->name, 2);
+						           else
+                                                              strncpy((angle->atom3),site_info[spec3->site_id[ks]].name, 3);
+                                                           angle->number1 = nmolj;
+                                                           angle->number2 = nmoli;
+                                                           angle->number3 = nmolk;
+                                                           angle->length1 = dist1;
+                                                           angle->length2 = dist2;
+                                                           angle->value = tmp_angle;
+		                                           node = morethan_ANGLE(aroot,angle);
+                                                           if( node == NULL )
+                                                           {
+                                                              if( insert_data(aroot,angle,1) < 0 )
+                                                                 error("Error creating first node in angle list - \n%s\n",strerror(errno));
+                                                           }
+                                                           else
+                                                           {
+                                                              if( insert_at_position(aroot,node,angle,0) < 0 )
+                                                                 error("Error inserting node in angle list - \n%s\n",strerror(errno));
+                                                           }
+                                                        }
+					             }
+                                                  }
+                                               }
+					    }
+			                 }
+                                      }
+                                   }
+		                }
+                       }
+	            }
+                 }
+	      }
+        }
      }
 }
 /******************************************************************************
  * data_out().  Output bonds and angles to file with same format as Shell by  *
  *              N. Allan and G. Barrera, Bristol Univ.                        *
  ******************************************************************************/
-void data_out(ROOT **broot, ROOT **aroot)
+void data_out(ROOT **broot, ROOT **aroot, int xflag)
 {
    NODE         *node;
    BOND         *bd;
@@ -453,7 +582,7 @@ void data_out(ROOT **broot, ROOT **aroot)
       do
       {
           bd = node->data;
-	  printf("             %3d -%4s   %3d -%4s   %12.7f\n",
+	  printf("            %4d -%4s  %4d -%4s   %12.7f\n",
               bd->number1,bd->atom1,bd->number2,bd->atom2,bd->length);
           node = node->next;
       } while(node != NULL);
@@ -469,9 +598,10 @@ void data_out(ROOT **broot, ROOT **aroot)
       do
       {
           ang = node->data;
-          printf(" %3d -%4s   %3d -%4s   %3d -%4s   %11.6f    %12.7f  %12.7f\n",
-              ang->number1,ang->atom1,ang->number2,ang->atom2,ang->number3,
-                  ang->atom3,ang->value, ang->length1,ang->length2);
+	  if( !(xflag == 1 && fmod(floor(1e6*ang->value),9e7) == 0.0))
+             printf("%4d -%4s  %4d -%4s  %4d -%4s   %11.6f    %12.7f  %12.7f\n",
+                ang->number1,ang->atom1,ang->number2,ang->atom2,ang->number3,
+                   ang->atom3,ang->value,ang->length1,ang->length2);
           node = node->next;
       } while(node != NULL);
    }
@@ -485,33 +615,35 @@ void data_out(ROOT **broot, ROOT **aroot)
 int
 main(int argc, char **argv)
 {
-   int	c, cflg = 0, ans_i, sym = 0, data_source = 0;
+   int	c, cflg, ans_i, data_source = 0;
    char 	line[80];
    extern char	*optarg;
    int		errflg = 0;
    int		intyp = 0;
    int		start, finish, inc;
-   int		rflag = 0, sflag = 0;
+   int		rflag = 0;
    int		bflag = 0, aflag = 0;
    int		irec;
    char         *bondlims = NULL, *anglims = NULL;
    char		*filename = NULL, *dump_name = NULL;
-   char		*speclims = NULL;
    char		*dumplims = NULL, *tempname;
    char		dumpcommand[256];
    int		dump_size;
    float	*dump_buf;
-   FILE		*Fp, *Dp;
+   FILE		*Fp = NULL, *Dp;
    restrt_mt	restart_header;
    system_mt	sys;
    spec_mt	*species;
    site_mt	*site_info;
    pot_mt	*potpar;
-   quat_mt	*qpf;
-   contr_mt	control_junk;
+   quat_mt	*qpf = NULL;
    int          av_convert;
+   char		*spec_list = NULL;
+   char		*spec_mask = NULL;
+   int		pbc = 0;    /* No periodic boundary conditions (default) */
+   int		mflag = 0;  /* Bond lengths calculated between species cofms, not molecular sites */
+   int		xflag = 0;  /* Include right angles (default) */
 
-   int		sp_range[3];              /* Range and increment for species selection */
    int          blim[2], alim[2];         /* Min and max values for bonds and angles */
    ROOT         *root_bond = NULL;        /* Root of bond linked list */
    ROOT         *root_angle = NULL;       /* Root of angle linked list */
@@ -521,7 +653,7 @@ main(int argc, char **argv)
 
    comm = argv[0];
 
-   while( (c = getopt(argc, argv, "r:s:d:t:g:o:b:a:") ) != EOF )
+   while( (c = getopt(argc, argv, "r:s:d:t:g:o:b:a:pxj") ) != EOF )
       switch(c)
       {
        case 'r':
@@ -538,7 +670,7 @@ main(int argc, char **argv)
 	 dumplims = mystrdup(optarg);
          break;
        case 'g':
-	 speclims = mystrdup(optarg);
+	 spec_list = mystrdup(optarg);
 	 break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
@@ -550,6 +682,15 @@ main(int argc, char **argv)
        case 'a':
 	 anglims = mystrdup(optarg);
          break;
+       case 'p': /* Apply periodic boundary conditions */
+	 pbc = 1;
+         break;
+       case 'x': /* Don't print right angles */
+	 xflag = 1;
+         break;
+       case 'j': /* Calculate bonds and angles between c_of_ms */
+	 mflag = 1;
+         break;
        default:
        case '?':
 	 errflg++;
@@ -559,7 +700,7 @@ main(int argc, char **argv)
    {
       fputs("Usage: mdbond [-s sys-spec-file|-r restart-file] ",stderr);
       fputs("[-d dump-file/s] [-t timeslice]] [-g species] ",stderr);
-      fputs("[-b bond-limits] [-a angle-limits] [-o output-file]\n",stderr);
+      fputs("[-b bond-limits] [-a angle-limits] [-p] [-x] [-j] [-o output-file]\n",stderr);
       exit(2);
    }
 
@@ -574,12 +715,6 @@ main(int argc, char **argv)
       if( (ans_i = get_int("? ", 1, 2)) == EOF )
 	 exit(2);
       intyp = ans_i-1 ? 'r': 's';
-      if( intyp == 's' )
-      {
-	 fputs( "Do you need to skip 'control' information?\n", stderr);
-	 if( (sym = get_sym("y or n? ","yYnN")) == 'y' || sym == 'Y')
-	    cflg++;
-      }
 
       if( (filename = get_str("File name? ")) == NULL )
 	 exit(2);
@@ -590,6 +725,7 @@ main(int argc, char **argv)
     case 's':
       if( (Fp = fopen(filename,"r")) == NULL)
 	 error("Couldn't open sys-spec file \"%s\" for reading", filename);
+      cflg = check_control(Fp);
       if( cflg )
       {
 	 do
@@ -607,7 +743,7 @@ main(int argc, char **argv)
       if( (Fp = fopen(filename,"rb")) == NULL)
 	 error("Couldn't open restart file \"%s\" for reading -\n%s\n", 
 	       filename, strerror(errno));
-      re_re_header(Fp, &restart_header, &control_junk);
+      re_re_header(Fp, &restart_header, &control);
       re_re_sysdef(Fp, restart_header.vsn, &sys, &species, &site_info, &potpar);
       break;
     default:
@@ -615,47 +751,27 @@ main(int argc, char **argv)
    }
    allocate_dynamics(&sys, species);
 
-   /* Use default values for species selection limits */
-   sp_range[0] = 0;
-   sp_range[1] = sys.nspecies-1;
-   sp_range[2] = 1;
+   spec_mask = (char*)calloc(sys.nspecies+1,sizeof(char));
 
-   if( speclims == NULL)
-        sflag ++;
-    
-   while (!sflag) 
+/* Check species selection list */
+   if( spec_list == NULL)
+     sprintf(spec_list,"1-%d",sys.nspecies);
+
+   if( tokenise(mystrdup(spec_list), spec_mask, sys.nspecies) == 0 )
+      error("invalid species specification \"%s\" - choose from species 1 to %d",spec_list,sys.nspecies);
+
+#ifdef DEBUG
    {
-      if( forstr(speclims, &(sp_range[0]), &(sp_range[1]), &(sp_range[2])))
-      {  
-          fputs("Invalid range for molecule selection \"", stderr);
-	  fputs(speclims, stderr);
-	  fputs("\"\n", stderr);
-      }
-      else
-          sflag++;
-      if( sp_range[0] > sp_range[1] || sp_range[0] < 0 || sp_range[2] <= 0 )
-      {
-         fputs("Species limits must satisfy", stderr);
-         fputs(" finish >= start, start >= 0 and increment > 0\n", stderr);
-         sflag = 0;
-      }
-      if( sp_range[1] > sys.nspecies-1)
-      {
-         fputs("Molecule selection exceeds no. of species\n",stderr);
-         sflag = 0;
-      }
-      if( !sflag )
-      {
-         sp_range[0] = 0;
-         sp_range[1] = sys.nspecies-1;
-         sp_range[2] = 1;
-         (void)free(speclims);
-         speclims = NULL;
-         fputs("Please specify molecule selection in form", stderr);
-         fputs(" start-finish:increment\n", stderr);
-         speclims = get_str("s-f:n? ");
-      }
+      int i;
+      for(i = 0; i < sys.nspecies; i++)
+         if(spec_mask[i])
+            putchar('1');
+         else
+            putchar('0');
+      putchar('\n');
    }
+#endif
+
    /* Set default values for bond limits (x10) */
    blim[0] = BOND_MIN;
    blim[1] = BOND_MAX;
@@ -749,7 +865,7 @@ main(int argc, char **argv)
       break;
     case 'r':                           /* Restart file                       */
       init_averages(sys.nspecies, restart_header.vsn,
-                    control_junk.roll_interval, control_junk.roll_interval,
+                    control.roll_interval, control.roll_interval,
                     &av_convert);
       read_restart(Fp, restart_header.vsn, &sys, av_convert);
       break;
@@ -801,7 +917,7 @@ main(int argc, char **argv)
         sys.nmols, sys.nmols_r, start, finish, inc, dump_name);
    
       if( (Dp = popen(dumpcommand,"r")) == 0)
-         error("Failed to execute \'dumpext\" command - \n%s",
+         error("Failed to execute \"dumpext\" command - \n%s",
             strerror(errno));
 #else
       tempname = tmpnam((char*)0);
@@ -819,16 +935,17 @@ main(int argc, char **argv)
                irec, strerror(errno));
 
          dump_to_moldy(dump_buf, &sys);  /* read dump data */
-         mat_vec_mul(sys.h, sys.c_of_m, sys.c_of_m, sys.nmols);
+	 if( !mflag )
+            mat_vec_mul(sys.h, sys.c_of_m, sys.c_of_m, sys.nmols);
 
 #ifdef DEBUG
       fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
-          %header.maxdumps, dump_name);
+          irec%control.maxdumps, dump_name);
 #endif
          /* Perform bond/angle calculations for each slice of dump file */
-         bond_calc(&sys, species, site_info, &root_bond, &root_angle, sp_range, blim, alim); 
+         bond_calc(&sys, species, site_info, &root_bond, &root_angle, spec_mask, blim, alim, pbc, mflag); 
          printf("- Time slice %d -\n",irec);
-         data_out(&root_bond, &root_angle);
+         data_out(&root_bond, &root_angle, xflag);
          putchar('\n');
          if( root_bond != NULL && delete_list(&root_bond))
             error("Error releasing bond list data for slice %d - \n%s\n",
@@ -850,10 +967,11 @@ main(int argc, char **argv)
    if( data_source == 's' || data_source == 'r' )
    {
 /* Convert molecule positions from frac coords to Cartesian coords */
-      mat_vec_mul(sys.h, sys.c_of_m, sys.c_of_m, sys.nmols);
+      if( !mflag )
+         mat_vec_mul(sys.h, sys.c_of_m, sys.c_of_m, sys.nmols);
 
-      bond_calc(&sys, species, site_info, &root_bond, &root_angle, sp_range, blim, alim); 
-      data_out(&root_bond,&root_angle);
+      bond_calc(&sys, species, site_info, &root_bond, &root_angle, spec_mask, blim, alim, pbc, mflag);
+      data_out(&root_bond, &root_angle, xflag);
    }
    return 0;    
 }

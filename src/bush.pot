@@ -4,7 +4,7 @@ Buckingham
 # Self-consistent Interatomic Potentials for Simulation of Binary and Ternary Oxides
 # J Mater Chem, 4[6] (1994) 831-837.
 
-O         2      O        -2     32.32        25.41        1.44154534
+O        -2      O        -2     32.32        25.41        1.44154534
 Li        1      O        -2         0       426.48        3.33333333
 Na        1      O        -2         0     1271.504        3.33333333
 K         1      O        -2         0      3587.57        3.33333333

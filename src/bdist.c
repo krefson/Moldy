@@ -6,6 +6,11 @@ Copyright (C) 1999, 2003 Craig Fisher */
  ************************************************************************************** 
  *  Revision Log
  *  $Log$
+ *  Revision 1.7.10.3  2004/12/06 19:03:40  cf
+ *  Added stdlib.h to headers.
+ *  Set uninitialized node to NULL.
+ *  Removed unused variables.
+ *
  *  Revision 1.7.10.2  2003/11/07 09:01:08  moldydv
  *  Fixed bug in bond length units.
  *
@@ -47,6 +52,7 @@ Copyright (C) 1999, 2003 Craig Fisher */
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "structs.h"
 #include "list.h"
 #include "utlsup.h"
@@ -223,7 +229,7 @@ NODE *search_angle(ROOT **root, char *atom1, char *atom2, char *atom3)
  ****************************************************************************/
 NODE *search_count(ROOT **root, int x)
 {
-   NODE    *node;
+   NODE    *node = NULL;
    COUNT   *ct;
 
    if( VALID(root) )
@@ -250,7 +256,6 @@ void count_poly(ROOT **bond_root, ROOT **poly_root, int *blim)
    BOND         *bd;
    POLY         *poly;
    NABOR        *nabor;
-   ROOT         *nb_root;
 
    if(VALID(bond_root))
    {
@@ -558,20 +563,17 @@ int main(int argc, char **argv)
    int		bflag=0, aflag=0;               /* Flags for input of limits */
    int		a, b, c;
    int		inflag = 0, outsw = 0;
-   int		nbond, nangle;                  /* Total no of bond and angle records */
    int		i, lineno=0;
    int		nslice=-1;
    char		keyword[LLENGTH], line[LLENGTH];
 
    BOND		*bond;
    ANGLE	*angle;
-   POLY         *poly;
    ROOT         *root_bond = NULL;          /* Root of linked list */
    ROOT		*root_angle = NULL;         /* Root of linked list */
    ROOT         *root_bct = NULL;           /* Root of linked list */
    ROOT		*root_act = NULL;           /* Root of linked list */
    ROOT         *root_poly = NULL;          /* Root of linked list */
-   NODE		*node;
 
    FILE		*Fp;
 

@@ -35,6 +35,17 @@ static char *RCSid = "$Header$";
  ************************************************************************************** 
  *  Revision Log
  *  $Log$
+ *  Revision 2.4.10.7  2004/12/07 11:03:37  cf
+ *  Added read_dump_header and made static.
+ *  Added verbose option for dumpext.
+ *
+ *  Revision 2.4.10.6  2004/12/07 10:35:56  cf
+ *  Incorporated Keith's corrections and additions.
+ *
+ *  Revision 2.4.10.5  2004/12/06 19:10:07  cf
+ *  System data read from dump header file.
+ *  Removed unused variables.
+ *
  *  Revision 2.4.10.4  2003/10/21 10:27:55  kr
  *  Fixed a couple of bugs in the trajectory output
  *
@@ -194,17 +205,127 @@ static char *RCSid = "$Header$";
 #include "structs.h"
 #include "messages.h"
 #include "utlsup.h"
+#ifdef USE_XDR
+#   include     "xdr.h"
+   XDR          xdrs;
+#endif
+
 int     in_region(real *pos, real (*range)[3]);
-int	getopt(int, char *const *, const char *);
-extern  int optind;
-/*======================== Global vars =======================================*/
+/*======================== Global variables ==================================*/
 int ithread=0, nthreads=1;
+
 #define MSD  0
 #define TRAJ 1
 #define GNU  0
 #define GEN  1
 #define INNER 1
 #define OUTER 2
+/******************************************************************************
+ *  read_dump_header. Read the header of a moldy dump file.                   *
+ ******************************************************************************/
+static
+int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_write,
+                size_mt sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
+{
+   int      errflg = true;      /* Provisionally !!   */
+   char     vbuf[sizeof hdr_p->vsn + 1];
+   int      vmajor,vminor;
+
+   *xdr_write = false;
+#ifdef USE_XDR
+   /*
+    * Attempt to read dump header in XDR format
+    */
+   if( xdr_dump(&xdrs, hdr_p) )
+   {
+      strncpy(vbuf,hdr_p->vsn,sizeof hdr_p->vsn);
+      vbuf[sizeof hdr_p->vsn] = '\0';
+      if( strstr(vbuf,"(XDR)") )
+      {
+         errflg = false;
+         *xdr_write = true;
+      }
+   }
+#endif
+   /*
+    * If we failed, try to read header as native struct image.
+    */
+   if( ! *xdr_write )
+   {
+      if( fseek(dumpf, 0L, 0) )
+         message(NULLI, NULLP, WARNING, SEFAIL, fname, strerror(errno));
+      else if( fread((gptr*)&*hdr_p, sizeof(dump_mt), 1, dumpf) == 0 )
+         message(NULLI, NULLP, WARNING, DRERR, fname, strerror(errno));
+      else
+         errflg = false;
+   }
+   if( ! errflg )
+   {
+      /*
+       * Parse header version
+       */
+      errflg = true;
+      if( sscanf(hdr_p->vsn, "%d.%d", &vmajor, &vminor) < 2 )
+         message(NULLI, NULLP, WARNING, INDVSN, hdr_p->vsn);
+      if( vmajor < 2 || vminor <= 17)
+         message(NULLI, NULLP, WARNING, OLDVSN, hdr_p->vsn);
+      else
+         errflg = false;
+   }
+   if( errflg ) return errflg;
+ 
+   if( dump_sysinfo == 0)
+      return errflg;
+   else if ( sysinfo_size == sizeof(dump_sysinfo_mt) )
+   {
+      /*
+       * Now check for sysinfo and read fixed part of it.  This is needed to
+       * determine species count to read the whole thing.
+       */
+#ifdef USE_XDR
+      if( *xdr_write ) {
+         if( ! xdr_dump_sysinfo_hdr(&xdrs, dump_sysinfo) )
+            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+         errflg = false;
+      } else
+#endif
+      {
+         if( fread((gptr*)dump_sysinfo,sizeof(dump_sysinfo_mt), 1, dumpf) == 0)
+            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+         errflg = false;
+      }
+   }
+   else
+   {
+      /*
+       * Now check for sysinfo and read it all.  N.B.  Buffer must be
+       * allocated to full expected size by prior call to read_dump_header.
+       */
+#ifdef USE_XDR
+      if( *xdr_write ) {
+         if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo, vmajor, vminor) )
+            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+      if (sizeof(dump_sysinfo_mt)
+          + sizeof(mol_mt) * (dump_sysinfo->nspecies-1) > sysinfo_size)
+      {
+         /*
+          * We have already overrun the end of the "dump_sysinfo" buffer.
+          * Perhaps we can exit gracefully before crashing?
+          */
+         message(NULLI, NULLP, FATAL, RDHERR,  sizeof(dump_sysinfo_mt)
+                 + sizeof(mol_mt) * (dump_sysinfo->nspecies-1), sysinfo_size);
+      }
+         errflg = false;
+      } else
+#endif
+      {
+         if( fread((gptr*)dump_sysinfo, sysinfo_size, 1, dumpf) == 0)
+            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+         errflg = false;
+      }
+   }
+   return errflg;
+}
 /******************************************************************************
  * traj_gnu().  Output routine for displaying trajectories                    *
  *		- coords vs time for each species/atom for GNUplot            * 
@@ -213,8 +334,7 @@ void
 traj_gnu(spec_mt *species, vec_mt (**traj_cofm), int nslices, real (*range)[3],
 	       	char *spec_mask, int nspecies)
 {
-   int          totmol=0, imol, i, itime;
-   int		ispec=0;
+   register int totmol=0, imol, i, itime, ispec;
    spec_mp      spec;
 
    for( spec = species, ispec=0; spec < species+nspecies; spec++, ispec++)
@@ -247,8 +367,7 @@ void
 traj_idl(spec_mt *species, vec_mt (**traj_cofm), int nslices, real (*range)[3],
 	       	char *spec_mask, int nspecies)
 {
-   int		totmol, imol, i, itime;
-   int		ispec=0;
+   register int	totmol, imol, i, itime, ispec;
    spec_mp	spec;
 
    for( itime = 0; itime < nslices; itime++)
@@ -284,10 +403,10 @@ msd_calc(spec_mt *species,	/* Species data */
          vec_mt (**traj_cofm),	/* Continuous trajectory data */
          real ***msd)		/* Msd data for each time slice */
 {
-   int it, irec, totmol, imsd, ispec, imol, nmols, cmols, i;
-   int nspec, tmol;
+   register int it, irec, totmol, imsd, ispec, imol, nmols, cmols;
+   register int i, tmol;
+   register double       msdtmp, stmp;
    spec_mp      spec;
-   double       msdtmp, stmp;
    vec_mt	*tct0, *tct1;
 
    /* Outer loop for selecting initial time slice */
@@ -339,7 +458,7 @@ msd_out(spec_mt *species,	/* Species data */
         int nspecies,           /* No of species in system */
         double tstep)           /* Absolute time step in ps */
 {
-   int          ispec=0, imsd, i;
+   register int ispec=0, imsd, i;
    real         totmsd;
    spec_mp      spec;
 
@@ -387,21 +506,19 @@ msd_out(spec_mt *species,	/* Species data */
  *        when outputting trajectories. Molecules selected based on initial   *
  *	  positions.							      *
  ******************************************************************************/
-contr_mt                control;
-
 int
 main(int argc, char **argv)
 {
-   int	c, cflg = 0;
+   int	c;
    extern char	*optarg;
    int		errflg = 0;
    int		outsw = MSD, trajsw = GNU;
    int		start, finish, inc;			/* Range specifiers for dump files */
    int		mstart, mfinish, minc;			/* Range specifiers for msds */ 
    int		it_inc = 1;				/* Default increment for initial time slice */
-   int		dflag, iflag, sflag, mflag;
+   int		dflag, iflag, mflag;
    int		i, irec, ispec;				/* Counters */
-   char		*filename = NULL, *dump_base = NULL;
+   char		*dump_base = NULL;
    char		*dump_name = NULL, *dump_names = NULL;
    char		*dumplims = NULL;
    char		*msdlims = NULL;
@@ -409,7 +526,7 @@ main(int argc, char **argv)
    char		dumpcommand[256];
    int		dump_size;
    float	*dump_buf;
-   FILE         *Fp, *Dp, *dump_file;
+   FILE         *Dp, *dump_file;
    dump_mt	dump_header;
    dump_sysinfo_mt *dump_sysinfo;
    size_mt	sysinfo_size;
@@ -418,21 +535,18 @@ main(int argc, char **argv)
    vec_mt 	**traj_cofm;		/* Cofm data for continuous trajectories */
    mat_mt	*hmat;			/* h matrix for each slice */
    real		range[3][3];		/* Spatial range to include in msd calcs */
-   site_mt	*site_info;
-   pot_mt	*potpar;
-   quat_mt	*qpf;
    int          nmsd, max_av, nspecies, nslices;
    real         ***msd;			/* Calculated MSD data for each time slice and species */
-   char         *spec_list = "1-50";    /* List of species to calculate for (with default) */
-   char         spec_mask[MAX_SPECIES]; /* Mask for selecting species */
+   char         *spec_list = NULL;      /* List of species to calculate for (with default) */
+   char         *spec_mask = NULL;      /* Mask for selecting species */
    int          arglen, ind, genflg;
    int          xdr = 0;
+   int		verbose = 0;
    real		msd_step; 		/* Absolute msd time interval (in ps) */
 
    zero_real(range[0],9);
 
 #define MAXTRY 100
-   control.page_length=1000000;
 
    comm = argv[0];
    if( strstr(comm, "msd") )
@@ -440,12 +554,9 @@ main(int argc, char **argv)
    else if( strstr(comm, "mdtraj") )
       outsw = TRAJ;
 
-   while( (c = getopt(argc, argv, "cd:t:m:i:g:o:w:xXyYzZ") ) != EOF )
+   while( (c = getopt(argc, argv, "d:t:m:i:g:o:w:xXyYzZv") ) != EOF )
       switch(c)
       {
-       case 'c':
-         cflg++;
-         break;
        case 'd':
 	 dump_base = optarg;
 	 break;
@@ -456,7 +567,7 @@ main(int argc, char **argv)
 	 msdlims = mystrdup(optarg);
          break;
        case 'g':
-	 spec_list = optarg;
+	 spec_list = mystrdup(optarg);
 	 break;
        case 'i':
 	 it_inc = atoi(optarg);
@@ -490,6 +601,8 @@ main(int argc, char **argv)
 	    trajsw = GEN;
 	 outsw = TRAJ;
          break;
+       case 'v':
+         verbose++;
        default:
        case '?':
 	 errflg++;
@@ -498,15 +611,12 @@ main(int argc, char **argv)
    if( errflg )
    {
       fprintf(stderr,
-         "Usage: %s [-c] [-d dump-files] [-t s[-f[:n]]] ",comm);
+         "Usage: %s [-d dump-files] [-t s[-f[:n]]] ",comm);
       fputs("[-m s[-f[:n]]] [-g s[-f[:n]]] ",stderr);
       fputs("[-i initial-time-increment] [-w trajectory-format] ",stderr);
-      fputs("[-x|-X] [-y|-Y] [-z|-Z] [-o output-file]\n",stderr);
+      fputs("[-x|-X] [-y|-Y] [-z|-Z] [-v] [-o output-file]\n",stderr);
       exit(2);
    }
-
-   if( tokenise(mystrdup(spec_list), spec_mask, MAX_SPECIES) == 0 )
-      error("Invalid species specification \"%s\": usage eg 1,3,5-9,4",spec_list);
 
    /* Prepare dump file name for reading */
    genflg = 0;
@@ -570,6 +680,14 @@ main(int argc, char **argv)
       + sizeof(mol_mt) * (dump_sysinfo->nspecies-1);
    (void)free(dump_sysinfo);
 
+/* Check dump file contains necessary data */
+    if( !(dump_header.dump_level & 1) )
+      {
+      fprintf(stderr, "C of M positions not contained in a dump of level %d\n", dump_header.dump_level);
+      fputs("Calculation aborted\n", stderr);
+      exit(2);
+      }
+
    /*
     * Allocate space for and read dump sysinfo.
     */
@@ -600,6 +718,15 @@ main(int argc, char **argv)
    }
 
    allocate_dynamics(&sys, species);
+
+/* Check species selection list */
+   spec_mask = (char*)calloc(sys.nspecies+1,sizeof(char));
+
+   if( spec_list == NULL)
+     sprintf(spec_list,"1-%d",sys.nspecies);
+
+   if( tokenise(mystrdup(spec_list), spec_mask, sys.nspecies) == 0 )
+      error("invalid species specification \"%s\" - choose from species 1 to %d",spec_list,sys.nspecies);
 
   /*
    *  Ensure that the dump limits start, finish, inc are set up,
@@ -703,11 +830,16 @@ main(int argc, char **argv)
           dump_size);
 #if defined (HAVE_POPEN) 
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s",
-        sys.nmols, sys.nmols_r, start, finish, inc, dump_names);
+      verbose?"-v":"", sys.nmols, sys.nmols_r, start, finish, inc, dump_names);
    
    if( (Dp = popen(dumpcommand,"r")) == 0)
-        error("Failed to execute \'dumpext\" command - \n%s",
+   {
+      if( !strcmp(strerror(errno),"Success") )
+         error("Failed to execute \"dumpext\" command\n");
+      else
+         error("Failed to execute \"dumpext\" command - \n%s",
             strerror(errno));
+   }
 #else
    tempname = tmpnam((char*)0);
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d -o %s %s",

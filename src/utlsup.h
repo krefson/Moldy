@@ -1,7 +1,6 @@
 /*
  * utlsup definitions
  */
-#define MAX_SPECIES 50                     /* Maximum no of different species          */
 #define DOTPROD(x,y)   ((x[0]*y[0])+(x[1]*y[1])+(x[2]*y[2])) /* Scalar product between x and y */
 #define xtoupper(c) (islower(c) ? toupper(c) : c)
 /*
@@ -15,6 +14,11 @@
 #define CSSR 5
 #define ARC 6
 #define XTL 7
+
+/*======================== External data references =======================================*/
+extern int optind;
+contr_mt                control;
+
 /*
  * utlsup functions
  */
@@ -25,7 +29,7 @@ extern int lines_left (void);
 extern void new_page (void); 
 extern void new_line (void); 
 extern void banner_page (system_mt *sys, spec_mt *spec, restrt_mt *rh); 
-extern void note (char *format, ...); 
+extern void note (char *format, ...);
 extern void message (int *nerrs, ...); 
 extern void error (char *format, ...); 
 extern char *mystrdup (char *s); 
@@ -44,9 +48,10 @@ extern char *comm;
 extern FILE  *open_dump(char *fname, char *mode);
 extern int close_dump(FILE *dumpf);
 extern int rewind_dump(FILE *dumpf, int xdr);
-extern int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_write,
-		     size_mt sysinfo_size, dump_sysinfo_mt *dump_sysinfo);
-int     tokenise(char *fields, char *mask, int len);
+extern int     tokenise(char *fields, char *mask, int len);
+extern int	get_tokens(char *buf, char **linev, char *sep);
+extern char    *get_line(char *line, int len, FILE *file, int skip);
+extern int 	check_control(FILE *file);
 /*
  * Moldy functions
  */
@@ -74,11 +79,8 @@ void	read_restart(FILE *restart, char *vsn, system_mp system,
 void	init_averages(int nspecies, char *vsn, long int roll_interval, 
 		      long int old_roll_interval, int *av_convert);
 int	getopt(int, char *const *, const char *);
-gptr	*talloc(int n, size_mt size, int line, char *file);
 void	zero_real(real *r, int n);
-void	zero_double(double *r, int n);
 void    conv_potentials(const unit_mt *unit_from, const 
 			unit_mt *unit_to, pot_mt *potpar, int npotpar,
 			int ptype, site_mt *site_info, int max_id);
-extern char    *get_line(char *line, int len, FILE *file, int skip);
-int	get_tokens(char *buf, char **linev, char *sep);
+void    read_control(FILE *file, const match_mt *match);

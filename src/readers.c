@@ -171,12 +171,17 @@ char    *read_ftype(char *filename)
 {
 char    *s = filename+strlen(filename);
 
-   while( s != NULL && *s != '.' )
-      s--;
+   if( strstr(filename,".") != NULL)
+   {
+     while( s != NULL && *s != '.' )
+       s--;
 
-   if( *s == '.')
-        s++;
-   return (s);
+     if( *s == '.')
+       s++;
+     return (s);
+   }
+   else
+     return ("");
 }
 /******************************************************************************
  * read_cssr().  Read structural data from cssr file.                         *
@@ -355,7 +360,7 @@ FILE     *Fp;
           crystflag++; /* Unit cell defined for this structure */
        }
 
-       if(strncmp(strlower(keyword),"scale",5) == 0 )         /* SCALE */
+       if(strncasecmp(keyword,"scale",5) == 0 )         /* SCALE */
        {
           sscanf(line, "SCALE%1d", &irow);
           if( irow < 1 || irow > 3 )
@@ -645,13 +650,15 @@ FILE     *Fp;
 int      read_xtl(char *filename, mat_mp h, char (*label)[NLEN], vec_mp x, double *charge, char *title, char *spgr)
 {
 int      i, num_tokens, natoms = 0;
+int	 shift, num_columns;
 double   cell[6];                                  /* Cell parameters */
 mat_mt   hinv;
-char     line[LLEN], *buff[32];
-char	 dummy[4], temp_name[6];
-int      sgno = 0, sgopt = 0;
+char     line[LLEN], *buffer[LLEN];
+char	 *temp_name=NULL;
+int      sgno = 0;
 int	 dimension = 3;
 boolean	 crystflag = false, cart = false;
+int	 column[9];
 FILE     *Fp;
 
    if( (Fp = fopen(filename,"r")) == NULL)
@@ -660,7 +667,7 @@ FILE     *Fp;
    while( !feof(Fp) )
    {
       get_line(line,LLEN,Fp,0);
-      if(strcmp(strlower(line),"title") == 0 )         /* Title */
+      if(strncasecmp(line,"tit",3) == 0 )         /* Title */
       {
          if( strlen(line+5) == 0)
             strncat(title,filename,TITLE_SIZE);
@@ -669,7 +676,7 @@ FILE     *Fp;
          trim(title);
       }
 
-      if (strncmp(strlower(line),"dimension ",10) == 0)  /* Periodicity */
+      if (strncasecmp(line,"dim ",3) == 0)  /* Periodicity */
       {
          if( sscanf(line,"dimension %d", &dimension) != 1)
             error("Error in DIMENSION line of \"%s\" -- should have 1 parameter", filename);
@@ -677,7 +684,7 @@ FILE     *Fp;
       if( dimension != 3)
             error("Error - \"%s\" does not contain a 3D structure", filename);
 
-      if(strcmp(strlower(line),"cell") == 0)   /* CELL - Specify unit cell */
+      if(strncasecmp(line,"cel",3) == 0)   /* CELL - Specify unit cell */
       {
          if( sscanf(get_line(line,LLEN,Fp,0),"%10lf %10lf %10lf %10lf %10lf %10lf",
             &cell[0],&cell[1],&cell[2],&cell[3],&cell[4],&cell[5]) < 6 )
@@ -685,75 +692,171 @@ FILE     *Fp;
          crystflag = true;
       }
 
-      if(strncmp(strlower(line),"symmetry ",9) == 0 )         /* Space group */
+      if(strncasecmp(line,"sym ",3) == 0 )         /* Space group */
       {
-        num_tokens = get_tokens(line, buff, " ");
+        num_tokens = get_tokens(line, buffer, " ");
         for (i=1 ; i<num_tokens-1 ; i++)
         {
           /* seek space group number */
-          if (strcmp("number", *(buff+i)) == 0)
-            sscanf(*(buff+i+1),"%d", &sgno);
+          if (strncasecmp("num", *(buffer+i),3) == 0)
+            sscanf(*(buffer+i+1),"%d", &sgno);
           /* seek space group label */
-          if (strcmp("label", *(buff+i)) == 0)
-            strcpy(spgr, *(buff+i+1));
+          if (strncasecmp("lab", *(buffer+i),3) == 0)
+            strcpy(spgr, *(buffer+i+1));
 
           if( sgno > 1 && (strcmp(spgr,"") == 0 || strcmp(spgr,"P 1") == 0))
             sprintf(spgr,"%d",sgno);
 
-          if (strcmp("qualifier", strlower(*(buff+i))) == 0)
+          if (strncasecmp("qua", *(buffer+i),3) == 0)
           {
             strcat(spgr,":");
 
-            if(strcmp("b", strlower(*(buff+i+1))) == 0)
+            if(strcmp("b", strlower(*(buffer+i+1))) == 0)
               strcat(spgr,"b");
 
-            if(strcmp("c", strlower(*(buff+i+1))) == 0)
+            if(strcmp("c", strlower(*(buffer+i+1))) == 0)
               strcat(spgr,"c");
 
-            if(strcmp("a", strlower(*(buff+i+1))) == 0)
+            if(strcmp("a", strlower(*(buffer+i+1))) == 0)
               strcat(spgr,"a");
 
-            if(strcmp("origin", strlower(*(buff+i+1))) == 0)
-              strcat(spgr,*(buff+i+2));
+            if(strcmp("origin", strlower(*(buffer+i+1))) == 0)
+              strcat(spgr,*(buffer+i+2));
 
-            if( strcmp(strlower(*(buff+i)),"hexagonal") == 0 )
+            if( strcmp(strlower(*(buffer+i)),"hexagonal") == 0 )
                  strcat(spgr,"h");
 
-            if( strcmp(strlower(*(buff+i)),"rhombohedral") == 0 )
+            if( strcmp(strlower(*(buffer+i)),"rhombohedral") == 0 )
                  strcat(spgr,"r");
           }
         }
       }
-
-      if(strcmp(strlower(line),"atoms") == 0)
+      /* Read in atom data */
+      /* nb. columns could be in any order */
+      if(strncasecmp(line,"ato",3) == 0)
       {
          get_line(line,LLEN,Fp,0);
-         if( strncmp(strlower(line),"name ",5) == 0)
+         num_tokens = get_tokens(line, buffer, " ");
+         /* Determine order of columns */
+         for(i=0; i<num_tokens; i++)
          {
-           num_tokens = get_tokens(line, buff, " ");
-           if( num_tokens > 1 &&  strncmp(strlower(*(buff+1)),"carx",4) == 0)
+           /* NAME secondary keyword */
+           if (strncasecmp("nam", *(buffer+i), 3) == 0)
+              column[0] = i;
+           /* X secondary keyword */
+           if (strncasecmp("x", *(buffer+i), 1) == 0)
+              column[1] = i;
+           /* Y secondary keyword */
+           if (strncasecmp("y", *(buffer+i), 1) == 0)
+              column[2] = i;
+           /* Z secondary keyword */
+           if (strncasecmp("z", *(buffer+i), 1) == 0)
+              column[3] = i;
+           /* SCATTER secondary keyword */
+           if (strncasecmp("sca", *(buffer+i), 3) == 0)
+              column[4] = i;
+           /* CHARGE secondary keyword */
+           if (strncasecmp("cha", *(buffer+i), 3) == 0)
+              column[5] = i;
+           /* CARX secondary keyword */
+           if (strncasecmp("carx", *(buffer+i), 4) == 0)
+           {
+              column[6] = i;
               cart = true;
-           do {
-              get_line(line,LLEN,Fp,0);
-
-              if( strcmp(strlower(line),"eof") !=0 )
-              {
-                 if( natoms > MAX_ATOMS )
-                    error("\"%s\" contains too many atoms! (max: %d)\n", filename, MAX_ATOMS);
-
-		 /* Read atom type from scattering element, as label not always element symbol */
-                 if( sscanf(line,"%s %lf %lf %lf %lf %*lf %*lf   %s",
-                     dummy, &x[natoms][0], &x[natoms][1], &x[natoms][2], &charge[natoms], temp_name) < 6)
-                    error("File \"%s\" has incorrect format", filename);
-
-                 str_cut(temp_name, label[natoms]); /* Extract atom symbol from symbol+number */
-                 trim(label[natoms]);
-                 natoms++;
-              }
-              else
-                break;
-           } while(!feof(Fp));
+           }
+           /* CARY secondary keyword */
+           if (strncasecmp("cary", *(buffer+i), 4) == 0)
+           {
+              column[7] = i;
+              cart = true;
+           }
+           /* CARZ secondary keyword */
+           if (strncasecmp("carz", *(buffer+i), 4) == 0)
+           {
+              column[8] = i;
+              cart = true;
+           }
          }
+         for (;;)
+         {
+           get_line(line,LLEN,Fp,0);
+           num_columns = get_tokens(line, buffer, " ");
+           if(!buffer)
+             break;
+
+           if (strncasecmp("eof", *buffer, 3) != 0)
+           {
+             if( natoms > MAX_ATOMS )
+                 error("\"%s\" contains too many atoms! (max: %d)\n", filename, MAX_ATOMS);
+
+/* enough tokens */
+/* Use scattering element in lookup, as label not always element symbol */
+/* otherwise check if first item is a valid atom type */
+/* C. Fisher 2004 */
+             if (column[4] != -1)
+             {
+               temp_name = mystrdup(*(buffer+column[4]));
+               if( num_columns > num_tokens)
+                 strcat(temp_name, *(buffer+column[4]+1));
+             }
+             else
+               if(column[0] != -1)
+                 temp_name = mystrdup(*(buffer+column[0]));
+               else
+                 break;
+             if( temp_name != NULL)
+             {
+               str_cut(temp_name, label[natoms]); /* Extract atom symbol from symbol+number */
+               trim(label[natoms]);
+             }
+
+             if( num_columns > num_tokens) /* SCATTER factor can exist as two items */
+               shift=1;      /* Shift column by one to allow for extra scatter term */
+             else
+               shift=0;
+
+             if( !cart )
+             {
+               if( column[1] > column[4] && shift==1 )
+                 x[natoms][0] = atof(*(buffer+column[1]+shift));
+               else
+                 x[natoms][0] = atof(*(buffer+column[1]));
+               if( column[2] > column[4] && shift==1 )
+                 x[natoms][1] = atof(*(buffer+column[2]+shift));
+               else
+                 x[natoms][1] = atof(*(buffer+column[2]));
+               if( column[3] > column[4] && shift==1 )
+                 x[natoms][2] = atof(*(buffer+column[3]+shift));
+               else
+                 x[natoms][2] = atof(*(buffer+column[3]));
+             }
+             else
+             {
+               if( column[6] > column[4] && shift==1 )
+                 x[natoms][0] = atof(*(buffer+column[6]+shift));
+               else
+                 x[natoms][0] = atof(*(buffer+column[6]));
+               if( column[7] > column[4] && shift==1 )
+                 x[natoms][1] = atof(*(buffer+column[7]+shift));
+               else
+                 x[natoms][1] = atof(*(buffer+column[7]));
+               if( column[8] > column[4] && shift==1 )
+                 x[natoms][2] = atof(*(buffer+column[8]+shift));
+               else
+                 x[natoms][2] = atof(*(buffer+column[8]));
+             }
+             if( column[5] != -1)
+             {
+               if( column[5] > column[4] && shift==1 )
+                 charge[natoms] = atof(*(buffer+column[5]+shift));
+               else
+                 charge[natoms] = atof(*(buffer+column[5]));
+             }
+             natoms++;
+           } 
+           else
+             break;
+        }
       }
    }
    fclose(Fp);
@@ -785,11 +888,9 @@ FILE     *Fp;
 int      read_xyz(char *filename, mat_mp h, char (*label)[NLEN], vec_mp x, char *title)
 {
 int      natoms = 0;
-double   cell[6];                                  /* Cell parameters */
 char     line[LLEN];
 char     temp_name[8];
-double   cellmax[3], cellmin[3];
-int	 i,j;
+int	 i;
 FILE     *Fp;
 
    if( (Fp = fopen(filename,"r")) == NULL)
@@ -834,7 +935,6 @@ char       symbol[4];
 double     mass, chg;
 spec_data  *ele = element;
 char       line[LLEN];
-char       *success_read;
 FILE       *Fe;
 
      if( (Fe = fopen(filename,"r")) == NULL)
