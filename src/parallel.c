@@ -22,6 +22,9 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.12  1995/12/06 10:44:50  keith
+ *       Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
+ *
  *       Revision 2.11  1994/11/24 14:48:17  keith
  *       Fixed problem with arg lists for TCGMSG
  *
@@ -65,7 +68,9 @@ extern int 	ithread, nthreads;
 #ifdef BSP
 /*
  * BSP currently doesn't handle auto & heap vars.  This interface
- * copies to static storage.
+ * copies to static storage.  A 1MB buffer is large enough to
+ * handle up to 44000 atomic sites in one go, and data for larger 
+ * systems is parcelled up appropriately and sent in chunks.
  */
 #define NBUFMAX 1048576
 static char tmpbuf[NBUFMAX];
@@ -201,26 +206,44 @@ par_rsum(buf, n)
 real *buf;
 int  n;
 {
-   if( n*sizeof(real) > NBUFMAX)
-      message(NULLI, NULLP, FATAL, 
-	      "par_rsum called with too large n (%d) - maximum is %d",
-	      n, NBUFMAX/sizeof(real));
-   memcp(tmpbuf, buf, n*sizeof(real));
-   bspreduce(vradd, tmpbuf, tmpbuf, n*sizeof(real));
-   memcp(buf, tmpbuf, n*sizeof(real));
+   int m;
+   
+   /*
+    * BSP only allows operations on statically allocated buffers. *sigh*
+    * Use loop to perform general operation copying in and out of a
+    * fixed-size, static buffer.
+    */
+   while( n > 0 )
+   {
+      m = MIN(n, NBUFMAX/sizeof(real));
+      memcp(tmpbuf, buf, m*sizeof(real));
+      bspreduce(vradd, tmpbuf, tmpbuf, m*sizeof(real));
+      memcp(buf, tmpbuf, m*sizeof(real));
+      buf += m;
+      n -= m;
+   }
 }
 void
 par_dsum(buf, n)
 double *buf;
 int  n;
 {
-   if( n*sizeof(double) > NBUFMAX)
-      message(NULLI, NULLP, FATAL, 
-	      "par_rsum called with too large n (%d) - maximum is %d",
-	      n, NBUFMAX/sizeof(double));
-   memcp(tmpbuf, buf, n*sizeof(double));
-   bspreduce(vdadd, tmpbuf, tmpbuf, n*sizeof(double));
-   memcp(buf, tmpbuf, n*sizeof(double));
+   int m;
+   
+   /*
+    * BSP only allows operations on statically allocated buffers. *sigh*
+    * Use loop to perform general operation copying in and out of a
+    * fixed-size, static buffer.
+    */
+   while( n > 0 )
+   {
+      m = MIN(n, NBUFMAX/sizeof(double));
+      memcp(tmpbuf, buf, m*sizeof(double));
+      bspreduce(vradd, tmpbuf, tmpbuf, m*sizeof(double));
+      memcp(buf, tmpbuf, m*sizeof(double));
+      buf += m;
+      n -= m;
+   }
 }
 #endif
 #ifdef MPI
@@ -288,13 +311,23 @@ int	n;
 size_mt	size;
 int	ifrom;
 {
-   if( n*size > NBUFMAX)
-      message(NULLI, NULLP, FATAL, 
-	      "cbrdcst called with too large n (%d) - maximum is %d",
-	      n*size, NBUFMAX);
-   memcp(tmpbuf, buf, n*size);
-   bspbroadcast(ifrom, tmpbuf, tmpbuf, n*size);
-   memcp(buf, tmpbuf, n*size);
+   int m;
+   size_mt nbyt = n*size;
+   
+   /*
+    * BSP only allows operations on statically allocated buffers. *sigh*
+    * Use loop to perform general operation copying in and out of a
+    * fixed-size, static buffer.
+    */
+   while( nbyt > 0 )
+   {
+      m = MIN(nbyt, NBUFMAX);
+      memcp(tmpbuf, buf, m);
+      bspbroadcast(ifrom, tmpbuf, tmpbuf, m);
+      memcp(buf, tmpbuf, m);
+      buf = (char*)buf + m;
+      nbyt -= m;
+   }
 }
 #endif
 #ifdef MPI
