@@ -228,6 +228,7 @@ int	bflg, nmols;
       tslice += inc;
       dump_base += inc*sizeof(float) * header.dump_size;
    }
+   (void)fclose(dump_file);
    (void)free((char*)buf);
 }
 
