@@ -29,6 +29,13 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.22  2000/12/06 17:45:29  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.21  2000/10/20 15:15:47  keith
  *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
  *
@@ -217,7 +224,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.21 2000/10/20 15:15:47 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.22 2000/12/06 17:45:29 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -805,7 +812,8 @@ double poteval(real *potpar,            /* Array of potential parameters      */
 	       double chgsq)            /* Product of site charges            */
 {
    double pe = 0.0;
-   double       norm = 2.0*control.alpha/sqrt(PI);
+   double norm = 2.0*control.alpha/sqrt(PI);
+   real   chgsq_r = chgsq;
    real f,rr;
    real *pp[NPOTP];
    int  i;
@@ -814,7 +822,7 @@ double poteval(real *potpar,            /* Array of potential parameters      */
       pp[i] = potpar+i;
 
    rr = SQR(r);
-   kernel(0,1,&f,&pe,&rr,&chgsq,1.0,norm,control.alpha,ptype, pp);
+   kernel(0,1,&f,&pe,&rr,&chgsq_r,1.0,norm,control.alpha,ptype, pp);
    return pe;
 }
 /******************************************************************************
@@ -1326,7 +1334,7 @@ void force_calc(real **site,            /* Site co-ordinate arrays       (in) */
                *pe_intra(spec, chg+isite, system->ptype, potpar,max_id);
          isite += spec->nmols*spec->nsites;
       }
-      note("Direct pot. energy = %g",eintra*CONV_E);
+      note("Intramolecular potential energy correction = %g",eintra*CONV_E);
       init=0;
    }
    if( ithread == 0 )
