@@ -564,7 +564,7 @@ null string {\em e.g.} \verb'save-file = '.
 
 \item[booleans] These are just switches which turn a feature off or
 on. `0' means off or false and `1' means on or true. The parameters
-\verb'text-mode-save', \verb'new-sys-spec', \verb'scale-separately',
+\verb'text-mode-save', \verb'new-sys-spec', 
 \verb'surface-dipole' and \verb'lattice-start' are booleans.
 
 \item[real parameters] Several parameters are real numbers \eg
@@ -634,8 +634,8 @@ MD cell dimensions. \\ \hline
 Frequency of velocity scaling to required temperature. \\
 \verb'scale-end' &	   	integer & 			1000000 &
 When to stop scaling. \\
-\verb'scale-separately' &	boolean & 		false  &
-Perform scaling for each species individually. \\
+\verb'scale-options' &           integer & 		0  &
+Select variations on scaling. \\
 \verb'temperature' &    	real &			0 &
 Temperature to set up initial configuration at and to scale to. \\ \hline
 \verb'const-pressure' &  	boolean & 		false  &
@@ -993,9 +993,61 @@ the velocity rescaling technique described in section
 \ref{sec:rescaling}.  Every \verb'scale-interval' timesteps until
 \verb'scale-end', the velocities are adjusted so that the kinetic
 energy corresponds exactly to the desired temperature (the value of
-control parameter \verb'temperature'). If it is required that each
-individual species should have its temperature adjusted separately,
-the switch \verb'scale-separately' should be set to 1 (true).
+control parameter \verb'temperature').
+
+There are several variants of scaling performed which are selected
+by the control parameter \verb'scale-options'.  This is an integer
+parameter interpreted as a set of bit flags with the following meanings.
+\begin{description}
+\item[bit 0]	perform scaling for each molecular species individually.
+and potential energy.	      
+\item[bit 1]	scale the rotational and translational components of
+the kinetic energy separately.
+\item[bit 2]	use the rolling averages of kinetic energy to
+calculate the scale factor rather than the instantaneous values.
+\item[bit 3]    discard all existing velocities and accelerations and
+re-initialize from the Maxwell-Boltzmann distribution.
+\end{description}
+These bits may be set in any combination so, for example
+\verb'scale-options=6' sets bits 1 and 2 ($ 6 = 2^1 + 2^2$) and scales
+separately for rotation/translation using the rolling averages.  If
+bit 3 is set the others are ignored.
+
+The options for scaling separately rotation and translation, and per
+species may be useful for achieving equilibration in ``difficult''
+systems where mode-coupling is ineffective.  In those situations it is
+otherwise possible for all the energy to be transferred into the
+rotational modes of a particular species, halting any progress to
+equilibrium for other degrees of freedom.   These options ensure that
+all degrees of freedom have some thermal energy.
+
+The option controlled by bit 3, to discard all existing information
+and start from a random set of velocities may be of use when starting
+from far-from-equilibrium situations.  In such cases the forces
+are frequently so large that the velocities and accelerations exceed
+the limits of the integration algorithm and timestep, which results in
+\moldy\ stopping with a {\em quaternion normalization} or {\em
+quaternion constraint} error.  Judicious use of this option every few
+timesteps (using \verb'scale-interval') ought to allow the system to
+relax to a state sufficiently close to equilibrium for normal scaling
+to take over.
+
+Bit 2 is intended to deal with the problem of setting the temperature
+accurately using scaling.  The {\em ensemble average} kinetic energy
+which characterizes the temperature of the system and the
+instantaneous value fluctuates about this value.  However in the
+traditional implementation of scaling, velocities are multiplied by a
+factor of $\sqrt{\mbox{\em desired KE} / \mbox{\em instantaneous
+KE}}$.  Thus the scaling factor is ``wrong'' by the ratio of the
+instantaneous to average KE's which means that the temperature can not
+be set more accurately than the relative size of the fluctuations in
+the KE.  
+
+The option selected by bit 2 goes some way towards the ideal scaling
+factor by using the rolling average KE instead of the instantaneous
+value.  The fluctuations in this short-term average should be much
+lower than in the instantaneous value, allowing more accurate
+temperature control. 
 
 \section{Output}
 \label{sec:output}
