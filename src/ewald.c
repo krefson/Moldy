@@ -3,6 +3,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.17  91/03/12  15:42:31  keith
+ * Tidied up typedefs size_t and include file <sys/types.h>
+ * Added explicit function declarations.
+ * 
  * Revision 1.16  91/02/07  16:52:18  keith
  * Rewrote trig identity loops for better vectorization on Titan.
  * Finally deleted ancient commented-out code (#if OLDEWALD and VCALLS).
@@ -68,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.16 91/02/07 16:52:18 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.17 91/03/12 15:42:31 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -118,7 +122,6 @@ real coshx[], sinhx[], cosky[], sinky[], coslz[], sinlz[],
 int  k,l,nsites;
 {
    int is;
-   real chxky, shxky;
    
    if( k >= 0 )
       if( l >= 0 )
@@ -126,10 +129,12 @@ int  k,l,nsites;
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    chxky = coshx[is]*cosky[is] - sinhx[is]*sinky[is];
-	    shxky = sinhx[is]*cosky[is] + coshx[is]*sinky[is];
-	    qcoskr[is] = chg[is]*(chxky*coslz[is] - shxky*sinlz[is]);
-	    qsinkr[is] = chg[is]*(shxky*coslz[is] + chxky*sinlz[is]);
+	    qcoskr[is] = chg[is]*(
+		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
+                - (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
+	    qsinkr[is] = chg[is]*(
+                  (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
+		+ (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
 	 }
       }
       else
@@ -137,10 +142,12 @@ VECTORIZE
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    chxky = coshx[is]*cosky[is] - sinhx[is]*sinky[is];
-	    shxky = sinhx[is]*cosky[is] + coshx[is]*sinky[is];
-	    qcoskr[is] = chg[is]*(chxky*coslz[is] +shxky*sinlz[is]);
-	    qsinkr[is] = chg[is]*(shxky*coslz[is] - chxky*sinlz[is]);
+	    qcoskr[is] = chg[is]*(
+		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
+                + (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
+	    qsinkr[is] = chg[is]*(
+                  (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
+		- (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
 	 }
       }
    else
@@ -149,10 +156,12 @@ VECTORIZE
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    chxky = coshx[is]*cosky[is] + sinhx[is]*sinky[is];
-	    shxky = sinhx[is]*cosky[is] - coshx[is]*sinky[is];
-	    qcoskr[is] = chg[is]*(chxky*coslz[is] - shxky*sinlz[is]);
-	    qsinkr[is] = chg[is]*(shxky*coslz[is] + chxky*sinlz[is]);
+	    qcoskr[is] = chg[is]*(
+		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
+                - (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
+	    qsinkr[is] = chg[is]*(
+                  (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
+		+ (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
 	 }
       }
       else
@@ -160,10 +169,12 @@ VECTORIZE
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    chxky = coshx[is]*cosky[is] + sinhx[is]*sinky[is];
-	    shxky = sinhx[is]*cosky[is] - coshx[is]*sinky[is];
-	    qcoskr[is] = chg[is]*(chxky*coslz[is] + shxky*sinlz[is]);
-	    qsinkr[is] = chg[is]*(shxky*coslz[is] - chxky*sinlz[is]);
+	    qcoskr[is] = chg[is]*(
+		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
+                + (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
+	    qsinkr[is] = chg[is]*(
+                  (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
+		- (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
 	 }
      }
 }
@@ -213,6 +224,7 @@ mat_t		stress;			/* Stress virial		(out) */
 		**slz = (real**)arralloc(sizeof(real),2, 0, lmax, 0, nsites-1);
    real		*coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
    real		*c1, *s1, *cm1, *sm1;
+   real		*site0, *site1, *site2;
    real		*qcoskr = dalloc(nsites),	/* q(i) cos(K.R(i))	      */
 		*qsinkr = dalloc(nsites);	/* q(i) sin(K.R(i))	      */
    real		force_comp;
@@ -296,22 +308,30 @@ mat_t		stress;			/* Stress virial		(out) */
 /*
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
  */
-VECTORIZE
-   for(is = 0; is < nsites; is++)
-      chx[0][is] = cky[0][is] = clz[0][is] = 1.0;
-
+   coshx = chx[0]; cosky = cky[0]; coslz = clz[0];
 VECTORIZE
    for(is = 0; is < nsites; is++)
    {
-      kx = astar[0]*site[0][is]+astar[1]*site[1][is]+astar[2]*site[2][is];
-      ky = bstar[0]*site[0][is]+bstar[1]*site[1][is]+bstar[2]*site[2][is];
-      kz = cstar[0]*site[0][is]+cstar[1]*site[1][is]+cstar[2]*site[2][is];
-      chx[1][is] = cos(kx);
-      shx[1][is] = sin(kx);
-      cky[1][is] = cos(ky);
-      sky[1][is] = sin(ky);
-      clz[1][is] = cos(kz);
-      slz[1][is] = sin(kz);
+      coshx[is] = 1.0;
+      cosky[is] = 1.0;
+      coslz[is] = 1.0;
+   }
+
+   coshx = chx[1]; cosky = cky[1]; coslz = clz[1];
+   sinhx = shx[1]; sinky = sky[1]; sinlz = slz[1];
+   site0 = site[0]; site1 = site[1]; site2 = site[2];
+VECTORIZE
+   for(is = 0; is < nsites; is++)
+   {
+      kx = astar[0]*site0[is]+astar[1]*site1[is]+astar[2]*site2[is];
+      ky = bstar[0]*site0[is]+bstar[1]*site1[is]+bstar[2]*site2[is];
+      kz = cstar[0]*site0[is]+cstar[1]*site1[is]+cstar[2]*site2[is];
+      coshx[is] = cos(kx);
+      sinhx[is] = sin(kx);
+      cosky[is] = cos(ky);
+      sinky[is] = sin(ky);
+      coslz[is] = cos(kz);
+      sinlz[is] = sin(kz);
    }
 /*
  * Use addition formulae to get sin(h*astar*x)=sin(Kx*x) etc for each site
