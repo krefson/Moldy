@@ -11,9 +11,10 @@ dnl  of alternatives *which take the same flags*
 dnl
    case "${target}" in
       alpha*-dec-osf*)    DEFCC="cc -migrate" ALTCC="mpicc bspcc cc c89";;
-      hppa1.*-hp-*)       DEFCC=c89 ALTCC="mpicc bspcc";;
+      hppa?.*-hp-*)       DEFCC=c89 ALTCC="mpicc bspcc cc";;
       rs6000-ibm-aix*)    DEFCC=cc ALTCC="mpcc mpicc bspcc xlc c89" ;;
       sparc-sun-sunos*)   DEFCC=cc ALTCC="mpicc bspcc acc";;
+      sparc-sun-solaris*) DEFCC=cc ALTCC="mpicc bspcc c89";;
 dnl   
 dnl Unrtunately the Bourne-shell "env=value command" construct breaks the 
 dnl configure script.
@@ -21,7 +22,7 @@ dnl However we can rely on the "env" command in the case of the crays.
 dnl   
       T3D-cray-unicos*)   DEFCC="env TARGET=cray-t3d cc" ALTCC="mpicc bspcc";;
       T3E-cray-unicos*)   DEFCC="env TARGET=cray-t3e cc" ALTCC="mpicc bspcc";;
-                     *)   DEFCC=cc ALTCC="mpicc bspcc";;
+                     *)   ALTCC="mpicc bspcc";;
    esac
 dnl
 dnl Here we test whether the specified (or default) C compiler is one of those
@@ -54,6 +55,8 @@ dnl
                           ${OPTAUX=$OPT2};;
      hppa1.*-hp-*)      : ${OPT=+O3\ +Olibcalls}  \
                           ${OPT2=${OPT}\ +Onoparmsoverlap} ${OPTAUX=$OPT2} ;;
+     hppa2.*-hp-*)      : ${OPT=+O3\ +Olibcalls}  \
+                          ${OPT2=${OPT}\ +Onoparmsoverlap\ +Odataprefetch\ +Oentrysched\ +Oregionsched} ${OPTAUX=$OPT2} ;;
      c*-convex-bsd*)    : ${OPT=-O2\ -na\ -nv\ -fi}  \
                           ${OPT2=${OPT}\ -alias\ standard\ -alias\ ptr_args\ -alias\ array_args} \
                           ${OPTAUX=$OPT2} ${LIBS=-fi\ -lveclib}  ;;
@@ -78,7 +81,8 @@ dnl AC_PATH_CPP
 dnl Extra compiler options.  We know whether we are using gcc at this point.
 if test "x$ac_cv_prog_gcc" = xyes; then
    case "${target}" in
-        i586*|i686*)  OPT=-O2\ -mcpu=pentium\ -malign-double ;;
+        i586*|i686*)  : ${OPT=-O2\ -mcpu=pentium\ -malign-double} ;;
+                  *)  : ${OPT=-O2}
    esac
    OPT=${OPT}\ -ffast-math
    OPTAUX=${OPT}\ -funroll-loops
@@ -109,7 +113,7 @@ $LN_S stddef-subst.h stddef.h
 $LN_S stdlib-subst.h stdlib.h
 fi
 
-AC_CHECK_HEADERS(sys/resource.h sys/time.h sys/times.h sys/types.h rpc/xdr.h)
+AC_CHECK_HEADERS(sys/param.h sys/resource.h sys/time.h sys/times.h sys/types.h rpc/xdr.h)
 AC_HEADER_TIME
 
 dnl  
@@ -129,16 +133,19 @@ AC_FUNC_STRFTIME
 AC_FUNC_VPRINTF
 
 AC_CHECK_FUNCS(xdr_int)
-if test $ac_cv_func_xdr_int = no; then
-   AC_CHECK_LIB(nsl, xdr_int)
-   ac_cv_func_xdr_int=yes
+if test $ac_cv_func_xdr_int = "no"; then
+   AC_CHECK_LIB(nsl, xdr_int, ac_cv_func_xdr_int="yes")
 fi
 if test $ac_cv_func_xdr_int = no; then
-   AC_CHECK_LIB(sun, xdr_int)
+   AC_CHECK_LIB(sun, xdr_int, ac_cv_func_xdr_int="yes")
+fi
+if test $ac_cv_func_xdr_int = no; then
+   AC_CHECK_LIB(rpclib, xdr_int, ac_cv_func_xdr_int="yes")
 fi
 
 AC_CHECK_FUNCS(gettimeofday getrusage strdup strerror strstr strchr memcpy memset remove strtol popen getopt raise times)
 
+if test $ac_cv_func_times = "yes" -a $ac_cv_header_sys_times_h = "yes" ; then
 AC_CACHE_CHECK("whether times returns the wall-clock time",md_cv_func_times_value,
 AC_TRY_RUN([#include <sys/times.h>
 #include<time.h>
@@ -147,6 +154,7 @@ md_cv_func_times_value=yes,md_cv_func_times_value=no,md_cv_func_times_value=yes)
 
 if test $md_cv_func_times_value != yes; then
    AC_DEFINE(TIMES_RETURNS_STATUS)
+fi
 fi
 
 dnl Select parallel compilation
