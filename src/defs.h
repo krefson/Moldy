@@ -19,14 +19,10 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 2.5 94/01/12 11:12:49 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 2.5 94/01/25 16:46:15 keith Exp $
  *
  * $Log:	defs.h,v $
- * Revision 2.5  94/01/12  11:12:49  keith
- * Removed linebreak in preprocessor conditional because VMS CC doesn't grok it.
- * 
- * Revision 2.4  93/12/22  17:13:30  keith
- * Mods for HP ANSI Compiler c89.
+ * Revision 2.4  94/01/18  13:13:42  keith
  * Workaround for bugs and defined symbol _HPUX_SOURCE needed to compile xdr.
  * 
  * Revision 2.3.1.1  93/12/21  19:02:17  keith
@@ -153,7 +149,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * Version ID strings
  */
 #define          REVISION         "$Revision: 2.5 $"
-#define		 REVISION_DATE    "$Date: 94/01/12 11:12:49 $"
+#define		 REVISION_DATE    "$Date: 94/01/25 16:46:15 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -180,8 +176,12 @@ what you give them.   Help stamp out software-hoarding!  */
 #   define unix
 #endif
 #ifdef __vms
-#   define vms
-#   define VMS
+#   ifndef vms
+#      define vms
+#   endif
+#   ifndef VMS
+#      define VMS
+#   endif
 #endif
 /*
  *  Set symbol USG to identify system V variant of unix, BSD for Berkeley.
@@ -221,8 +221,10 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  * Set ANSI_LIBS only if you have the standard ANSI headers and libraries
  */
-#ifdef __cray__
+#ifdef _CRAY
+#ifndef CRAY
 #   define CRAY
+#endif
 #endif
 #if defined(CRAY) && defined(__STDC__)	/* scc compiler comes with libraries*/
 #   define ANSI_LIBS
