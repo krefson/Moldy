@@ -31,10 +31,6 @@ what you give them.   Help stamp out software-hoarding! */
  *  Initial revision
  *
  */
-#ifndef lint
-static char *RCSid = "$Header: mdavpos.c,v 1.2 1997/07/04 13:22:10 keith Exp $";
-#endif
-
 #include "defs.h"
 #if defined(ANSI) || defined(__STDC__)
 #include <stdarg.h>
@@ -299,10 +295,10 @@ int	*start, *finish, *inc;
       if( pp == str )
 	 goto limerr;
    }
-   if( *start+*inc > *finish || *start < 0 || *inc <= 0 )
+   if( *start > *finish || *start < 0 || *inc <= 0 )
    {
       fputs("Limits must satisfy", stderr);
-      fputs(" finish >= start + increment, start >= 0 and increment > 0\n", stderr);
+      fputs(" finish > start, start >= 0 and increment > 0\n", stderr);
       goto limerr;
    }
    return 0;
@@ -831,7 +827,7 @@ char	*argv[];
    extern char	*optarg;
    int		errflg = 0;
    int		intyp = 0;
-   int		iout = 0, outsw = 0;
+   int		iout = 0, outsw = SHAK;
    int		start, finish, inc;
    int		rflag, nav;
    int		irec;
@@ -1026,7 +1022,7 @@ char	*argv[];
  	   init_species(&sys, species, prev_slice); 
  	   init_species(&sys, species, avpos);	   
  	   copy_spec(&sys, species, avpos);
- 	   init_h(&sys,&avh);        	   
+ 	   init_h(&sys,&avh);      
  	}       
         else
         {
@@ -1042,10 +1038,11 @@ char	*argv[];
 	   irec%header.maxdumps, dump_name);
 #endif
       }
+
      /* Display species and calculated trajectories */
         average(&sys, avpos, &avh, nav);
         moldy_out(iout++, &sys, site_info, insert, avpos, &avh, outsw);
-        
+
 #if defined (unix) || defined (__unix__)
    pclose(Dp);
 #else
