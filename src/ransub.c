@@ -27,18 +27,28 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
- *  Revision 1.9  2000/12/06 10:47:33  keith
- *  Fixed call of make_sites() in utlsup.c to be compatible with new version.
- *  Tidied up declarations and added lint flags to reduce lint noise.
+ *  Revision 1.7  2001/04/24 16:17:21  fisher
+ *  elem.h renamed specdata.h to avoid confusion with other software packages.
+ *  Modifications and improvements regarding options -y and -e.
  *
- *  Revision 1.8  2000/11/09 16:54:13  keith
- *  Updated utility progs to be consistent with new dump format
+ *  Revision 1.6.2.1  2001/03/27 17:42:42  keith
+ *  New version from Craig:
  *
- *  Revision 1.7  2000/04/27 17:57:11  keith
- *  Converted to use full ANSI function prototypes
+ *  Removed relevant definitions to header file elem.h.
+ *  Option -y added for reading potential parameters from text file.
+ *  Option -e added for reading species data from text file.
+ *  Minor modifications to program structure and variable names for clarity.
+ *
+ * Revision 2.1  2001/03/23  01:29:11  fisher
+ * Removed shared definitions to header file elem.h.
+ *
+ * Revision 2.0  2001/02/19  06:18:32  fisher
+ * Option -y added for reading potential parameters from text file.
+ * Option -e added for reading species data from text file.
+ * Minor modifications to program structure and variable names for clarity.
  *
  *  Revision 1.6  2000/02/16 11:46:09  craig
- *  checked in with -k by keith at 2000/04/14 14:50:07
+ *  Incorporated site-pbc branch "bekker" into main "Beeman" branch.
  *
  *  Revision 1.6  2000/02/16 11:46:09  craig
  *  Corrected memory leak when performing strcmp of NULL value.
@@ -91,11 +101,15 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ransub.c,v 1.6.2.1 2001/03/27 17:42:42 keith Exp $";
+static char *RCSid = "$Header: /earth/users/jfcc/fisher/moldy-2.16c/source/RCS/ransub.c,v 2.1 2001/03/23 01:29:11 fisher Exp fisher $";
 #endif  
 
 #include "defs.h"
+#ifdef HAVE_STDARG_H
 #include <stdarg.h>
+#else
+#include <varargs.h>
+#endif
 #include <errno.h>
 #include <math.h>
 #include "stdlib.h"
@@ -106,74 +120,54 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ransub.c,v 1.6
 #include "structs.h"
 #include "messages.h"
 #include "utlsup.h"
-#include "elem.h"  
+#include "specdata.h"
 
+void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_info, pot_mp *pot_ptr);
+void	initialise_sysdef(system_mp system, spec_mt *species, site_mt *site_info, quat_mt (*qpf));
+void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr);
+void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr);
+void	allocate_dynamics(system_mp system, spec_mt *species);
+void	lattice_start(FILE *file, system_mp system, spec_mp species, quat_mt (*qpf));
+void	read_restart(FILE *restart, char *vsn, system_mp system, int av_convert);
+void	init_averages(int nspecies, char *vsn, long int roll_interval, long int old_roll_interval, int *av_convert);
+void    conv_potentials(const unit_mt *unit_from, const unit_mt *unit_to, pot_mt *potpar, int npotpar, int ptype, site_mt *site_info, int max_id);
 int	getopt(int, char *const *, const char *);
-void   read_sysdef(FILE *, system_mp, spec_mp *, site_mp *, pot_mp *);
-void   initialise_sysdef(system_mp, spec_mt *, site_mt *, quat_mt (*));
-void   re_re_header(FILE *, restrt_mt *, contr_mt *);
+gptr	*talloc(int n, size_mt size, int line, char *file);
+char    *atime(void);
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 extern const  unit_mt prog_unit;
 static  unit_mt input_unit = {MUNIT, LUNIT, TUNIT, _ELCHG};
-contr_mt                control;
+contr_mt               control;
 
 /* Time units for different energy units */
-#define EV 1.018050697e-14; 		/* electron volts */
-#define KJMOL 1.0e-13;			/* kilojoules per mole */
-#define KCALS 4.88882131e-14;		/* kilocalories per mole */
-#define E2A 2.682811715e-15;		/* electron charge squared per angstrom */
+#define EV 1.018050697e-14  		/* electron volts */
+#define KJMOL 1.0e-13 			/* kilojoules per mole */
+#define KCALS 4.88882131e-14 		/* kilocalories per mole */
+#define E2A 2.682811715e-15 		/* electron charge squared per angstrom */
 /*========================== External data references ========================*/
 
 extern  const pots_mt   potspec[];          /* Potential type specification */
 
 /******************************************************************************
- * Structure declarations                                                     *
- ******************************************************************************/
-typedef struct {
-   char         name[NLEN], /* Name of species */
-                symbol[4];  /* Symbol of species */
-   double       mass,       /* Mass of species */
-                charge;     /* Charge of species */
-   int          *pos,       /* Array of species' position nos */
-                nmols;      /* No of molecules of species */
-} spec_data;
-/******************************************************************************
- *  get_line  read an input line skipping blank and comment lines             *
- ******************************************************************************/
-static
-char    *get_line(char *line, int len, FILE *file)
-{
-   char *s;
-   int  i;
-   do
-   {
-      s = fgets(line, len, file);               /* Read one line of input     */
-      if(s == NULL) break;                      /* exit if end of file        */
-      i = strlen(s) - 1;
-      while(i >= 0 && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
-         s[i--] = '\0';                         /* Strip trailing white space */
-   }
-   while(*s == '\0' || *s == '#');              /* Repeat if blank or comment */
-   if(s == NULL)
-      *line = '\0';                             /* Return null at eof         */
-   return(line);
-}
-/******************************************************************************
  * read_pot2().  Read potential data from file.                                *
  ******************************************************************************/
-void       read_pot2(char *potfile, pot_mp *pot_ptr, int idj, 
-		     site_mt *site_info, spec_data *dopant)
+int        read_pot2(char *potfile, pot_mp *pot_ptr, int idj, site_mt *site_info, spec_data *dopant)
+                   
+                                  /* To be pointed at potpar array      */
+              
+                      
+                  
 {
 char       atom1[4], atom2[4];
 double     chg1, chg2;
 double     p_tmp;
 pot_mt     pot;
 int        i,idi, n_items;
-char       name[LLEN],             /* Temporary species name             */
-           line[LLEN],             /* Store for input line from file     */
-           pline[LLEN];            /* Used in pot'l paramater parsing    */
-int        ptype;                  /* Potential type index               */
+char       name[L_name],             /* Temporary species name             */
+           line[L_name],             /* Store for input line from file     */
+           pline[L_name];            /* Used in pot'l paramater parsing    */
+int        ptype=-1;               /* Potential type index               */
 int        nerrs = 0;              /* Accumulated error count            */
 site_mt    spi;
 spec_data  *spj;
@@ -181,9 +175,9 @@ spec_data  *spj;
 FILE       *Fpot;
 
     if( (Fpot = fopen(potfile,"r")) == NULL)
-        error("Couldn't open potential parameter file \"%s\" for reading", potfile);
+        return ptype;
 
-    n_items = sscanf(get_line(line,LLEN,Fpot), "%s", name);
+    n_items = sscanf(get_line(line,L_name,Fpot), "%s", name);
 
     if( n_items <= 0 )
        message(NULLI,NULLP,FATAL,SYSEOF,"potential type specification");
@@ -198,7 +192,7 @@ FILE       *Fpot;
 
     spj = dopant;
 
-    while(sscanf(get_line(line,LLEN,Fpot),"%s",name) > 0
+    while(sscanf(get_line(line,L_name,Fpot),"%s",name) > 0
                  && strcmp(strlower(name), "end") != 0)
     {
        n_items = 0;
@@ -218,7 +212,9 @@ FILE       *Fpot;
               (!strcmp(atom2,spj->symbol)) && (chg2 == spj->charge)) ||
                  ((!strcmp(atom1,spj->symbol)) && (chg1 == spj->charge) &&
                     (!strcmp(atom2,spi.name)) && (chg2 == spi.charge)) )
+          {
                           (*pot_ptr)[idi-1] = pot;  /* Write potential to "spare" pot values */
+          }
        }
     }
 
@@ -227,31 +223,7 @@ FILE       *Fpot;
     if(nerrs > 0)                        /* if any errors have been detected */
        message(&nerrs,NULLP,FATAL,ERRS,nerrs,(nerrs>1)?'s':' ');
 
-}
-/******************************************************************************
- * read_ele().  Read elemental data from file.                                *
- ******************************************************************************/
-int          read_ele(spec_data *element, char *filename)
-{
-char       name[NLEN];
-char       symbol[4];
-double     mass, chg;
-spec_data  *ele;
-FILE       *Fe;
-
-     if( (Fe = fopen(filename,"r")) == NULL)
-        return 1;
-
-     for( ele = element; ele < element+NELEM; ele++)
-     {
-        fscanf(Fe,"%s %s %lf %lf", &name, &symbol, &mass, &chg);
-        strcpy(ele->name, name);
-        strcpy(ele->symbol, symbol);
-        ele->mass = mass;
-        ele->charge = chg;
-     }
-   fclose(Fe);
-   return 0;
+    return ptype;
 }
 /******************************************************************************
  * prep_pot().  Convert units and add potentials for dopant.                  *
@@ -288,8 +260,7 @@ int   nunits;
  * system specification file for MOLDY                                        *
  ******************************************************************************/
 void
-sys_spec_out(system_mt *system, spec_mt *species, char *molname, 
-	     spec_data *dopant, site_mt *site_info, pot_mt *potpar)
+sys_spec_out(system_mt *system, spec_mt *species, char *molname, spec_data *dopant, site_mt *site_info, pot_mt *potpar)
 {
    spec_mt      *spec;
    double       a, b, c, alpha, beta, gamma;
@@ -322,7 +293,6 @@ sys_spec_out(system_mt *system, spec_mt *species, char *molname,
       (void)printf("%s  %d  %s\n", spec->name, specmol,
                     spec->framework ? "framework" : "");
       for(isite=0; isite < spec->nsites; isite++)
-{
          (void)printf("%d %9g %9g %9g %9g %9g %s\n",
                         spec->site_id[isite],
                         spec->p_f_sites[isite][0],
@@ -331,7 +301,6 @@ sys_spec_out(system_mt *system, spec_mt *species, char *molname,
                         site_info[spec->site_id[isite]].mass,
                         site_info[spec->site_id[isite]].charge,
                         site_info[spec->site_id[isite]].name);
-}
 
       if( (molname != NULL) && (dopant->name != NULL) )
         if( !strcmp(strlower(spec->name), molname) && dopant->nmols > 0 )
@@ -447,18 +416,17 @@ main(int argc, char **argv)
    int		errflg = 0;
    int		intyp = 0;
    int		start, finish, inc;
-   int		rflag, mflag, uflag, eflag=0;
+   int		rflag, mflag, uflag;
    int		irec;
+   int          n_elem;         /* No of records read from element data file */
    char		*filename = NULL, *dump_name = NULL;
    char		*dumplims = NULL;
    char		*molname = NULL;
-   char         *elefile = "elements.dat";
-   char         *potfile = NULL;
-   char		*tempname;
-   char		dumpcommand[256];
-   int		dump_size;
-   float	*dump_buf;
-   FILE		*Fp, *Dp;
+   char         *elename = "elements.dat";
+   char         *potname = NULL;
+   char         elefile[50];
+   char         potfile[50];
+   FILE		*Fp;
    restrt_mt	restart_header;
    system_mt	sys;
    spec_mt	*species, *spec;
@@ -489,12 +457,6 @@ main(int argc, char **argv)
 	 intyp = data_source = c;
 	 filename = optarg;
 	 break;
-       case 'd':
-	 dump_name = optarg;
-	 break;
-       case 't':
-	 dumplims = mystrdup(optarg);
-	 break;
        case 'm':
 	 molname = strlower(mystrdup(optarg));
 	 break;
@@ -514,11 +476,12 @@ main(int argc, char **argv)
          strncpy(dopant.symbol, optarg,4);
 	 break;
        case 'e':
-         elefile = optarg;
-         eflag++;
+         elename = optarg;
          break;
        case 'y':
-         potfile = optarg;
+         potname = optarg;
+         /* Create full path name, but don't exceed max length of string */
+         strncat(strncat(potfile, POTPATH, PATHLN-strlen(potfile)), potname, PATHLN-strlen(potfile));
          break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
@@ -532,14 +495,11 @@ main(int argc, char **argv)
    if( errflg )
    {
       fputs("Usage: ransub [-r restart-file | -s sys-spec-file] ",stderr);
-      fputs("[-c] [-d dump-files] [-t s[-f[:n]]] [-m solvent-species] ",stderr);
+      fputs("[-c] [-m solvent-species] ",stderr);
       fputs("[-u solute-species] [-n no-of-substitutions] ",stderr);
       fputs("[-w mass] [-q charge] [-z symbol] [-o output-file]\n",stderr);
       exit(2);
    }
-
-   if( dump_name )
-      data_source = 'd';
 
    if(intyp == 0)
    {
@@ -599,15 +559,13 @@ main(int argc, char **argv)
    {
       mflag = 0;
       if( molname == NULL)
-      {
-         if( strcmp(dopant.name,"")  || dopant.nmols > 0)
+         if( strcmp(dopant.name,"") || dopant.nmols > 0)
          {
             fputs("What is the name of the species to be replaced",stderr);
             molname = get_str("? ");
          }
          else
             mflag++;
-      }
 
       if( molname != NULL)
       {
@@ -655,29 +613,15 @@ main(int argc, char **argv)
 
    (&dopant)->pos = ialloc(dopant.nmols);         
 
-   if( data_source == 0 )               /* If called interactively            */
-   {
-      fputs( "Where is the configurational information kept?\n", stderr);
-      if( intyp == 's' )
-      {
-         fputs( "In a lattice start file(1) or a dump dataset(2)?\n", stderr);
-         if( (ans_i = get_int("? ", 1, 2)) == EOF)
-            exit(2);
-         data_source = ans_i-1 ? 'd' : 's';
-      }
-      else if( intyp == 'r' )
-      {
-         fputs( "In a restart file(1) or a dump dataset(2)?\n", stderr);
-         if( (ans_i = get_int("? ", 1, 2)) == EOF)
-            exit(2);
-         data_source = ans_i-1 ? 'd' : 'r';
-      }
-   }
+   data_source = intyp;
+
+   /* Create full path name, but don't exceed max length of string */
+   strncat(strncat(elefile, ELEPATH, PATHLN-strlen(elefile)), elename, PATHLN-strlen(elefile));
 
    /* Read dopant species data from element data file if available */
-   if( !read_ele(element, elefile) && dopant.nmols > 0 )
+   if( (n_elem = read_ele(element, elefile)) && dopant.nmols >= 0 )
    {
-      for( irec=0; irec < NELEM; irec++)
+      for( irec=0; irec < n_elem; irec++)
         if( !strcmp(strlower(dopant.name),strlower((element+irec)->name)) )
         {
            if( !strcmp(dopant.symbol, "") )
@@ -688,12 +632,12 @@ main(int argc, char **argv)
               dopant.charge = (element+irec)->charge;
         }
    }
-   else if( eflag )
-        error("Couldn't open element data file \"%s\" for reading", elefile);
+   else
+      message(NULLI,NULLP,WARNING,NOELEM,elefile);
 
    /* If potential parameter file exists, read in data */
-   if( potfile != NULL )
-        read_pot2(potfile, &potpar, sys.max_id, site_info, &dopant);
+   if( (potname != NULL) && (read_pot2(potfile, &potpar, sys.max_id, site_info, &dopant) < 0) )
+        message(NULLI,NULLP,WARNING,NOPOTL,potfile);
 
    switch(data_source)                  /* To read configurational data       */
    {
@@ -709,88 +653,6 @@ main(int argc, char **argv)
         read_restart(Fp, restart_header.vsn, &sys, av_convert);
         random_pos(maxmol, dopant.nmols, (&dopant)->pos);
         sys_spec_out(&sys, species, molname, &dopant, site_info, potpar);
-      break;
-    case 'd':
-        if( dump_name == 0 )
-        {
-           fputs("Enter canonical name of dump files (as in control)\n",stderr);
-           if( (dump_name = get_str("Dump file name? ")) == NULL)
-	      exit(2);
-        }
-
-    /*
-     *  Ensure that the dump limits start, finish, inc are set up,
-     *  either on command line or by user interaction.
-     */
-   
-     do
-     {
-        rflag = 0;
-        if( dumplims == NULL )
-        {
-            fputs("Please specify range of dump records in form", stderr);
-            fputs(" start-finish:increment\n", stderr);
-            dumplims = get_str("s-f:n? ");
-        }
-        if( forstr(dumplims, &start, &finish, &inc) )
-        {
-            rflag++;
-            fputs("Invalid range for dump records \"", stderr);
-            fputs(dumplims, stderr);
-            fputs("\"\n", stderr);
-        }
-        if( rflag)
-        {
-            (void)free(dumplims);
-            dumplims = NULL;
-        } 
-     } while(rflag);
-      
-    /*
-     * Allocate buffer for data
-     */
-     dump_size = DUMP_SIZE(~0, sys.nmols, sys.nmols_r)*sizeof(float);
-
-     if( (dump_buf = (float*)malloc(dump_size)) == 0)
-       error("malloc failed to allocate dump record buffer (%d bytes)",
-          dump_size);
-#if defined (HAVE_POPEN) 
-     sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s",
-        sys.nmols, sys.nmols_r, start, finish, inc, dump_name);
-   
-     if( (Dp = popen(dumpcommand,"r")) == 0)
-        error("Failed to execute \'dumpext\" command - \n%s",
-            strerror(errno));
-#else
-     tempname = tmpnam((char*)0);
-     sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d -o %s %s",
-         sys.nmols,sys.nmols_r, start, finish, inc, tempname, dump_name);
-     system(dumpcommand);
-     if( (Dp = fopen(tempname,"rb")) == 0)
-        error("Failed to open \"%s\"",tempname);
-#endif
-
-     for(irec = start; irec <= finish; irec+=inc)
-     {
-       if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
-           error("Error reading record %d in dump file - \n%s\n",
-              irec, strerror(errno));
-        dump_to_moldy(dump_buf, &sys);  /*read dump data */
-
-#ifdef DEBUG
-        fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
-	   irec, dump_name);
-#endif
-     /* Perform random substitution */
-        random_pos(maxmol, dopant.nmols, (&dopant)->pos);
-        sys_spec_out(&sys, species, molname, &dopant, site_info, potpar);
-     }
-#if defined (HAVE_POPEN) 
-      pclose(Dp);
-#else
-      fclose(Dp);
-      remove(tempname);
-#endif
       break;
     default:
       break;

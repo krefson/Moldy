@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.15 2000/12/06 10:47:33 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.16 2001/05/18 17:10:56 keith Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *
@@ -28,6 +28,12 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.16  2001/05/18 17:10:56  keith
+ *  Incorporated changes from Beeman branch 2.15e
+ *  Specifically fixes for translational thermostat dof problem
+ *  Additional mdshak etc output formats
+ *  Craig's extra ransub functionality.
+ *
  *  Revision 2.15  2000/12/06 10:47:33  keith
  *  Fixed call of make_sites() in utlsup.c to be compatible with new version.
  *  Tidied up declarations and added lint flags to reduce lint noise.
@@ -128,7 +134,11 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.
  *
  */
 #include "defs.h"
+#ifdef HAVE_STDARG_H
 #include <stdarg.h>
+#else
+#include <varargs.h>
+#endif
 #include <errno.h>
 #include <math.h>
 #include "stdlib.h"
@@ -138,6 +148,26 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.
 #include "structs.h"
 #include "messages.h"
 #include "utlsup.h"
+#ifdef HAVE_STDARG_H
+gptr    *arralloc(size_mt,int,...);     /* Array allocator */
+#else
+gptr    *arralloc(size_mt, int, ...);                    /* Array allocator */
+#endif
+
+void    moldy_out(int, int, int, system_mt *, mat_mp, spec_mt *, site_mt *, int, int, char *);
+void    make_sites(real (*h)[3], vec_mp c_of_m_s, quat_mp quat, vec_mp p_f_sites, real **site, int nmols, int nsites, int molflag);
+char    *strlower(char *);
+void    read_sysdef(FILE *, system_mp, spec_mp *, site_mp *, pot_mp *);
+void    initialise_sysdef(system_mp, spec_mt *, site_mt *, quat_mt (*));
+void    re_re_header(FILE *, restrt_mt *, contr_mt *);
+void    re_re_sysdef(FILE *, char *, system_mp, spec_mp *, site_mp *, pot_mp *);
+void    allocate_dynamics(system_mp, spec_mt *);
+void    lattice_start(FILE *, system_mp, spec_mp, quat_mt (*));
+void    read_restart(FILE *, char *, system_mp, int);
+void    init_averages(int, char *, long int, long int, int *);
+int     getopt(int, char *const *, const char *);
+gptr    *talloc(int, size_mt, int, char *);
+void    zero_real(real *r, int n);
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 contr_mt                control;
@@ -149,6 +179,47 @@ contr_mt                control;
 #define CSSR 5
 #define ARC 6
 #define XTL 7
+#define FRAC 0
+#define CART 1
+/******************************************************************************
+ * fraccoord().  Convert coords from Cartesian to fractional                  *
+ ******************************************************************************/
+void
+fraccoord(system_mt *system, spec_mt *species, mat_mp h)
+{
+   mat_mt       hinv;
+   spec_mt      *spec;
+
+   invert(h, hinv);
+   for(spec = species; spec < species+system->nspecies; spec++)
+       mat_vec_mul(hinv, spec->c_of_m, spec->c_of_m, spec->nmols);
+}
+/******************************************************************************
+ * cartcoord().  Convert coords from fractional to Cartesian                  *
+ ******************************************************************************/
+void
+cartcoord(system_mt *system, spec_mt *species, mat_mp h)
+{
+   spec_mt      *spec;
+
+   for(spec = species; spec < species+system->nspecies; spec++)
+       mat_vec_mul(h, spec->c_of_m, spec->c_of_m, spec->nmols);
+}
+/******************************************************************************
+ * onebox().  Shift all coords to within simulation cell                      *
+ ******************************************************************************/
+void
+onebox(system_mt *system, spec_mt *species)
+{
+   spec_mt      *spec;
+   int          i, imol;
+
+   for(spec = species; spec < species+system->nspecies; spec++)
+      for(imol = 0; imol < spec->nmols; imol++)
+         for( i = 0; i < 3; i++)
+             spec->c_of_m[imol][i] = spec->c_of_m[imol][i] -
+                      floor(spec->c_of_m[imol][i]);
+}
 /******************************************************************************
  * copy_spec().  Duplicate species data in another array    	              *
  ******************************************************************************/
@@ -267,6 +338,9 @@ main(int argc, char **argv)
    int		errflg = 0;
    int		intyp = 0;
    int		outsw = SHAK;
+   int          avsw = FRAC;
+   int          rectsw = 0;
+   int          boxsw = 0;
    int		start, finish, inc;
    int		rflag, nav;
    int		irec;
@@ -294,7 +368,7 @@ main(int argc, char **argv)
 
    comm = argv[0];
 
-   while( (c = getopt(argc, argv, "cr:s:d:t:o:f:") ) != EOF )
+   while( (c = getopt(argc, argv, "cr:s:d:t:o:f:ali") ) != EOF )
       switch(c)
       {
        case 'c':
@@ -336,7 +410,16 @@ main(int argc, char **argv)
 	  else if (!strcasecmp(optarg, "bin") )
 	     outsw = OUTBIN;
 	  break;
-       case 'o':
+      case 'a':
+         avsw = CART;
+         break;
+      case 'l':
+         rectsw = 1;
+         break;
+      case 'i':
+         boxsw = 1;
+         break;
+      case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error("failed to open file \"%s\" for output", optarg);
 	 break;
@@ -348,7 +431,7 @@ main(int argc, char **argv)
    if( errflg )
    {
       fputs("Usage: mdavpos [-r restart-file | -s sys-spec-file] ",stderr);
-      fputs("[-c] [-f output-type] -d dump-files ",stderr);
+      fputs("[-c] [-f output-type] [-a] [-l] [-i] -d dump-files ",stderr);
       fputs("[-t s[-f[:n]]] [-o output-file]\n",stderr);
       exit(2);
    }
@@ -437,67 +520,89 @@ main(int argc, char **argv)
        } 
    } while(rflag);
       
-  /*
-   * Allocate buffer for data
-   */
-     dump_size = DUMP_SIZE(~0, sys.nmols, sys.nmols_r)*sizeof(float);
+   /*
+    * Allocate buffer for data
+    */
+   dump_size = DUMP_SIZE(~0, sys.nmols, sys.nmols_r)*sizeof(float);
 
-  /* create arrays for previous c_of_m`s for each species */
-     prev_cofm = aalloc(sys.nmols, vec_mt);
-     zero_real(prev_cofm[0],3*sys.nmols);
-     avpos = aalloc(sys.nspecies, spec_mt);
-  
-     if( (dump_buf = (float*)malloc(dump_size)) == 0)
-       error("malloc failed to allocate dump record buffer (%d bytes)",
-           dump_size);
-#if defined (HAVE_POPEN) 
-     sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s",
-        sys.nmols, sys.nmols_r, start, finish, inc, dump_name);
+   /* create arrays for previous c_of_m`s for each species */
+   prev_cofm = aalloc(sys.nmols, vec_mt);
+   zero_real(prev_cofm[0],3*sys.nmols);
+   avpos = aalloc(sys.nspecies, spec_mt);
    
-     if( (Dp = popen(dumpcommand,"r")) == 0)
-        error("Failed to execute \'dumpext\" command - \n%s",
+   if( (dump_buf = (float*)malloc(dump_size)) == 0)
+      error("malloc failed to allocate dump record buffer (%d bytes)",
+	    dump_size);
+#if defined (HAVE_POPEN) 
+   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s",
+	   sys.nmols, sys.nmols_r, start, finish, inc, dump_name);
+   
+   if( (Dp = popen(dumpcommand,"r")) == 0)
+      error("Failed to execute \'dumpext\" command - \n%s",
             strerror(errno));
 #else
-     tempname = tmpnam((char*)0);
-     sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d -o %s %s",
-         sys.nmols,sys.nmols_r, start, finish, inc, tempname, dump_name);
-     system(dumpcommand);
-     if( (Dp = fopen(tempname,"rb")) == 0)
-        error("Failed to open \"%s\"",tempname);
+   tempname = tmpnam((char*)0);
+   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d -o %s %s",
+	   sys.nmols,sys.nmols_r, start, finish, inc, tempname, dump_name);
+   system(dumpcommand);
+   if( (Dp = fopen(tempname,"rb")) == 0)
+      error("Failed to open \"%s\"",tempname);
 #endif
+   
+   /* Loop for calculating trajectories from current and previous time slices */ 
+   
+   nav = floor((finish-start+1)/inc);  /* Number of time slices averaged over */
+   
+   for(irec = start; irec <= finish; irec+=inc)
+   {
+      if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
+	 error("Error reading record %d in dump file - \n%s\n",
+	       irec, strerror(errno));
+      dump_to_moldy(dump_buf, &sys);  /*read dump data */
+      
+      traj_con(&sys, prev_cofm, irec-start);
 
- /* Loop for calculating trajectories from current and previous time slices */ 
+      /* Convert to cartesian coords if cart option selected */
+      if( avsw )
+	 cartcoord(&sys, species, sys.h);
 
-     nav = floor((finish-start+1)/inc);  /* Number of time slices averaged over */
+      if( irec == start) /* Set up species arrays and h matrix */
+      {
+	 init_species(&sys, species, avpos);
+	 copy_spec(&sys, species, avpos);
+	 memcpy(avh, sys.h, sizeof(mat_mt));
+      }       
+      else
+	 summate(&sys, species, avpos, avh);
 
-     for(irec = start; irec <= finish; irec+=inc)
-     {
-       if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
-           error("Error reading record %d in dump file - \n%s\n",
-              irec, strerror(errno));
-        dump_to_moldy(dump_buf, &sys);  /*read dump data */
-
-        traj_con(&sys, prev_cofm, irec-start);
-
-        if( irec == start) /* Set up species arrays and h matrix */
-        {
- 	   init_species(&sys, species, avpos);
- 	   copy_spec(&sys, species, avpos);
-	   memcpy(avh, sys.h, sizeof(mat_mt));
-        }       
-        else
-           summate(&sys, species, avpos, avh);
+      /* Convert back to fractional coords if cart option selected */
+      if( avsw )
+	 fraccoord(&sys, species, sys.h);
 
 #ifdef DEBUG
-        fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
-	   irec, dump_name);
+      fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
+	      irec, dump_name);
 #endif
-      }
+   }
 
-     /* Display species and calculated trajectories */
-        average(&sys, avpos, avh, nav); 
-        moldy_out(0, 0, 1, &sys, avh, avpos, site_info, outsw, intyp, insert);
-
+   /* Calculate average cell size and c_of_m positions */
+   average(&sys, avpos, avh, nav); 
+     
+   if( avsw )      /* Convert av coords to frac format if calculated as cartesian */
+      fraccoord(&sys, avpos, avh);
+   if( rectsw )    /* Convert coords to frac positions in rectangular box */
+   {
+      cartcoord(&sys, avpos, avh);
+      avh[0][1] = avh[0][2] = 0.0;
+      avh[1][0] = avh[1][2] = 0.0;
+      avh[2][0] = avh[2][1] = 0.0;
+      fraccoord(&sys, avpos, avh);
+   }
+   if( boxsw )    /* Shift coords so all lie within simulation box */
+      onebox(&sys, avpos);
+   /* Display species and calculated trajectories */
+   moldy_out(0, 0, 1, &sys, avh, avpos, site_info, outsw, intyp, insert);
+     
 #if defined (HAVE_POPEN) 
    pclose(Dp);
 #else

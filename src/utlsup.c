@@ -1,15 +1,24 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/utlsup.c,v 1.8 2000/12/06 10:47:32 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/utlsup.c,v 1.5.2.1 2000/12/11 12:33:36 keith Exp $";
 #endif
 
 #include "defs.h"
+#ifdef HAVE_STDARG_H
 #include <stdarg.h>
+#else
+#include <varargs.h>
+#endif
+#include <errno.h>
 #include <math.h>
 #include "stdlib.h"
+#include "stddef.h"
 #include "string.h"
 #include <stdio.h>
 #include "structs.h"
 #include "messages.h"
+#include "specdata.h"
+
+#define DATAREC "%d record%ssuccessfully read from %s"
 
 void mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
 void invert(real (*a)[3], real (*b)[3]);
@@ -18,47 +27,56 @@ char	*comm;
 /******************************************************************************
  * Dummies of moldy routines so that utils may be linked with moldy library   *
  ******************************************************************************/
-/*ARGSUSED*/
-void 	init_rdf(system_mt *sys)
+/*VARARGS*/
+void 	init_rdf(void)
 {}
-/*ARGSUSED*/
-gptr *rdf_ptr(int *size)
+/*VARARGS*/
+gptr *rdf_ptr(void)
 {return 0;}
-/*ARGSUSED*/
-void new_lins(int n)
+/*VARARGS*/
+void new_lins(void)
 {}
-/*ARGSUSED*/
 int lines_left(void)
 {return 0;}
-/*ARGSUSED*/
 void new_page(void)
 {}
-/*ARGSUSED*/
 void	new_line(void)
 {
    (void)putchar('\n');
 }
-/*ARGSUSED*/
-void	banner_page(system_mt *sys, spec_mt *spec, restrt_mt *rh)
+/*VARARGS*/
+void	banner_page(void)
 {}
-/*ARGSUSED*/
-/*VARARGS1*/
-void	note(char *s, ...)
+/*VARARGS*/
+void	note(void)
 {}
-
 /******************************************************************************
  *  message.   Deliver error message to possibly exiting.  It can be called   *
  *             BEFORE output file is opened, in which case output to stderr.  *
  ******************************************************************************/
+#ifdef HAVE_STDARG_H
+#   undef  va_alist
+#   define      va_alist int *nerrs, ...
+#   ifdef va_dcl
+#      undef va_dcl
+#   endif
+#   define va_dcl /* */
+#endif
 /*VARARGS*/
-void    message(int *nerrs, ...)
-
+void    message(va_alist)
 {
    va_list      ap;
    char         *buff;
    int          sev;
    char         *format;
+#ifdef HAVE_STDARG_H
    va_start(ap, nerrs);
+#else
+   int          *nerrs;
+
+   va_start(ap);
+   nerrs = va_arg(ap, int *);
+#endif
    buff  = va_arg(ap, char *);
    sev   = va_arg(ap, int);
    format= va_arg(ap, char *);
@@ -82,12 +100,26 @@ void    message(int *nerrs, ...)
 /******************************************************************************
  *  error.   Deliver error message to possibly exiting.                       *
  ******************************************************************************/
+#ifdef HAVE_STDARG_H
+#undef  va_alist
+#define	va_alist char *format, ...
+#ifdef  va_dcl
+#   undef  va_dcl
+#endif
+#define va_dcl /* */
+#endif
 /*VARARGS*/
-void	error(char *format, ...)
-
+void	error(va_alist)
 {
    va_list	ap;
+#ifdef HAVE_STDARG_H
    va_start(ap, format);
+#else
+   char		*format;
+
+   va_start(ap);
+   format= va_arg(ap, char *);
+#endif
 
    (void)fprintf(stderr, "%s: ",comm);
    (void)vfprintf(stderr, format, ap);
@@ -382,4 +414,58 @@ int	xi, yi, zi;
        return 1;   /* Molecule c_of_m lies within selected region */
     else
        return 0;   /* Molecule c_of_m isn't within selected region */ 
+}
+/******************************************************************************
+ *  get_line  read an input line skipping blank and comment lines             *
+ ******************************************************************************/
+char    *get_line(char *line, int len, FILE *file)
+{
+   char *s;
+   int  i;
+   do
+   {
+      s = fgets(line, len, file);               /* Read one line of input     */
+      if(s == NULL) break;                      /* exit if end of file        */
+      i = strlen(s) - 1;
+      while(i >= 0 && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
+         s[i--] = '\0';                         /* Strip trailing white space */
+   }
+   while(*s == '\0' || *s == '#');              /* Repeat if blank or comment */
+   if(s == NULL)
+      *line = '\0';                             /* Return null at eof         */
+   return(line);
+}
+/******************************************************************************
+ * read_ele().  Read elemental data from file.                                *
+ ******************************************************************************/
+int          read_ele(spec_data *element, char *filename)
+{
+int        n=0;                  /* No of records read */
+char       name[NLEN];
+char       symbol[4];
+double     mass, chg;
+spec_data  *ele = element;
+char       line[LLEN];
+char       *success_read;
+FILE       *Fe;
+
+     if( (Fe = fopen(filename,"r")) == NULL)
+        return -1;
+
+     for( ele = element; ele < element+NELEM; ele++ )
+     {
+        if( (sscanf(get_line(line,LLEN,Fe),"%s %s %lf %lf", &name, &symbol, &mass, &chg) < 4) && !feof(Fe) )
+            error("Unexpected format in \"%s\"", filename);
+        if( feof(Fe) )
+            break;
+        strcpy(ele->name, name);
+        strcpy(ele->symbol, symbol);
+        ele->mass = mass;
+        ele->charge = chg;
+        n++;
+     }
+     fclose(Fe);
+
+     message(NULLI,NULLP,INFO,DATAREC,n,n==1?" ":"s ",filename);
+     return n;
 }

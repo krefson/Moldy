@@ -56,3 +56,4 @@ void	zero_real(real *r, int n);
 void    conv_potentials(const unit_mt *unit_from, const 
 			unit_mt *unit_to, pot_mt *potpar, int npotpar,
 			int ptype, site_mt *site_info, int max_id);
+extern char    *get_line(char *line, int len, FILE *file);     
