@@ -34,6 +34,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.14  2000/12/08 15:22:07  keith
+ *       Reorganized order of potentials to maintain existing numberinf of HIW
+ *       etc -- for restart file compatibility.
+ *
  *       Revision 2.13  2000/12/08 12:22:33  keith
  *       Incorporated Morse and HIW potentials
  *
@@ -174,7 +178,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/kernel.c,v 2.13 2000/12/08 12:22:33 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/kernel.c,v 2.14 2000/12/08 15:22:07 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -187,7 +191,7 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/kernel.c,v 2.1
 void	message(int *,...);		/* Write a warning or error message   */
 /*========================== Potential type specification ====================*/
 #define LJPOT 0		/* Lennard Jones.   U=p0*((p1/r)^6 - (p1/r)^12)       */
-#define E6POT 1		/* 6-exp potential  U=p0/r^6 + p1*exp(-p2*r)          */
+#define E6POT 1		/* 6-exp potential  U=-p0/r^6 + p1*exp(-p2*r)          */
 #define MCYPOT 2	/* MCY water pot.  J.Chem.Phys 64,1351(1976)    */
 			/*		    U= p0*exp(-p1*r) - p2*exp(-p3*r)  */
 #define GENPOT 3	/* "generic" potential for multipurpose use.          */
@@ -237,7 +241,7 @@ const dim_mt   pot_dim[][NPOTP]= {
 #define PP	 0.3275911
 
 #define POLY5(t)   ((t)*(E1 + (t)*(E2 + (t)*(E3 + (t)*(E4 + (t)*E5)))))
-
+#define BPAR_TOL 1.0e-7
 /*============================================================================*/
 /******************************************************************************
  *  dist_pot   return attractive part of potential integrated outside cutoff. *
@@ -258,15 +262,30 @@ double	dist_pot(real *potpar,          /* Array of potential parameters      */
     case LJPOT:
       return(potpar[0]*CUBE(SQR(potpar[1])/cutoff) / 3.0);
     case E6POT:
-      return(potpar[0] / ( 3.0*CUBE(cutoff)));
+       if( potpar[2] > BPAR_TOL ) 
+	  return( potpar[0] / ( 3.0*CUBE(cutoff))
+		  - potpar[1] * exp(-potpar[2]*cutoff)
+		  * (SQR(cutoff)/potpar[2] + 2*cutoff/SQR(potpar[2]) + 2.0 / CUBE(potpar[2])));
+       else
+	  return( potpar[0] / ( 3.0*CUBE(cutoff))
+		  - potpar[1] * exp(-potpar[2]*cutoff)
+		  * (SQR(cutoff)/potpar[2] + 2*cutoff/SQR(potpar[2]) + 2.0 / CUBE(potpar[2])));
     case MCYPOT:
-      if( potpar[3] != 0.0 )
+      if( potpar[3]  > BPAR_TOL )
          return( potpar[2] * (SQR(cutoff)/potpar[3] + 2*cutoff/SQR(potpar[3])
 	   		   + 2.0 / CUBE(potpar[3])) * exp(-potpar[3]*cutoff));
       else
          return( 0.0 );
     case GENPOT:
-      return ( potpar[4] / ( 3.0*CUBE(cutoff)) + potpar[3] / cutoff);
+       if( potpar[1] > BPAR_TOL ) 
+	  return ( - potpar[0] * exp(-potpar[1]*cutoff) *
+		   (SQR(cutoff)/potpar[1] + 2*cutoff/SQR(potpar[1]) + 2.0 / CUBE(potpar[1])) 
+		   -potpar[2] / ( 9.0*CUBE(CUBE(cutoff))) + potpar[3] / cutoff 
+		   + potpar[4] / ( 3.0*CUBE(cutoff)) + potpar[5] / ( 5.0*SQR(cutoff)*CUBE(cutoff)));
+       else
+	  return ( -potpar[2] / ( 9.0*CUBE(CUBE(cutoff))) + potpar[3] / cutoff 
+		   + potpar[4] / ( 3.0*CUBE(cutoff)) + potpar[5] / ( 5.0*SQR(cutoff)*CUBE(cutoff)));
+	  
     case MORPOT:
       if( potpar[5] != 0.0 )
          return( potpar[3] / ( 3.0*CUBE(cutoff))
