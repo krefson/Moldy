@@ -1,3 +1,20 @@
+RELEASE 2.15c
+-------------
+ * Fixed bug in stress calculation for polyatomic molecules.
+   Was using old set of co-ordinates.  
+
+RELEASE 2.15b
+-------------
+ * Added warning if surface-dipole turned on for ionic systems.
+
+ * Extended initial banner printout to give details of all setting.
+
+ * Much improved plotrdf script
+
+ * Bugfixes to Ransub
+
+ * Bugfixes to xdr.c over save/restore of const_pressure != 1 and scale_options != 1
+
 RELEASE 2.15
 ------------
  * text-mode save now converts potentials and control back to input units. 
