@@ -3,6 +3,16 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.19  91/08/15  18:11:52  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
  * Revision 1.18  91/05/29  16:33:01  keith
  * Modified code for speed improvement in TITAN
  * 
@@ -75,7 +85,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.20 91/08/14 14:23:27 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.19 91/08/15 18:11:52 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -288,16 +298,16 @@ mat_t		stress;			/* Stress virial		(out) */
        */
       if( frame_flag )
       {
-	 sheet_energy += PI*(sq-sqxf)*sqxf / (2.0*SQR(control.alpha));
+	 sheet_energy = PI*SQR(sq-sqxf) / (2.0*SQR(control.alpha));
 	 message(NULLI, NULLP, INFO, FRACHG, 
-		 sqxf*CONV_Q, sheet_energy/vol*CONV_E);
+		 (sq-sqxf)*CONV_Q, sheet_energy/vol*CONV_E);
       }
       /* 
        *  2) Case of entire system non-neutral.
        */
       if( fabs(sq)*CONV_Q > 1.0e-5)
       {
-	 sheet_energy += intra = PI*SQR(sq) / (2.0*SQR(control.alpha));
+	 sheet_energy -= intra = PI*SQR(sq) / (2.0*SQR(control.alpha));
 	 message(NULLI, NULLP, WARNING, SYSCHG, sq*CONV_Q, intra/vol*CONV_E);
       }
 
@@ -305,7 +315,10 @@ mat_t		stress;			/* Stress virial		(out) */
       init = false;
    }
 
-   *pe -= self_energy+sheet_energy/vol;	/* Subtract self energy term	      */
+   *pe -= self_energy;			/* Subtract self energy term	      */
+   *pe += sheet_energy/vol;		/* Uniform charge correction	      */
+   for(i=0; i<3; i++)
+      stress[i][i] += sheet_energy/vol;
 
    invert(system->h, hinvp);		/* Inverse of h is matrix of r.l.v.'s */
    mat_sca_mul(2*PI, hinvp, hinvp);
@@ -438,6 +451,7 @@ VECTORIZE
       *pe += pe_k;
 
       sqsinkr *= coeff; sqcoskr *= coeff;
+      sqsinkrn *= coeff; sqcoskrn *= coeff;
 /*
  * Calculate long-range coulombic contribution to stress tensor
  */
@@ -448,22 +462,30 @@ NOVECTOR
 	 for(j = i; j < 3; j++)
 	    stress[i][j] -= pe_k * coeff2 * kv[i] * kv[j];
       }
-
 /*
- * Old and less efficient calculation of site forces. Retained for machines
- * with poor vectorising compilers.
- */
-/*
- * Evaluation of site forces. Vectorises under CRAY CC 4.0 & Convex VC 2.0
+ * Evaluation of site forces.   Non-framework sites interact with all others
  */
 VECTORIZE
-      for(is = 0; is < nsites; is++)
+      for(is = 0; is < nsitesxf; is++)
       {
 	 force_comp = qsinkr[is]*sqcoskr - qcoskr[is]*sqsinkr;
 	 site_fx[is] += kv[0] * force_comp;
 	 site_fy[is] += kv[1] * force_comp;
 	 site_fz[is] += kv[2] * force_comp;
       }
+#if 1
+/*
+ *  Framework sites -- only interact with non-framework sites
+ */
+VECTORIZE
+      for(is = nsitesxf; is < nsites; is++)
+      {
+	 force_comp = qsinkr[is]*sqcoskrn - qcoskr[is]*sqsinkrn;
+	 site_fx[is] += kv[0] * force_comp;
+	 site_fy[is] += kv[1] * force_comp;
+	 site_fz[is] += kv[2] * force_comp;
+      }
+#endif
    }
 
 /*
