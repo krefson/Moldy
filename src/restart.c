@@ -11,6 +11,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 1.13  91/08/23  14:12:46  keith
+ * Fixed declaration of av_ptr to agree with definition in values.c
+ * 
  * Revision 1.12  91/08/16  15:59:48  keith
  * Checked error returns from fread, fwrite, fseek and fclose more
  * rigourously.   Called strerror() to report errors.
@@ -57,7 +60,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.12 91/08/16 15:59:48 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.13 91/08/23 14:12:46 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -255,6 +258,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
    int		zero = 0, one = 1;
    restrt_t	save_header;
    FILE		*save;
+   char		*vsn = "$Revision: 1.14 $"+11;
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)
@@ -265,8 +269,8 @@ pot_p		potpar;			/* To be pointed at potpar array      */
 
    control.reset_averages = 0;		/* This flag never propagated.	      */
    save_header = restart_header;
-   (void)strncpy(save_header.vsn, "$Revision: 1.12 $"+11, 
-		 sizeof save_header.vsn-1);
+   (void)strncpy(save_header.vsn, vsn, sizeof save_header.vsn-1);
+   save_header.vsn[strlen(save_header.vsn)-2] = '\0'; /* Strip trailing $     */
    save_header.prev_timestamp = restart_header.timestamp;
    save_header.timestamp = time((time_t*)0);		/* Update header      */
    save_header.seq++;
@@ -274,7 +278,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
    cwrite(save,  (gptr*)&save_header, sizeof save_header, 1);
    cwrite(save,  (gptr*)&control, sizeof control, 1); 
 
-   cwrite(save,  (gptr*)system, sizeof(system_t), 1);/* write system structure */
+   cwrite(save,  (gptr*)system, sizeof(system_t), 1);
    cwrite(save,  (gptr*)species, sizeof(spec_t), system->nspecies);
    
    for (spec = species; spec < &species[system->nspecies]; spec++)
