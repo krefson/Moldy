@@ -218,7 +218,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/rahman/keith/moldy/src/RCS/accel.c,v 2.16 1996/08/23 15:06:01 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.17 1996/11/05 09:48:10 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -298,6 +298,15 @@ extern int 	ithread, nthreads;
 /*  Can't rely on ANSI yet. */
 #ifndef DBL_MIN
 #   define DBL_MIN 1.0e-36
+#endif
+/*========================== Cache Parameters=================================*/
+/* The default values are for the Cray T3D but are probably good enough 
+ *  for most other systems too. */
+#ifndef NCACHE
+#   define NCACHE (256*sizeof(double)/sizeof(real))
+#endif
+#ifndef NLINE
+#   define NLINE  (4*sizeof(double)/sizeof(real))
 #endif
 /*============================================================================*/
 /******************************************************************************
@@ -797,10 +806,11 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
  */
    vec_mp          force_base = ralloc(sys->nmols),
 		   torque_base = sys->nmols_r?ralloc(sys->nmols_r):0;
+   int		nsarray = (sys->nsites - 1 | NCACHE - 1) + 1+NLINE;
    real		**site = (real**)arralloc((size_mt)sizeof(real), 2,
-					  0, 2, 0, sys->nsites-1);
+					  0, 2, 0, nsarray-1);
    real		**site_force = (real**)arralloc((size_mt)sizeof(real), 2,
-						0, 2, 0, sys->nsites-1);
+						0, 2, 0, nsarray-1);
 /*
  * Other local variables
  */
@@ -888,9 +898,9 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
    zero_real(stress[0], 9);	       /* Initialise stress tensor   */
    zero_real(meansq_f_t[0][0], 6 * sys->nspecies);
    zero_real(dip_mom, 3);
-   zero_real(site_force[0], sys->nsites);
-   zero_real(site_force[1], sys->nsites);
-   zero_real(site_force[2], sys->nsites);
+   zero_real(site_force[0], nsarray);
+   zero_real(site_force[1], nsarray);
+   zero_real(site_force[2], nsarray);
    zero_double(pe, NPE);
 /*
  * Initial co-ordinate step of Beeman algorithm.
@@ -932,7 +942,7 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
 #ifdef SPMD
    par_dsum(pe, NPE);
    par_rsum(stress[0], 9);
-   par_rsum(site_force[0], 3*sys->nsites);
+   par_rsum(site_force[0], 3*nsarray);
 #endif
    if (control.alpha > ALPHAMIN)
    {
