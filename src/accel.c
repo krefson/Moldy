@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.39.4.2  2002/06/20 17:50:59  kr
+ *       Patrick's mods to do 1/r**7 terms with an Ewald sum
+ *       (very slightly tidied up).
+ *
  *       Revision 2.39.4.1  2002/03/13 10:27:52  kr
  *       Trial version incorporating reciprocal-space summation for r^-2 and r^-6
  *       interactions.  This version implements a new potential "genpot46" to activate.
@@ -350,7 +354,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/accel.c,v 2.39.4.1 2002/03/13 10:27:52 kr Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/accel.c,v 2.39.4.2 2002/06/20 17:50:59 kr Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -405,8 +409,13 @@ void   force_calc(real **site, real **site_force, system_mt *system,
 double poteval(real *potpar, double r, int ptype, double chgsq);
 double dist_pot(real *potpar, double cutoff, int ptype); 
                                       /* Returns integrated potential fn     */
+void   mkpot46(real **pot4, real **pot6, real **pot7, 
+	       int max_id, int ptype, pot_mt *potpar);
 void   ewald(real **site, real **site_force, system_mp system, spec_mt *species, 
              real *chg, double *pe, mat_mt stress); 
+void   ewald46(real **site, real **site_force, system_mp system, 
+	       spec_mt *species, real  **pot4, real  **pot6, real  **pot7,
+	       double *pe, real (*stress)[3]);
 void   dump(system_mp system, spec_mt *species, vec_mt (*force), vec_mt (*torque), 
             mat_mt stress, double pe, restrt_mt *restart_header, 
             int backup_restart);	/*  Write dump data files            */
