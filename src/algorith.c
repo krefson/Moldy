@@ -34,6 +34,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: algorith.c,v $
+ *       Revision 2.19  2001/05/24 16:26:43  keith
+ *       Updated program to store and use angular momenta, not velocities.
+ *        - added conversion routines for old restart files and dump files.
+ *       Got rid of legacy 2.0 and lower restart file reading code.
+ *
  *       Revision 2.18  2001/02/13 17:45:07  keith
  *       Added symplectic Parrinello-Rahman constant pressure mode.
  *
@@ -172,7 +177,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/algorith.c,v 2.18 2001/02/13 17:45:07 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/algorith.c,v 2.19 2001/05/24 16:26:43 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -318,11 +323,11 @@ void make_sites(mat_mt h,        /* Unit cell matrix h                   (in) */
    int		imol, isite, i;	/* Counters				      */
    vec_mt	c_of_m;		/* Unscaled centre of mass co-ordinates       */
    vec_mt	*ssite = ralloc(nsites);
-   register double	t;
+   register double	tx, ty, tz;
    mat_mt	hinv;
-   double	lx   = h[0][0], lxy  = h[0][1],
-		ly   = h[1][1], lxz  = h[0][2],
-		lz   = h[2][2], lyz  = h[1][2];
+   double	lx   = h[0][0], lxy  = h[0][1], lxz  = h[0][2],
+                lyx  = h[1][0], ly   = h[1][1], lyz  = h[1][2],
+                lzx  = h[2][0], lzy  = h[2][1], lz   = h[2][2];
    invert(h,hinv);
 
    for(imol = 0; imol < nmols; imol++)
@@ -346,12 +351,12 @@ void make_sites(mat_mt h,        /* Unit cell matrix h                   (in) */
    if( molflag!=MOLPBC ) /* Apply pbc's to put sites into cell */
       for( isite = 0; isite < nmols*nsites; isite++ )
       {
-          site[0][isite] -= lx  *      floor(MATMUL(0,hinv,site,isite) + 0.5);
-          site[0][isite] -= lxy * (t = floor(MATMUL(1,hinv,site,isite) + 0.5));
-          site[1][isite] -= ly  * t;
-          site[0][isite] -= lxz * (t = floor(MATMUL(2,hinv,site,isite) + 0.5));
-          site[1][isite] -= lyz * t;
-          site[2][isite] -= lz  * t;
+	 tx = floor(MATMUL(0,hinv,site,isite) + 0.5);
+	 ty = floor(MATMUL(1,hinv,site,isite) + 0.5);
+	 tz = floor(MATMUL(2,hinv,site,isite) + 0.5);
+	 site[0][isite] -= lx  * tx + lxy * ty + lxz * tz;
+	 site[1][isite] -= lyx * tx + ly  * ty + lyz * tz;
+	 site[2][isite] -= lzx * tx + lzy * ty + lz  * tz;
       }
    xfree(ssite);
 }
