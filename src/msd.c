@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.8 1997/10/09 13:22:10 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.9 1997/10/15 13:13:09 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.8 
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 1.9  1997/10/15 13:13:09  keith
+ *  Minor tirying up by CF.
+ *
  *  Revision 1.8  1997/10/13  11:16:10  craig
  *  Removed unused variable declarations
  *
@@ -701,7 +704,12 @@ char	*argv[];
          cflg++;
          break;
        case 'r':
-       case 's':
+	 if( intyp )
+	    errflg++;
+	 intyp = c;
+	 filename = optarg;
+	 break;
+        case 's':
 	 if( intyp )
 	    errflg++;
 	 intyp = c;
@@ -749,7 +757,7 @@ char	*argv[];
    if( errflg )
    {
       fprintf(stderr,
-         "Usage: %s [-s sys-spec-file] [-r restart-file] ",comm);
+         "Usage: %s [-s sys-spec-file |-r restart-file] [-c] ",comm);
       fputs("[-d dump-files] [-t s[-f[:n]]] [-m s[-f[:n]]] ",stderr);
       fputs("[-g s[-f[:n]]] [-i init_inc] ",stderr);
       fputs("[-u] [-w] [-x] [-y] [-z] [-o output-file]\n",stderr);

@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 2.1 1997/10/09 11:01:10 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 2.2 1997/10/15 13:12:07 keith Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *       
@@ -28,6 +28,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.2  1997/10/15 13:12:07  keith
+ *  Fixed for polyatomics - CF
+ *
  *  Revision 2.1  1997/10/13 10:55:13  craig
  *  Removed declarations of unused variables
  *
@@ -850,6 +853,11 @@ char	*argv[];
          cflg++;
          break;
        case 'r':
+	 if( intyp )
+	    errflg++;
+	 intyp = c;
+	 filename = optarg;
+	 break;
        case 's':
 	 if( intyp )
 	    errflg++;
@@ -882,8 +890,8 @@ char	*argv[];
 
    if( errflg )
    {
-      fputs("Usage: mdavpos [-h] [-p] [-x] [-s sys-spec-file] ",stderr);
-      fputs("[-r restart-file] [-d dump-files] [-t s[-f[:n]]] ",stderr);
+      fputs("Usage: mdavpos [-r restart-file | -s sys-spec-file] ",stderr);
+      fputs("[-c] [-h] [-p] [-x] [-d dump-files] [-t s[-f[:n]]] ",stderr);
       fputs("[-o output-file]\n",stderr);
       exit(2);
    }

@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdshak.c,v 2.11 1997/07/04 13:22:10 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdshak.c,v 2.12 1997/11/13 12:51:40 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -742,6 +742,11 @@ char	*argv[];
 	 cflg++;
 	 break;
        case 'r':
+	 if( intyp )
+	    errflg++;
+	 intyp = data_source = c;
+	 filename = optarg;
+	 break;
        case 's':
 	 if( intyp )
 	    errflg++;
@@ -774,7 +779,7 @@ char	*argv[];
    if( errflg )
    {
       fprintf(stderr,
-	      "Usage: %s [-x|-v] [-h] [-c] [-s sys-spec-file] [-r restart-file] ",
+	      "Usage: %s [-x|-v] [-h] [-c] [-s sys-spec-file|-r restart-file] ",
 	      comm);
       fputs("[-d dump-files] [-t s[-f[:n]]] [-o output-file]\n", stderr);
       exit(2);
