@@ -32,6 +32,9 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 1.6  1997/08/12 14:03:05  keith
+ *  Combined version to produce output for GNUPLOT or IDL
+ *
  *  Revision 1.2  1997/07/16 14:20:47  craig
  *  Option for various output formats trajectory coords
  *
@@ -543,6 +546,7 @@ int		nslices, sp_range[3];
 /***********************************************************************
  * msd_calc. Calculate msds from trajectory array		       *
  ***********************************************************************/    
+void
 msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, traj_cofm, msd)
 spec_mt		species[];
 vec_mt		**traj_cofm;
@@ -953,11 +957,11 @@ char	*argv[];
 
 #ifdef DEBUG
         fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
-	   irec%header.maxdumps, dump_name);
+	   irec, dump_name);
 #endif
-        xfree(dump_buf);
    }
 
+   xfree(dump_buf);
 #if defined (unix) || defined (__unix__)
    pclose(Dp);
 #else
