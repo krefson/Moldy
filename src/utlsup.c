@@ -1,13 +1,9 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/utlsup.c,v 1.11 2001/08/09 11:46:56 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/utlsup.c,v 1.12 2001/08/09 16:41:09 keith Exp $";
 #endif
 
 #include "defs.h"
-#ifdef HAVE_STDARG_H
 #include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
 #include <errno.h>
 #include <math.h>
 #include "stdlib.h"
@@ -54,29 +50,15 @@ void	note(void)
  *  message.   Deliver error message to possibly exiting.  It can be called   *
  *             BEFORE output file is opened, in which case output to stderr.  *
  ******************************************************************************/
-#ifdef HAVE_STDARG_H
-#   undef  va_alist
-#   define      va_alist int *nerrs, ...
-#   ifdef va_dcl
-#      undef va_dcl
-#   endif
-#   define va_dcl /* */
-#endif
 /*VARARGS*/
-void    message(va_alist)
+void    message(int *nerrs, ...)
 {
    va_list      ap;
    char         *buff;
    int          sev;
    char         *format;
-#ifdef HAVE_STDARG_H
-   va_start(ap, nerrs);
-#else
-   int          *nerrs;
 
-   va_start(ap);
-   nerrs = va_arg(ap, int *);
-#endif
+   va_start(ap, nerrs);
    buff  = va_arg(ap, char *);
    sev   = va_arg(ap, int);
    format= va_arg(ap, char *);
@@ -100,26 +82,11 @@ void    message(va_alist)
 /******************************************************************************
  *  error.   Deliver error message to possibly exiting.                       *
  ******************************************************************************/
-#ifdef HAVE_STDARG_H
-#undef  va_alist
-#define	va_alist char *format, ...
-#ifdef  va_dcl
-#   undef  va_dcl
-#endif
-#define va_dcl /* */
-#endif
 /*VARARGS*/
-void	error(va_alist)
+void	error(char *format, ...)
 {
    va_list	ap;
-#ifdef HAVE_STDARG_H
    va_start(ap, format);
-#else
-   char		*format;
-
-   va_start(ap);
-   format= va_arg(ap, char *);
-#endif
 
    (void)fprintf(stderr, "%s: ",comm);
    (void)vfprintf(stderr, format, ap);

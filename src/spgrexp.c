@@ -24,6 +24,11 @@ what you give them.   Help stamp out software-hoarding! */
  **************************************************************************************
  *  Revision Log
  *  $Log: spgrexp.c,v $
+ *  Revision 2.2  2001/08/09 11:46:56  keith
+ *  Tidied up against some compiler warnings.
+ *  Added license file for SgInfo routines with permission of
+ *  Ralf W. Grosse-Kunstleve
+ *
  *  Revision 2.1  2001/08/09 09:36:35  keith
  *  Incorporated Craig's new "Syswrite" utility.
  *
@@ -37,11 +42,7 @@ what you give them.   Help stamp out software-hoarding! */
 #include "sginfo.h"
 #include "specdata.h"
 
-#ifdef HAVE_STDARG_H
 #include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
 #include <errno.h>
 #include <math.h>
 #include "stdlib.h"

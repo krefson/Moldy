@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.16 2001/05/18 17:10:56 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/mdavpos.c,v 2.17 2001/08/08 16:31:52 keith Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *
@@ -28,6 +28,10 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.17  2001/08/08 16:31:52  keith
+ *  Incorporated Craig's modifications.
+ *  Compiles but not properly tested.
+ *
  *  Revision 2.16  2001/05/18 17:10:56  keith
  *  Incorporated changes from Beeman branch 2.15e
  *  Specifically fixes for translational thermostat dof problem
@@ -134,11 +138,7 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.
  *
  */
 #include "defs.h"
-#ifdef HAVE_STDARG_H
 #include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
 #include <errno.h>
 #include <math.h>
 #include "stdlib.h"

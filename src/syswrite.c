@@ -25,6 +25,10 @@ what you give them.   Help stamp out software-hoarding! */
  **************************************************************************************
  *  Revision Log
  *  $Log: syswrite.c,v $
+ *  Revision 2.3  2001/08/09 16:41:08  keith
+ *  Fixed some bugs.
+ *  Converted some expressions to use array syntax.
+ *
  *  Revision 2.2  2001/08/09 11:46:56  keith
  *  Tidied up against some compiler warnings.
  *  Added license file for SgInfo routines with permission of
@@ -38,14 +42,10 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/syswrite.c,v 2.2 2001/08/09 11:46:56 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/syswrite.c,v 2.3 2001/08/09 16:41:08 keith Exp $";
 #endif
 #include "defs.h"
-#ifdef HAVE_STDARG_H
 #include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
