@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.22 92/03/19 15:48:27 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.23 92/04/21 17:49:44 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -130,7 +130,7 @@ typedef struct				/* Prototype for a 3Nx x 3Ny x 3Nz    */
    int 		ncell, rel;
 }		reloc_t;
 /*========================== Global variables ================================*/
-static          int nx = 0, ny = 0, nz = 0;
+static          int nx = 0, ny = 0, nz = 0, onx = 0, ony = 0, onz = 0;
 /*========================== Macros ==========================================*/
 #define         NCELL(ix,iy,iz) ((iz)+nz*((iy)+ny*(ix)))
 /*
@@ -142,7 +142,7 @@ static          int nx = 0, ny = 0, nz = 0;
  * to increase this from 1, your system must be *highly* inhomogeneous
  * and may not make sense!
  */
-#define         NMULT 1.5
+#define         NMULT 2.0
 #define		NSHELL (2*NSH+1)
 #define         NREL(ix,iy,iz) ((iz)+NSH+NSHELL*((iy)+NSH+NSHELL*((ix)+NSH)))
 #define         CELLMAX 5
@@ -218,6 +218,7 @@ double  cutoff;
 {
    double               dist;
    int                  i, j, ix, iy, iz, mx, my, mz, inabor = 0, nnab;
+   static int		onabor=0;
    ivec_t		*nabor;
    vec_t                s;
    mat_t                G, htr, htrinv;
@@ -261,7 +262,9 @@ double  cutoff;
 #endif
             }
          }
-   note(NABORS,2 * inabor);
+   if( inabor != onabor )
+      note(NABORS,2 * inabor);
+   onabor = inabor;
    *nnabor = inabor;
    return(nabor);
 }
@@ -437,7 +440,7 @@ mat_t           stress;                 /* Stress virial                (out) */
    int          nsites = system->nsites,/* Local copy to keep optimiser happy */
                 n_potpar = system->n_potpar,
    		max_id = system->max_id;
-   int          ncells = nx*ny*nz;	/* Total number of cells	      */
+   int          ncells;			/* Total number of cells	      */
    int          tx, ty, tz;             /* Temporaries for # unit cell shifts */
    int		ix, iy, iz;
    int		*id      = ialloc(nsites),   	/* Array of site_id[nsites]   */
@@ -460,11 +463,11 @@ mat_t           stress;                 /* Stress virial                (out) */
    spec_p       spec;
    cell_t       **cell;
    real		*sf0, *sf1, *sf2, *ssf0, *ssf1, *ssf2;
+   ivec_t       *nabor;
    
    static boolean       init = true;
    static int           n_nabors;
-   static ivec_t        *nabor;
-   static reloc_t       ***reloc;
+   static reloc_t       ***reloc = 0;
    int		nthreads = nprocessors(),
    		ithread;
    double	*pe_n = (double *)aalloc(nthreads, double);
@@ -482,19 +485,19 @@ mat_t           stress;                 /* Stress virial                (out) */
    for(ithread = 1; ithread < nthreads; ithread++)
       s_f_n[ithread] = (real**)arralloc(sizeof(real), 2, 0, 2, 0, nsites-1);
 
-   if(init)
+   if(control.subcell <= 0.0) control.subcell = control.cutoff/5.0;
+   nx = system->h[0][0]/control.subcell+0.5;
+   ny = system->h[1][1]/control.subcell+0.5;
+   nz = system->h[2][2]/control.subcell+0.5;
+   ncells = nx*ny*nz;
+   if( nx != onx || ny != ony || nz != onz )
    {
-      if(control.subcell <= 0.0) control.subcell = control.cutoff/5.0;
-      nx = system->h[0][0]/control.subcell+0.5;
-      ny = system->h[1][1]/control.subcell+0.5;
-      nz = system->h[2][2]/control.subcell+0.5;
-      ncells = nx*ny*nz;
       note("MD cell divided into %d subcells (%dx%dx%d)",ncells,nx,ny,nz);
 
       if(control.cutoff > NSH*MIN3(system->h[0][0],system->h[1][1],system->h[2][2]))
 	 message(NULLI, NULLP, FATAL, CUTOFF, NSH);
-      nabor = neighbour_list(&n_nabors, system->h, control.cutoff);
-   
+      if( reloc )
+	 (void)xfree(reloc);
       reloc = (reloc_t***)arralloc(sizeof(reloc_t),3,
             -NSH*nx, (NSH+1)*nx-1, -NSH*ny, (NSH+1)*ny-1, -NSH*nz, (NSH+1)*nz-1);
  
@@ -508,9 +511,13 @@ mat_t           stress;                 /* Stress virial                (out) */
                         reloc[ix+tx][iy+ty][iz+tz].ncell = NCELL(ix, iy, iz);
                         reloc[ix+tx][iy+ty][iz+tz].rel= NREL(tx/nx,ty/ny,tz/nz);
                      }
+      onx = nx; ony = ny; onz = nz;
+   }
 #ifdef titan
 #pragma asis
 #endif
+   if(init)
+   {
       for(spec = species; spec < species+system->nspecies; spec++)
 	 if( spec->framework )
 	    n_cell_list += spec->nmols*spec->nsites;
@@ -520,7 +527,8 @@ mat_t           stress;                 /* Stress virial                (out) */
       c_ptr = aalloc(n_cell_list, cell_t);
       init = false;
    }
-
+   nabor = neighbour_list(&n_nabors, system->h, control.cutoff);
+   
    cell = aalloc(ncells, cell_t *);
 
 /*  Construct and fill expanded site-identifier array, id                     */
@@ -642,6 +650,7 @@ VECTORIZE
    xfree((potp+1));  xfree(c_ptr); 
    xfree(cell);        xfree(id); 
    xfree(pe_n);   xfree(stress_n);
+   xfree(nabor);
    for( ithread = 1; ithread < nthreads; ithread++)
       xfree(s_f_n[ithread]);
 }
