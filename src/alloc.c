@@ -5,6 +5,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.3  89/09/21  14:56:01  keith
+ * Modified talloc() to return null rather than exit if 0 bytes requested.
+ * 
  * Revision 1.2  89/05/24  13:54:26  keith
  * Changed ifdef's to select on __STDC__ macro
  * 
@@ -13,7 +16,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/alloc.c,v 1.2 89/05/24 13:54:26 keith Stab $";
+static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/alloc.c,v 1.4 89/12/22 19:30:29 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
@@ -65,8 +68,10 @@ char	*p;
  *  specified lower and upper bounds for each dimension.  Each dimension is   *
  *  an array of pointers, and the actual data is laid out in standard 'c'     *
  *  fashion ie last index varies most rapidly.  All storage is got in one     *
- *  block, so to free whole array, just free lowest element.                  *
+ *  block, and so can be freed in one go.  				      *
  *  array = (double*) arralloc(sizeof(double), 3, 0, 10, -10, 10, 0, 5);      *
+ *  cfree((char*) array);					     	      *
+ *  (N.B. if lower bound of 1st dimension != 0 then free array+l.b.           *
  ******************************************************************************/
 #if ANSI || __STDC__
 #define	va_alist size_t size, int ndim, ...
@@ -75,15 +80,13 @@ char	*p;
 
 #define	MAXDIM	11
                  /*VARARGS*/
-void	*arralloc(va_alist)
+char	*arralloc(va_alist)
 va_dcl
 {
    int		lb[MAXDIM], ub[MAXDIM];
    va_list	ap;
-   char 	*cur, **ptr_start, *start;
-   long		n_elem, n_data, n_p_data, n_ptr, stride, i;
-   int		idim;
-
+   long		xsize, stride, idim, n_ptr, n_data;
+   char		**pointer, **end, *pointed, *start;
 #if ANSI || __STDC__
    va_start(ap, ndim);
 #else
@@ -121,22 +124,23 @@ va_dcl
    start = talloc(1L, (size_t)(n_data*size + (n_ptr+1)*sizeof(char*)),
 		  __LINE__, __FILE__);
 
-   n_p_data = (double)size/sizeof(char*) * n_data+0.5;	/* # pointers to fill */
-   ptr_start = (char**)start + n_p_data;		/* same space as data */
-   n_elem = n_data;
-   cur = start - size*lb[ndim-1];
- 
-   for(idim = ndim - 1; idim > 0; idim--)
+   pointer = (char**)start;
+   pointed = (char*)(pointer + ub[0] - lb[0] + 1);
+   xsize = sizeof (char*);
+   for(idim = 1; idim < ndim ; idim++)
    {
-      n_elem /= ub[idim] - lb[idim] + 1;
-      stride = size*(ub[idim] - lb[idim] + 1);
-      for(i = 0; i < n_elem; i++)
+      end = (char**)pointed;
+      if( idim == ndim - 1 ) 		/* Last iteration - set up pointers   */
+      {					/* to data this time.		      */
+	 xsize = size;			/* Increment is now sizeof(data)      */
+	 pointed = start + ((pointed-start)*sizeof(char)+size-1)/size*size;
+      }					/* Make sure 'pointed' is data-aligned*/
+      stride = ub[idim] - lb[idim] + 1;
+      for(; pointer < end; pointer++)
       {
-	 *ptr_start = cur;
-	 ptr_start++;  cur += stride;
+	 *pointer = pointed - lb[idim]*xsize;
+	 pointed += stride*xsize;
       }
-      cur = (char*)(ptr_start - n_elem - lb[idim-1]);
-      size = sizeof(char*);
    }
-   return ((void*)cur);
+   return (start - lb[0]*(ndim > 1 ? sizeof(char*) : size));
 }
