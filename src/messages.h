@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/messages.h,v 2.7 1994/06/08 13:15:01 keith Exp $
+ * $Header: /home/eeyore_data/keith/md/moldy/RCS/messages.h,v 2.8 1995/01/05 09:50:57 keith stab $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -66,7 +66,8 @@ what you give them.   Help stamp out software-hoarding!  */
 #define	REREAD	"read error on restart file at byte %ld\n    -  %s"
 #define	REEOF	"unexpected end of file reading restart file"
 #define	REWRT	"write error on restart file\n    -  %s"
-#define	NOVAL	"no value associated with name \"%s\""
+#define	NOKEY	"no keyword found on line"
+#define	NOVAL	"no value associated with keyword \"%s\""
 #define	NOTFND	"keyword \"%s\" not found"
 #define	BADVAL	"value \"%s\" is wrong type for keyword \"%s\""
 #define	ERRCON	"control file contains %d error%c"
