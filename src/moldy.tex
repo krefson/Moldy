@@ -1,7 +1,6 @@
-\documentstyle{report}
-\oddsidemargin=0.5in
-\textwidth=6in
-\textheight=8.5in
+\documentstyle[a4wide]{report}
+\oddsidemargin=0in
+\textwidth=6.5in
 \title{{\Huge Moldy User's Manual}}
 \author{Keith Refson\\Department of Earth Sciences\\Parks Road
 \\Oxford OX1 3PR\\keith@uk.ac.ox.earth\\}
@@ -26,7 +25,7 @@ polyatomic molecules, atoms or ions and any mixture thereof. It uses
 the `link cell' method to calculate short-range forces and the Ewald
 sum technique to handle long-range electrostatic forces.  Simulations
 may be performed either in the usual $NVE$ ensemble or in an $N\sigma
-T$ ensemble using the constant-stress method of Parinello and Rahman.
+T$ ensemble using the constant-stress method of Parrinello and Rahman.
 As the MD cell need not be cubic, the program is equally suitable for
 simulations of solids and liquids.
 
@@ -275,7 +274,7 @@ essential if the (generalised) velocities enter the dynamical
 equations themselves.  
 
 Velocity-dependent forces occur in equations~\ref{eqn:euler}
-and~\ref{eqn:qddot} and in the Parinello-Rahman constant-pressure
+and~\ref{eqn:qddot} and in the Parrinello-Rahman constant-pressure
 equations (section~\ref{sec:const-stress}). These usually present a
 problem to non ``predictor-corrector'' algorithms which are based on
 the assumption that the forces depend only on the co-ordinates.
@@ -283,7 +282,7 @@ Fincham has devised a scheme to allow integration of the rotational
 equations using Verlet-like algorithms \cite{fincham:81}, which is
 widely used despite the potential problems caused by the low
 accuracy of the velocities being propagated into the dynamics.  The
-case of the Parinello-Rahman equations has been handled by
+case of the Parrinello-Rahman equations has been handled by
 reformulating them to avoid the velocity-dependence \cite{dove:??}.
 
 However both cases are easily and accurately handled by the
@@ -332,6 +331,11 @@ Only the angular accelerations and quaternion second derivatives must
 be evaluated at each iteration using equations~\ref{eqn:euler} and
 ~\ref{eqn:qddot}, and this operation is relatively cheap.
 
+\section{Short Range Forces}
+\subsection*{Potential Functions}
+% LJ, Buckingham (Born-Meyer) & MCY
+% distant potential correction
+
 \section{The Ewald Sum}
 \label{sec:ewald}
 The long range Coulomb interactions are handled using the Ewald Sum
@@ -358,15 +362,15 @@ U & = &  \underbrace{\frac{1}{4 \pi \epsilon_0}
  & - & 
 \underbrace{\frac{\alpha}{4 \pi^\frac{3}{2} \epsilon_0} 
 \sum_{i=1}^{N} q_i^2}_{\mbox{Point self-energy}} 
- - \underbrace{\frac{1}{4 \pi \epsilon_0} \sum_{m=1}^M
-\sum_{\kappa=1}^{N_m} \sum_{\lambda=\kappa+1}^{N_m} q_{m\kappa} q_{m\lambda}
+ - \underbrace{\frac{1}{4 \pi \epsilon_0} \sum_{n=1}^M
+\sum_{\kappa=1}^{N_m} \sum_{\lambda=\kappa+1}^{N_m} q_{n\kappa} q_{n\lambda}
 \frac{\erf( \alpha | \bm{r}_{\kappa\lambda} |)}{ |
 \bm{r}_{\kappa\lambda}| }}_{\mbox{Intra-molecular self energy}}
 \nonumber \\
 & + & \underbrace{ \frac{1}{8 \pi \epsilon_0 V \alpha^2}
                     \left | \sum_{i=1}^N q_i 
-		    \right |^2}_{\mbox{charged system term}}
-\; \underbrace{\left [ + \frac{1}{6 \epsilon_0 V} 
+		    \right |^2}_{\mbox{charged system term}} +
+\; \underbrace{\left [  \frac{1}{6 \epsilon_0 V} 
                     \left | \sum_{i=1}^N q_i \bm{r}_i 
                     \right |^2 \right ]}_{\mbox{surface dipole term}}
 \nonumber
@@ -379,16 +383,21 @@ $\bm{n}$	& Lattice vector of periodic array of MD cell images. \\
 $\bm{k}$	& Reciprocal lattice vector of periodic array of MD cell images.. \\
 $k$		& Modulus of $\bm{k}$. \\
 $i,j$		& absolute indices of all charged sites. \\
-$m$		& index of molecules. \\
+$n$		& index of molecules. \\
 $\kappa,\lambda$ & indices of sites within a single molecule. \\
 $N$		& Total number of charged sites. \\
 $M$		& Total number of molecules. \\
 $N_m$		& Number of sites on molecule $m$. \\
+$\bm{p}_i$	& Co-ord of site $i$ relative to molecular 
+centre-of-mass, $\bm{r}_i - \bm{R}_i$. \\
 $q_i$		& Charge on absolute site $i$. \\
 $q_{m\kappa}$	& Charge on site $\kappa$ of molecule $m$. \\
 $\bm{r}_i$	& Cartesian co-ordinate of site $i$. \\
 $\bm{r}_{ij}$	& $\bm{r}_j - \bm{r}_i$. \\
 $\alpha$	& Real/reciprocal space partition parameter. \\
+$\pi_{lm}$	& Instantaneous stress tensor. \\
+$\delta_{lm}$	& Dirac delta function. \\
+$l, m$		& $xyz$ tensor indices. \\
 $V$		& Volume of MD cell.
 \end{tabular}
 
@@ -407,8 +416,8 @@ and the force on charge $i$ is given by
 \left \lbrace 
 \sin(\bm{k.r}_i) \sum_{j=1}^{N} q_j \cos(\bm{k.r}_j)  + 
 \cos(\bm{k.r}_i) \sum_{j=1}^{N} q_j \sin(\bm{k.r}_j) 
-\right \rbrace}_{\mbox{Reciprocal-space term}}\\
-& \, & \underbrace{\left [ + \frac{q_i}{6 \epsilon_0 V} 
+\right \rbrace}_{\mbox{Reciprocal-space term}}\\ 
+& + & \underbrace{\left [  \frac{q_i}{6 \epsilon_0 V} 
                     \left ( \sum_{j=1}^N q_j \bm{r}_j
                     \right ) \right ]}_{\mbox{surface dipole term}}
 \nonumber
@@ -419,6 +428,10 @@ $\bm{k}$) converge fairly rapidly so that only a few terms need be
 evaluated.  We define the {\em cut-off} distances $r_c$ and $k_c$ so
 that all terms with $| \bm{r}_{ij} +\bm{n} | < r_c$ and $\bm{k} < k_c$
 are included.
+
+The molecular forces and torques $\bf{F}$ and $\bf{N}$ are evaluated
+from the site forces $\bf{f}_i$ using equations~\ref{eqn:comf} and
+\ref{eqn:comt}.
 
 Notice that the equation~\ref{eqn:ewald} for the energy contains a
 correction for the intra-molecular self-energy, whose derivative is
@@ -431,26 +444,420 @@ include unwanted terms these sum to zero in the evaluation of the
 molecular centre-of-mass forces and torques (equations~\ref{eqn:comf}
 and \ref{eqn:comt}) (by the conservation laws for linear and angular
 momentum).
-% Self energies
-% uniform sheet correction
-% Surface dipole term
-\section{Pressure and Temperature}
-% Virial, site-site & mol-mol correction.
+
+\subsection*{Uniform Sheet Correction}
+The 5th term in equation~\ref{eqn:ewald} necessary only if the system
+has a nonzero net electric charge, and is useful in special cases such
+as framework systems.  
+
+In a periodic system the electrostatic energy is finite only if the
+total electric charge of the MD cell is zero.  The reciprocal space
+sum in equation~\ref{eqn:ewald} for $\bm{k}=0$ takes the form
+\[\frac{1}{k^2}e^{-\frac{k^2}{4 \alpha^2}} \left | \sum_{i=1}^{N} q_i
+ \right |^2\] which is zero in the case of electroneutrality but
+infinite otherwise.  Its omission from the sum in
+equation~\ref{eqn:ewald} is physically equivalent to adding a uniform
+jelly of charge which exactly neutralises the unbalanced point
+charges.  But though the form of the reciprocal space sum is
+unaffected by the uniform charge jelly the real-space sum is not.  The
+real-space part of the interaction of the jelly with each point charge
+as well as the self-energy of the jelly itself must be included giving
+the fifth term in equation~\ref{eqn:ewald}.
+
+\subsection*{Surface Dipole Term}
+The optional final term in equations \ref{eqn:ewald} and
+\ref{eqn:ewald-force} if used performs the calculations under
+different periodic boundary conditions.  It was suggested by De Leeuw,
+Perram and Smith\cite{deleeuw:80} in order to accurately model
+dipolar systems and is necessary in any calculation of a dielectric
+constant. 
+
+The distinction arises from considerations of how the imaginary set of
+infinite replicas is constructed from a single copy of the MD box
+\cite[pp 156-159]{allen:87}.  Consider a near-spherical ``cluster''
+of MD cells.  The ``infinite'' result for any property is the limit of
+its ``cluster'' value as the size of the cluster tends to infinity.
+However this value is non-unique and depends on the dielectric
+constant, $\epsilon_s$ of the physical medium surrounding the cluster.
+If this medium is conductive ($\epsilon_s=\infty$) the dipole
+moment of the cluster is neutralised by image charges, whereas in a
+vacuum ($\epsilon_s=1$) it remains.  It is trivial to show that
+in that case the dipole moment per unit volume (or per MD cell) does
+{\em not} decrease with the size of the cluster.
+
+The final term in equation \ref{eqn:ewald} is just the dipole energy,
+and ought to be used in any calculation of the dielectric constant of
+a dipolar molecular system.  It is switched on by \moldy's control
+parameter \verb+surface-dipole+.  Note that as it represents the
+dipole at the surface of the cluster the system is no longer truly
+periodic.
+
+Conversely it {\em must not} be used if the simulated system contains
+mobile ions.  Consider an ion crossing a periodic boundary and jumping
+from one side of the MD cell to another.  In that case the dipole
+moment of the MD cell changes discontinuously.   Because of the
+surface dipole term the calculation would model a discontinuous
+macroscopic change in the dipole moment of the whole system caused by
+an infinite number of ions jumping an infinite distance.  This is
+manifested in practice by a large and discontinuous change in the
+energy of the system and on the force on each charge within it.
+
+This situation is completely non-physical but is easily avoided.
+However the problem may also arise more subtly even when there are no
+mobile ions if a framework is being simulated (section
+\ref{sec:frameworks}).  The framework is treated as a set of discrete,
+but fixed atoms rather than a molecular unit.  If the shape of the
+unit cell is allowed to vary then ions constituting the framework may
+indeed cross MD cell boundaries causing the aforementioned problems.
+
+\subsection*{Stress}
+
+The internal stress (and pressure) of an atomic system is given by the
+volume-derivative of the internal energy.  The situation is slightly
+more complicated for rigid molecules since molecules do not scale with
+volume and only the inter-molecular distances vary.  The resulting
+expression for the coulombic part of the ``instantaneous'' stress
+$\pi_{ik}^e$ is \cite[Appendix A]{nose:83}
+
+\begin{eqnarray}
+\label{eqn:ewald-stress}
+V\pi_{lm}^e & = & \underbrace{\frac{1}{4 \pi \epsilon_0}
+\sum_{\bm{n}}\sum_{i=1}^{N} \sum_{j=i+1}^{N} q_iq_j \left \lbrace 
+\frac{\erfc( \alpha | \bm{r}_{ij} +  \bm{n} |)}{ | \bm{r}_{ij} +\bm{n} | } +
+\frac{2 \alpha}{\sqrt{\pi}}e^{- \alpha^2 | \bm{r}_{ij} +  \bm{n} |^2}
+\right \rbrace \frac{ (\bm{r}_{ij} + \bm{n})_l(\bm{r}_{ij} +
+\bm{n})_m}{ | \bm{r}_{ij} + \bm{n} |^2}}_{\mbox{Real-space term}} \nonumber \\
+ & + & \underbrace{\frac{1}{2 \epsilon_0 V} \sum_{\bm{k} \ne 0} \frac{1}{k^2}
+       e^{-\frac{k^2}{4 \alpha^2}}
+\left ( \delta_{lm}  \!- \! 2 \left [ \frac{1}{k^2} \! + \! \frac{1}{4 \alpha^2}
+\right ] \bm{k}_l\bm{k}_m \right )\left \lbrace 
+%
+\left | \sum_{i=1}^{N} q_i \cos(\bm{k.r}_i) \right |^2 + 
+\left | \sum_{i=1}^{N} q_i \sin(\bm{k.r}_i) \right |^2 
+\right \rbrace}_{\mbox{Reciprocal-space term}} \nonumber \\
+& - & \underbrace{\sum_{i=1}^{N}  \bm{(F_i)}_l \bm{(p_i)}_m}_{\mbox{Molecular
+Virial Correction}} 
++  \underbrace{ \frac{\delta_{lm}}{8 \pi \epsilon_0 V \alpha^2}
+                    \left | \sum_{i=1}^N q_i 
+		    \right |^2}_{\mbox{charged system term}}
+\end{eqnarray}
+
+The true internal stress is the ensemble average average, $\pi_{lm} =
+\left < \pi_{lm}^e + \pi_{lm}^{s.r.} + \pi_{lm}^K \right >$, where
+$\pi_{lm}^{s.r.}$ and $\pi_{lm}^K$ are the short-range force and
+kinetic contributions respectively.  $\pi_{lm}^e$ enters into the
+Parrinello-Rahman equations of motion (see
+section~\ref{sec:const-stress}).
+
+The term marked {\em Molecular Virial Correction} in
+equation~\ref{eqn:ewald-stress} is the difference between the
+site-site virial $\sum_i f_i.r_i$ and the molecular virial $\sum_i
+F_i.R_i$ and is subtracted after all of the site forces and the
+molecular forces have been calculated including the short-range
+potential components which are not included in the equations above.
+Though is is not apparent in reference \cite[Appendix A]{nose:83} this
+term has exactly the same form for all parts of the stress --- the
+short-range potential and the real- and reciprocal space coulombic
+parts.
+
 \section{Periodic Boundaries --- the Link Cell Method}
 \label{sec:link-cell}
-\section{Temperature Scaling}
+The real space part of the Ewald (equation~\ref{eqn:ewald}) and
+short-range potential energy is a sum of contributions over pairs of
+sites.  In both cases the interaction decays rapidly with separation,
+which means that only site pairs closer some {\em cutoff} distance
+$r_c$ need be considered.  Several methods are available to enumerate
+site pairs and choose those within the cutoff.
+
+Most simple MD codes simply loop over all pairs of particles in the MD
+box and compute the separation $r$ for each.  If $r < r_c$ the
+interaction is computed.  This method suffers from several
+disadvantages.  Since for any given site, the interaction with any
+other site is considered only once, only the {\em nearest} periodic
+image of that site is included (the {\em minimum-image} convention).
+However this restricts the cutoff radius to less than half the MD cell
+dimension $r_c < 2L$.  More serious is the way the computational
+time scales with the number of sites.  If there are $N$ sites, there
+are $O(N^2)$ separations to compute and the overall time therefore scales
+as $O(N^2)$.
+
+The Verlet {\em Neighbour List} scheme \cite[pp 146-149]{allen:87} makes
+use of the spatial locality of the interaction potential by
+maintaining a list for each site of all the ``neighbouring'' sites
+({\em i.e.} all those within the cutoff distance).  This can give
+considerable gains for moderate numbers of sites, but it ultimately
+requires $O(N^2)$ time (to build the lists) as well as $O(N)$ storage for
+the lists.
+
+\moldy\ uses an implementation of the Link-Cell method of Quentrec {\em
+et al.\ } \cite{quentrec:75} described in Allen and Tildesly's book
+\cite[pp 149-152]{allen:87} which is a true $O(N)$ algorithm.  
+The fundamental idea is that the MD cell is partitioned into a number
+of smaller cells, known as {\em subcells}.  Every timestep a linked
+list of all the particles contained in each subcell is constructed.
+The selection of all pairs of {\em particles} within the cutoff is
+achieved by looping over all pairs of {\em subcells} within the cutoff
+and particles within the subcells.  Because of their regular
+arrangement, the list of ``neighbouring'' subcells is fixed and may be
+precomputed.  Its construction takes only $O(N)$ operations and only
+$O(N)$ pair interactions need be calculated.
+
+% Molecular nature of cutoffs.
+
+When the system consists of polyatomic molecules it is important that
+all sites belonging to a particular molecule are assigned to the same
+cell.  Otherwise it is impossible to calculate the stress and pressure
+(equation~\ref{eqn:ewald-stress}) correctly as MD cell vectors are
+added to some intra-molecular distances.  Therefore all sites of any
+molecule are assigned to a cell if the molecular centre-of-mass lies
+inside it.
+
+One drawback of the link-cell method has been the difficulty of
+implementing it efficiently for vector processors.  The linked list of
+``neighbour'' particles is not stored in the regular-stride array
+which is required for vectorization.  Heyes and Smith \cite{heyes:87}
+pointed out that {\em gather} operations might be used to assemble a
+temporary array of neighbour particle co-ordinates from which the
+interaction potential and forces could be evaluated in vector mode.  A
+{\em scatter} operation is then used to add the resulting forces to
+the total force array.  This is the technique used in \moldy.  Almost
+all modern vector machines have scatter/gather hardware which means
+these operations are fairly cheap.
+
+\subsection*{No minimum-image convention}
+One notable feature of the implementation of the link-cell method in
+\moldy\ is that it does {\em not} follow the {\em minimum image}
+convention used in most MD codes.  Instead the list of neighbouring
+cells, and hence interactions considered, includes {\em all} periodic
+images of a particle which are within the cutoff.  This means that it
+is quite safe to use a cutoff of more than half of the MD cell side in
+any direction.  By default the arrays are sized to allow a cutoff of
+up to unity times the MD cell side.  This may be increased by
+increasing the constant \verb'NSH' from 1 in \verb`force.c`.
+
+
+% quick 'n dirty vs strict.
+\subsection*{Cell or Strict cutoff}
+There are two options for the way in which site-site interactions are
+selected for inclusion in the total energy and forces.  These are
+{\em cell-based} cutoff and {\em strict} cutoff and are selected
+by the \verb'strict-cutoff' control parameter.
+
+In cell-based mode (\verb'strict-cutoff=0') the neighbour cell list is
+built to include only those cells whose centre is within the cutoff
+radius of the centre of the reference cell.  All interactions between
+sites belonging to molecules in the neighbouring cell list are
+computed.  This is a ``quick and dirty'' method as some interactions
+between sites closer than the cutoff will inevitably be excluded
+whereas some outside the cutoff range will be included.
+
+In strict mode (\verb'strict-cutoff=1') all interactions between pairs
+of {\em sites} within the cutoff are included.  The neighbouring cell
+list contains all pairs of cells with any parts closer than the cutoff
+plus twice the greatest molecular radius.  This ensures that all
+appropriate interactions are included.  Furthermore, all interactions
+between sites further apart than the cutoff are excluded (by the
+expedient of setting their separation to a large value in the
+potential calculation).  This means that large and asymmetric
+molecules are handled correctly.  
+
+For a given cutoff radius the cell-based mode is rather quicker than
+the strict mode since the neighbouring cell list is much smaller and
+fewer interactions are computed.  However to ensure that significant
+interactions are not omitted, it the cutoff ought to be set to a
+greater value than strictly required.    This tends to offset the
+potential speed gain.   On the other hand, if strict isotropy is
+required in a liquid simulation for example then the strict cutoff
+option ought to be used.
+
+
+\section{Temperature Initialization and Scaling}
 \label{sec:rescaling}
-% Per species and total rescaling
+
+The equipartition theorem states that each degree of freedom in the
+system, $f$ has a kinetic energy $\left < {\cal K} \right >_f~=~\frac{1}{2}k_BT$.  The
+effective temperature of the system is therefore given by the ensemble
+average of its kinetic energy.
+\begin{equation}
+\label{eqn:equipartition}
+T = \left < {\cal T} \right > = \frac{2}{N_fk_B}
+\left < \sum_{f=1}^{N_f} {\cal K}_f \right > 
+= \frac{1}{3Nk_B}\left < \sum_{i=1}^N  m_i \bm{v}_i^2 
++ \bm{ \omega_i.I. \omega_i} \right > 
+\end{equation}
+Here ${\cal K}_f$ is the instantaneous kinetic energy of degree of
+freedom $f$, $N_f$ is the number of degreed of freedom, $N$ is the
+number of molecules, $\cal T$ is an instantaneous ``temperature''.
+
+It is almost always desirable that a simulation be conducted so that
+the temperature is the supplied parameter rather than the kinetic
+energy.  This requires some mechanism to fix the {\em average} kinetic
+energy at thermal equilibrium.   The {\em initial} kinetic energy may
+be set approximately by choosing random velocities which sample the
+Maxwell-Boltzmann distribution at the desired temperature, and this is
+indeed what \moldy\ does on starting a new run.  But because the
+initial configuration is usually far from equilibrium it will have too
+much potential energy.  As the run progresses this will be converted
+into kinetic energy, raising the temperature above the desired value.
+
+It is therefore necessary to have some mechanism for removing excess
+kinetic energy as the run progresses.  \moldy\ uses the common
+technique of {\em velocity scaling}.  At periodic intervals linear and
+angular velocities are multiplied by a factor of
+\begin{equation}
+\label{eqn:scaling}
+s = \sqrt{\frac{N_fk_BT_d}{2\cal K}}
+\end{equation}
+where $T_d$ is the desired temperature.  By repeatedly setting the
+``instantaneous'' temperature to the correct value while the system
+approaches its equilibrium state, the kinetic energy is made to
+approch its desired value.  {\em Scaling} may be performed every
+timestep, or every few depending on the simulation conditions.
+
+An MD run with scaling does not generate a valid statistical ensemble,
+and it must therefore be switched off before any calculation of
+thermodynamic averages is performed.
+
+\moldy\ incorporates two refinements to the basic scaling algorithm
+(which are selected by the \verb'scale-options' parameter).  Linear
+and angular velocities can be scaled independently, either for the
+whole system or for each species individually.  In this way, one does
+not rely on the interactions of these degrees of freedom for
+convergenge to equilibrium.  In many systems these degrees of freedom
+are loosely coupled and the exchange of energy between them is slow.
+In these cases individual scaling can speed up the approach to
+equilibrium considerably.
+
+The other refinement addresses the problem of setting the temperature
+accurately.  At equilibrium the system's kinetic energy fluctuates
+with mean-square amplitude\footnote{This formula actually applies to
+the Canonical rather than the microcanonical ensemble, but it serves
+for the purpose of this argument} $\left < \delta {\cal K}^2\right > =
+\frac{1}{2}N_f\left(k_BT\right)^2$, which corresponds to a
+rms fluctuation in the instantaneous ``temperature'' 
+$\sqrt{\left < \delta {\cal T}^2\right >} = 
+\sqrt{2 /N_f}\left < {\cal T}\right >$.   The difficulty with applying equation~\ref{eqn:scaling}
+is the instantaneous kinetic energy $\cal K$ in the denominator.
+Strictly, scaling ought to use the {\em average} kinetic energy
+$\left<\cal K \right>$ as in equation~\ref{eqn:equipartition}, but
+this quantity is not known until after the run is completed.  Because
+of this equation~\ref{eqn:scaling} can only set the temperature to an
+accuracy of $1/N_f$.  This is often inadequate for purposes of
+comparison with experiment.
+
+In order to allow the temperature to be set with greater accuracy,
+\moldy\ allows the use of a partial average in the denominator,
+\begin{equation}
+\label{eqn:rav-scaling}
+s = \sqrt{\frac{N_fk_BT_d}{2\left < {\cal  K}\right >^\prime}}
+\end{equation}
+where $\left < {\cal K}\right >^\prime$ is the ``rolling'' average of
+$\cal K$ over some number of preceding timesteps.  That number is
+determined by the control parameter \verb'roll-interval'.   
+
+This option should be used cautiously.  The change in $\left <{\cal
+K}\right >$ upon scaling only has a significant effect on the average
+after many timesteps. If the subsequent scaling is performed before
+this change is reflected in the value of $\left < {\cal K}\right
+>^\prime$ it will use an out-of-date value of the average kinetic
+energy.  It is therefore recommended that the number of timesteps
+between scalings be greater than or equal to the number used to
+compute the rolling average.  Otherwise it is possible to produce wild
+overshoots and oscillations in the temperature.
+
+Finally, there is a method for tackling really difficult cases when
+even individual scaling is unable to keep the temperature under
+control.  This might be a far-from-equilibrium configuration where the
+potentials are so strong that velocicites rapidly become very large,
+or when a single molecule acquires a very large velocity.  In that
+case the velocities can all be re-initialized randomly from the
+Maxwell-Boltzmann distribution periodically.  This provides a kind of
+pseudo monte-carlo equilibration for difficult cases.
+
 \section{Constant Stress}
 \label{sec:const-stress}
+It is frequently desireable to conduct simulations under conditions of
+constant pressure or stress, rather than constant volume.  For
+example, this allows the simulation of a solid-state phase transition
+with a change of symmetry or unit call size.  \moldy\ incorporates the
+constant pressure method of Parrinello and Rahman\cite{parrinello:81}.
+
+In a constant-stress simulation the MD cell changes in size and shape
+in response to the imbalance between the internal and externally
+applied pressure.  For an exposition of the method the reader should
+refer to Parrinello and Rahman's paper\cite{parrinello:81} and to
+Nos\'{e} and Klein's extension to rigid molecular
+systems\cite{nose:83}.  The equation of motion for the reduced
+centre-of-mass so-ordinates $\bm{S}_i =
+\bm{h}^{-1}\bm{R}_i$ is
+\begin{equation}
+\label{eqn:p&r}
+M_i\ddot{\bm{S}}_i = \bm{h}^{-1} \bm{F}_i - M_i \bm{G}^{-1}\dot{\bm{G}}\dot{\bm{S}}_i
+\end{equation}
+replacing the straightforward Newton equation~\ref{eqn:newton}.
+$\bm{h}$ deonotes the $3 \times 3$ MD cell matrix whose columns are
+the MD cell vectors $\bm{a}, \bm{b}$ and $\bm{c}$, $\bm{F}_i$ is the
+centre-of-mass force and $\bm{G} =\bm{h^\prime h}$.
+Equation~\ref{eqn:euler}, the Euler equation governs the angular
+motion exactly as in the constant-volume case.
+
+The dynamics of the unit cell matrix $\bm{h}$ are governed by the
+equation
+\begin{equation}
+\label{eqn:rahman}
+W\ddot{\bm{h}} = \left ( \bm{\pi} - p \right ) \bm{\sigma}
+\end{equation}
+where $W$ is a ficticious mass parameter, $\bm{\sigma} = V
+\bm{h}^{\prime-1}$ and $p$ is the external pressure.  The
+instantaneous internal stress $\bm{\pi}$ is given by 
+\begin{equation}
+\bm{\pi} = \frac{1}{V}\sum_{i=1}^N m_i (\bm{h}_i\dot{\bm{s}}_i)^2 + \bm{\pi}^{s.r.} + \bm{\pi}^e
+\end{equation}
+with the short-ranged and electrostatic components given by
+equations~\ref{eqn:stress-sr} and~\ref{eqn:ewald-stress} respectively.
+
+Nos\'{e} and Klein\cite{nose:83} describe and address the problem of
+the whole MD cell rotating during the course of the simulation.
+Angular momentum is not conserved in a periodic system, and because
+the $\bm{h}$ matrix has 9 degrees of freedom, three more than needed
+to specify the position and orientation of the MD cell.  Their
+solution is to constrain the $\bm{h}$ matrix to be symmetric, and
+involves a modification of the Parrinello-Rahman equations.
+
+\moldy\ incorporates a rather different constraint which is not only
+simpler to implement (as it does not require modification of the
+equations of motion) but which also has a more obvious physical
+interpretation.  The lower three sub-diagonal elements of the $\bm{h}$
+matrix are constrained to zero.  In other words the MD cell vector
+$\bm{a}$ is constrained to lie along the $x$-axis and $\bm{b}$ is
+constrained to lie in the $xy$-plane.  Physically this may be thought
+of as implementing an MD box lying on a horizontalsurface under the
+influence of a weak gravitational field.  The implementation is
+trivial; at each timestep the acceleration of those components,
+$\ddot{\bm{h}}_{ij}$, is set to zero which is equivalent to adding a
+ficticious opposing force.
+
+This constraint technique is not restricted merely to eliminating
+redundant degrees of freedom, but can also be used for other purposes.
+For example it may be used to allow uniaxial expansion only.  The most
+important use of $\bm{h}$ matrix constraints however is probably for
+simulations of liquids.  Since a liquid can not support shear stress
+there is no restoring force to keep the simulation cell nearly cubic,
+and it will therefore drift to a paralellopiped shape.  To counter
+this tendancy $\bm{h}$ may be constrained so that only the diagonal
+elements are non-zero and allowed to change.  This does not give a
+completely isotropic MD cell expansion, but the time average should
+tend towards a cubic cell.
+
+MD cell constraints are selected using the control parameter
+\verb'strain-mask' (see section~\ref{sec:cp-constraints}).
+
 \section{Radial Distribution Functions}
 % Formulae for multi-component systems.
 \section{The Initial Configuration}
 \label{sec:skewstart}
-\section{Potential Functions}
-% LJ, Buckingham (Born-Meyer) & MCY
-% distant potential correction
 \section{Frameworks}
+\label{sec:frameworks}
 % Zeolites, clay
 % Discussion of models - wrt unbalanced charges.
 % Framework is constrained
@@ -651,17 +1058,21 @@ Select variations on scaling. \\
 \verb'temperature' &    	real &			0 &
 Temperature to set up initial configuration at and to scale to. \\ \hline
 \verb'const-pressure' &  	boolean & 		false  &
-Whether to use Parinello and Rahman constant stress. \\
+Whether to use Parrinello and Rahman constant stress. \\
 \verb'w' &		    	real &			100.0 &
 Value of P \& R mass parameter. \\
 \verb'pressure' &	    	real &			0 &
-Applied pressure. \\ \hline
+Applied pressure. \\
+\verb'strain-mask' &		integer &		200 &
+bitmask controlling $\bm{h}$ matrix constraint. \\ \hline
 \verb'alpha' &	    		real &			0.3 &
 $\alpha$ parameter for Ewald sum. \\
 \verb'k-cutoff' &		real &			2 &
 Reciprocal space cut off distance in \AA$^{-1}$. \\
 \verb'cutoff' &	    	real &			10 &
 Direct space cutoff distance in \AA. \\
+\verb'strict-cutoff' &	    	boolean &		false &
+Flag to select rigorous or cheap but approximate cutoff algorithm. \\
 \verb'surface-dipole' &	boolean & 		false  &
 Include De Leeuw \& Perram term in Ewald sum. \\ \hline
 \verb'roll-interval' &   	integer & 		10 &
@@ -1012,7 +1423,6 @@ by the control parameter \verb'scale-options'.  This is an integer
 parameter interpreted as a set of bit flags with the following meanings.
 \begin{description}
 \item[bit 0]	perform scaling for each molecular species individually.
-and potential energy.	      
 \item[bit 1]	scale the rotational and translational components of
 the kinetic energy separately.
 \item[bit 2]	use the rolling averages of kinetic energy to
@@ -1270,7 +1680,7 @@ matrix second derivatives.
 Items selected are written in the order laid out above.  Within each
 set of variables, values are ordered primarily by species in the order
 they appeared in the system specification.  Within a species ordering
-is by molecule (or atom) and at the finest level by $x$, $y$ or $z$
+vis by molecule (or atom) and at the finest level by $x$, $y$ or $z$
 component ($q_{0}, \ldots q_{3}$ for quaternions). Therefore if $n$ is
 the total number of molecules and $n_{r}$ is the the number with
 rotational freedom the size of each record is
@@ -1357,22 +1767,55 @@ analyse dump data.
 
 Setting  the control parameter   \verb'const-pressure' switches from a
 constant-volume  simulation to a constant-stress  simulation using the
-method     of    Parinello     and    Rahman\cite{parinello:81}   (see
+method     of    Parrinello     and    Rahman\cite{parrinello:81}   (see
 section~\ref{sec:const-stress}).   The value of  the  ``MD cell'' mass
 parameter,  $W$  is given by the control  parameter \verb'w'  and  the
 external pressure by \verb'pressure'. At present it is not possible to
 specify an anisotropic external stress, though this  capability may be
 added in future versions of the program.
 
+\label{sec:cp-constraints}
+The $\bm{h}$ matrix may be constrained so as to disable motion of any
+or all of its components using the parameter \verb'strain-mask'. 
+\verb'Strain-mask' is a bitmap: each ``bit'' of the integer
+freezes one of the components of $\bm{h}$;
+$\mbox{bit } i \mbox{ freezes } \bm{h}_{kl}$ with 
+$ i = 3 (k\!-\!1)\! +\! l\! -\!1$.
+The bitmask is the sum of $2^i$ over the $i$'s to be set, so the
+\verb`strain-mask` values
+
+\begin{displaymath}
+\left (
+\begin{array}{rrr}
+1 & 2 & 4 \\ 8 & 16 & 32 \\ 64 & 128 & 256
+\end{array}
+\right )
+\mbox{ constrain the corresponding components of }
+h, 
+\left (
+\begin{array}{rrr}
+h_{11} & h_{12} & h_{13} \\ h_{21} & h_{22} & h_{23} \\ h_{31} & h_{32} & h_{33}
+\end{array}
+\right ) .
+\end{displaymath}
+
+Thus the default constraint of $\bm{h}_{?1} = \bm{a} = (a_x,0,0),
+\bm{h}_{?2} = \bm{b} = (b_x,b_y,0)$ is given by \verb'strain-mask=200'
+(8+64+128).  Another useful value is 238 which freezes all the
+off-diagonal components.  This is needed for a liquid simulation since
+there are no shear restoring forces acting on those components.
+
 \section{Cutoffs and Adjustable Parameters}
 
-There are four parameters related to the Ewald sum method of force
+There are five parameters related to the Ewald sum method of force
 evaluation (see section~\ref{sec:ewald}).  The $\alpha$ parameter is
 specified by \verb'alpha' and the direct and reciprocal space cutoff
 distances $r_{c}$ and $k_{c}$ by \verb'cutoff' and \verb'k-cutoff'.
 They are specified in units of \AA$^{-1}$, \AA\ and \AA$^{-1}$
 respectively.  Before a new simulation is started, trial runs should
 be performed to establish suitable values of these three parameters.
+Two variants of the cutoff algorithm are allowed; use the parameter
+\verb'strict-cutoff' to choose which.
 For a simulation of 512 MCY water molecules the values $\alpha =
 0.3$\AA$^{-1}$, $r_{c} = 9$\AA\ and $k_{c} = 1.9$\AA$^{-1}$ give
 potential energies correct to approximately 1 part in $10^{5}$. For a
@@ -1386,16 +1829,30 @@ Smith\cite{deleeuw:80}.  See the note in section~\ref{sec:ewald} for an
 explanation of why this term should {\em never} be used for an ionic
 (as opposed to dipolar) system.
 
-The one adjustable parameter which controls the link-cell force
-calculation (see section~\ref{sec:link-cell}) is \verb'subcell'. It
-specifies the length (in \AA) of the side of a link cell and determines
-the number of cells the MD cell is divided into. In fact the MD cell
-is divided into a whole number of subcells whose side in each of the
-three directions is nearest to the value of \verb'subcell'.  (The
-default of zero though, is special and sets subcell to one fifth of
-the cutoff radius.) In general the smaller the link cell, the more
-accurately the cutoff radius is implemented, but too many of them
-reduces the efficiency of the program.
+The two adjustable parameters which control the link-cell force
+calculation (see section~\ref{sec:link-cell}) are \verb'subcell' and
+\verb'strict-cutoff'. The former specifies the length (in \AA) of the side of
+a link cell and determines the number of cells the MD cell is divided
+into. In fact the MD cell is divided into a whole number of subcells
+whose side in each of the three directions is nearest to the value of
+\verb'subcell'.  (The default of zero though, is special and sets
+subcell to one fifth of the cutoff radius.)  In general the smaller
+the link cell, the more accurately the cutoff radius is implemented,
+but too many of them reduces the efficiency of the program.
+
+In the default cutoff mode \verb'strict-cutoff=false' the list of
+neighbour cells is constructed to include all cells whose
+centre-centre distance is less than the cutoff.  This means that some
+molecule pairs separated by more than the cutoff will be included and
+some by less will be omitted.  Setting \verb'strict-cutoff' to true
+generates a larger cell neighbour list which is guaranteed to include
+all appropriate molecule pairs.  Furthermore, molecules separated by
+more than the cutoff are excluded from the force calculation by
+setting their separation to a large number, 100 times the cutoff, at
+which distance it is assumed the potential is very close to zero.
+This is therefore the mode of choice for liquid simulations where any
+artificial anisotropy is undesirable.  See section~\ref{sec:link-cell}
+for a full explanation.
 
 It is worth noting that it is unnecessary to recompile the program or
 change anything else when the cutoffs are modified. Unlike most MD
@@ -1817,10 +2274,10 @@ be so easy!
 \begin{verbatim}
 # LJ Argon - about as simple as you can get
 Argon 128
-1          0           0          0    36 Ar
+1          0           0          0    36 0 Ar
 end
 Lennard-Jones
-1 1 ? ?
+1 1 3984.08 3.41
 \end{verbatim}
 \section{TIPS2 Water}
 This is the four-site water model of Jorgenson 
