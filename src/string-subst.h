@@ -19,9 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/md/moldy/RCS/string.h,v 2.8 1996/03/06 16:02:13 keith Exp $
+ * $Header: /home/eeyore_data/keith/moldy/src/RCS/string-subst.h,v 2.9 1998/05/07 17:06:11 keith Exp $
  *
- * $Log: string.h,v $
+ * $Log: string-subst.h,v $
+ * Revision 2.9  1998/05/07 17:06:11  keith
+ * Reworked all conditional compliation macros to be
+ * feature-specific rather than OS specific.
+ * This is for use with GNU autoconf.
+ *
  * Revision 2.8  1996/03/06 16:02:13  keith
  * Moved tests/#defines of m/c include macros into non-ansi case only.
  *
@@ -80,14 +85,6 @@ what you give them.   Help stamp out software-hoarding!  */
 #   include <string.h>
 #else
 
-#ifndef __string_h
-#ifndef _STRING_H
-#ifndef _STRING_H_
-#ifndef __STRING_H
-#ifndef _H_STRING
-#ifndef __STRING_H__
-#ifndef _STRING_INCLUDED
-
 #include "stddef.h"
 
 extern char
@@ -114,20 +111,4 @@ extern gptr
 	*memcpy(),
 	*memset();
 
-#define __string_h
-#define _STRING_H
-#define _STRING_H_
-#define __STRING_H
-#define __STRING_H__
-#define  _H_STRING
-#define _STRING_INCLUDED
-
-
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
 #endif

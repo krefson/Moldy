@@ -22,23 +22,9 @@ what you give them.   Help stamp out software-hoarding!  */
 #ifdef STDC_HEADERS
 #   include <stddef.h>
 #else
-#ifndef __stddef_h
-#ifndef _STDDEF_H
-#ifndef _STDDEF_H_
-#ifndef __STDDEF_H
-#ifndef __STDDEF_H__
-#ifndef _STDDEF_INCLUDED
-
 #   ifndef NULL
 #      define NULL 0
 #   endif
-
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
 #endif
 
 

@@ -22,14 +22,6 @@ what you give them.   Help stamp out software-hoarding!  */
 #   include <stdlib.h>
 #else
 
-#ifndef __stdlib_h
-#ifndef _STDLIB_H
-#ifndef _STDLIB_H_
-#ifndef __STDLIB_H
-#ifndef __STDLIB_H__
-#ifndef _H_STDLIB
-#ifndef _STDLIB_INCLUDED
-
 #  include "stddef.h"
 
    extern char * calloc();
@@ -41,21 +33,6 @@ what you give them.   Help stamp out software-hoarding!  */
    extern int abs ();
    extern int atoi ();
    extern long strtol();
-#define __stdlib_h
-#define __STDLIB_H__
-#define __STDLIB_H
-#define _STDLIB_H_
-#define _STDLIB_H
-#define  _H_STDLIB
-#define _STDLIB_INCLUDED
-
-#endif /* __STDLIB_H__ */
-#endif /* __STDLIB_H__ */
-#endif /* _STDLIB_H_ */
-#endif /* _STDLIB_H_ */
-#endif /* _STDLIB_H_ */
-#endif /* _STDLIB_H_ */
-#endif /* _STDLIB_H_ */
 
 #endif
 

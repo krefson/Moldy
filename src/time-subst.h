@@ -22,45 +22,18 @@ what you give them.   Help stamp out software-hoarding!  */
  *  Time.h   replacement for ANSI one
  */
 #ifdef STDC_HEADERS
-#include <time.h>
+#  include <time.h>
 #else
-
-#ifndef __time_h
-#ifndef _TIME_H
-#ifndef _TIME_H_
-#ifndef __TIME_H
-#ifndef _H_TIME
-#ifndef __TIME_H__
-#ifndef _TIME_INCLUDED
-
-#include <time.h>
-#   if defined(unix) || defined(__unix__)
-/*
- *  We must protect the inclusion of <sys/types.h>.  
- */
-#      ifndef SYS_TYPES_INCLUDED
-#         define SYS_TYPES_INCLUDED
-#         include <sys/types.h>
-#      endif
-       extern time_t	time();
-       extern char * ctime();
-#   endif
-#define __time_h
-#define _TIME_H
-#define _TIME_H_
-#define __TIME_H
-#define _H_TIME
-#define __TIME_H__
-#define _TIME_INCLUDED
-
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-#endif
-
+#  ifdef HAVE_SYS_TYPES_H
+#     ifndef SYS_TYPES_INCLUDED
+#        define SYS_TYPES_INCLUDED
+#        include <sys/types.h>
+#     endif
+#  endif
+   extern time_t  time();
+   extern char *  ctime();
+   extern clock_t clock();
+   extern struct tm *localtime();
 #endif
 
 

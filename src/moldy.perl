@@ -12,12 +12,12 @@ package main;
 #
 #
  
-sub do_env_partfigure {
-    local($_) = @_;
- 
-    $contents =~ s/$optional_arg_rx//o;    # ditch [tbp]
-    &process_environment("figure", $global{'max_id'}++);
-    }
+#sub do_env_partfigure {
+#    local($_) = @_;
+# 
+#    $contents =~ s/$optional_arg_rx//o;    # ditch [tbp]
+#    &process_environment("figure", $global{'max_id'}++);
+#    }
 
 sub do_env_Argdescription {
     local($_) = @_;
@@ -52,13 +52,16 @@ sub do_env_Fndescription {
 sub do_cmd_Emph { &styled_text_chunk('B','em','font','variant','','', @_); }
 sub do_cmd_Lit { &styled_text_chunk('TT','em','font','variant','','', @_); }
 sub do_cmd_Fname { &styled_text_chunk('I','em','font','variant','','', @_); }
+sub do_cmd_Quat { &styled_text_chunk('B','em','font','variant','','', @_); }
+ 
 
-&process_commands_in_tex (<<_RAW_ARG_CMDS_);
-partfigure # []
-_RAW_ARG_CMDS_
+#&process_commands_in_tex (<<_RAW_ARG_CMDS_);
+#partfigure # []
+#_RAW_ARG_CMDS_
  
 &ignore_commands( <<_IGNORED_CMDS_);
-superfig
+#superfig
+Calcd
 saferagged
 _IGNORED_CMDS_
 1;                              # This must be the last line
