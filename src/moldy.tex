@@ -37,6 +37,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\usepackage{pslatex}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%% Not essential, except that it MUST be used with pslatex %%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\usepackage[T1]{fontenc}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% Use the "geometry" package to set page layout.      %%%%%%%%
 %%%%%%%%%%% Hard coded params are given as comments below if nec. %%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -64,14 +68,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage[mathcal]{eucal}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%% Not really essential, but it will be the default soon. %%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\usepackage[T1]{fontenc}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% Postscript figure inclusion.  Epsfig is part of the %%%%%%%%
 %%%%%%%%%%% "graphics" bundle.  Install it if necessary.        %%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\usepackage{epsfig}
+\usepackage{graphicx}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% Eepic graphics work well if you don't have PostScript
 %%%%%%%%%%% but you DO have a graphics driver which supports the
@@ -90,68 +90,43 @@
 %%%%%%%%%%% does this  *right*. Otherwise use \mathbf, but you won't
 %%%%%%%%%%% get bold greek or symbols. 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%begin{latexonly}
 \typeout{^^JAttention - if the ``bm'' Package isn't installed you will
   get an error here.^^JJust hit <ret> and continue. (Bold math won't
   work quite as well).}
 \usepackage{bm}
+%end{latexonly}
 \providecommand{\bm}[1]{\mathbf{#1}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% This defines the \sideset{} macro as a replacement for
 %%%%%%%%%%% the AMS version plus the superfig/partfigure environments.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\usepackage{moldy}
+\usepackage{amsmath}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%% Specific customized macros for abstracting physical   %%%%%%
+%%%%%%%%%%%  font changes.                                        %%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{moldy}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% Hyperref is useful for including hypertext links.   %%%%%%%%
 %%%%%%%%%%% Useful options to the package are                   %%%%%%%%
 %%%%%%%%%%% [hypertex] - for xdvi.  (Need xhdvik)               %%%%%%%%
 %%%%%%%%%%% [pdfmark]  - tp process ps file with distiller to pdf %%%%%%
-%%%%%%%%%%% [pdftex] for direct conversion to pdf using pdftex
-%%%%%%%%%%% It must be commented out for LaTeXtHTML processing    %%%%%%
+%%%%%%%%%%% [pdftex] for direct conversion to pdf using pdftex  %%%%%%%%
+%%%%%%%%%%% No option defaults to ``hypertex'' using LaTeX and  %%%%%%%%
+%%%%%%%%%%% ``pdftex'' using pdflatex.                          %%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\usepackage[hypertex]{hyperref}
+%\usepackage{hyperref}
+%
+% Comment this out for LaTeX2html translation
+%
+\providecommand{\htmladdnormallink}[2]{#1}
 
 \renewcommand{\topfraction}{0.9}
 \renewcommand{\textfraction}{0.1}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%% Font selection macros to parameterize document %%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%
-%  Extra emphasis - use bold.
-%
-\newcommand{\Emph}[1]{\textbf{#1}}
-%
-% Set font for filename display - sans-serif is nice.
-%
-\newcommand{\Fname}[1]{{\upshape\mdseries\sffamily{}#1}}
-\newenvironment{Fndescription}{\begingroup%
-     \renewcommand{\descriptionlabel}[1]{\Fname{##1}}\begin{description}}%
-     {\end{description}\endgroup}
-%
-% Set font for literal text display (typed commands, file contents
-%     input/output and code fragments.
-%
-\newcommand{\Litf}{\ttfamily\upshape\mdseries}
-\DeclareTextFontCommand{\Lit}{\Litf}
-%% LaTeX2HTML doesn't recognise \DeclareTextFontCommand.  The
-%% \providecommand  should define it conditionally for LaTeX2html at
-%% the expense of our font.parameterization.
-\providecommand{\Lit}[1]{\texttt{#1}}
-
-\newenvironment{Litdescription}{\begingroup%
-     \renewcommand{\descriptionlabel}[1]{\Lit{##1}}\begin{description}}%
-     {\end{description}\endgroup}
-\newcommand{\ttlabel}[1]{\Lit{#1}\hfil}
-%
-% Calculus infinitesimal - upright ``d''
-%
-\newcommand{\Calcd}{\mathrm{d}}
-%
-% Quaternion - bold sans-serif.
-%
-\newcommand{\Quat}[1]{\mbox{\mathversion{bold}$\mathsf{#1}$}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% Useful shorthand macros                               %%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -170,7 +145,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.14 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.15 $ $}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -289,7 +264,7 @@ Permission to compile and run \moldy\ is granted to any individual or
 organization without restriction.  This program is distributed in the
 hope that it will be useful, but WITHOUT ANY WARRANTY; without even
 the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-PURPOSE.  See the GNU General Public License for more details.
+PURPOSE\@.  See the GNU General Public License for more details.
 
 \moldy\ is free software; you may redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -659,9 +634,13 @@ and $\bm{\delta}$ is the unit matrix.
 % LJ, Buckingham (Born-Mayer) & MCY
 \moldy\ supports most common forms of potential function.  In
 particular, 
-\begin{list}{}{\labelwidth=1in \labelsep=0.25in \leftmargin=1.5in \parsep=0in
-\renewcommand{\makelabel}[1]{\emph{#1} \hfil}}
-\item[Lennard-Jones] $\phi(r) = \epsilon((\frac{\sigma}{r})^{12}) -
+\begin{list}{}{%
+\setlength{\parsep}{0in} 
+\setlength{\labelwidth}{1in}
+\setlength{\labelsep}{0.25in}
+\setlength{\leftmargin}{1.5in}
+\renewcommand{\makelabel}[1]{\hspace{\labelsep}\emph{#1} \hfil}}
+\item[Lennard-Jones] $\phi(r) = \epsilon((\frac{\sigma}{r})^{12} -
 (\frac{\sigma}{r})^{6})$
 \item[6-exp] $\phi(r) = -\frac{A}{r^{6}} +
 B\exp(-Cr)$\\
@@ -748,24 +727,24 @@ centre-of-mass, $\bm{r}_i - \bm{R}_i$ \\
 
 and the force on charge $i$ is given by
 \begin{eqnarray}
-\label{eqn:ewald-force}
-\bm{f}_i &=& - \nabla_{\bm{r}_i} U \nonumber \\
-& = &  \underbrace{\frac{q_i}{4 \pi \epsilon_0}
-\sideset{}{^\dag}\sum_{\bm{n}} \sum_{j=1 \atop j \neq i}^{N} q_j \left \lbrace 
-\frac{\erfc( \alpha | \bm{r}_{ij} +  \bm{n} |)}{| \bm{r}_{ij} +\bm{n} | } +
-\frac{2 \alpha}{\sqrt{\pi}}e^{- \alpha^2 | \bm{r}_{ij} +  \bm{n} |^2}
-\right \rbrace \frac{\bm{r}_{ij} + \bm{n}}{| \bm{r}_{ij} + \bm{n} |^2}
-}_{\textnormal{Real-space term}} \nonumber \\
- & + & \underbrace{\frac{2}{\epsilon_0 V} 
-\sum_{\bm{k} > 0} q_i \frac{\bm{k}}{k^2} e^{-\frac{k^2}{4 \alpha^2}} 
-\left \lbrace 
-\sin(\bm{k \cdot r}_i) \sum_{j=1}^{N} q_j \cos(\bm{k \cdot r}_j)  - 
-\cos(\bm{k \cdot r}_i) \sum_{j=1}^{N} q_j \sin(\bm{k \cdot r}_j) 
-\right \rbrace}_{\textnormal{Reciprocal-space term}}\\ 
-& + & \underbrace{\left [  \frac{q_i}{6 \epsilon_0 V} 
-                    \left ( \sum_{j=1}^N q_j \bm{r}_j
-                    \right ) \right ]}_{\textnormal{Surface dipole term}}
-\nonumber
+  \label{eqn:ewald-force}
+  \bm{f}_i &=& - \nabla_{\bm{r}_i} U \nonumber \\
+  & = & \underbrace{\frac{q_i}{4 \pi \epsilon_0}
+    \sideset{}{^\dag}\sum_{\bm{n}} \sum_{\genfrac{}{}{0pt}{}{j=1}{j \neq
+        i}}^{N} q_j \left \lbrace \frac{\erfc( \alpha | \bm{r}_{ij} +
+        \bm{n} |)}{| \bm{r}_{ij} +\bm{n} | } + \frac{2
+        \alpha}{\sqrt{\pi}}e^{- \alpha^2 | \bm{r}_{ij} + \bm{n} |^2}
+    \right \rbrace \frac{\bm{r}_{ij} + \bm{n}}{| \bm{r}_{ij} + \bm{n}
+      |^2}
+    }_{\textnormal{Real-space term}} \nonumber \\
+  & + & \underbrace{\frac{2}{\epsilon_0 V} \sum_{\bm{k} > 0} q_i
+    \frac{\bm{k}}{k^2} e^{-\frac{k^2}{4 \alpha^2}} \left \lbrace
+      \sin(\bm{k \cdot r}_i) \sum_{j=1}^{N} q_j \cos(\bm{k \cdot r}_j) -
+      \cos(\bm{k \cdot r}_i) \sum_{j=1}^{N} q_j \sin(\bm{k \cdot r}_j)
+    \right \rbrace}_{\textnormal{Reciprocal-space term}}\\
+  & + & \underbrace{\left [ \frac{q_i}{6 \epsilon_0 V} \left (
+        \sum_{j=1}^N q_j \bm{r}_j \right ) \right
+    ]}_{\textnormal{Surface dipole term}} \nonumber
 \end{eqnarray}
 
 The molecular forces and torques $\bm{F}$ and $\bm{N}$ are evaluated
@@ -2090,7 +2069,7 @@ The meaning of the parameters for the currently defined potentials is
 as follows:
 \begin{Litdescription}
 \item[Lennard-Jones] The potential is 
-\[\phi(r_{ij}) = \epsilon((\sigma/r_{ij})^{12}) -
+\[\phi(r_{ij}) = \epsilon((\sigma/r_{ij})^{12} -
 (\sigma/r_{ij})^{6}),\] and has two parameters, $\epsilon ( \equiv p^{1}_{ij})$
 and $\sigma ( \equiv p^{2}_{ij})$, which occur on each line in that
 order.  Note that the definition of $\epsilon$ \emph{includes} the
@@ -3096,17 +3075,20 @@ multiprocessors and many distributed-memory parallel machines.
 
 \begin{description}
 \raggedright
-\item[MPI] The MPICH and CHIMP implementations can be fetched by
-  anonymous ftp from the URLs 
-  \Lit{ftp://info.mcs.anl.gov/pub/mpi/mpich} and
-  \Lit{ftp://ftp.epcc.ad.ac.uk/pub/chimp/release}.
+\item[MPI] The MPICH implementation can be downloaded by anonymous ftp
+  from the URL
+  \htmladdnormallink{\Lit{ftp://info.mcs.anl.gov/pub/mpi/mpich.tar.gz}}{ftp://info.mcs.anl.gov/pub/mpi/mpich.tar.gz}\ and with other information at
+  \htmladdnormallink{\Lit{http://www.mcs.anl.gov/mpi/index.html}}{http://www.mcs.anl.gov/mpi/index.html}.
+
+  The CHIMP implementation can be downloaded by anonymous ftp
+  from \htmladdnormallink{\Lit{ftp://ftp.epcc.ed.ac.uk/pub/chimp/release/chimp.tar.Z}}{ftp://ftp.epcc.ed.ac.uk/pub/chimp/release/chimp.tar.Z}.
 \item[TCGMSG] This may be obtained by anonymous ftp from
-  \Lit{ftp://ftp.tcg.anl.gov/pub/tcgmsg/tcgmsg.4.04.tar.Z}.
+  \htmladdnormallink{\Lit{ftp://ftp.tcg.anl.gov/pub/tcgmsg/tcgmsg.4.04.tar.Z}}{ftp://ftp.tcg.anl.gov/pub/tcgmsg/tcgmsg.4.04.tar.Z}.
 \item[BSP] The Oxford BSP Library is available through Oxford
   Parallel's WWW server
-  \Lit{http://www.comlab.ox.ac.uk/oucl/oxpara/bsplib1.htm} 
-  or by anonymous ftp
-  \Lit{ftp://ftp.comlab.ox.ac.uk/pub/Packages/BSP/bsp1.2.tar.Z}.
+  \htmladdnormallink{\Lit{http://www.BSP-Worldwide.org/implmnts/oxtool.htm}}{http://www.BSP-Worldwide.org/implmnts/oxtool.htm}\ or by anonymous ftp
+  \htmladdnormallink{\Lit{ftp://ftp.comlab.ox.ac.uk/pub/Packages/BSP/}}{ftp://ftp.comlab.ox.ac.uk/pub/Packages/BSP/}.
+%v1.3\_bsplib\_toolset.tar.gz}.
 \item[SHMEM] The CRI native communications library for T3D and T3E
   systems.
 \end{description}
@@ -4012,10 +3994,11 @@ annotated list of files follows.
 \subsection{Input and Initialization}
 \label{sec:startup}
 
-\begin{superfig}
-\begin{partfigure}[tb]
+\begin{figure}[tb]
 \noindent
+\begin{minipage}[b]{260bp}
 \input{fig_startup-a.ftx}
+\end{minipage}
 \begin{minipage}[b]{2.55in}
 \raggedright
 \textbf{Functions called by start\_up()}\\
@@ -4058,27 +4041,27 @@ annotated list of files follows.
   and ``program'' units.
 \end{Litdescription}
 \end{minipage}
-\caption[Block diagram of initialization function
-\Lit{start\_up()}]{Block diagram of the initialization function
-  \Lit{start\_up()} and a list of the functions called.  Continued
-  in Figure~\ref{fig:startup-b}.}
+\renewcommand{\thefigure}{\arabic{chapter}.\arabic{figure}(a)}
+\caption[Block diagram of initialization function \Lit{start\_up()}]{%
+  Block diagram of the initialization function \Lit{start\_up()} and a
+  list of the functions called. Continued in Figure~\ref{fig:startup-b}.}
 \label{fig:startup-a}
+\end{figure}
 
-\end{partfigure}
-
-\begin{partfigure}[tb]
-\begin{center}
+\addtocounter{figure}{-1}
+\begin{figure}[tb]
+\centering
 \input{fig_startup-b.ftx}
-\end{center}
-\caption[Block diagram of initialization function
-\Lit{start\_up()}]{Block diagram of the initialization function
+\renewcommand{\thefigure}{\arabic{chapter}.\arabic{figure}(b)}
+\caption[Block diagram of initialization function \Lit{start\_up()}]{%
+  Block diagram of the initialization function
   \Lit{start\_up()} and a list of the functions called.  Continued
   from Figure~\ref{fig:startup-a}.  The paths beginning at \textbf{A},
   \textbf{B} and \textbf{C} are for a new run, a restart from a save
   file, and a restart from a backup file respectively.}
 \label{fig:startup-b}
-\end{partfigure}
-\end{superfig}
+\end{figure}
+
 
 The initialization and input file reading stage of \moldy\ is rather
 more complicated than is usual in a molecular-dynamics simulation
@@ -4199,29 +4182,29 @@ integrated into the link cell force calculation.}
 \label{fig:main}
 \end{figure}
 
-\begin{superfig}
-\begin{partfigure}[tbp]
-\begin{center}
+\begin{figure}[tbp]
+\centering
 \input{fig_dostep-a.ftx}
-\end{center}
+\renewcommand{\thefigure}{\arabic{chapter}.\arabic{figure}(a)}
 \caption[Flow  diagram of function \Lit{do\_step()} which performs
 a single timestep.]{Flow diagram of function \Lit{do\_step()} which
   performs a single timestep.  (\emph{continued in
-    Figure~\ref{fig:dostep-b}})}
-  \label{fig:dostep-a}
-  
-\end{partfigure}
-\begin{partfigure}[tbp]
-\begin{center}
-  \input{fig_dostep-b.ftx}
-\end{center}
+    Figure~\protect\ref{fig:dostep-b}})}
+\label{fig:dostep}
+\label{fig:dostep-a}
+\end{figure}
+
+\addtocounter{figure}{-1}
+\begin{figure}[tbp]
+\centering
+\input{fig_dostep-b.ftx}
+\renewcommand{\thefigure}{\arabic{chapter}.\arabic{figure}(b)}
 \caption[Flow  diagram of function \Lit{do\_step()} which performs
 a single timestep.]{Flow diagram of function \Lit{do\_step()} which
   performs a single timestep.  (\emph{continued from
-    Figure~\ref{fig:dostep-a}})}
+    Figure~\protect\ref{fig:dostep-a}})}
 \label{fig:dostep-b}
-\end{partfigure}
-\end{superfig}
+\end{figure}
 
 The timestep loop continues until either the requested number of steps
 have been completed, a \Lit{SIGTERM} or \Lit{SIGXCPU} signal is
@@ -4240,8 +4223,8 @@ reason. For conditions which require immediate program exit, function
 \Lit{siglock()} is called to delete the lock files before exiting.
 
 The tasks of calculating the forces, implementing the equations of
-motion and updating the dynamic variables each timestep are managed
-by function \Lit{do\_step()}.  The conceptually simple calculation of
+motion and updating the dynamic variables each timestep are managed by
+function \Lit{do\_step()}.  The conceptually simple calculation of
 forces and stepping of co-ordinates is made lengthy and less
 transparent by the need to handle the rigid-molecule equations of
 motion and the constant-pressure and -temperature extended system
@@ -4914,7 +4897,7 @@ reading by other programs.  It is invoked with the command:
 \textit{dump-file1 dump-file2} \ldots
 \end{center}
 The meanings of its arguments are
-\begin{list}{}{\let\makelabel\ttlabel\itemsep=0pt\parsep=3pt\leftmargin=1.5cm}
+\begin{Argdescription}
 \item[-R] the total number of molecules.  This argument is compulsory.
 \item[-Q] the number of polyatomic molecules.  This argument is compulsory.
 \item[-c] which pieces (``components'') of the information in dump
@@ -4948,7 +4931,7 @@ molecules.
 \item[-o] name of optional output file.  Defaults to standard output.
 \item[-b] selects binary output in single-precision floating point
 numbers. Defaults to ASCII formatted numbers.
-\end{list}
+\end{Argdescription}
 If any of the compulsory arguments are omitted, you will be prompted
 to supply a value.  In particular you must \emph{always} supply the
 number of molecules and polyatomic molecules.  (This information is
@@ -5033,7 +5016,7 @@ Alternatively, the command line options are
 \Lit{[-o} \textit{output-file} \Lit{]}
 \end{center}
 where the meanings of the options are
-\begin{list}{}{\let\makelabel\ttlabel\itemsep=0pt\parsep=3pt\leftmargin=1.5cm}
+\begin{Argdescription}
 \item[-s] read a system specification file
 \item[-r] read a restart file.  Only one of \Lit{-s} or \Lit{-r} may
 be given.
@@ -5049,7 +5032,7 @@ to add extra SCHAKAL commands, such as BOX.
 \item[-x] Write an output file in XYZ format suitable for \emph{Xmol}
   or \emph{RasMol}
 \item[-b] Write the atom co-ordinates in raw binary (unformatted) format.
-\end{list}
+\end{Argdescription}
 
 \emph{Mdshak} may be useful for more than just visualization purposes
 as it extracts atomic co-ordinates from the system specification,
@@ -5106,7 +5089,7 @@ specified in command line mode:
 \end{center}
 
 where meanings of the options are
-\begin{list}{}{\let\makelabel\ttlabel\itemsep=0pt\parsep=3pt\leftmargin=1.5cm}
+\begin{Argdescription}
 \item[-s] read the species data from a system specification file.
 \item[-r] read the species data from a restart file. Only one of
   \Lit{-s} or \Lit{-r} may be given.
@@ -5119,7 +5102,7 @@ section~\ref{sec:dumping}.
 \item[-i] the increment the initial time, $t_0$, is increased by during
 calculation of msd for a given time interval. Defaults to 1.
 \item[-g] range of species to be included, given in ``selector''
-  format where \Lit{0} = represents the \emph{first} species. Defaults
+  format where \Lit{0} represents the \emph{first} species. Defaults
   to all species. 
 \item[-u] option to by-pass msd calculation and output the connected particle
 trajectories in the format selected by \Lit{-w}. 
@@ -5132,8 +5115,8 @@ trajectories in the format selected by \Lit{-w}.
         trajectory output. The user is prompted at run time for the
         limits. The default is to include all particles.
 \item[-o] name of optional output file. Defaults to standard output.
+\end{Argdescription}
 
-\end{list}
 
 The output format for msd calculations consists of four columns
 corresponding to the $x, y, z$ components and total msd, with
@@ -5142,9 +5125,9 @@ increasing time intervals down the columns.
 The time intervals specified by \Lit{-m} (and initial time increment
 \Lit{-i}) are taken relative to the dump slices selected with \Lit{-t}
 rather than the complete dump records stored in the dump files. For
-example, if dump records 1,3,5..19 are extracted using \Lit{-t}, then
+example, if dump records 1,3,5,\ldots{}19 are extracted using \Lit{-t}, then
 time intervals of \Lit{-m} 1-5 correspond to "real" intervals of
-2,4,...,10 relative to the original dump file data. It should also be
+2,4,\ldots{}10 relative to the original dump file data. It should also be
 pointed out that the msds for each time interval are only averaged
 over as many initial time slices as the \emph{longest} time interval.
 Therefore it is usual to specify the largest value of \Lit{-m} to be
@@ -5163,7 +5146,7 @@ y z$ coordinates for all particles, with time increasing down the
 columns.
 
 The \Lit{-x}, \Lit{-y} and \Lit{-z} options only apply to the
-trajectory data and are useful for reducingthe number of particle
+trajectory data and are useful for reducing the number of particle
 trajectories outputted by "cutting" the simulation box into more
 manageable slices.
 
@@ -5189,7 +5172,7 @@ Mdshak, with command line options
 
 where the arguments have the following meanings
 
-\begin{list}{}{\let\makelabel\ttlabel\itemsep=0pt\parsep=3pt\leftmargin=1.5cm}
+\begin{Argdescription}
 \item[-s] read a system specification file.
 \item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
 \item[-d] read configurational data from a dump file given as a prototype name
@@ -5200,7 +5183,7 @@ average positions over.
 \item[-p] give the output in Brookhaven Protein Data Bank (PDB) format.
 \item[-x] give the output in XYZ format suitable for Xmol or RasMol.
 \item[-o] name of optional output file. Defaults to standard output.
-\end{list}
+\end{Argdescription}
 
 \bibliography{simulation,mypubs}
 \bibliographystyle{amsplain}
