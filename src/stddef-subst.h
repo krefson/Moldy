@@ -18,8 +18,13 @@ Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
-#ifndef MOLDY_STDDEF_H
-#define MOLDY_STDDEF_H
+
+#ifndef __stddef_h
+#ifndef _STDDEF_H
+#ifndef _STDDEF_H_
+#ifndef __STDDEF_H
+#ifndef __STDDEF_H__
+#ifndef _STDDEF_INCLUDED
 
 #ifdef ANSI_LIBS
 #   include <stddef.h>
@@ -29,19 +34,15 @@ what you give them.   Help stamp out software-hoarding!  */
 #         ifndef _SIZE_T
 #            ifndef _SIZE_T_
 #		ifndef _GCC_SIZE_T
-#                  ifdef sun
-#                     include <sys/stdtypes.h>
+#		   define  _GCC_SIZE_T
+#                  define  __SIZE_T
+#                  define  __SIZE_T__
+#                  define  _SIZE_T
+#                  define  _SIZE_T_
+#                  if defined(unix) && (!defined(__GNUC__))
+                      typedef unsigned size_t;
 #                  else
-#		      define  _GCC_SIZE_T
-#                     define  __SIZE_T
-#                     define  __SIZE_T__
-#                     define  _SIZE_T
-#                     define  _SIZE_T_
-#                     if defined(unix) && (!defined(__GNUC__))
-                         typedef unsigned size_t;
-#                     else
-                         typedef unsigned long size_t;
-#                     endif
+                      typedef unsigned long size_t;
 #                  endif
 #		endif
 #            endif
@@ -53,4 +54,17 @@ what you give them.   Help stamp out software-hoarding!  */
 #   endif
 #endif
 
-#endif /* _STDDEF_H */
+#define __stddef_h
+#define _STDDEF_H
+#define _STDDEF_H_
+#define __STDDEF_H
+#define __STDDEF_H__
+#define _STDDEF_INCLUDED
+
+#endif
+#endif
+#endif
+#endif
+#endif
+#endif
+
