@@ -26,6 +26,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.34  2001/05/24 16:26:43  keith
+ *       Updated program to store and use angular momenta, not velocities.
+ *        - added conversion routines for old restart files and dump files.
+ *       Got rid of legacy 2.0 and lower restart file reading code.
+ *
  *       Revision 2.33  2001/02/22 10:24:35  keith
  *       Reinstated capability of "molecular" cutoff, but still using Bekker stress.
  *
@@ -308,7 +313,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.33 2001/02/22 10:24:35 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.34 2001/05/24 16:26:43 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -330,7 +335,7 @@ void   leapf_com(double step, vec_mt (*c_of_m), vec_mt (*mom),
 void   leapf_mom(double step, mat_mt, vec_mt (*mom), 
 		 vec_mt (*force),  int nmols);
 void   leapf_quat(double step, quat_mt (*quat), quat_mt (*amom), 
-		  real *inertia, int nmols);
+		  real *inertia, real *smom, real s, int nmols);
 void   leapf_amom(double step, quat_mt (*amom), vec_mt (*torque), int nmols);
 double leapf_s(double step, real s, real smom, double Q);
 double leapf_smom_a(double step, real s, real smomo,  double Q, double gkt);
@@ -615,7 +620,7 @@ NOVECTOR
 /******************************************************************************
  * tot_ke().	   Evaluate total kinetic energy.			      *
  ******************************************************************************/
-double tot_ke (system_mt *sys, spec_mt *species)
+double tot_ke (system_mt *sys, spec_mt *species, boolean rot_flag)
 {
    double   ke = 0.0;
    spec_mt  *spec;
@@ -623,7 +628,7 @@ double tot_ke (system_mt *sys, spec_mt *species)
    for(spec=species, ispec = 0; ispec < sys->nspecies; spec++, ispec++)
    {
       ke += trans_ke(sys->h, spec->mom, sys->ts, spec->mass, spec->nmols) ;
-      if(spec->rdof > 0)                     /* Only if polyatomic species */
+      if(rot_flag && spec->rdof > 0)         /* Only if polyatomic species */
 	 ke += rot_ke(spec->amom, sys->ts, spec->inertia, spec->nmols);
    }
    return ke;
@@ -651,8 +656,8 @@ void leapf_all_coords(double step, system_mt *sys, spec_mt *species)
       leapf_com(step, spec->c_of_m, spec->mom, sys->h, sys->ts, 
 		spec->mass, spec->nmols);
       if( spec->rdof > 0 )
-	 leapf_quat(step/sys->ts, spec->quat, spec->amom, 
-		    spec->inertia, spec->nmols);
+	 leapf_quat(step, spec->quat, spec->amom, 
+		    spec->inertia, &sys->tsmom, sys->ts, spec->nmols);
    }
 }
 /******************************************************************************
@@ -935,7 +940,7 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    vec_mp   force_base = ralloc(sys->nmols),
             torque_base = sys->nmols_r?ralloc(sys->nmols_r):0;
    mat_mt          ke_dyad;
-   double	   ke;
+   double	   ke, tke;
    spec_mp         spec;
    int             ispec, imol, imol_r;
    int		   nspecies = sys->nspecies;
@@ -967,9 +972,12 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    /*
     * H3 half step
     */
-   ke = tot_ke(sys, species);
+   /*
+    * Partial update of thermostat momentum.  Note trans. KE only as
+    * rotational contribution added inside leapf_quat()
+    */
    if( control.const_temp )
-      sys->tsmom += 0.5*control.step*ke;
+     sys->tsmom += 0.5*control.step*tot_ke(sys, species, 0);
    if( control.const_pressure )
    {
       stress_kin(ke_dyad, sys, species);
@@ -989,14 +997,15 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
     * N.B.  "ke" still contains old, on-step value at this point.
     */ 
    if(control.istep == 1 || init_H_0 )
+   {
+      ke = tot_ke(sys, species,1);
       sys->H_0 = ke + pe[0] + pe[1] + SQR(sys->tsmom)/(2.0*control.ttmass) 
                             + sys->d_of_f*kB*control.temp * log(sys->ts)
 	                    + ke_cell(sys->hmom, control.pmass)
                             + control.pressure*det(sys->h);
+   }
 
    leapf_all_momenta(control.step, sys, species, force, torque);
-
-   ke = tot_ke(sys, species);
 
    if( control.const_temp )
       sys->tsmom -= control.step*(pe[0]+pe[1] - sys->H_0);
@@ -1007,7 +1016,7 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
     * Second H3 half step.
     */
    if( control.const_temp )
-      sys->tsmom += 0.5*control.step*ke;
+     sys->tsmom += 0.5*control.step*tot_ke(sys, species, 0);
    if( control.const_pressure )
    {
       stress_kin(ke_dyad, sys, species);
@@ -1035,7 +1044,7 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
       HP = SQR(sys->tsmom)/(2.0*control.ttmass);
       HHP = ke_cell(sys->hmom, control.pmass);
       HHS = control.pressure*det(sys->h);
-      ke = tot_ke(sys, species);
+      ke = tot_ke(sys, species,1);
       H = ke + pe[0] + pe[1] + HP + HS + HHP + HHS;
       fprintf(stderr,
              "do_step:  s= %7.4g          ps= %9.5g      H= %12.7g  HK= %12.7g  HV= %12.7g  \n          HP= %12.7g    HS= %12.7g   HHP= %12.7g  HHS= %12.7g   (H-H_0)s= %12.7g\n",

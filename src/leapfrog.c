@@ -35,6 +35,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: leapfrog.c,v $
+ *       Revision 2.12  2001/05/24 16:34:41  keith
+ *       Eliminated some redundant variables
+ *
  *       Revision 2.11  2001/05/24 16:26:43  keith
  *       Updated program to store and use angular momenta, not velocities.
  *        - added conversion routines for old restart files and dump files.
@@ -88,7 +91,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.11 2001/05/24 16:26:43 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.12 2001/05/24 16:34:41 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -108,8 +111,8 @@ gptr	*talloc(int n, size_mt size, int line, char *file);
 void	q_mul(quat_mp p, quat_mp q, quat_mp r, int n);
 void	q_conj_mul(quat_mp p, quat_mp q, quat_mp r, int n);
 void	q_mul_conj(quat_mp p, quat_mp q, quat_mp r, int n);
-void	vscale(register int n, register double s, register real *x, 
-	       register int ix);
+double  vdot(int n, real *x, int ix, real *y, int iy); /* Fast  dot product   */
+void	vscale(int n, double s, real *x, int ix);
 void    transpose(mat_mt a, mat_mt b)    ;
 void    invert(mat_mt a, mat_mt b)    ;
 void    mvaxpy(int n, mat_mt a, vec_mt (*x), vec_mt (*y));
@@ -117,6 +120,8 @@ void	mat_mul(mat_mt a, mat_mt b, mat_mt c); /* 3 x 3 matrix multiplier     */
 void	mat_add(mat_mt a, mat_mt b, mat_mt c); /* Add 2 3x3 matrices          */
 void	mat_sca_mul(register real s, mat_mt a, mat_mt b); 
 					/* Multiply 3x3 matrix by scalar      */
+double rot_ke(quat_mt (*amom), real s, real *inertia, int nmols); 
+                                    /* Compute rotational kinetic energy     */
 double  ke_cell(mat_mt hmom, real w);
 double  det(mat_mt );			/* Returns matrix determinant	     */
 double  trace(mat_mt);
@@ -314,10 +319,12 @@ void rot_substep(quat_mt (*rot), quat_mt (*amom), quat_mt (*quat), int nmols)
  *    Adapted for use with quaternions by K.R.				      *
  ******************************************************************************/
 void leapf_quat_b(double step, quat_mt (*quat), quat_mt (*amom), 
-		  real *inertia, int nmols)
+		  real *inertia, real *smom, real ts, int nmols)
 {
    int i;
    double idmin, idiff;
+   double       stepdts = step/ts;
+
    quat_mt	*rot  = qalloc(nmols);
    real rinertia[3];
    static int firsttime = 0, saxis, orthaxis1,orthaxis2;
@@ -353,21 +360,31 @@ void leapf_quat_b(double step, quat_mt (*quat), quat_mt (*amom),
    /*
     * First, apply half of delta-from-symmetry rotation
     */
-   make_rot(0.5*step, orthaxis1, amom, 
+   make_rot(0.5*stepdts, orthaxis1, amom, 
 	    rinertia[orthaxis1]-rinertia[orthaxis2], rot, nmols);
    rot_substep(rot, amom, quat, nmols);
+   /*
+    * Update thermostat momentum if necessary.
+    */
+   if( control.const_temp )
+     *smom += 0.5*step*rot_ke(amom, ts, inertia, nmols);
    /*
     * Apply rotations to angular momentum and to quaternions.
     * 1. Rotation about symmetry axis due to precession.
     */
-   make_rot(step, saxis, amom, rinertia[saxis]-rinertia[orthaxis2], 
+   make_rot(stepdts, saxis, amom, rinertia[saxis]-rinertia[orthaxis2], 
 	    rot, nmols);
    rot_substep(rot, amom, quat, nmols);
    /*
     * 2. Rotation about angular momentum vector due to spin.
     */
-   make_rot_amom(step, amom, rinertia[orthaxis2],rot, nmols);
+   make_rot_amom(stepdts, amom, rinertia[orthaxis2],rot, nmols);
    q_mul(quat, rot, quat, nmols);
+   /*
+    * Update thermostat momentum if necessary.
+    */
+   if( control.const_temp )
+     *smom += 0.5*step*rot_ke(amom, ts, inertia, nmols);
    /*
     * Finally, apply half of delta-from-symmetry rotation
     */
@@ -385,10 +402,11 @@ void leapf_quat_b(double step, quat_mt (*quat), quat_mt (*amom),
  *    Adapted for use with quaternions by K.R.				      *
  ******************************************************************************/
 void leapf_quat_a(double step, quat_mt (*quat), quat_mt (*amom), 
-		  real *inertia, int nmols)
+		  real *inertia, real *smom, real ts, int nmols)
 {
    int i;
    quat_mt	*rot  = qalloc(nmols);
+   double       stepdts = step/ts, stepdts2 = step/SQR(ts);
 
    real rinertia[3];
 
@@ -403,15 +421,29 @@ void leapf_quat_a(double step, quat_mt (*quat), quat_mt (*amom),
    /*
     * Apply rotations to angular momentum and to quaternions.
     */
-   make_rot(0.5*step, 0, amom, rinertia[0], rot, nmols);
+   make_rot(0.5*stepdts, 0, amom, rinertia[0], rot, nmols);
    rot_substep(rot, amom, quat, nmols);
-   make_rot(0.5*step, 1, amom, rinertia[1], rot, nmols);
+   if( control.const_temp )
+   {
+     *smom += 0.25*stepdts2*rinertia[0]*vdot(nmols, amom[0]+1, 4, amom[0]+1, 4);
+     *smom += 0.25*stepdts2*rinertia[1]*vdot(nmols, amom[0]+2, 4, amom[0]+2, 4);
+   }
+   make_rot(0.5*stepdts, 1, amom, rinertia[1], rot, nmols);
    rot_substep(rot, amom, quat, nmols);
-   make_rot(    step, 2, amom, rinertia[2], rot, nmols);
+   if( control.const_temp )
+   {
+     *smom += 0.5*stepdts2*rinertia[2]*vdot(nmols, amom[0]+3, 4, amom[0]+3, 4);
+   }
+   make_rot(    stepdts, 2, amom, rinertia[2], rot, nmols);
    rot_substep(rot, amom, quat, nmols);
-   make_rot(0.5*step, 1, amom, rinertia[1], rot, nmols);
+   make_rot(0.5*stepdts, 1, amom, rinertia[1], rot, nmols);
    rot_substep(rot, amom, quat, nmols);
-   make_rot(0.5*step, 0, amom, rinertia[0], rot, nmols);
+   if( control.const_temp )
+   {
+     *smom += 0.25*stepdts2*rinertia[1]*vdot(nmols, amom[0]+2, 4, amom[0]+2, 4);
+     *smom += 0.25*stepdts2*rinertia[0]*vdot(nmols, amom[0]+1, 4, amom[0]+1, 4);
+   }
+   make_rot(0.5*stepdts, 0, amom, rinertia[0], rot, nmols);
    rot_substep(rot, amom, quat, nmols);
 
    normalise(quat, nmols);
@@ -421,12 +453,12 @@ void leapf_quat_a(double step, quat_mt (*quat), quat_mt (*amom),
  * leapf_quat().  Chooses which symplectic splitting method to use.           *
  ******************************************************************************/
 void leapf_quat(double step, quat_mt (*quat), quat_mt (*amom), 
-		real *inertia, int nmols)
+		real *inertia, real *smom, real ts,  int nmols)
 {
   if( control.nosymmetric_rot )
-      leapf_quat_a(step, quat, amom, inertia, nmols);
+      leapf_quat_a(step, quat, amom, inertia, smom, ts, nmols);
   else
-      leapf_quat_b(step, quat, amom, inertia, nmols);
+      leapf_quat_b(step, quat, amom, inertia, smom, ts, nmols);
 }
 /******************************************************************************
  * leapf_amom().  Perform the angular velocity update step of the leapfrog    *
