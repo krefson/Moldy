@@ -200,7 +200,7 @@ int	 sgno=0, sgopt=0; /* Space group number and associated option */
    if( sscanf(get_line(line,LLEN,Fp,0),"%*38c%8lf%8lf%8lf",&cell[0],&cell[1],&cell[2]) < 3)
       nocell++;
 
-   if( sscanf(get_line(line,LLEN,Fp,0),"%*21c%8lf%8lf%8lf    SPGR =%3d %11c OPT =%2d",
+   if( sscanf(get_line(line,LLEN,Fp,0),"%*21c%8lf%8lf%8lf    SPGR =%3d %11[a-zA-Z0-9-/ ] OPT =%2d",
           &cell[3],&cell[4],&cell[5],&sgno,spgr,&sgopt) < 5)
       nocell++;
 
@@ -643,6 +643,7 @@ mat_mt   hinv;
 char     line[LLEN], *buff[32];
 char	 dummy[4], temp_name[6];
 int      sgno = 0, sgopt = 0;
+int	 dimension = 3;
 boolean	 crystflag = false, cart = false;
 FILE     *Fp;
 
@@ -660,6 +661,14 @@ FILE     *Fp;
             strncat(title,line+5,TITLE_SIZE);
          trim(title);
       }
+
+      if (strncmp(strlower(line),"dimension ",10) == 0)  /* Periodicity */
+      {
+         if( sscanf(line,"dimension %d", &dimension) != 1)
+            error("Error in DIMENSION line of \"%s\" -- should have 1 parameter", filename);
+      }
+      if( dimension != 3)
+            error("Error - \"%s\" does not contain a 3D structure", filename);
 
       if(strcmp(strlower(line),"cell") == 0)   /* CELL - Specify unit cell */
       {
