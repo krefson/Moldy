@@ -1,13 +1,18 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/header.c,v 1.1 89/04/11 15:05:01 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 1.1 90/02/22 17:46:11 keith Exp $";
 #endif
 
 /*
- * $Log:	$
+ * $Log:	moldyanalyze.c,v $
+ * Revision 1.1  90/02/22  17:46:11  keith
+ * Initial revision
+ * 
  */
 
 #include	<stdio.h>
 #include	"structs.h"
+
+char	*malloc();
 
 #undef cfree
 
