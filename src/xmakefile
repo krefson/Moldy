@@ -12,10 +12,10 @@ XDR=-DUSE_XDR
 # TCGMSG library
 #PARLIBC=-DSPMD -DTCGMSG -I/usr/local/include/tcgmsg
 #PARLIBL=-L/usr/local/lib -ltcgmsg
-# BSP library
-#CC=bspcc
+# Oxford BSP library
+#CC=bspcc -overridecc cc
 #PARLIBC=-DSPMD -DBSP
-#PARLIBL=-L/usr/local/lib -lbsp
+#PARLIBL=-flibrary-level 2 
 # MPI library
 #CC=mpicc
 #PARLIBC=-DSPMD -DMPI -I/usr/local/include/mpi
@@ -50,7 +50,7 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #CFLAGS=	-O2 -mips2  $(XDR) $(PARLIBC) $(CFLAGS0)
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lsun -lmalloc -lfastm
 #INLINE=
-##  **** MIPS for SGI, IRIX 6/R8000 ****
+##.FTXfor SGI, IRIX 6/R8000 ****
 #CFLAGS= -DANSI_LIBS -O3 -mips4 -woff 1174 $(XDR) $(PARLIBC) $(CFLAGS0)
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #CFLAGS2=-OPT:alias=restrict:fast_sqrt=on
@@ -156,20 +156,20 @@ EXTRAS = $(EXTRA0) ewald-RIL.c
 
 HFILES=		structs.h defs.h string.h time.h stddef.h stdlib.h messages.h xdr.h
 
-FIGTEXPS=	fig_arralloc.tex fig_dostep-a.tex fig_dostep-b.tex \
-                fig_ewald.tex fig_link-cell.tex fig_main.tex \
-                fig_skewstart.tex fig_startup-a.tex fig_startup-b.tex \
+FIGTEXPS=	fig_arralloc.ftx fig_dostep-a.ftx fig_dostep-b.ftx \
+                fig_ewald.ftx fig_link-cell.ftx fig_main.ftx \
+                fig_skewstart.ftx fig_startup-a.ftx fig_startup-b.ftx \
 		fig_arralloc.ps fig_dostep-a.ps fig_dostep-b.ps \
                 fig_ewald.ps fig_link-cell.ps fig_main.ps \
                 fig_skewstart.ps fig_startup-a.ps fig_startup-b.ps    \
-		fig_arralloc-eepic.tex fig_dostep-a-eepic.tex \
-		fig_dostep-b-eepic.tex fig_ewald-eepic.tex \
-		fig_link-cell-eepic.tex fig_main-eepic.tex \
-                fig_skewstart-eepic.tex fig_startup-a-eepic.tex \
-		fig_startup-b-eepic.tex
+		fig_arralloc-eepic.ftx fig_dostep-a-eepic.ftx \
+		fig_dostep-b-eepic.ftx fig_ewald-eepic.ftx \
+		fig_link-cell-eepic.ftx fig_main-eepic.ftx \
+                fig_skewstart-eepic.ftx fig_startup-a-eepic.ftx \
+		fig_startup-b-eepic.ftx
 
 DOC=		READ.ME BENCHMARK COPYING RELNOTES moldy.tex moldy.bbl \
-		$(FIGTEXPS)
+		$(FIGTEXPS) moldy.sty moldy.perl
 
 VMSBUILD=	compile_moldy.com link_moldy.com defcomm.com\
 		compile_utils.com link_utils.com compile.com
@@ -206,14 +206,14 @@ mdavpos:	mdavpos.o $(SHAKOBJS) $(GETOPT)
 utilities:	$(UTILS) $(UTILS2)
 
 $(FIGTEXPS):	
-		(cd figures; \
+		(set -x;cd figures; \
 		 transfig -L pstex -m 0.66; \
 		 $(MAKE); \
-		 mv *.ps *.tex ..;\
+		 mv *.ps ..;\
+		 for file in *.tex; do mv $$file ../`basename $$file .tex`.ftx; done;\
 		 transfig -L eepic -m 0.66;\
 		 $(MAKE); \
-		 rename 's/\.tex/-eepic.tex/' *.tex;\
-		 mv *.tex ..)
+		 for file in *.tex; do mv $$file ../`basename $$file .tex`-eepic.ftx; done;)
 
 protoize:	$(CFILES) $(HFILES)
 		protoize -k $(CFILES)
@@ -367,7 +367,7 @@ moldy.com.Z:	moldy.com
 moldy.ps:	moldy.dvi
 		dvips -t a4 moldy -o moldy.ps
 
-moldy.dvi:	moldy.tex moldy.bbl
+moldy.dvi:	moldy.tex moldy.bbl $(FIGTEXPS)
 		latex moldy
 		latex moldy
 		@touch moldy.bbl
