@@ -19,17 +19,36 @@ Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
+#ifndef lint
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 2.1 1997/10/09 11:01:10 keith Exp $"
+#endif
 /**************************************************************************************
- * mdavpos    	code for calculating mean positions of	    		              *       
- *              molecules and average box dimensions from MolDy dump files	      *
+ * mdavpos    	code for calculating mean positions of                                *       
+ *              molecules and average box dimensions from MolDy dump files            *
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
- *  Revision 1.3  1997/08/15 15:20:10  craig
+ *  Revision 2.1  1997/10/8 15:05:24  craig
+ *  Correctly initialised p_f_sites for monatomic species
+ *  Moved constant species quantities from copy_spec to init_spec
+ *
+ *  Revision 2.0  1997/10/7 16:41:48  craig
+ *  Major corrections to polyatomic and framework calculations
+ *
+ *  Revision 1.5  1997/10/3 16:50:44  craig
+ *  Schakal format set as default output
+ *  Option 'c' added to parameter list to skip control information
+ *  Removed freeing of dumplims which was causing crash
+ *  Initialisation of p_f_sites and quaternion arrays for polyatomic species added
+ *
+ *  Revision 1.4  1997/08/15 15:20:10  craig
  *  Init_h function replaced with call to memcpy
  *  Calculation now performed entirely in scaled coords
  *  Error in shakal_out corrected - outputs scaled coords instead of real coords 
  *  Centre_mass and shift functions called correctly
+ *
+ *  Revision 1.3  1997/08/12 14:03:53  keith
+ *  Fixed minor bugs in start/finish timeslice code
  *
  *  Revision 1.2  1997/07/10 11:15:23  craig
  *  Options for different output formats added
@@ -53,9 +72,9 @@ what you give them.   Help stamp out software-hoarding! */
 #include "structs.h"
 #include "messages.h"
 #if defined(ANSI) || defined(__STDC__)
-gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
+gptr	*arralloc(size_mt,int,...); 	/* Array allocator */
 #else
-gptr	*arralloc();	        	/* Array allocator		      */
+gptr	*arralloc();	        	/* Array allocator */
 #endif
 
 void	invert();
@@ -77,8 +96,8 @@ FILE	*popen();
 int ithread=0, nthreads=1;
 static   char           *comm;
 contr_mt                control;
+#define SHAK 0
 #define PDB 1
-#define SHAK   0
 #define XYZ 2
 /******************************************************************************
  * Dummies of moldy routines so that mdavpos may be linked with moldy library *
@@ -155,7 +174,7 @@ va_dcl
 }
 
 /******************************************************************************
- *  message.   Deliver error message to possibly exiting. 		      *
+ *  message.   Deliver error message to possibly exiting.                     *
  ******************************************************************************/
 #if defined(ANSI) || defined(__STDC__)
 #undef  va_alist
@@ -218,7 +237,7 @@ int	lo, hi;
       return(EOF);
 }
 /******************************************************************************
- * get_sym().  Read a character from stdin and match to supplied set	      *
+ * get_sym().  Read a character from stdin and match to supplied set          *
  ******************************************************************************/
 int get_sym(prompt, cset)
 char	*prompt;
@@ -242,7 +261,7 @@ char	*cset;
       return(EOF);
 }
 /******************************************************************************
- * get_str().  Read a string from stdin, issuing a prompt.		      *
+ * get_str().  Read a string from stdin, issuing a prompt                     *
  ******************************************************************************/
 char	*get_str(prompt)
 char	*prompt;
@@ -275,7 +294,7 @@ char	*instr;
 int	*start, *finish, *inc;
 {
    char	*p, *pp, *str = mystrdup(instr);
-   long strtol();
+   /*    long strtol();*/
    
    if( (p = strchr(str,':')) != NULL)
    {
@@ -305,7 +324,7 @@ int	*start, *finish, *inc;
    if( *start > *finish || *start < 0 || *inc <= 0 )
    {
       fputs("Limits must satisfy", stderr);
-      fputs(" finish > start, start >= 0 and increment > 0\n", stderr);
+      fputs(" finish >= start, start >= 0 and increment > 0\n", stderr);
       goto limerr;
    }
    return 0;
@@ -317,10 +336,8 @@ int	*start, *finish, *inc;
  * dump.c for format), expanding floats to doubles if necessary.              *
  ******************************************************************************/
 #define DUMP_SIZE(level)  (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
-			            (3*sys.nmols + 4*sys.nmols_r + 9)+ \
-			     (level>>3 & 1) * \
-			            (3*sys.nmols + 3*sys.nmols_r + 9) +\
-			     (level & 1))
+           (3*sys.nmols + 4*sys.nmols_r + 9)+ (level>>3 & 1) * \
+           (3*sys.nmols + 3*sys.nmols_r + 9) + (level & 1))
 void
 dump_to_moldy(buf, system)
 float	*buf;
@@ -455,7 +472,7 @@ mat_mp		avh;
 }
 /******************************************************************************
  * pdb_out().  Write a system configuration to stdout in the form of a        *
- * Brookhaven Protein Data Bank (pdb) file		                      *
+ * Brookhaven Protein Data Bank (pdb) file                                    *
  ******************************************************************************/
 void
 pdb_out(n, system, site_info, insert, avpos, avh)
@@ -467,7 +484,7 @@ spec_mt		avpos[];
 mat_mp		avh;
 {
    double	**site = (double**)arralloc(sizeof(double),2,
-					    0,2,0,system->nsites-1);
+                                            0,2,0,system->nsites-1);
    mat_mp       h = avh;
    spec_mt	*spec;
    double	a,b,c, alpha, beta, gamma;
@@ -487,22 +504,22 @@ mat_mp		avh;
 
    for(spec = avpos; spec < avpos+system->nspecies; ispec++, spec++)
    {
-      make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 spec->framework, site, spec->nmols, spec->nsites);
+     make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
+           spec->framework, site, spec->nmols, spec->nsites);
 
-      isite = 0;
-      for(imol = 0; imol < spec->nmols; imol++)
-      {
-      	 for(is = 0; is < spec->nsites; is++)
-      	 {
-	    if(fabs(site_info[spec->site_id[is]].mass) != 0)
-	       (void)printf("HETATM%5d %2s%d  NONE    1     %7.3f %7.3f %7.3f  1.00  0.00\n",
-			    itot, site_info[spec->site_id[is]].name, ispec,
-			    site[0][isite], site[1][isite], site[2][isite]);
-   	    isite++;
-	    itot++;
-         }
-      }
+     isite = 0;
+     for(imol = 0; imol < spec->nmols; imol++)
+     {
+       for(is = 0; is < spec->nsites; is++)
+       {
+         if(fabs(site_info[spec->site_id[is]].mass) != 0)
+            (void)printf("HETATM%5d %2s%d  NONE    1     %7.3f %7.3f %7.3f  1.00  0.00\n",
+               itot, site_info[spec->site_id[is]].name, ispec,
+                  site[0][isite], site[1][isite], site[2][isite]);
+         isite++;
+         itot++;
+       }
+     }
    }
    (void)printf("TER              %d     NONE    1\n",itot);
    (void)printf("END\n");
@@ -643,28 +660,30 @@ char            *insert;
    spec_mp      spec, frame_spec  = NULL;
    vec_mt       c_of_m;
 
-   for(spec = avpos; spec < avpos+system->nspecies; spec++)
+   for( spec = avpos; spec < avpos+system->nspecies; spec++)
       if( spec->framework )
          frame_spec = spec;
 
    if( frame_spec != NULL )
-      shift(avpos->c_of_m, system->nmols, frame_spec->c_of_m[0]);
+      for( spec = avpos; spec < avpos+system->nspecies; spec++)
+         shift(spec->c_of_m, spec->nmols, frame_spec->c_of_m[0]);
    else
    {
       centre_mass(avpos, system->nspecies, c_of_m);
-      shift(avpos->c_of_m, system->nmols, c_of_m);
+      for( spec = avpos; spec < avpos+system->nspecies; spec++) 
+         shift(spec->c_of_m, spec->nmols, c_of_m);
    } 
-
    switch (outsw)
    {
-    case SHAK:
-      schakal_out(n, system, site_info, insert, avpos, avh);
-      break;
     case PDB:
       pdb_out(n, system, site_info, insert, avpos, avh);
       break;
     case XYZ:
       xyz_out(n, system, site_info, insert, avpos, avh); 
+      break;
+    default:
+    case SHAK:
+      schakal_out(n, system, site_info, insert, avpos, avh);
       break;
    }
 }
@@ -682,34 +701,16 @@ spec_mt		dupl_spec[];
 
    for(spec = species; spec < species+system->nspecies; dupl_spec++,spec++)
    {
-        dupl_spec->nmols = spec->nmols;
-        dupl_spec->nsites = spec->nsites;
-        dupl_spec->framework = spec->framework;
-        dupl_spec->site_id = spec->site_id;
-	dupl_spec->mass = spec->mass;
-     
-        for( i=0; i<32; i++)
-             dupl_spec->name[i] = spec->name[i];
-
-	if(spec->nsites = 1)	/* monatomic species */
-                dupl_spec->p_f_sites = 0;
-
-        for(imol=0; imol < spec->nmols; imol++)
-           for( i=0; i<3; i++)
-               dupl_spec->c_of_m[imol][i] = spec->c_of_m[imol][i];
-
-        if( spec->rdof > 1)     /* Treat polyatomic molecules */
-        {
-           for( isite=0; isite< spec->nsites; isite++)
-               for( j=0; j< 3; j++)                  
-                   dupl_spec->p_f_sites[isite][j] = spec->p_f_sites[isite][j];
-           for(imol = 0; imol < spec->nmols; imol++)
-               for( j = 0; j< 4; j++)
-                   dupl_spec->quat[imol][j] = spec->quat[imol][j];
-        } 
-        else
-           dupl_spec->quat = 0;
-    }
+      if( spec->rdof > 0)	/* polyatomic (non-framework) species */
+      {
+         for( imol=0; imol < spec->nmols; imol++)
+             for( j=0; j<4; j++)
+                 dupl_spec->quat[imol][j] = spec->quat[imol][j];
+      } 
+      for(imol=0; imol < spec->nmols; imol++)
+         for( i=0; i<3; i++)
+             dupl_spec->c_of_m[imol][i] = spec->c_of_m[imol][i];
+   }
 }
 /******************************************************************************
  * init_species().  Create arrays of c_of_m`s for each molecule of species    *
@@ -721,12 +722,32 @@ spec_mt		species[];
 spec_mt		init_spec[];
 {
    spec_mt	*spec;
-
+   int		i,j,isite;
    for(spec = species; spec < species+system->nspecies; init_spec++,spec++)
-         init_spec->c_of_m = ralloc(spec->nmols);
+   {
+   /* Allocate space for data */
+        init_spec->site_id = ialloc(spec->nsites);
+        init_spec->p_f_sites = ralloc(spec->nsites);
+        init_spec->c_of_m = ralloc(spec->nmols);
+        if( spec->rdof > 0)
+           init_spec->quat = qalloc(spec->nmols);
+        else
+           init_spec->quat = 0;
+
+   /* Duplicate non-varying quantities */
+        init_spec->nmols = spec->nmols;
+        init_spec->nsites = spec->nsites;
+        init_spec->framework = spec->framework;
+        init_spec->mass = spec->mass;
+        init_spec->rdof = spec->rdof;
+        init_spec->site_id = spec->site_id;
+        init_spec->p_f_sites = spec->p_f_sites;
+        for( i=0; i<32; i++)
+           init_spec->name[i] = spec->name[i];
+   }
 }
 /******************************************************************************
- * summate().  Summate positions of each species			      *
+ * summate().  Summate positions of each species                              *
  ******************************************************************************/
 void
 summate(system, species, avpos, avh)
@@ -748,15 +769,11 @@ mat_mp		avh;
       for( imol=0; imol<spec->nmols; imol++)
          for( i=0; i<3; i++)
             avpos->c_of_m[imol][i] += spec->c_of_m[imol][i];
+
       if( spec->rdof > 1)
-      {
-         for( i=0; i< spec->nsites; i++)
-            for( j=0; j< 3; j++)                  
-                avpos->p_f_sites[i][j] += spec->p_f_sites[i][j];
          for(imol = 0; imol < spec->nmols; imol++)
             for( j = 0; j< 4; j++)
                 avpos->quat[imol][j] += spec->quat[imol][j];
-      }          
    }
 }
 /******************************************************************************
@@ -782,22 +799,17 @@ int		nav;
             avpos->c_of_m[imol][j] /= nav;
 
       if( avpos->rdof > 1)
-      {
-         for( i=0; i< avpos->nsites; i++)
-            for( j=0; j< 3; j++)                  
-                avpos->p_f_sites[i][j] /= nav;
          for(imol = 0; imol < avpos->nmols; imol++)
             for( j = 0; j< 4; j++)
                 avpos->quat[imol][j] /= nav;
-      }
    }
 }
 /******************************************************************************
  * main().   Driver program for calculating mean pos. from MOLDY dump files   *
- * Acceptable inputs are sys-spec files or restart files. Actual 	      *
- * configurational info must be read from dump files.			      *
- * Call: mdavpos [-s sys-spec-file] [-r restart-file]. 			      *
- * If neither specified on command line, user is interrogated.		      *
+ * Acceptable inputs are sys-spec files or restart files. Actual              *
+ * configurational info must be read from dump files.                         *
+ * Call: mdavpos [-s sys-spec-file] [-r restart-file].                        *
+ * If neither specified on command line, user is interrogated.                *
  ******************************************************************************/
 int
 main(argc, argv)
@@ -835,9 +847,12 @@ char	*argv[];
 #define MAXTRY 100
    control.page_length=1000000;
 
-   while( (c = getopt(argc, argv, "r:s:d:t:o:hpx") ) != EOF )
+   while( (c = getopt(argc, argv, "cr:s:d:t:o:hpx") ) != EOF )
       switch(c)
       {
+       case 'c':
+         cflg++;
+         break;
        case 'r':
        case 's':
 	 if( intyp )
@@ -850,7 +865,7 @@ char	*argv[];
 	 break;
        case 't':
 	 dumplims = optarg;
-         break;
+	 break;
        case 'h':
 	 outsw = SHAK;
 	 break;
@@ -865,15 +880,15 @@ char	*argv[];
 	    error("failed to open file \"%s\" for output", optarg);
 	 break;
        default:
-       case '?':
+       case '?': 
 	 errflg++;
       }
 
    if( errflg )
    {
-      fputs("Usage: mdavpos [-h] [-p] [-x] [-s sys-spec-file] [-r restart-file] ",stderr);
-      fputs("[-d dump-files] [-t s[-f[:n]]] [-o output-file]\n",
-            stderr);
+      fputs("Usage: mdavpos [-h] [-p] [-x] [-s sys-spec-file] ",stderr);
+      fputs("[-r restart-file] [-d dump-files] [-t s[-f[:n]]] ",stderr);
+      fputs("[-o output-file]\n",stderr);
       exit(2);
    }
 
@@ -926,7 +941,7 @@ char	*argv[];
    }
    allocate_dynamics(&sys, species);
 
-  /* Dump dataset			      */
+  /* Dump dataset */
    if( dump_name == 0 )
    {
 	fputs("Enter canonical name of dump files (as in control)\n",stderr);
@@ -956,7 +971,6 @@ char	*argv[];
        }
        if( rflag)
        {
-          (void)free(dumplims);
           dumplims = NULL;
        } 
    } while(rflag);
@@ -991,7 +1005,7 @@ char	*argv[];
 
  /* Loop for calculating trajectories from current and previous time slices */ 
 
-     nav = floor((finish-start+1)/inc);
+     nav = floor((finish-start+1)/inc);  /* Number of time slices averaged over */
 
      for(irec = start; irec <= finish; irec+=inc)
      {
@@ -999,22 +1013,21 @@ char	*argv[];
            error("Error reading record %d in dump file - \n%s\n",
               irec, strerror(errno));
         dump_to_moldy(dump_buf, &sys);  /*read dump data */
-        if( irec == start)
+
+        if( irec == start) /* Set up species arrays and h matrix */
         {
  	   init_species(&sys, species, prev_slice); 
- 	   init_species(&sys, species, avpos);	 
- 	   copy_spec(&sys, species, avpos); 
-           memcpy(avh, sys.h, sizeof(mat_mt));
- 	}       
+ 	   init_species(&sys, species, avpos);
+ 	   copy_spec(&sys, species, avpos);
+	   memcpy(avh, sys.h, sizeof(mat_mt));
+        }       
         else
         {
            traj_con(&sys, species, prev_slice);
-           summate(&sys, species, avpos, &avh);
+           summate(&sys, species, avpos, avh);
         }
-
    /*   Make copy of c_of_m`s for joining trajectory of next time slice */
         copy_spec(&sys, species, prev_slice); 
-        
 #ifdef DEBUG
         fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
 	   irec%header.maxdumps, dump_name);
@@ -1022,8 +1035,8 @@ char	*argv[];
       }
 
      /* Display species and calculated trajectories */
-        average(&sys, avpos, &avh, nav);
-        moldy_out(iout++, &sys, site_info, insert, avpos, &avh, outsw);
+        average(&sys, avpos, avh, nav); 
+        moldy_out(iout++, &sys, site_info, insert, avpos, avh, outsw);
 
 #if defined (unix) || defined (__unix__)
    pclose(Dp);
