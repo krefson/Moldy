@@ -26,6 +26,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.11  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.10  1996/11/18 15:58:48  keith
  *       Revised Cray macro tests to use _CRAY1 to select vector architecture.
  *       Use "scalar" versions rather than SCILIB functions on Cray T3D
@@ -253,7 +258,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/auxil.c,v 2.10 1996/11/18 15:58:48 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2.11 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -697,10 +702,7 @@ double rt_clock()
       else
 	 return t/(double)CLK_TCK;
    }
-   if( use_time )
-   {
-      return time((time_t *)0);
-   }
+   return time((time_t *)0);
 }
 #else
 #   if defined(HAVE_GETTIMEOFDAY)
