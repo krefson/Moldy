@@ -3,6 +3,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.16  91/11/26  12:48:43  keith
+ * Put #ifdefs around machine-specific pragmas for portability.  Now
+ * supports Stardent 1000,2000 & 3000 (titan) series and convex.
+ * 
  * Revision 1.13  91/08/24  16:55:18  keith
  * Added pragmas for convex C240 parallelization
  * 
@@ -81,7 +85,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.13 91/08/24 16:55:18 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.16 91/11/26 12:48:43 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -247,16 +251,16 @@ mat_t		stress;			/* Stress virial		(out) */
        */
       if( frame_flag )
       {
-	 sheet_energy += PI*(sq-sqxf)*sqxf / (2.0*SQR(control.alpha));
+	 sheet_energy = PI*SQR(sq-sqxf) / (2.0*SQR(control.alpha));
 	 message(NULLI, NULLP, INFO, FRACHG, 
-		 sqxf*CONV_Q, sheet_energy/vol*CONV_E);
+		 (sq-sqxf)*CONV_Q, sheet_energy/vol*CONV_E);
       }
       /* 
        *  2) Case of entire system non-neutral.
        */
       if( fabs(sq)*CONV_Q > 1.0e-5)
       {
-	 sheet_energy += intra = PI*SQR(sq) / (2.0*SQR(control.alpha));
+	 sheet_energy -= intra = PI*SQR(sq) / (2.0*SQR(control.alpha));
 	 message(NULLI, NULLP, WARNING, SYSCHG, sq*CONV_Q, intra/vol*CONV_E);
       }
 
@@ -290,9 +294,10 @@ mat_t		stress;			/* Stress virial		(out) */
 	 }
       }
 
-   *pe -= self_energy+sheet_energy/vol;	/* Subtract self energy term	      */
-      
-
+   *pe -= self_energy;			/* Subtract self energy term	      */
+   *pe += sheet_energy/vol;		/* Uniform charge correction	      */
+   for(i=0; i<3; i++)
+      stress[i][i] += sheet_energy/vol;
 /*
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
  */
@@ -554,18 +559,19 @@ real	**site_force;
    double ksq, coeff, coeff2, pe_k;
    double sqcoskr, sqsinkr, sqcoskrn, sqsinkrn, sqcoskrf, sqsinkrf;
    real *coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
-   int is, i, j, h, k, l, ihkl;
-   double vol=*volp, r_4_alpha = *r_4_alphap;
+   int is, i, j, h, k, l;
+   struct _hkl *phkl;
+   double vol = *volp, r_4_alpha = *r_4_alphap;
    real		force_comp;
    real *qcoskr = dalloc(nsites), *qsinkr = dalloc(nsites);
    real		*site_fx = site_force[0],
    		*site_fy = site_force[1],
    		*site_fz = site_force[2];
 
-   for(ihkl = ithread; ihkl < nhkl; ihkl += nthreads)
+   for(phkl = hkl+ithread; phkl < hkl+nhkl; phkl += nthreads)
    {
-      h  = hkl[ihkl].h;	    k     = hkl[ihkl].k;  l     = hkl[ihkl].l;
-      kv[0] = hkl[ihkl].kx; kv[1] = hkl[ihkl].ky; kv[2] = hkl[ihkl].kz;
+      h  = phkl->h;	    k     = phkl->k;  l     = phkl->l;
+      kv[0] = phkl->kx; kv[1] = phkl->ky; kv[2] = phkl->kz;
 /*
  * Calculate pre-factors A(K) etc
  */
@@ -602,6 +608,7 @@ real	**site_force;
       *pe += pe_k;
 
       sqsinkr *= coeff; sqcoskr *= coeff;
+      sqsinkrn *= coeff; sqcoskrn *= coeff;
 /*
  * Calculate long-range coulombic contribution to stress tensor
  */
@@ -615,24 +622,33 @@ NOVECTOR
       }
 
 /*
- * Old and less efficient calculation of site forces. Retained for machines
- * with poor vectorising compilers.
- */
-/*
- * Evaluation of site forces. Vectorises under CRAY CC 4.0 & Convex VC 2.0
+ * Evaluation of site forces.   Non-framework sites interact with all others
  */
 VECTORIZE
-      for(is = 0; is < nsites; is++)
+      for(is = 0; is < nsitesxf; is++)
       {
 	 force_comp = qsinkr[is]*sqcoskr - qcoskr[is]*sqsinkr;
 	 site_fx[is] += kv[0] * force_comp;
 	 site_fy[is] += kv[1] * force_comp;
 	 site_fz[is] += kv[2] * force_comp;
       }
+#if 1
+/*
+ *  Framework sites -- only interact with non-framework sites
+ */
+VECTORIZE
+      for(is = nsitesxf; is < nsites; is++)
+      {
+	 force_comp = qsinkr[is]*sqcoskrn - qcoskr[is]*sqsinkrn;
+	 site_fx[is] += kv[0] * force_comp;
+	 site_fy[is] += kv[1] * force_comp;
+	 site_fz[is] += kv[2] * force_comp;
+      }
+#endif
 /*
  * End of loop over K vectors.
  */
-    }
+   }
 xfree(qcoskr); xfree(qsinkr);
 }
 
