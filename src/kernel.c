@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.13  2000/12/08 12:22:33  keith
+ *       Incorporated Morse and HIW potentials
+ *
  *       Revision 2.12  2000/12/07 10:11:08  keith
  *       Tidied up prototypes and incorporated mods of 2.10.4.3.
  *
@@ -171,7 +174,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/kernel.c,v 2.12 2000/12/07 10:11:08 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/kernel.c,v 2.13 2000/12/08 12:22:33 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -189,20 +192,22 @@ void	message(int *,...);		/* Write a warning or error message   */
 			/*		    U= p0*exp(-p1*r) - p2*exp(-p3*r)  */
 #define GENPOT 3	/* "generic" potential for multipurpose use.          */
 			/* U= p0*exp(-p1*r) + p2/r^12 - p3/r^4 -p4/r^6 -p5/r^8 */
-#define MORPOT 4	/* Busing-Ida-Gilbert plus Morse-potential of Mdxorto */
+#define HIWPOT 4	/* HIW pot. R.R.Pappalardo, J.Phys.Chem 97,4500(1993) */
+			/*		    U= p0/r^4 + p1/r^6 + p2/r^12      */
+#define RSRVD  5	/* Reserved					      */
+#define MORPOT 6	/* Busing-Ida-Gilbert plus Morse-potential of Mdxorto */
 			/* Material Design using Personal computer, Ed        */
                         /* Kazuyuki Hirao,  (1994) ISBN 4-7853-6803-9         */
 			/*     U=    B * exp ((C-R)*D)   - E/r^6 +            */
 			/*           F * exp (-2*G(r-H)) - 2F*exp (-G(r-H))   */
-#define HIWPOT 5	/* HIW pot. R.R.Pappalardo, J.Phys.Chem 97,4500(1993) */
-			/*		    U= p0/r^4 + p1/r^6 + p2/r^12      */
 
 const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 		              {"buckingham",3},
                               {"mcy",4},
 		              {"generic",6},
-		              {"morse",7},
 			      {"hiw",3},
+		              {"reserved for developer",1},
+		              {"morse",7},
 		              {0,0}};	            /* MUST be null-terminated*/
 /*
  *  Array of dimensions of pot'l parameters.  Triplets contain powers
@@ -210,14 +215,16 @@ const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
  *  to program units.   E.g LJ, e is an energy: kgm**2s-2 => {1,2,-2},
  *  sigma ls a length => {0,1,0}.
  */
-const dim_mt   pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
-                                 {{1,8,-2},{1,2,-2},{0,-1,0}},
-		                 {{1,2,-2},{0,-1,0},{1,2,-2},{0,-1,0}},
-			         {{1,2,-2},{0,-1,0},{1,14,-2},
-			          {1,6,-2},{1,8,-2},{1,10,-2}}, 
-			         {{1,2,-2},{0, 1,0},{0,-1, 0},
-			          {1,8,-2},{1,2,-2},{0,-1,0},{0, 1, 0}},
-				  {{1,6,-2},{1,8,-2},{1,14,-2}}};
+const dim_mt   pot_dim[][NPOTP]= {
+   /* Lennard-Jones */	{{1,2,-2},{0,1,0}},
+   /* Buckingham    */  {{1,8,-2},{1,2,-2},{0,-1,0}},
+   /* MCY           */  {{1,2,-2},{0,-1,0},{1,2,-2},{0,-1,0}},
+   /* Generic       */  {{1,2,-2},{0,-1,0},{1,14,-2},{1,6,-2},{1,8,-2},{1,10,-2}}, 
+   /* HIW           */  {{1,6,-2},{1,8,-2},{1,14,-2}},
+   /* Reserved      */  {{0,0,0}},
+   /* Morse         */  {{1,2,-2},{0, 1,0},{0,-1, 0},
+			          {1,8,-2},{1,2,-2},{0,-1,0},{0, 1, 0}}
+                                  };
 
 /*========================== Macros ==========================================*/
 
