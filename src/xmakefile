@@ -33,92 +33,107 @@ XDR=-DUSE_XDR
 #LDFLAGS1= -mh $(LDFLAGS0)
 #  **** Scalar machines using default C compiler ****
 CFLAGS=	-O  $(XDR) $(PARLIBC) $(CFLAGS0)
-LDFLAGS= $(LDFLAGS0) $(PARLIBL)
+LDFLAGS= $(LDFLAGS0) $(PARLIBL) -lm
 #INLINE=
 #  **** Scalar machines using gcc - can compile with -g ****
 #CC=	gcc
 #CFLAGS= -O2 -ffast-math $(XDR) $(PARLIBC) $(CFLAGS0)
+#CFLAGSAUX=-funroll-loops
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lm
+#INLINE=
+#  **** gcc under Windows 95/NT using mingw32 port.   ****
+# Options for exe which will run under 486, optimum under pentium pro.
+# This doesn't have a "getopt" so include getopt.o.  Nor a separate
+# maths library, so no "-lm".
+#CC=	gcc
+#XDR=
+#GETOPT=getopt.o
+#CFLAGS= -O2 -ffast-math -mcpu=pentiumpro -march=i486 -malign-double $(XDR) $(PARLIBC) $(CFLAGS0)
 #CFLAGSAUX=-funroll-loops
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #INLINE=
 #  **** IBM RS6000 ****
 #CC=cc
 #CFLAGS=   -DRS6000 -qansialias -O3 $(XDR) $(PARLIBC) $(CFLAGS0)
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0)
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lm
 #INLINE=
 #  **** MIPS for SGI, IRIX 5 ****
 #CFLAGS=	-O2 -mips2  $(XDR) $(PARLIBC) $(CFLAGS0)
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lsun -lmalloc -lfastm
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lsun -lmalloc -lfastm -lm
 #INLINE=
-##.FTXfor SGI, IRIX 6/R8000 ****
+#  **** MIPS for SGI, IRIX 6/R8000 ****
 #CFLAGS= -DANSI_LIBS -O3 -mips4 -woff 1174 $(XDR) $(PARLIBC) $(CFLAGS0)
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0)
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lm
 #CFLAGS2=-OPT:alias=restrict:fast_sqrt=on
 #INLINE=
 #  **** Sun C 3.0.1
 #CC=acc
 #CFLAGS= -fast -xO4 $(PARLIBC) $(XDR) $(CFLAGS0)
 #CFLAGS2= -fsimple
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -fast 
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -fast  -lm
 #INLINE=
 #  **** Sun Solaris 2
 #CFLAGS= -fast -xO4 $(PARLIBC) $(XDR) $(CFLAGS0)
 #CFLAGS2= -fsimple -xrestrict=%all
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -fast -lnsl
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -fast -lnsl -lm
 #INLINE=
 #  **** Solaris 2 using gcc  ****
 #CC=	gcc
 #CFLAGS= -O2 -ffast-math $(PARLIBC) $(XDR) $(CFLAGS0)
 #CFLAGSAUX=-funroll-loops
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lnsl
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lnsl -lm
 #INLINE=
 #  **** DEC Alpha ****
 #CC=cc -migrate
 #CFLAGS= -tune host -O4 $(XDR) $(PARLIBC) $(CFLAGS0) -D_FASTMATH
 #CFLAGS2=-ansi_alias -O5
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0)
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lm
 #  **** HP 700 and Convex SPP ****
 #CC=c89
 ##CC=mpicc
 #CFLAGS=	+O3  +Olibcalls $(XDR) $(PARLIBC) $(CFLAGS0)
 #CFLAGS2=       +Onoparmsoverlap 
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0)
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lm
 #  **** Stellar ****
 #CFLAGS= -g -O2 -va -na -nv $(XDR) $(CFLAGS0)
 #CFLAGS2= +CaliasFreePointers
-#LDFLAGS= $(LDFLAGS0) -g -z 
+#LDFLAGS= $(LDFLAGS0) -g -z  -lm
 #INLINE=
 #  **** Titan ****
 #CFLAGS= -O2 -vector_c -vreport $(XDR) $(PARLIBC) $(CFLAGS0)
 #CFLAGS2=  -safe=ptrs
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) 
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0)  -lm
 #CFLAGSAUX=-catalog=auxil.in 
 #INLINE= -inline -Npaths=auxil.in
 #  **** convex ****
 #CFLAGS= -O2 -na -nv -fi $(XDR) $(PARLIBC) $(CFLAGS0)
 #CFLAGS2= -alias standard -alias ptr_args -alias array_args
 ##CFLAGSP= -O3 -re  # force,ewald_parallel versions only
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -fi -lveclib 
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -fi -lveclib  -lm
 #INLINE=
 #  **** Cray **** (SCC 3.0)
 #CFLAGS= -h nostdc,vector3,scalar3,ivdep,fastaddr $(XDR) $(PARLIBC) $(CFLAGS0)
-#LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" -lsci
+#LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" -lsci -lm
 #INLINE=
-#  **** Cray T3D ****
+#  **** Cray T3D/T3E ****
 #CC=TARGET=cray-t3d cc
+#CC=TARGET=cray-t3e cc
 #CFLAGS= -O2 $(XDR) $(PARLIBC) $(CFLAGS0)
 #CFLAGS2=-hrestrict=a
 #
 # The benchmark lib contains fast trig and sqrt functions. 
 # It's not essential but it speeds the program up slightly.
-#LDFLAGS=$(PARLIBL) $(LDFLAGS0) -L/usr/local/lib/bnchlib -lbnch -lsci
+#LDFLAGS=$(PARLIBL) $(LDFLAGS0) -L/usr/local/lib/bnchlib -lbnch -lsci -lm
 #  ***** End *****
+W32BIN=w32bin
 PRFLAGS=-c "-DUSE_XDR -DSPMD -D__MSDOS__"
 LINT=		lint
 TAR=		tar
 DCLAR=		dclar
+ZIP=            zip
 PFLAGS=		-P
 EPFLAGS=	-2r
+RM=             rm -f
 A2FLAGS=
 SHFILE=		$$file
 FILES = accel algorith alloc ansi auxil beeman convert dump ewald force input \
@@ -178,7 +193,7 @@ VMSBUILD=	compile_moldy.com link_moldy.com defcomm.com\
 DOSBUILD=	Makefile.mak OFILES.RSP SHAKOBJS.RSP
 
 moldy:		$(OFILES) $(EXTRA_OBJ) $(HFILES)
-		$(CC) -o moldy $(LDFLAGS1) $(OFILES) $(EXTRA_OBJ) $(LDFLAGS) -lm 
+		$(CC) -o moldy $(LDFLAGS1) $(OFILES) $(EXTRA_OBJ) $(LDFLAGS)  
 
 moldyext:	moldyext.c $(GETOPT) $(HFILES)
 		$(CC) $(CFLAGS) -o moldyext $(LDFLAGS1) moldyext.c $(GETOPT) $(LDFLAGS)
@@ -196,13 +211,13 @@ dumpconv:	dumpconv.c xdr.o $(HFILES)
 		$(CC) $(CFLAGS) -o dumpconv $(LDFLAGS1) dumpconv.c xdr.o $(LDFLAGS)
 
 mdshak:		mdshak.o $(SHAKOBJS) $(GETOPT) 
-		$(CC) -o mdshak $(LDFLAGS1) mdshak.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) -lm
+		$(CC) -o mdshak $(LDFLAGS1) mdshak.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) 
 
 msd:		msd.o $(SHAKOBJS) $(GETOPT) 
-		$(CC) -o msd $(LDFLAGS1) msd.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) -lm
+		$(CC) -o msd $(LDFLAGS1) msd.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) 
 
 mdavpos:	mdavpos.o $(SHAKOBJS) $(GETOPT) 
-		$(CC) -o mdavpos $(LDFLAGS1) mdavpos.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) -lm
+		$(CC) -o mdavpos $(LDFLAGS1) mdavpos.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) 
 
 utilities:	$(UTILS) $(UTILS2)
 
@@ -294,12 +309,12 @@ tags:		$(CFILES) $(HFILES)
 		etags $(CFILES) $(HFILES)  
 
 clean:		
-		/bin/rm -f $(OFILES) $(LFILES) moldy $(UTILS) $(UTILS2) \
+		$(RM) $(OFILES) $(LFILES) moldy $(UTILS) $(UTILS2) \
 			mdshak.o msd.o mdavpos.o moldy.dvi moldy.toc moldy.log
 
 spotless:	
 		$(MAKE) clean
-		/bin/rm -f moldy.shar* moldy.shar.Z* cray.job* cray.job.Z* \
+		$(RM) moldy.shar* moldy.shar.Z* cray.job* cray.job.Z* \
 			   moldy.job* moldy.job.Z* \
 			   moldy.com* moldy.com.Z* moldy.aux; /bin/true
 annihilate:
@@ -313,6 +328,7 @@ annihilate:
 #
 #  Export options
 #
+ 
 moldy.tar:	$(CFILES) $(HFILES)  Makefile xmakefile \
 		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
 		$(TAR) cf moldy.tar\
@@ -334,6 +350,13 @@ moldy.shar:	$(CFILES) $(HFILES)  Makefile xmakefile \
 moldy.shar.Z:	moldy.shar
 		compress moldy.shar
 
+moldy.zip:	$(CFILES) $(HFILES)  Makefile xmakefile \
+		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
+		$(ZIP) -l moldy.zip\
+		$(CFILES)  $(HFILES) Makefile xmakefile \
+		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD);\
+		$(ZIP) -r -j moldy.zip $(W32BIN)
+
 cray:		$(CFILES) $(HFILES)  
 		./cray_make $(CFILES)  $(HFILES) > cray.job
 
@@ -347,9 +370,10 @@ link_moldy.com:		Makefile
 		./make_vms_link moldy $(FILES) > link_moldy.com
 
 compile_utils.com:	Makefile
-		./make_vms_compile getopt $(UTILS) $(UTILS2) > compile_utils.com
+		./make_vms_compile getopt ReadDCD $(UTILS) $(UTILS2) > compile_utils.com
 
 link_utils.com:	Makefile
+		$(RM) link_utils.com; \
 		for file in $(UTILS); do ./make_vms_link $$file $$file getopt>> \
 			link_utils.com; done
 		for file in $(UTILS2); do \
@@ -373,7 +397,7 @@ moldy.dvi:	moldy.tex moldy.bbl $(FIGTEXPS)
 		latex moldy
 		@touch moldy.bbl
 
-moldy.bbl:	moldy.aux simulation.bib claybib.bib
+moldy.bbl:	moldy.aux
 		-bibtex moldy
 
 moldy.aux:	moldy.tex
