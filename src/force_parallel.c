@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.25 92/06/15 16:51:50 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.27 92/09/18 14:57:36 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -107,6 +107,7 @@ void    	spaxpy();               /* Scattered vector add               */
 void    	spxpy();                /* Scattered vector add               */
 void    	transpose();            /* Generate 3x3 matrix transpose      */
 void    	zero_real();            /* Initialiser                        */
+void    	zero_double();          /* Initialiser                        */
 void    	force_inner();          /* Inner loop forward reference       */
 int     	nprocessors();          /* Return no. of procs to execute on. */
 double  	precision();            /* Floating pt precision.             */
@@ -489,7 +490,7 @@ mat_t           stress;                 /* Stress virial                (out) */
       s_f_n[ithread] = (real**)arralloc(sizeof(real), 2, 0, 2, 0, nsites-1);
       zero_real(s_f_n[ithread][0],3*nsites);
    }
-   zero_real(stress_n,9*nthreads);
+   zero_real(stress_n[0][0],9*nthreads);
    zero_double(pe_n, nthreads);
 
    if(control.subcell <= 0.0) control.subcell = control.cutoff/5.0;
