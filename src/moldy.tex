@@ -113,6 +113,7 @@
 \newenvironment{Litdescription}{\begingroup%
      \renewcommand{\descriptionlabel}[1]{\Lit{##1}}\begin{description}}%
      {\end{description}\endgroup}
+\newcommand{\ttlabel}[1]{\Lit{#1}\hfil}
 %
 % Abbreviation for bold math.  Set to \mathbf for LaTeX2e
 %
@@ -169,7 +170,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.11 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.12 $ $}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -569,7 +570,7 @@ $\dot{x}^{(p)}$ and $\dot{x}^{(c)}$ to represent ``predicted'' and
   \label{eqn:beeman}
 \end{equation}
 
-The predictor-corrector cycle of steps \emph{iii} to \emph{v} are
+The predictor-corrector cycle of steps \emph{iii} to \emph{v} is
 iterated until the predicted and corrected velocities have converged
 to a relative precision of better than 1 part in $10^{-7}$, which in
 practice takes 2 or 3 cycles.  This iteration is not as inefficient as
@@ -2180,13 +2181,14 @@ specification file.  $X, Y$ and $Z$ are \emph{fractional}
 co-ordinates, between 0 and 1 giving the location of the molecular
 centres of mass in the crystal unit cell. The orientation is given by
 the four quaternions $q_{0}, q_{1}, q_{2}, q_{3}$ which specify a
-rotation \emph{relative to the orientation of the prototype molecule
-  in the system specification file}.  (Notice the slight inconsistency
-with the positions, which are of the centres of mass, \emph{not} the
-zeroes of co-ordinates in the system specification file. This may be
-fixed in future releases.)  Quaternions need only be included for
-polyatomic species, that is molecules $1$ and $n$ above, and omitted
-for the monatomic species $i$.
+rotation about the centre-of-mass \emph{relative to the orientation of
+  the prototype molecule in the system specification file}.  (Notice
+the slight inconsistency with the positions, which are of the centres
+of mass, \emph{not} the zeroes of co-ordinates in the system
+specification file. This may be fixed in future releases.)
+Quaternions need only be included for polyatomic species, that is
+molecules $1$ and $n$ above, and omitted for the monatomic species
+$i$.
 
 After the molecular positions and orientations have been set up, their
 velocities (and angular velocities if appropriate) are initialized.
@@ -3464,11 +3466,11 @@ a vector of (squared) distances between some reference site and its
 neighbour sites.  Vectors of potential parameters and charges are
 supplied which bear a one to one correspondence with the elements of
 the distance vector.  It calculates the corresponding values of
-${dU(r_{ij})} \over {dr_{ij}}$ which it stores in \Lit{forceij[]}.
-There are several variants of the force-calculation loop, one for each
-kind of potential.  The potential type in use is passed as a parameter
-to \Lit{kernel()} and is used in a \Lit{switch} statement to select
-the appropriate code. 
+$\frac{1}{r_{ij}}\frac{dU(r_{ij})}{dr_{ij}}$ which it stores in
+\Lit{forceij[]}.  There are several variants of the force-calculation
+loop, one for each kind of potential.  The potential type in use is
+passed as a parameter to \Lit{kernel()} and is used in a \Lit{switch}
+statement to select the appropriate code.
 
 To add a new potential the array of structs called \Lit{potspec[]}
 must be extended.  The new array element should contain the name of
@@ -3582,10 +3584,10 @@ descriptions to act as a map of the program structure.
 
 \moldy\ is written in modular fashion in adherence to the principles
 of \emph{structured programming} to as great a degree as practical.
-This does not mean merely the avoidance \Lit{goto}s but, instead
+This does not mean merely the avoidance of \Lit{goto}s but, instead
 the organization of the program into modules and functions which are
 independent of each other and of global environmental variables.
-Functions are kept to a limited size and as far as practical and
+Functions are kept to a limited size and as far as practical
 serve a single, well defined purpose.\footnote{The term ``function''
   in C corresponds to both functions and subroutines in FORTRAN.} This
 ensures that the internal workings of a function are unaffected by
@@ -3707,7 +3709,7 @@ exactly as if it was a true multidimensional array. For example\\
 \begin{quote}
   \Litf
 double **r;\\
-r = arralloc(sizeof(double), 2, 0, m, 0, n);
+r = arralloc(sizeof(double), 2, 0, m-1, 0, n-1);
 \end{quote}}\\
 \noindent defines a 2D array, $m \times n$ of \Lit{double} so that
 \Lit{r[i][j]} is a reference to the $i, j$ th element in the usual
@@ -3752,7 +3754,7 @@ pointer \Lit{double **x}.
     contains all the information needed to access element
     \Lit{r[i][j]} using pointer indirection rather than an indexing
     computation and therefore without any reference to the values of
-    $m$ or $n$.  Higher dimensional arrays are set out on a similar
+    $m$ or $n$.  Higher dimensional arrays are set out in a similar
     fashion with more levels of pointer arrays, $n-1$ for an
     $n$-dimensional array}
     \label{fig:arralloc}
@@ -4819,13 +4821,11 @@ end
 \chapter{Utility Programs} %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Five utility programs are included in the \moldy\ package, mostly for
+Seven utility programs are included in the \moldy\ package, mostly for
 manipulation and analysis of dump data (see section~\ref{sec:dumping}).
 They are easily compiled on unix systems using the makefile: the
 command is ``\Lit{make}~\emph{progname}'' for each program or
-``\Lit{make utilities}'' to make the lot.  Apart from \emph{mdshak}
-which must be linked with several modules from \moldy\ itself they are
-all self-contained in a single source file.  They are written with
+``\Lit{make utilities}'' to make the lot.  They are written with
 unix systems in mind using unix-style option arguments, but ought to
 compile and run under VMS if defined as foreign commands.
 
@@ -4837,7 +4837,7 @@ syntax for such options. The numbers 1, 5, 17 to 20 inclusive and
 commas and each one may be a range separated by a hyphen with an
 optional increment following a colon.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+v%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Moldyext}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 It is usual to plot the instantaneous values of energy, temperature
@@ -4914,7 +4914,6 @@ reading by other programs.  It is invoked with the command:
 \textit{dump-file1 dump-file2} \ldots
 \end{center}
 The meanings of its arguments are
-\newcommand{\ttlabel}[1]{\Lit{#1}\hfil}
 \begin{list}{}{\let\makelabel\ttlabel\itemsep=0pt\parsep=3pt\leftmargin=1.5cm}
 \item[-R] the total number of molecules.  This argument is compulsory.
 \item[-Q] the number of polyatomic molecules.  This argument is compulsory.
@@ -5058,6 +5057,150 @@ positions and quaternions.  It is written so that only the output routine
 (called \Lit{schakal\_out()}) is SCHAKAL specific.  This is quite
 short and can easily be replaced with one tailored to a different
 purpose.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Msd}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\emph{Msd} is a utility for calculating the mean square displacements
+of selected species from the dump files written during the course of a
+Moldy run. A plot of msd against time enables the diffusion
+coefficient of that species to be calculated from the gradient using
+the Einstein relation
+\begin{equation}
+   <|\bm{r}(t)-\bm{r}(0)|^2> = 6 D t
+\end{equation}
+(see Allen and Tildesley\cite[p60]{allen:87}).
+
+For a species of $N$ particles, the mean square displacement is
+calculated as
+\begin{equation}  
+        <|\bm{r}(t)-\bm{r}(0)|^2> = \frac{1}{N N_t}
+        \sum_{n=1}^{N} \sum_{t_0}^{N_t}
+        |\bm{r}_n(t+t_0) - \bm{r}(t_0)|^2
+\end{equation}
+
+where $\bm{r}_n(t)$ is the position of particle $n$ at
+time $t$.  In interactive mode you are prompted for the source of the
+system specification (sys-spec or restart file) and the dump file for
+reading the configurational information. You will also be prompted to
+supply the dump range limits and msd time interval limits before the
+calculation can commence. Be careful to either redirect the output
+(using \Lit{>} on unix) or specify an output file with \Lit{-o},
+otherwise the output will go to the screen!  More options can be
+specified in command line mode:
+
+\begin{center}
+\Lit{msd}
+\Lit{[-s} \textit{system-specification} \Lit{]|}% 
+\Lit{[-r} \textit{restart-file} \Lit{]}
+\Lit{[-d} \textit{dump-file-format} \Lit{]}
+\Lit{[-t} \textit{dump-range} \Lit{]} \\
+
+\Lit{[-m} \textit{msd-time-range} \Lit{]}
+\Lit{[-i} \textit{initial-time-increment} \Lit{]}
+\Lit{[-g} \textit{species-range} \Lit{]}
+\Lit{[-u]}
+\Lit{[-w} \textit{trajectory-output-format} \Lit{]}
+\Lit{[-x]} \Lit{[-y]} \Lit{[-z]}
+\Lit{[-o} \textit{output-file} \Lit{]}
+\end{center}
+
+where meanings of the options are
+\begin{list}{}{\let\makelabel\ttlabel\itemsep=0pt\parsep=3pt\leftmargin=1.5cm}
+\item[-s] read the species data from a system specification file.
+\item[-r] read the species data from a restart file. Only one of
+  \Lit{-s} or \Lit{-r} may be given.
+\item[-d] read the centre of mass coordinates from a dump file given as a
+prototype name containing a \Lit{printf()} format string -- see
+section~\ref{sec:dumping}. 
+\item[-t] range of records in dump file, specified in ``selector'' format.
+\item[-m] time intervals to calculate the msd values for, specified in
+  ``selector'' format.
+\item[-i] the increment the initial time, $t_0$, is increased by during
+calculation of msd for a given time interval. Defaults to 1.
+\item[-g] range of species to be included, given in ``selector''
+  format where \Lit{0} = represents the \emph{first} species. Defaults
+  to all species. 
+\item[-u] option to by-pass msd calculation and output the connected particle
+trajectories in the format selected by \Lit{-w}. 
+\item[-w] selects output format for trajectory data. Set to 
+        \Lit{0} for format readable by GNUPlot (default) or
+        \Lit{1} for generic format (simple matrix)
+      \item[-x, -y, -z] indicate that limits are to be specified in
+        the given direction. Only particles whose positions in the
+        first timeslice lie within these limits are included in the
+        trajectory output. The user is prompted at run time for the
+        limits. The default is to include all particles.
+\item[-o] name of optional output file. Defaults to standard output.
+
+\end{list}
+
+The output format for msd calculations consists of four columns
+corresponding to the $x, y, z$ components and total msd, with
+increasing time intervals down the columns.
+
+The time intervals specified by \Lit{-m} (and initial time increment
+\Lit{-i}) are taken relative to the dump slices selected with \Lit{-t}
+rather than the complete dump records stored in the dump files. For
+example, if dump records 1,3,5..19 are extracted using \Lit{-t}, then
+time intervals of \Lit{-m} 1-5 correspond to "real" intervals of
+2,4,...,10 relative to the original dump file data. It should also be
+pointed out that the msds for each time interval are only averaged
+over as many initial time slices as the \emph{longest} time interval.
+Therefore it is usual to specify the largest value of \Lit{-m} to be
+half that of the total number of dump slices in order to optimise the
+msd time interval and number of calculations over which each msd is
+averaged.
+
+Selecting option \Lit{-u} circumvents calculation of the msds and
+instead sends the connected trajectory coordinates to the output. The
+default format for trajectory data is "\# \textit{species-name}" followed by a
+row of $x y z$ for a single particle for each increasing time interval.
+Trajectory data for each particle are separated by two blank lines.
+This is the format favoured by GNUPlot. Specifying \Lit{-w 1}  selects
+the generic matrix format in which a single row contains consecutive $x
+y z$ coordinates for all particles, with time increasing down the
+columns.
+
+The \Lit{-x}, \Lit{-y} and \Lit{-z} options only apply to the
+trajectory data and are useful for reducingthe number of particle
+trajectories outputted by "cutting" the simulation box into more
+manageable slices.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Mdavpos}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Mdavpos is a utility for calculating the average positions of particles
+from dump slices recorded during a Moldy run. The utility is similar to
+Mdshak, with command line options
+
+\begin{center}
+\Lit{mdavpos}
+\Lit{[-s} \textit{system-specification}\Lit{]}
+\Lit{[-r} \textit{restart-file}\Lit{]}
+\Lit{[-d} \textit{dump-file-format}\Lit{]}
+\Lit{[-t} \textit{dump-range}\Lit{]} 
+\Lit{[-h]}
+\Lit{[-p]}
+\Lit{[-x]}
+\Lit{[-o} \textit{output-file}\Lit{]}
+\end{center}
+
+where the arguments have the following meanings
+
+\begin{list}{}{\let\makelabel\ttlabel\itemsep=0pt\parsep=3pt\leftmargin=1.5cm}
+\item[-s] read a system specification file.
+\item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
+\item[-d] read configurational data from a dump file given as a prototype name
+containing a printf() format string - see section 3.7.
+\item[-t] range of records in the dump file, specified in ``selector'' format, to
+average positions over.
+\item[-h] give the output in SCHAKAL format (default).
+\item[-p] give the output in Brookhaven Protein Data Bank (PDB) format.
+\item[-x] give the output in XYZ format suitable for Xmol or RasMol.
+\item[-o] name of optional output file. Defaults to standard output.
+\end{list}
 
 \bibliography{simulation,mypubs}
 \bibliographystyle{amsplain}
