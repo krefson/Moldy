@@ -92,7 +92,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 2.3 93/10/28 15:23:41 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 2.4 94/01/18 13:41:12 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
