@@ -1,6 +1,16 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([Moldy],[3.2])
+AC_INIT([Moldy],[3.5pre4])
 AC_CONFIG_SRCDIR([accel.c])
+
+if test "x$CC" != "x" ; then
+   for c in cc gcc c89 ; do
+     ($c dummy.c -c -o $dummy.o) >/dev/null 2>&1
+     if test $? = 0 ; then
+         CC_FOR_BUILD="$c"; break
+     fi
+   done
+   export CC_FOR_BUILD
+fi
 
 AC_CANONICAL_TARGET([])
 
@@ -16,9 +26,9 @@ parlib=$enableval, parlib=none
 )
 
 if test $parlib = "mpi"; then
-   compilers="mpicc pgcc cc c89 gcc egcs"
+   compilers="mpicc hcc icc pgcc cc c89 gcc egcs"
 elif test $parlib = "bsp"; then
-   compilers="bspcc pgcc cc c89 gcc egcs"
+   compilers="bspcc pgcc icc cc c89 gcc egcs"
 else
    compilers="icc pgcc cc c89 gcc egcs"
 fi
@@ -31,12 +41,12 @@ dnl Check for C compiler. DEFCC is preferred compiler, ALTCC is a list
 dnl  of alternatives *which take the same flags*
 dnl
    case "${target}" in
-      alpha*-dec-osf*)    DEFCC="cc -migrate" ALTCC="mpicc bspcc cc c89";;
-      hppa?.*-hp-*)       DEFCC=c89 ALTCC="mpicc bspcc cc";;
-      rs6000-ibm-aix*)    DEFCC=cc ALTCC="mpcc mpicc bspcc xlc c89" ;;
-      sparc-sun-sunos*)   DEFCC=cc ALTCC="mpicc bspcc acc";;
-      sparc-sun-solaris*) DEFCC=cc ALTCC="mpicc bspcc c89";;
-      mips-sgi-irix*)     DEFCC=cc ALTCC="mpicc bspcc c89";;
+      alpha*-dec-osf*)    DEFCC="cc -migrate" ALTCC="mpicc bspcc hcc cc c89";;
+      hppa?.*-hp-*)       DEFCC=c89 ALTCC="mpicc bspcc hcc cc";;
+      rs6000-ibm-aix*)    DEFCC=cc ALTCC="mpcc mpicc bspcc hcc xlc c89" ;;
+      sparc-sun-sunos*)   DEFCC=cc ALTCC="mpicc bspcc hcc acc";;
+      sparc-sun-solaris*) DEFCC=cc ALTCC="mpicc bspcc hcc c89";;
+      mips-sgi-irix*)     DEFCC=cc ALTCC="mpicc bspcc hcc c89";;
 dnl   
 dnl Unfortunately the Bourne-shell "env=value command" construct breaks the 
 dnl configure script.
@@ -47,8 +57,8 @@ dnl
 dnl
 dnl Alternative compilers for Linux
 dnl
-      i?86-pc-linux*)     DEFCC=pgcc ALTCC="icc mpicc bspcc";;
-                     *)   ALTCC="cc mpicc bspcc";;
+      i?86-pc-linux*)     DEFCC=pgcc ALTCC="icc mpicc bspcc hcc";;
+                     *)   ALTCC="cc mpicc bspcc hcc";;
    esac
 dnl
 dnl Here we test whether the specified (or default) C compiler is one of those
@@ -63,7 +73,7 @@ dnl
     case "${target}" in
      alpha*-dec-osf*)   : ${OPT=-tune\ host\ -O4}  \
                           ${OPT2=-tune\ host\ -ansi_alias\ -O5} \
-	                  ${OPTAUX=$OPT2};;
+                          ${OPTAUX=$OPT2};;
      #sparc-sun-sunos*) : ${OPT=-fast\ -xO4}  \
      #                    ${OPT2=-fast\ -xO4\ -fsimple}  \
      #                    ${LDFLAGS=-fast} ;;
@@ -77,7 +87,7 @@ dnl
      mips-sgi-irix5*)   : ${OPT=-O2\ -mips2} ${OPT2=$OPT} ${OPTAUX=$OPT2}\
                           ${LIBS=-lmalloc\ -lfastm} ;;
      mips-sgi-irix6*)   : ${EXTRA_CFLAGS=-woff\ 1174,84,1552,1680} ${LDFLAGS=-woff\ 84} \
-			  ${OPT=-O3} \
+                          ${OPT=-O3} \
                           ${OPT2=${OPT}\ -OPT:alias=restrict:fast_sqrt=on:roundoff=3:IEEE_arithmetic=3}} \
                           ${OPTAUX=$OPT2};;
      hppa1.*-hp-*)      : ${OPT=+O3\ +Olibcalls}  \
@@ -97,13 +107,12 @@ dnl
      alphaev*-cray-unicosmk*) : ${OPT=-O2} ${OPTAUX=-O3\ -hunroll,aggress,restrict=a} \
                           ${OPT2=$OPTAUX,inlinefrom=auxil.c} \
                           ${LIBS=-lsci} ;;
-     i?86-pc-linux*)      ${CPPFLAGS=-D_XOPEN_SOURCE} 
-			  if test $CC = "pgcc" ; then
-			   :  ${OPT=-O2} ${OPT2=$OPT} ${OPTAUX=$OPT2 -Munroll}
-		  	  fi
-      			  if test $CC = "icc" ; then
-			   :  ${OPT=-O3} ${OPT2=$OPT} ${OPTAUX=$OPT2}
-		  	  fi ;;
+     i?86-pc-linux*)      if test $CC = "pgcc" ; then
+                           :  ${OPT=-O2} ${OPT2=$OPT} ${OPTAUX=$OPT2 -Munroll}
+                            fi
+                                if test $CC = "icc" ; then
+                           :  ${OPT=-O3} ${OPT2=$OPT} ${OPTAUX=$OPT2}
+                            fi ;;
 
                     *)  : ${OPT=-O} ${OPT2=$OPT} ${OPTAUX=$OPT2}
     esac
@@ -141,13 +150,6 @@ dnl AC_CHECK_LIB(m, main)
 dnl Checks for header files.
 dnl ANSI headers.  
 AC_HEADER_STDC
-rm -f string.h time.h stddef.h stdlib.h
-if test $ac_cv_header_stdc = no; then
-$LN_S string-subst.h string.h
-$LN_S time-subst.h time.h
-$LN_S stddef-subst.h stddef.h
-$LN_S stdlib-subst.h stdlib.h
-fi
 
 AC_CHECK_HEADERS(sys/param.h sys/resource.h sys/time.h sys/times.h sys/types.h rpc/xdr.h)
 AC_HEADER_TIME
@@ -170,8 +172,6 @@ AC_CHECK_SIZEOF(float, 4)
 AC_CHECK_SIZEOF(int, 4)
 
 AC_TYPE_SIZE_T
-AC_CHECK_TYPE(time_t, long)
-AC_CHECK_TYPE(clock_t, long)
 
 dnl Checks for library functions.
 AC_TYPE_SIGNAL
