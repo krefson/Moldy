@@ -178,10 +178,10 @@ for( J=1; J<=N; J++ )
 	}
 }
 
-/* Sort eigenvalues and vectors into ascending order */
+/* Sort eigenvalues and vectors into descending order */
 void eigensort(real *ev, real *e, int n, vec_mt p)
 {
-   int i, j, min;
+   int i, j, max;
    real swap;
   
    for(i=0; i<n; i++)
@@ -189,21 +189,22 @@ void eigensort(real *ev, real *e, int n, vec_mt p)
 
    for(i=0; i<n-1; i++)
    {
-      min = i;
+      max = i;
+      swap = e[max];
       for(j = i+1; j < n; j++)
 	 if(e[j] > swap )
-	   min = j;
-      if( min != i)
+	   max = j;
+      if( max != i)
       {
-         swap = e[min];
-	 e[min] = e[i];
+         swap = e[max];
+	 e[max] = e[i];
 	 e[i] = swap;
 	 for(j=0; j<n; j++)
 	 {
-	    swap = ev[n*min+j];
-	    ev[n*min+j] = ev[n*i+j];
+	    swap = ev[n*max+j];
+	    ev[n*max+j] = ev[n*i+j];
 	    ev[n*i+j] = swap;
-            if( j != min && j != i)
+            if( j != max && j != i)
                p[j] *= -1.0;
 	 }
       }
