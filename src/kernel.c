@@ -14,6 +14,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 1.6  89/12/15  12:56:53  keith
+ * Added conditional ionclusion of <fastmath.h> for stellar
+ * 
  * Revision 1.5  89/11/20  13:29:26  keith
  * Replaced separate arrays "types" and "npotp" with array of structs "potspec"
  * 
@@ -32,7 +35,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/kernel.c,v 1.5 89/11/20 13:29:26 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore1/keith/md/moldy/RCS/kernel.c,v 1.6 89/12/15 12:56:53 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -110,6 +113,7 @@ register real	*pot[];
    		exp_f1, exp_f2,		/* Temporary for b*exp(-cr) etc      */
    		r_sqr_r, r_12_r;	/* Powers of above                    */
    register int	jsite;
+   real *p0 = pot[0], *p1 = pot[1], *p2 = pot[2], *p3 = pot[3];
 
    switch(ptype)
    {
@@ -123,14 +127,14 @@ VECTORIZE
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = 1.0 / r;
 	    r_sqr_r = SQR(r_r);
-	    r_6_r = SQR(pot[1][jsite])* r_sqr_r;
+	    r_6_r = SQR(p1[jsite])* r_sqr_r;
 	    r_6_r   = CUBE(r_6_r);
 	    r_12_r  = SQR(r_6_r);
 	    expa2r2 = nab_chg[jsite]* chg * exp(-SQR(alpha*r));
 	    t = 1.0/(1.0+PP*(alpha*r));
 	    erfc_term = POLY5(t) * expa2r2 * r_r;
-	    ppe += erfc_term + pot[0][jsite]*(r_12_r - r_6_r);
-	    forceij[jsite] = r_sqr_r*(6.0*pot[0][jsite]*(2*r_12_r - r_6_r)
+	    ppe += erfc_term + p0[jsite]*(r_12_r - r_6_r);
+	    forceij[jsite] = r_sqr_r*(6.0*p0[jsite]*(2*r_12_r - r_6_r)
 				      + erfc_term + norm * expa2r2);
 	 }
       else
@@ -138,11 +142,11 @@ VECTORIZE
          for(jsite=j0; jsite < nnab; jsite++)
 	 {
 	    r_sqr_r = 1.0 / r_sqr[jsite];
-	    r_6_r = SQR(pot[1][jsite])* r_sqr_r;
+	    r_6_r = SQR(p1[jsite])* r_sqr_r;
 	    r_6_r   = CUBE(r_6_r);
 	    r_12_r  = SQR(r_6_r);
-	    ppe += pot[0][jsite]*(r_12_r - r_6_r);
-	    forceij[jsite] = r_sqr_r*6.0*pot[0][jsite]*(2*r_12_r - r_6_r);
+	    ppe += p0[jsite]*(r_12_r - r_6_r);
+	    forceij[jsite] = r_sqr_r*6.0*p0[jsite]*(2*r_12_r - r_6_r);
 	 }
       break;
     case E6POT:
@@ -153,14 +157,14 @@ VECTORIZE
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = 1.0 / r;
 	    r_sqr_r = SQR(r_r);
-	    r_6_r   = pot[0][jsite] * CUBE(r_sqr_r);
+	    r_6_r   = p0[jsite] * CUBE(r_sqr_r);
 	    expa2r2 = nab_chg[jsite]* chg * exp(-SQR(alpha*r));
 	    t = 1.0/(1.0+PP*(alpha*r));
 	    erfc_term = POLY5(t) * expa2r2 * r_r;
-	    exp_f1 = pot[1][jsite] * exp(-pot[2][jsite] * r);
+	    exp_f1 = p1[jsite] * exp(-p2[jsite] * r);
 	    ppe += erfc_term - r_6_r + exp_f1;
 	    forceij[jsite] = r_sqr_r*(-6.0* r_6_r+ erfc_term + norm * expa2r2)
-	    + pot[2][jsite]*exp_f1 * r_r;
+	    + p2[jsite]*exp_f1 * r_r;
 	 }
       else
 VECTORIZE
@@ -169,11 +173,11 @@ VECTORIZE
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = 1.0 / r;
 	    r_sqr_r = SQR(r_r);
-	    r_6_r   = pot[0][jsite] * r_sqr_r * r_sqr_r * r_sqr_r;
-	    exp_f1 = pot[1][jsite] * exp(-pot[2][jsite] * r);
+	    r_6_r   = p0[jsite] * r_sqr_r * r_sqr_r * r_sqr_r;
+	    exp_f1 = p1[jsite] * exp(-p2[jsite] * r);
 	    ppe +=  - r_6_r + exp_f1;
 	    forceij[jsite] = -r_sqr_r * 6.0 * r_6_r
-	                     + pot[2][jsite]*exp_f1 * r_r;
+	                     + p2[jsite]*exp_f1 * r_r;
 	 }
       
       break;      
@@ -188,10 +192,10 @@ VECTORIZE
 	    expa2r2 = nab_chg[jsite]* chg * exp(-SQR(alpha*r));
 	    t = 1.0/(1.0+PP*(alpha*r));
 	    erfc_term = POLY5(t) * expa2r2 * r_r;
-	    exp_f1 =  pot[0][jsite] * exp(-pot[1][jsite]*r);
-	    exp_f2 = -pot[2][jsite] * exp(-pot[3][jsite]*r);
+	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
+	    exp_f2 = -p2[jsite] * exp(-p3[jsite]*r);
 	    ppe += erfc_term + exp_f1 + exp_f2;
-	    forceij[jsite] = (pot[1][jsite]*exp_f1 + pot[3][jsite]*exp_f2) * r_r
+	    forceij[jsite] = (p1[jsite]*exp_f1 + p3[jsite]*exp_f2) * r_r
 	    + (erfc_term + norm * expa2r2) * r_sqr_r;
 	 }
        else
@@ -200,10 +204,10 @@ VECTORIZE
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = 1.0 / r;
-	    exp_f1 =  pot[0][jsite] * exp(-pot[1][jsite]*r);
-	    exp_f2 = -pot[2][jsite] * exp(-pot[3][jsite]*r);
+	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
+	    exp_f2 = -p2[jsite] * exp(-p3[jsite]*r);
 	    ppe += exp_f1 + exp_f2;
-	    forceij[jsite] = (pot[1][jsite]*exp_f1 + pot[3][jsite]*exp_f2) *r_r;
+	    forceij[jsite] = (p1[jsite]*exp_f1 + p3[jsite]*exp_f2) *r_r;
 	 }
       break;      
    }
