@@ -31,6 +31,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.19  2001/02/13 17:45:09  keith
+ *       Added symplectic Parrinello-Rahman constant pressure mode.
+ *
  *       Revision 2.18  2000/12/06 17:45:33  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -197,7 +200,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/restart.c,v 2.18 2000/12/06 17:45:33 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/restart.c,v 2.19 2001/02/13 17:45:09 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -405,7 +408,6 @@ void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr)
 #ifdef USE_XDR
    char         vbuf[sizeof header->vsn + 1];
 #endif
-   int		vmajor,vminor;
    xfp_mt	xfp;
    xfp.xp =     &xdrs;
 
@@ -435,21 +437,6 @@ void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr)
     * Ensure header version string is null-terminated -- we rely on it.
     */
    header->vsn[sizeof header->vsn-1] = '\0'; 
-   /*
-    * Parse header version
-    */
-   if( sscanf(header->vsn, "%d.%d", &vmajor, &vminor) < 2 )
-      message(NULLI, NULLP, FATAL, INRVSN, header->vsn);
-   /*
-    * Bodge up botched control struct in restart files written by 
-    * Moldy 2.10 ir restart.c 2.9
-    */
-   if( vmajor == 2 && vminor == 9 )
-   {
-      contr->ttmass = contr->rtmass = 10000.0;
-      contr->const_temp = 0;
-      message(NULLI,NULLP,WARNING,BODGUP,contr->ttmass);
-   }
 }
 /******************************************************************************
  *  conv_potsize    Convert potential parameters array if NPOTP has changed   *
@@ -491,28 +478,15 @@ void	re_re_sysdef(FILE *restart,     /* File pointer to read info from     */
    spec_mp	spec;
    size_mt	old_pot_size;
    int		old_npotp, n_pot_recs;
-   int		vmajor,vminor;
    xfp_mt	xfp;
 
    xfp.xp = &xdrs;
    xfp.fp = restart;
 
    /*
-    * Parse header version
-    */
-   if( sscanf(vsn, "%d.%d", &vmajor, &vminor) < 2 )
-      message(NULLI, NULLP, FATAL, INRVSN, vsn);
-
-   /*
     *  Read in system structure.
-    *  Size changed in 2.11, read old files (XDR only).
     */
-   if( vmajor > 2 || (vmajor == 2 && vminor > 9) )
-     cread(xfp,  (gptr*)system, lsizeof(system_mt), 1, xdr_system);
-   else
-     cread(xfp,  (gptr*)system, lsizeof(system_mt)-10*lsizeof(real*),
-	   1, xdr_system_2);
-
+   cread(xfp,  (gptr*)system, lsizeof(system_mt), 1, xdr_system);
    /* Allocate space for species, site_info and potpar arrays and set pointers*/
    *spec_ptr  = aalloc(system->nspecies,                spec_mt );
    *site_info = aalloc(system->max_id,                  site_mt );
@@ -561,15 +535,8 @@ void	read_restart(FILE *restart,       /* Open file descriptor to read from*/
    int   	rdf_size;
    gptr		*rdf_base;
 
-   int		vmajor,vminor;
    xfp_mt	xfp;
 
-   /*
-    * Parse header version
-    */
-   if( sscanf(vsn, "%d.%d", &vmajor, &vminor) < 2 )
-      message(NULLI, NULLP, FATAL, INRVSN, vsn);
-      
    xfp.xp= &xdrs;
    xfp.fp=restart;
 
@@ -579,21 +546,18 @@ void	read_restart(FILE *restart,       /* Open file descriptor to read from*/
    if(system->nmols_r > 0)
    {
       cread(xfp,  (gptr*)system->quat,    lsizeof(real), 4*system->nmols_r, xdr_real);
-      cread(xfp,  (gptr*)system->avel,    lsizeof(real), 4*system->nmols_r, xdr_real);
-      cread(xfp,  (gptr*)system->avelp,   lsizeof(real), 4*system->nmols_r, xdr_real);
+      cread(xfp,  (gptr*)system->amom,    lsizeof(real), 4*system->nmols_r, xdr_real);
+      cread(xfp,  (gptr*)system->amomp,   lsizeof(real), 4*system->nmols_r, xdr_real);
    }
    cread(xfp,  (gptr*)system->h,       lsizeof(real), 9, xdr_real);
    cread(xfp,  (gptr*)system->hmom,    lsizeof(real), 9, xdr_real);
    cread(xfp,  (gptr*)system->hmomp,   lsizeof(real), 9, xdr_real);
 
-   if( vmajor > 2 || (vmajor == 2 && vminor > 7) )
-   {
-      cread(xfp,  (gptr*)&system->ts,      lsizeof(real), 1, xdr_real);
-      cread(xfp,  (gptr*)&system->tsmom,   lsizeof(real), 1, xdr_real);
-
-      cread(xfp,  (gptr*)&system->rs,      lsizeof(real), 1, xdr_real);
-      cread(xfp,  (gptr*)&system->rsmom,   lsizeof(real), 1, xdr_real);
-   }
+   cread(xfp,  (gptr*)&system->ts,      lsizeof(real), 1, xdr_real);
+   cread(xfp,  (gptr*)&system->tsmom,   lsizeof(real), 1, xdr_real);
+   
+   cread(xfp,  (gptr*)&system->rs,      lsizeof(real), 1, xdr_real);
+   cread(xfp,  (gptr*)&system->rsmom,   lsizeof(real), 1, xdr_real);
 
    ap = av_ptr(&asize,av_convert);	      /* get addr, size of database   */
    xdr_set_av_size_conv(asize,av_convert);    /* Pass  to xdr_averages.  Ugh! */
@@ -688,8 +652,8 @@ void	write_restart(char *save_name,  /* Name of save file to be written    */
    if(system->nmols_r > 0)
    {
       cwrite(xfp, (gptr*)system->quat,    lsizeof(real), 4*system->nmols_r, xdr_real);
-      cwrite(xfp, (gptr*)system->avel,    lsizeof(real), 4*system->nmols_r, xdr_real);
-      cwrite(xfp, (gptr*)system->avelp,   lsizeof(real), 4*system->nmols_r, xdr_real); 
+      cwrite(xfp, (gptr*)system->amom,    lsizeof(real), 4*system->nmols_r, xdr_real);
+      cwrite(xfp, (gptr*)system->amomp,   lsizeof(real), 4*system->nmols_r, xdr_real); 
    }
    cwrite(xfp,  (gptr*)system->h,       lsizeof(real), 9, xdr_real);
    cwrite(xfp,  (gptr*)system->hmom,    lsizeof(real), 9, xdr_real);

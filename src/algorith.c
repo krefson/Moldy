@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: algorith.c,v $
+ *       Revision 2.18  2001/02/13 17:45:07  keith
+ *       Added symplectic Parrinello-Rahman constant pressure mode.
+ *
  *       Revision 2.17  2000/12/06 17:45:27  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -169,7 +172,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/algorith.c,v 2.17 2000/12/06 17:45:27 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/algorith.c,v 2.18 2001/02/13 17:45:07 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -199,6 +202,9 @@ void	note(char *, ...);		/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
 /*========================== Macros ==========================================*/
 #define MATMUL(i, m, r, o) (m[i][0]*r[0][o] + m[i][1]*r[1][o] + m[i][2]*r[2][o])
+#ifndef INERTIA_MIN
+#define INERTIA_MIN	1.0e-14		/* Tolerance for zero mom of I	      */
+#endif
 /*============================================================================*/
 /******************************************************************************
  *  rotate        Perform the rotation described by the quaternions in the    *
@@ -375,7 +381,7 @@ double	trans_ke(mat_mt h,       /* Unit cell matrix                      (in) */
 /******************************************************************************
  *  rot_ke  calculate and return the rotational kinetic energy                *
  ******************************************************************************/
-double	rot_ke(quat_mt (*omega_p),/* Principal angular velocities        (in) */ 
+double	rot_ke(quat_mt (*amom),   /* Principal angular momenta           (in) */ 
 	       real s,            /* Thermostat, time scaling variable   (in) */
 	       real *inertia,     /* Principal moments of inertia        (in) */
 	       int nmols)	  /* Number of molecules                 (in) */
@@ -384,8 +390,9 @@ double	rot_ke(quat_mt (*omega_p),/* Principal angular velocities        (in) */
    int		i;
    
    for(i = 0; i < 3; i++)
-      ke += inertia[i] * vdot(nmols, omega_p[0]+i+1, 4, omega_p[0]+i+1, 4);
-
+     if( inertia[i] > INERTIA_MIN )
+       ke += vdot(nmols, amom[0]+i+1, 4, amom[0]+i+1, 4)/inertia[i];
+   
    return(0.5 * ke/ SQR(s));
 }
 /******************************************************************************

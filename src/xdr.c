@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.21  2001/05/22 14:52:45  keith
+ *       Added control param "dont-use-symm-rot" to switch between rotational
+ *       leapfrog versions at runtime.
+ *
  *       Revision 2.20  2001/02/19 19:36:45  keith
  *       First working version of combined isothermic/isobaric ensemble.
  *       (Previous version was faulty).
@@ -133,7 +137,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.20 2001/02/19 19:36:45 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.21 2001/05/22 14:52:45 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -202,16 +206,6 @@ bool_t xdr_system(XDR *xdrs, system_mt *sp)
        */
       xdr_opaque(xdrs, (gptr*)&sp->c_of_m, 9*XDR_4PTR_SIZE) &&
       xdr_vector(xdrs, (gptr*)&sp->ts, 5, sizeof(real),(xdrproc_t)xdr_real);
-}
-
-/*
- * This version for reading restart files written by 2.10 or before.
- */
-bool_t xdr_system_2(XDR *xdrs, system_mt *sp)
-{
-   return
-      xdr_vector(xdrs, (gptr*)&sp->nsites, 8, sizeof(int), (xdrproc_t)xdr_int) &&
-      xdr_opaque(xdrs, (gptr*)&sp->c_of_m, 18*XDR_4PTR_SIZE);
 }
 
 bool_t xdr_species(XDR *xdrs, spec_mt *sp)

@@ -43,6 +43,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.21  2001/03/06 15:32:10  keith
+ *       Fixed classic  C "shoot own feet" bug.
+ *
  *       Revision 2.20  2001/02/13 17:45:07  keith
  *       Added symplectic Parrinello-Rahman constant pressure mode.
  *
@@ -222,7 +225,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.20 2001/02/13 17:45:07 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.21 2001/03/06 15:32:10 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -251,13 +254,17 @@ void            vscale( int,  double,  real *, int); /* Vector* const multiply *
 static void	dump_convert(float *, system_mt (*), spec_mt (*), vec_mt (*), 
 			     vec_mt (*), mat_mt, double );
 static void	real_to_float(real *b, float *a, int n);
-static void	avel_to_float(quat_mt *b, float *a, int n, double ts);
+static void	amom_to_float(spec_mt *species, float *a, int n, double ts);
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
 /*========================== External data references ========================*/
 extern contr_mt	control;                    /* Main simulation control parms. */
 #ifdef USE_XDR
 static   XDR		xdrs;
+#endif
+/*============================================================================*/
+#ifndef INERTIA_MIN
+#define INERTIA_MIN	1.0e-14		/* Tolerance for zero mom of I	      */
 #endif
 /*============================================================================*/
 FILE  *open_dump(char *fname, char *mode)
@@ -483,7 +490,7 @@ void	dump(system_mp system, spec_mt *species,
    boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.20 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.21 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    if( ! strchr(control.dump_file, '%') )
@@ -742,7 +749,7 @@ static void	dump_convert(float *buf, system_mt *system, spec_mt *species,
       transpose(hinvt, hinvt);
       mat_vec_mul(hinvt, system->mom, scale_buf, nmols);
       for (spec = species, imol=0; spec < &species[system->nspecies]; 
-	   imol += spec->nmols, spec++)
+	   imol += spec->nmols,spec++)
 	 vscale(3 * spec->nmols,   1.0/(spec->mass*system->ts), scale_buf[imol], 1);
       /*
        * 1/w*hmom*rho[i] term.
@@ -753,7 +760,7 @@ static void	dump_convert(float *buf, system_mt *system, spec_mt *species,
 
       if( system->nmols_r > 0 )
       {
-	 avel_to_float(system->avel, buf, nmols_r, 1.0/system->ts);
+	 amom_to_float(species, buf, system->nspecies, 1.0/system->ts);
 	 buf += 3*nmols_r;
       }
       real_to_float(system->hmom[0],    buf, 9);	buf += 9;
@@ -782,15 +789,34 @@ static void	real_to_float(real *b, float *a, int n)
       a[i] = b[i];
 }
 /******************************************************************************
- *  avel_to_float  Copy data from angular velocity array of quaternions to    *
+ *  amom_to_float  Copy data from angular velocity array of quaternions to    *
  *  vector, float array.                                                      *
  ******************************************************************************/
-static void	avel_to_float(quat_mt *b, float *a, int n, double rts)
+static void	amom_to_float(spec_mt *species, float *a, 
+			      int nspecies, double rts)
 {
-   int i,iq;
-   for( iq=0; iq<n; iq++)
+   int i,imol = 0,im;
+   spec_mt *spec;
+   real rinertia[3];
+   
+   for (spec = species; spec < &species[nspecies]; spec++)
    {
-      for(i=0; i<3; i++)
-	 a[3*iq+i] = b[iq][i+1]*rts;
+     for(i=0; i<3; i++)
+     {
+       if( spec->inertia[i]/(spec->inertia[(i+1)%3]+spec->inertia[(i+2)%3]) 
+	   < INERTIA_MIN )
+	 rinertia[i] = 0.0;
+       else
+	 rinertia[i] = 1.0/spec->inertia[i];
+     }
+
+     if( spec-> rdof > 0 )
+     {
+        for( im=0; im < spec->nmols; im++, imol++)
+        {
+	  for(i=0; i<3; i++)
+	    a[3*imol+i] = spec->amom[im][i+1]*rts*rinertia[i];
+	}
+     }
    }
 }

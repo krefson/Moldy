@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.29  2001/05/22 14:52:45  keith
+ *      Added control param "dont-use-symm-rot" to switch between rotational
+ *      leapfrog versions at runtime.
+ *
  *      Revision 2.28  2001/02/22 10:24:38  keith
  *      Reinstated capability of "molecular" cutoff, but still using Bekker stress.
  *
@@ -309,7 +313,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.28 2001/02/22 10:24:38 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.29 2001/05/22 14:52:45 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -664,15 +668,15 @@ void	thermalise(system_mp system, spec_mt *species)
 	 {
 	    for(i = 0; i < 3; i++)
 	       if(spec->inertia[i] != 0.0)
-		  root_kti[i] = sqrt(kB * control.temp / spec->inertia[i]);
+		  root_kti[i] = sqrt(kB * control.temp * spec->inertia[i]);
 	       else
 		  root_kti[i] = 0.0;
 	    
 	    for(imol = 0; imol < spec->nmols; imol++)
 	    {
-	       spec->avel[imol][0] = 0.0;
+	       spec->amom[imol][0] = 0.0;
 	       for(i = 0; i < 3; i++)	/* Centre of mass co-ords -1 < x < 1  */
-		  spec->avel[imol][i+1] = root_kti[i] * gauss_rand();
+		  spec->amom[imol][i+1] = root_kti[i] * gauss_rand();
 	    }
 	 }
       }
@@ -845,11 +849,11 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
    if(system->nmols_r > 0)
    {
       system->quat   = qalloc(system->nmols_r);
-      system->avel   = qalloc(system->nmols_r);
-      system->avelp  = qalloc(system->nmols_r);
+      system->amom   = qalloc(system->nmols_r);
+      system->amomp  = qalloc(system->nmols_r);
    }
    else
-      system->quat = system->avel = system->avelp = 0;
+      system->quat = system->amom = system->amomp = 0;
 
 
    system->h       = ralloc(3);
@@ -877,17 +881,17 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
       if(spec->rdof > 0)
       {
          spec->quat    = system->quat    + nmolr_cum;
-         spec->avel    = system->avel    + nmolr_cum;
-         spec->avelp   = system->avelp   + nmolr_cum;
+         spec->amom    = system->amom    + nmolr_cum;
+         spec->amomp   = system->amomp   + nmolr_cum;
          nmolr_cum += spec->nmols;
 #ifdef	DEBUG
          printf(" *D* Species %d Dynamic variables (all %d x 4 reals)\n",
 		spec-species, spec->nmols);
-         printf(afmt,"quat",spec->quat, "avel",spec->avel);
+         printf(afmt,"quat",spec->quat, "amom",spec->amom);
 #endif
       }
       else
-	 spec->quat = spec->avel = spec->avelp = 0;
+	 spec->quat = spec->amom = spec->amomp = 0;
       nmol_cum += spec->nmols;
    }
 }
@@ -1079,6 +1083,7 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
    contr_mt	backup_control;		/* Control struct from backup file    */
    quat_mt	*qpf=0;			/* Quat of rotation to princ. frame   */
    spec_mt	*spec;			/* Species counter.		      */
+   int		imol;			/* Molecule counter		      */
    int		av_convert;		/* Flag for old-fmt averages in restrt*/
    int		vmajor, vminor;		/* Version numbers		      */
    mat_mt	htr, g, tmp_mat;	/* Temporary matricies.		      */
@@ -1107,6 +1112,14 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
          message(NULLI, NULLP, FATAL, ORFAIL, control.restart_file, 
 		 strerror(errno));
       re_re_header(restart, restart_header, &control);
+      if( sscanf(restart_header->vsn, "%d.%d", &vmajor, &vminor) < 2 )
+	 message(NULLI, NULLP, FATAL, INRVSN, restart_header->vsn);
+      /*
+       * Check that I can read this restart file
+       */
+      if( vmajor < 2 || vminor < 13 )
+	message(NULLI,NULLP,FATAL,OLDRST,restart_header->vsn);
+      
       /*
        *  Now reread control file to override restart file defaults.
        *  Need to do this here in case backup file name changed.
@@ -1346,8 +1359,6 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
       /*
        * Convert velocities into momenta
        */
-      if( sscanf(restart_header->vsn, "%d.%d", &vmajor, &vminor) < 2 )
-	 message(NULLI, NULLP, FATAL, INRVSN, restart_header->vsn);
       if( vmajor == 2 && vminor <= 18 )
       {
 	 note("Velocities from old restart file version %d.%d converted to momenta",
@@ -1358,6 +1369,21 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
 	 {
 	    mat_sca_mul(spec->mass*system->ts,g, tmp_mat);
 	    mat_vec_mul(tmp_mat, spec->mom, spec->mom, spec->nmols);
+	 }
+      }
+      if( vmajor == 2 && vminor <= 19 )
+      {
+	 note("Angular Velocities from old restart file version %d.%d converted to momenta",
+	      vmajor, vminor);
+	 for (spec = *species; spec < *species+system->nspecies; spec++)
+	 {
+	   if( spec->rdof > 0 )
+	     for(imol=0; imol < spec->nmols; imol++)
+	     {
+	       spec->amom[imol][1] *= spec->inertia[0];
+	       spec->amom[imol][2] *= spec->inertia[1];
+	       spec->amom[imol][3] *= spec->inertia[2];
+	     }
 	 }
       }
 

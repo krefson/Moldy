@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/messages.h,v 2.23 2000/11/16 10:54:19 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/messages.h,v 2.24 2001/02/09 13:17:52 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -66,6 +66,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #define	REREAD	"read error on restart file at byte %ld\n    -  %s"
 #define	REEOF	"unexpected end of file reading restart file"
 #define	REWRT	"write error on restart file\n    -  %s"
+#define OLDRST  "restart file version %s was written by wrong Moldy version - can not read"
 #define	NOVAL	"no value associated with name \"%s\""
 #define	NOTFND	"keyword \"%s\" not found"
 #define	BADVAL	"value \"%s\" is wrong type for keyword \"%s\""

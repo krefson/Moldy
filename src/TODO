@@ -9,10 +9,6 @@ Eliminate extra args for kernel.
 Take DEBUG_THERMOSTAT out of accel.c
 Get rid of system header -subst files?
 
-Dump legacy restart file reading.
-
-NPL version should test for 2.16 restart file and refuse to read....
-
 Fix T3E version - don't use MPI_ABORT as it dumps core
 
 Zap value of save-file when written to avoid overwriting?  Or test for
@@ -62,4 +58,8 @@ Fix "scaling" message in banner page not to print if scaling not to be
 performed.
 
 Fix "rescale" to fix Deng/Ca sim problem.
+
+Dump legacy restart file reading.
+
+NPL version should test for 2.16 restart file and refuse to read....
 

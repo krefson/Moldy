@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.33  2001/02/22 10:24:35  keith
+ *       Reinstated capability of "molecular" cutoff, but still using Bekker stress.
+ *
  *       Revision 2.32  2001/02/21 09:45:11  keith
  *       Modified rescale() function to reset thermostat variable to 1 and
  *       associated momentum to 0.  Every scaling now resets the thermostat
@@ -305,7 +308,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.32 2001/02/21 09:45:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.33 2001/02/22 10:24:35 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -326,10 +329,9 @@ void   leapf_com(double step, vec_mt (*c_of_m), vec_mt (*mom),
 		 mat_mt h, real s, real mass, int nmols);
 void   leapf_mom(double step, mat_mt, vec_mt (*mom), 
 		 vec_mt (*force),  int nmols);
-void   leapf_quat(double step, quat_mt (*quat), quat_mt (*avel), 
+void   leapf_quat(double step, quat_mt (*quat), quat_mt (*amom), 
 		  real *inertia, int nmols);
-void   leapf_avel(double step, quat_mt (*avel), vec_mt (*torque), 
-		  real *inertia, int nmols);
+void   leapf_amom(double step, quat_mt (*amom), vec_mt (*torque), int nmols);
 double leapf_s(double step, real s, real smom, double Q);
 double leapf_smom_a(double step, real s, real smomo,  double Q, double gkt);
 double leapf_smom_b(double step, real s, real smomo, double Q, double gkt);
@@ -387,7 +389,7 @@ void   thermalise(system_mp system, spec_mt *species);
                                       /* Randomize velocities to given temp  */
 double trans_ke(mat_mt, vec_mt (*mom_s), real s, double mass, int nmols);
                                      /* Compute translational kinetic energy */
-double rot_ke(quat_mt (*omega_p), real s, real *inertia, int nmols); 
+double rot_ke(quat_mt (*amom), real s, real *inertia, int nmols); 
                                     /* Compute rotational kinetic energy     */
 void   q_conj_mul(quat_mp p, quat_mp q, quat_mp r, int n);   
                                       /* Quat. conjugated x by quat. dot     */
@@ -530,7 +532,7 @@ rescale(system_mp system, spec_mp species)
 	 if( spec->rdof > 0 )
 	 { 
 	    scale = sqrt(control.temp / temp_value[2*ispec+1]);
-	    vscale(4 * spec->nmols, scale, spec->avel[0], 1);
+	    vscale(4 * spec->nmols, scale, spec->amom[0], 1);
 	 }
 	 
       }
@@ -622,7 +624,7 @@ double tot_ke (system_mt *sys, spec_mt *species)
    {
       ke += trans_ke(sys->h, spec->mom, sys->ts, spec->mass, spec->nmols) ;
       if(spec->rdof > 0)                     /* Only if polyatomic species */
-	 ke += rot_ke(spec->avel, sys->ts, spec->inertia, spec->nmols);
+	 ke += rot_ke(spec->amom, sys->ts, spec->inertia, spec->nmols);
    }
    return ke;
 }
@@ -649,7 +651,7 @@ void leapf_all_coords(double step, system_mt *sys, spec_mt *species)
       leapf_com(step, spec->c_of_m, spec->mom, sys->h, sys->ts, 
 		spec->mass, spec->nmols);
       if( spec->rdof > 0 )
-	 leapf_quat(step/sys->ts, spec->quat, spec->avel, 
+	 leapf_quat(step/sys->ts, spec->quat, spec->amom, 
 		    spec->inertia, spec->nmols);
    }
 }
@@ -666,8 +668,7 @@ void leapf_all_momenta(double step, system_mt *sys, spec_mt *species,
    {
       leapf_mom(step*sys->ts, sys->h, spec->mom,  force[ispec], spec->nmols);
       if( spec->rdof > 0 )
-	 leapf_avel(step*sys->ts, spec->avel, torque[ispec], spec->inertia, 
-		                                             spec->nmols);
+	 leapf_amom(step*sys->ts, spec->amom, torque[ispec], spec->nmols);
    }
 }
 /******************************************************************************

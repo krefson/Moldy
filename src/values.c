@@ -34,6 +34,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ *       Revision 2.18  2001/05/18 17:10:57  keith
+ *       Incorporated changes from Beeman branch 2.15e
+ *       Specifically fixes for translational thermostat dof problem
+ *       Additional mdshak etc output formats
+ *       Craig's extra ransub functionality.
+ *
  *       Revision 2.17  2001/02/13 17:45:10  keith
  *       Added symplectic Parrinello-Rahman constant pressure mode.
  *
@@ -182,7 +188,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.17 2001/02/13 17:45:10 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.18 2001/05/18 17:10:57 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -576,7 +582,7 @@ void	values(system_mt *system,        /* record of system info             */
 	 rkem5[ispec] = rkem3[ispec]; 
 	 rkem3[ispec] = rkem1[ispec]; 
 	 rkem1[ispec] = rkep1[ispec];
-         rkep1[ispec] = rot_ke(spec->avel, 0.5*(tsold+system->ts), spec->inertia, spec->nmols);
+         rkep1[ispec] = rot_ke(spec->amom, 0.5*(tsold+system->ts), spec->inertia, spec->nmols);
 	 if(rkem1[ispec] < 0.0)
 	    rkem1[ispec] = rkem3[ispec] = rkem5[ispec] = rkep1[ispec];
 	 e = KEINT(rkep1[ispec], rkem1[ispec], rkem3[ispec], rkem5[ispec]);

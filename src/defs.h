@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.18 2000/11/15 17:51:58 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.19 2001/02/22 11:51:47 keith Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.19  2001/02/22 11:51:47  keith
+ * Added "generic+win" potential.
+ *
  * Revision 2.18  2000/11/15 17:51:58  keith
  * Changed format of dump files.
  * Added second struct with sufficient information
@@ -300,7 +303,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * Version ID strings
  */
 #define          REVISION         "$Name:  $"
-#define		 REVISION_DATE    "$Date: 2000/11/15 17:51:58 $"
+#define		 REVISION_DATE    "$Date: 2001/02/22 11:51:47 $"
 #define		 REVISION_STATE   "$State: Exp $"
 
 #ifdef HAVE_CONFIG_H
@@ -514,3 +517,4 @@ typedef vec_mt	*mat_mp;
    			 (( (level & 1)    * (3*n + 4*n_r + 9 + 2)+ \
 			    (level>>1 & 1) * (3*n + 3*n_r + 9 + 1)+ \
                             (level>>3 & 1) * (3*n + 3*n_r + 9) ))
+#define INERTIA_MIN  1.0e-14       

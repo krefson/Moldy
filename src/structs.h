@@ -19,9 +19,13 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.18 2001/02/22 10:24:38 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.19 2001/05/22 14:52:45 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.19  2001/05/22 14:52:45  keith
+ * Added control param "dont-use-symm-rot" to switch between rotational
+ * leapfrog versions at runtime.
+ *
  * Revision 2.18  2001/02/22 10:24:38  keith
  * Reinstated capability of "molecular" cutoff, but still using Bekker stress.
  *
@@ -263,8 +267,8 @@ typedef struct                  /* Whole system information                   */
                 mom,            /* " " " momenta                              */
                 momp;           /* Predicted C of M momenta                   */
    quat_mp      quat,           /* Quaternions for this component             */
-                avel,           /* Quaternion derivatives                     */
-                avelp;          /* Predicted quaternion derivatives           */
+                amom,           /* Quaternion derivatives                     */
+                amomp;          /* Predicted quaternion derivatives           */
    mat_mp       h,              /* Unit cell for zero-stress simulation       */
                 hmom,           /* Unit cell derivatives                      */
                 hmomp;          /* Predicted unit cell derivatives            */
@@ -302,8 +306,8 @@ typedef struct                  /* Information for one species                */
                 mom,            /* " " " momenta                              */
                 momp;           /* Predicted C of M momenta                   */
    quat_mp      quat,           /* Quaternions for this species               */
-                avel,           /* Quaternion derivatives                     */
-                avelp;          /* Predicted quaternion derivatives           */
+                amom,           /* Quaternion derivatives                     */
+                amomp;          /* Predicted quaternion derivatives           */
 } spec_mt, *spec_mp;
 
 typedef struct                  /* site info template.                        */

@@ -22,6 +22,9 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.28  2001/02/13 17:45:08  keith
+ *       Added symplectic Parrinello-Rahman constant pressure mode.
+ *
  *       Revision 2.27  2000/12/06 17:45:32  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -112,7 +115,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2.27 2000/12/06 17:45:32 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2.28 2001/02/13 17:45:08 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -1131,8 +1134,8 @@ void	copy_dynamics(system_mp system)
    if(system->nmols_r > 0)
    {
       par_broadcast((gptr*)system->quat,    4*system->nmols_r, sizeof(real), 0);
-      par_broadcast((gptr*)system->avel,    4*system->nmols_r, sizeof(real), 0);
-      par_broadcast((gptr*)system->avelp,   4*system->nmols_r, sizeof(real), 0);
+      par_broadcast((gptr*)system->amom,    4*system->nmols_r, sizeof(real), 0);
+      par_broadcast((gptr*)system->amomp,   4*system->nmols_r, sizeof(real), 0);
    }
    par_broadcast((gptr*)system->h,       9, sizeof(real), 0); 
    par_broadcast((gptr*)system->hmom,    9, sizeof(real), 0);
