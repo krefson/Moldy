@@ -1,7 +1,10 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.20 92/06/11 21:40:41 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.21 92/06/12 12:55:56 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.21  92/06/12  12:55:56  keith
+ * Mods to make it work on VMS again.  Ugh.
+ * 
  * Revision 1.20  92/06/11  21:40:41  keith
  * Added LOCKEX macro for system-dependent lock extension.
  * 
@@ -84,8 +87,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.20 $"
-#define		 REVISION_DATE    "$Date: 92/06/11 21:40:41 $"
+#define          REVISION         "$Revision: 1.21 $"
+#define		 REVISION_DATE    "$Date: 92/06/12 12:55:56 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -296,7 +299,7 @@ typedef char	gptr;
 #define palloc(n) aalloc(n, vec_t *)
 #define qalloc(n) aalloc(n, quat_t)
 
-#define	xfree( ptr )	tfree( (gptr *) ptr )
+#define	xfree( ptr )	tfree( (gptr *) (ptr) )
 
 #ifdef ANSI_LIBS
 #   define memcp(s1,s2,n) (void)memcpy( (gptr*)(s1), (gptr*)(s2), (size_t)(n))
