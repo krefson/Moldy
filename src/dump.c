@@ -43,6 +43,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.20  2001/02/13 17:45:07  keith
+ *       Added symplectic Parrinello-Rahman constant pressure mode.
+ *
  *       Revision 2.19  2000/12/06 17:45:28  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -219,7 +222,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.19 2000/12/06 17:45:28 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.20 2001/02/13 17:45:07 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -480,7 +483,7 @@ void	dump(system_mp system, spec_mt *species,
    boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.19 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.20 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    if( ! strchr(control.dump_file, '%') )
@@ -739,7 +742,7 @@ static void	dump_convert(float *buf, system_mt *system, spec_mt *species,
       transpose(hinvt, hinvt);
       mat_vec_mul(hinvt, system->mom, scale_buf, nmols);
       for (spec = species, imol=0; spec < &species[system->nspecies]; 
-	   spec++, imol += spec->nmols)
+	   imol += spec->nmols, spec++)
 	 vscale(3 * spec->nmols,   1.0/(spec->mass*system->ts), scale_buf[imol], 1);
       /*
        * 1/w*hmom*rho[i] term.
