@@ -7,10 +7,14 @@
 #CFLAGS=	-O4 $(CFLAGS0)
 #LDFLAGS= $(LDFLAGS0)
 #INLINE=
+#  **** Sun (unbundled) CC -- fastest options & getter than gcc 2.0
+CFLAGS=	-O2 -dalign $(CFLAGS0)
+LDFLAGS=  /usr/lib/libm.il $(LDFLAGS0)
+#INLINE=
 #  **** Scalar machines using gcc - can compile with -g ****
-CC=	gcc
-CFLAGS= -g -O2 $(CFLAGS0)
-LDFLAGS= $(LDFLAGS0) -g
+#CC=	gcc
+#CFLAGS= -O2 $(CFLAGS0)
+#LDFLAGS= $(LDFLAGS0)
 #INLINE=
 #  **** Stellar ****
 #CFLAGS= -g -O2 -va -na -nv $(CFLAGS0)
@@ -111,12 +115,10 @@ proto-mdshak:	mdshak.c $(SHAKC)
 		protoize mdshak.c $(SHAKC)
 
 install:	moldy $(UTILS) mdshak
-		cp  $? $(HOME)/bin
-		(cd $(HOME)/bin; chmod 755 $?)
+		install $?  $? $(HOME)/bin
 
 install2:	moldy $(UTILS) mdshak
-		cp  $? $(HOME)/bin.$(HOSTTYPE)
-		(cd $(HOME)/bin.$(HOSTTYPE); chmod 755 $?)
+		install $?  $? $(HOME)/bin.$(HOSTTYPE)
 
 Makefile:	xmakefile
 		@PATH=/usr/5bin:${PATH};\
