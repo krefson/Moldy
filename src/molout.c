@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/molout.c,v 1.12 2002/09/19 09:26:29 kr Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/molout.c,v 1.12 2002/09/19 09:26:29 kr Exp $";
 #endif
 
 #include "defs.h"
@@ -11,6 +11,7 @@ static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/molout.c,v 1.12 20
 #include <stdio.h>
 #include "structs.h"
 #include "ReadDCD.h"
+#include "utlsup.h"
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 
 void	invert(real (*a)[3], real (*b)[3]);
@@ -22,14 +23,6 @@ void    afree(gptr *p);
 char    *atime(void);
 /*======================== Global vars =======================================*/
 extern contr_mt		control;
-#define OUTBIN 2
-#define SHAK   0
-#define XYZ 1
-#define DCD 3
-#define PDB 4
-#define CSSR 5
-#define ARC 6
-#define XTL 7
 /******************************************************************************
  ******************************************************************************/
 void 
@@ -90,9 +83,9 @@ void	shift(vec_mt (*r), int nmols, real *s)
    int imol;
    for(imol = 0; imol < nmols; imol++)
    {
-      r[imol][0] -= s[0];
-      r[imol][1] -= s[1];
-      r[imol][2] -= s[2];
+      r[imol][0] += 0.5;
+      r[imol][1] += 0.5;
+      r[imol][2] += 0.5;
    }
 }
 /******************************************************************************
@@ -478,6 +471,10 @@ cssr_out(system_mt *system, mat_mp h, spec_mt *species,
          for(is = 0; is < spec->nsites; is++)
             if(fabs(site_info[spec->site_id[is]].mass) != 0)
                 isite++;
+
+/* Exit if no of atoms exceeds max allowed by CSSR format */
+   if( isite > 9999 )
+      error("Too many atoms \(%d\) for CSSR format. Process aborted.", isite);
 
 /* Write the cssr header */
    (void)printf("%38c %7.3f %7.3f %7.3f\n",' ',a,b,c);
