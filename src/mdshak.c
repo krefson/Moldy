@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/mdshak.c,v 2.27.8.1 2003/07/29 09:45:10 moldydv Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdshak.c,v 2.27.8.2 2004/05/07 07:36:03 moldydv Exp $";
 #endif
 
 #include "defs.h"
@@ -30,22 +30,20 @@ static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/mdshak.c,v 2.27.8.
 #include <stdio.h>
 #include "structs.h"
 #include "utlsup.h"
-int	getopt(int, char *const *, const char *);
-/*======================== Global vars =======================================*/
-int ithread=0, nthreads=1;
-contr_mt		control;
 
+/*======================== Global variables ==================================*/
+int ithread=0, nthreads=1;
 /******************************************************************************
  * main().   Driver program for generating SCHAKAL input files from MOLDY     *
  * files.    Acceptable inputs are sys-spec files, or restart files. Actual   *
- * configrational info can be read from dump files, lattice-start files or    *
+ * configurational info can be read from dump files, lattice-start files or   *
  * restart files.  Call: mdshak [-s sys-spec-file] [-r restart-file].   If    *
  * neither specified on command line, user is interrogated.		      *
  ******************************************************************************/
 int
 main(int argc, char **argv)
 {
-   int	c, cflg = 0, ans_i, sym, data_source = 0;
+   int	c, cflg, ans_i, data_source = 0;
    char 	line[80];
    extern char	*optarg;
    int		errflg = 0;
@@ -62,16 +60,16 @@ main(int argc, char **argv)
    char		dumpcommand[256];
    int		dump_size;
    float	*dump_buf;
-   FILE		*Fp, *Dp;
+   FILE		*Fp = NULL, *Dp;
    restrt_mt	restart_header;
    system_mt	sys;
    spec_mt	*species;
    site_mt	*site_info;
    pot_mt	*potpar;
-   quat_mt	*qpf;
+   quat_mt	*qpf = NULL;
    int		av_convert;
    int		trajsw = 0;
-   vec_mt       *prev_cofm;
+   vec_mt       *prev_cofm = NULL;
    
 #define MAXTRY 100
    control.page_length=1000000;
@@ -94,15 +92,12 @@ main(int argc, char **argv)
    else
      outsw = OUTBIN;
 
-   while( (c = getopt(argc, argv, "o:cr:s:d:t:i:yf:") ) != EOF )
+   while( (c = getopt(argc, argv, "o:r:s:d:t:i:yf:") ) != EOF )
       switch(c)
       {
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error("failed to open file \"%s\" for output", optarg);
-	 break;
-       case 'c':
-	 cflg++;
 	 break;
        case 'r':
 	 if( intyp )
@@ -154,7 +149,7 @@ main(int argc, char **argv)
    if( errflg )
    {
       fprintf(stderr,
-	      "Usage: %s [-f out-type] [-y] [-c] [-s sys-spec-file|-r restart-file] ",
+	      "Usage: %s [-f out-type] [-y] [-s sys-spec-file|-r restart-file] ",
 	      comm);
       fputs("[-d dump-files] [-t s[-f[:n]]] [-o output-file]\n", stderr);
       exit(2);
@@ -171,12 +166,6 @@ main(int argc, char **argv)
       if( (ans_i = get_int("? ", 1, 2)) == EOF )
 	 exit(2);
       intyp = ans_i-1 ? 'r': 's';
-      if( intyp == 's' )
-      {
-	 fputs( "Do you need to skip 'control' information?\n", stderr);
-	 if( (sym = get_sym("y or n? ","yYnN")) == 'y' || sym == 'Y')
-	    cflg++;
-      }
 
       if( (filename = get_str("File name? ")) == NULL )
 	 exit(2);
@@ -187,6 +176,7 @@ main(int argc, char **argv)
     case 's':
       if( (Fp = fopen(filename,"r")) == NULL)
 	 error("Couldn't open sys-spec file \"%s\" for reading", filename);
+      cflg = check_control(Fp);
       if( cflg )
       {
 	 do
@@ -301,7 +291,7 @@ main(int argc, char **argv)
 	sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %s %s",
 		sys.nmols,sys.nmols_r, dumplims, dump_name);
 	if( (Dp = popen(dumpcommand,"r")) == 0)
-	   error("Failed to execute \'dumpext\" command - \n%s",
+	   error("Failed to execute \"dumpext\" command - \n%s",
 		 strerror(errno));
 #else
 	tempname = tmpnam((char*)0);

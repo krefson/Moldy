@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/mdavpos.c,v 2.19 2002/09/19 09:26:29 kr Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdavpos.c,v 2.19.10.1 2003/07/29 09:40:11 moldydv Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *
@@ -28,6 +28,10 @@ static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/mdavpos.c,v 2.19 2002
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.19.10.1  2003/07/29 09:40:11  moldydv
+ *  Species selection now in 'true' selector format. Species numbering now starts at 1 rather than 0.
+ *  XTL and XYZ formats added to possible output file formats.
+ *
  *  Revision 2.19  2002/09/19 09:26:29  kr
  *  Tidied up header declarations.
  *  Changed old includes of string,stdlib,stddef and time to <> form
@@ -161,23 +165,9 @@ gptr    *arralloc(size_mt,int,...);     /* Array allocator */
 gptr    *arralloc(size_mt, int, ...);                    /* Array allocator */
 #endif
 
-void    moldy_out(int, int, int, system_mt *, mat_mp, spec_mt *, site_mt *, int, int, char *);
-void    make_sites(real (*h)[3], vec_mp c_of_m_s, quat_mp quat, vec_mp p_f_sites, real **site, int nmols, int nsites, int molflag);
-char    *strlower(char *);
-void    read_sysdef(FILE *, system_mp, spec_mp *, site_mp *, pot_mp *);
-void    initialise_sysdef(system_mp, spec_mt *, site_mt *, quat_mt (*));
-void    re_re_header(FILE *, restrt_mt *, contr_mt *);
-void    re_re_sysdef(FILE *, char *, system_mp, spec_mp *, site_mp *, pot_mp *);
-void    allocate_dynamics(system_mp, spec_mt *);
-void    lattice_start(FILE *, system_mp, spec_mp, quat_mt (*));
-void    read_restart(FILE *, char *, system_mp, int);
-void    init_averages(int, char *, long int, long int, int *);
-int     getopt(int, char *const *, const char *);
-gptr    *talloc(int, size_mt, int, char *);
-void    zero_real(real *r, int n);
-/*======================== Global vars =======================================*/
+/*======================== Global variables ==================================*/
 int ithread=0, nthreads=1;
-contr_mt                control;
+
 #define FRAC 0
 #define CART 1
 /******************************************************************************
@@ -303,7 +293,7 @@ summate(system_mt *system, spec_mt *species, spec_mt *avpos, mat_mp avh)
 void
 average(system_mt *system, spec_mt *avpos, mat_mp avh, int nav)
 {
-   int		i, j, imol;
+   register int		i, j, imol;
 
    for( i = 0; i < 3; i++)
       for( j = 0; j < 3; j++)
@@ -331,7 +321,7 @@ average(system_mt *system, spec_mt *avpos, mat_mp avh, int nav)
 int
 main(int argc, char **argv)
 {
-   int	c, cflg = 0, ans_i, sym = 0;
+   int	c, cflg, ans_i;
    char 	line[80];
    extern char	*optarg;
    int		errflg = 0;
@@ -358,7 +348,6 @@ main(int argc, char **argv)
    site_mt	*site_info;
    pot_mt	*potpar;
    quat_mt	*qpf;
-   contr_mt	control_junk;
    spec_mt	*avpos;
    mat_mt	avh;
 
@@ -367,12 +356,9 @@ main(int argc, char **argv)
 
    comm = argv[0];
 
-   while( (c = getopt(argc, argv, "cr:s:d:t:o:f:ali") ) != EOF )
+   while( (c = getopt(argc, argv, "r:s:d:t:o:f:ali") ) != EOF )
       switch(c)
       {
-       case 'c':
-         cflg++;
-         break;
        case 'r':
 	 if( intyp )
 	    errflg++;
@@ -430,7 +416,7 @@ main(int argc, char **argv)
    if( errflg )
    {
       fputs("Usage: mdavpos [-r restart-file | -s sys-spec-file] ",stderr);
-      fputs("[-c] [-f output-type] [-a] [-l] [-i] -d dump-files ",stderr);
+      fputs("[-f output-type] [-a] [-l] [-i] -d dump-files ",stderr);
       fputs("[-t s[-f[:n]]] [-o output-file]\n",stderr);
       exit(2);
    }
@@ -443,12 +429,6 @@ main(int argc, char **argv)
       if( (ans_i = get_int("? ", 1, 2)) == EOF )
 	 exit(2);
       intyp = ans_i-1 ? 'r': 's';
-      if( intyp == 's' )
-      {
-	 fputs( "Do you need to skip 'control' information?\n", stderr);
-	 if( (sym = get_sym("y or n? ","yYnN")) == 'y' || sym == 'Y')
-	    cflg++;
-      }
 
       if( (filename = get_str("File name? ")) == NULL )
 	 exit(2);
@@ -459,6 +439,7 @@ main(int argc, char **argv)
     case 's':
       if( (Fp = fopen(filename,"r")) == NULL)
 	 error("Couldn't open sys-spec file \"%s\" for reading", filename);
+      cflg = check_control(Fp);
       if( cflg )
       {
 	 do
@@ -476,7 +457,7 @@ main(int argc, char **argv)
       if( (Fp = fopen(filename,"rb")) == NULL)
 	 error("Couldn't open restart file \"%s\" for reading -\n%s\n", 
 	       filename, strerror(errno));
-      re_re_header(Fp, &restart_header, &control_junk);
+      re_re_header(Fp, &restart_header, &control);
       re_re_sysdef(Fp, restart_header.vsn, &sys, &species, &site_info, &potpar);
       break;
     default:
@@ -537,7 +518,7 @@ main(int argc, char **argv)
 	   sys.nmols, sys.nmols_r, start, finish, inc, dump_name);
    
    if( (Dp = popen(dumpcommand,"r")) == 0)
-      error("Failed to execute \'dumpext\" command - \n%s",
+      error("Failed to execute \"dumpext\" command - \n%s",
             strerror(errno));
 #else
    tempname = tmpnam((char*)0);
@@ -557,7 +538,7 @@ main(int argc, char **argv)
       if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
 	 error("Error reading record %d in dump file - \n%s\n",
 	       irec, strerror(errno));
-      dump_to_moldy(dump_buf, &sys);  /*read dump data */
+      dump_to_moldy(dump_buf, &sys);  /* read dump data */
       
       traj_con(&sys, prev_cofm, irec-start);
 

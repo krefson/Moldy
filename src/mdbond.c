@@ -28,6 +28,13 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdbond.c,v $
+ *  Revision 1.12.10.1  2003/07/29 09:34:38  moldydv
+ *  Three new options added:
+ *  -j calculate bonds and angles between molecule's centres of mass only.
+ *  -x don't include right angles in output.
+ *  -p apply pbc's to include all bonds/angles in range. Default is now contents of single box only.
+ *  Species now specified with -g in 'true' selector format.
+ *
  *  Revision 1.12  2002/09/19 09:26:29  kr
  *  Tidied up header declarations.
  *  Changed old includes of string,stdlib,stddef and time to <> form
@@ -97,7 +104,7 @@ what you give them.   Help stamp out software-hoarding! */
  */
 
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/mdbond.c,v 1.12 2002/09/19 09:26:29 kr Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdbond.c,v 1.12.10.1 2003/07/29 09:34:38 moldydv Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -115,13 +122,17 @@ static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/mdbond.c,v 1.12 20
 void    make_sites(real (*h)[3], vec_mp c_of_m_s,
                    quat_mp quat, vec_mp p_f_sites,
                    real **site, int nmols, int nsites, int pbc);
+
+/*======================== Global variables ==================================*/
+int ithread=0, nthreads=1;
+
 /*
  * Default limits for bond intervals and angle intervals - integers only
  */
 #define BOND_MIN  2
-#define BOND_MAX  20          /* Interparticle distances in tenths of Angstroms */
+#define BOND_MAX  20        /* Interparticle distances in tenths of Angstroms */
 #define ANGLE_MIN  0
-#define ANGLE_MAX  180        /* Angle intervals in degrees */
+#define ANGLE_MAX  180      /* Angle intervals in degrees */
 /*
  * Structures for bond and angle data. 
  */
@@ -146,11 +157,6 @@ typedef struct
    double	length2;
    double	value;
 } ANGLE;
-
-int	getopt(int, char *const *, const char *);
-/*======================== Global vars =======================================*/
-int ithread=0, nthreads=1;
-contr_mt	control;
 
 /******************************************************************************
  * morethan_BOND(). Compare distances stored in BOND structure types          *
@@ -228,19 +234,19 @@ bond_calc(system_mt *system, spec_mt *species, site_mt *site_info, ROOT **broot,
    BOND		*bond;
    ANGLE        *angle;
    spec_mt	*spec1, *spec2, *spec3;
-   double	dist1, dist2;
-   double	tmp_angle;
+   register double	dist1, dist2;
+   register double	tmp_angle;
    vec_mt	point1, point2, point3;
    vec_mt	vec1, vec2;
    vec_mt	shift, frac;
    vec_mt	shift2, frac2;
    vec_mt	a, min, max;
-   int		i, j, k, u;
-   int		is, js, ks;
-   int		nspec1, nspec2, nspec3;
-   int		nmoli, nmolj, nmolk;
-   int		flag;
-   int	        nsites1, nsites2, nsites3;
+   register int		i, j, k, u;
+   register int		is, js, ks;
+   register int		nspec1, nspec2, nspec3;
+   register int		nmoli, nmolj, nmolk;
+   register int		flag;
+   register int	        nsites1, nsites2, nsites3=0;
    NODE		*node;
    mat_mp	h = system->h;
    double       **site1 = (double**)arralloc(sizeof(double),2,
@@ -605,7 +611,7 @@ void data_out(ROOT **broot, ROOT **aroot, int xflag)
 int
 main(int argc, char **argv)
 {
-   int	c, cflg = 0, ans_i, sym = 0, data_source = 0;
+   int	c, cflg, ans_i, data_source = 0;
    char 	line[80];
    extern char	*optarg;
    int		errflg = 0;
@@ -616,22 +622,20 @@ main(int argc, char **argv)
    int		irec;
    char         *bondlims = NULL, *anglims = NULL;
    char		*filename = NULL, *dump_name = NULL;
-   char		*speclims = NULL;
    char		*dumplims = NULL, *tempname;
    char		dumpcommand[256];
    int		dump_size;
    float	*dump_buf;
-   FILE		*Fp, *Dp;
+   FILE		*Fp = NULL, *Dp;
    restrt_mt	restart_header;
    system_mt	sys;
    spec_mt	*species;
    site_mt	*site_info;
    pot_mt	*potpar;
-   quat_mt	*qpf;
-   contr_mt	control_junk;
+   quat_mt	*qpf = NULL;
    int          av_convert;
-   char		*spec_list = "1-50";
-   char		spec_mask[MAX_SPECIES];
+   char		*spec_list = NULL;
+   char		*spec_mask = NULL;
    int		pbc = 0;    /* No periodic boundary conditions (default) */
    int		mflag = 0;  /* Bond lengths calculated between species cofms, not molecular sites */
    int		xflag = 0;  /* Include right angles (default) */
@@ -662,7 +666,7 @@ main(int argc, char **argv)
 	 dumplims = mystrdup(optarg);
          break;
        case 'g':
-	 spec_list = optarg;
+	 spec_list = mystrdup(optarg);
 	 break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
@@ -696,9 +700,6 @@ main(int argc, char **argv)
       exit(2);
    }
 
-   if( tokenise(mystrdup(spec_list), spec_mask, MAX_SPECIES) == 0 )
-	    error("Invalid species specification \"%s\": usage eg 1,3,5-9,4",spec_list);
-
    if( dump_name )
       data_source = 'd';
 
@@ -710,12 +711,6 @@ main(int argc, char **argv)
       if( (ans_i = get_int("? ", 1, 2)) == EOF )
 	 exit(2);
       intyp = ans_i-1 ? 'r': 's';
-      if( intyp == 's' )
-      {
-	 fputs( "Do you need to skip 'control' information?\n", stderr);
-	 if( (sym = get_sym("y or n? ","yYnN")) == 'y' || sym == 'Y')
-	    cflg++;
-      }
 
       if( (filename = get_str("File name? ")) == NULL )
 	 exit(2);
@@ -726,6 +721,7 @@ main(int argc, char **argv)
     case 's':
       if( (Fp = fopen(filename,"r")) == NULL)
 	 error("Couldn't open sys-spec file \"%s\" for reading", filename);
+      cflg = check_control(Fp);
       if( cflg )
       {
 	 do
@@ -743,7 +739,7 @@ main(int argc, char **argv)
       if( (Fp = fopen(filename,"rb")) == NULL)
 	 error("Couldn't open restart file \"%s\" for reading -\n%s\n", 
 	       filename, strerror(errno));
-      re_re_header(Fp, &restart_header, &control_junk);
+      re_re_header(Fp, &restart_header, &control);
       re_re_sysdef(Fp, restart_header.vsn, &sys, &species, &site_info, &potpar);
       break;
     default:
@@ -751,10 +747,19 @@ main(int argc, char **argv)
    }
    allocate_dynamics(&sys, species);
 
+   spec_mask = (char*)calloc(sys.nspecies+1,sizeof(char));
+
+/* Check species selection list */
+   if( spec_list == NULL)
+     sprintf(spec_list,"1-%d",sys.nspecies);
+
+   if( tokenise(mystrdup(spec_list), spec_mask, sys.nspecies) == 0 )
+      error("invalid species specification \"%s\" - choose from species 1 to %d",spec_list,sys.nspecies);
+
 #ifdef DEBUG
    {
       int i;
-      for(i = 0; i < MAX_SPECIES; i++)
+      for(i = 0; i < sys.nspecies; i++)
          if(spec_mask[i])
             putchar('1');
          else
@@ -856,7 +861,7 @@ main(int argc, char **argv)
       break;
     case 'r':                           /* Restart file                       */
       init_averages(sys.nspecies, restart_header.vsn,
-                    control_junk.roll_interval, control_junk.roll_interval,
+                    control.roll_interval, control.roll_interval,
                     &av_convert);
       read_restart(Fp, restart_header.vsn, &sys, av_convert);
       break;
@@ -908,7 +913,7 @@ main(int argc, char **argv)
         sys.nmols, sys.nmols_r, start, finish, inc, dump_name);
    
       if( (Dp = popen(dumpcommand,"r")) == 0)
-         error("Failed to execute \'dumpext\" command - \n%s",
+         error("Failed to execute \"dumpext\" command - \n%s",
             strerror(errno));
 #else
       tempname = tmpnam((char*)0);
