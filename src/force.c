@@ -10,12 +10,16 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	force.c,v $
+ * Revision 1.2  89/05/17  13:53:49  keith
+ * Reorganised neighbour list construction in preparation for framework.
+ * (Also goes slighty faster)
+ * 
  * Revision 1.1  89/04/20  16:00:40  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: force.c,v 1.1.1.1 89/05/17 12:45:50 keith Exp $";
+static char *RCSid = "$Header: force.c,v 1.2 89/05/17 13:53:49 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -33,7 +37,6 @@ void    cfree();
 void    note();                         /* Make a note in output file         */
 void    *arralloc();                    /* General purpose array allocator    */
 int     search_lt();			/* Search a vector for el. < scalar   */
-void    vadd();                         /* Vector add                         */
 double  vdot();                         /* Vector dot product                 */
 double  sum();                          /* Sum a vector                       */
 void    scatter();                      /* Interface to CRAY scatter routine  */
@@ -212,6 +215,18 @@ real    reloc[][27];
             reloc[1][NREL(tx,ty,tz)] = ty*h[1][1] + tz*h[1][2];
             reloc[2][NREL(tx,ty,tz)] = tz*h[2][2];
          }
+}
+/******************************************************************************
+ * Vadd vector addition							      *
+ ******************************************************************************/
+static void vadd(n, a, b)
+int	n;
+real	a[], b[];
+{
+   int i;
+VECTORIZE
+   for(i=0; i<n; i++)
+      a[i] += b[i];
 }
 /******************************************************************************
  *  vaadd,calcdist. These are functions because of a compiler bug in cray C4.0*

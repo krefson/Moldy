@@ -6,10 +6,13 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	aux.c,v $
+ * Revision 1.1  89/04/27  15:01:14  keith
+ * Initial revision
+ * 
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: aux.c,v 1.2 89/04/25 16:41:21 keith Exp $";
+static char *RCSid = "$Header: aux.c,v 1.1 89/04/27 15:01:14 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -297,15 +300,6 @@ int	n;
 {
    while( n-- > 0 )
       *r++ = 0.0;
-}
-void vadd(n, a, b)
-int	n;
-real	a[], b[];
-{
-   int i;
-VECTORIZE
-   for(i=0; i<n; i++)
-      a[i] += b[i];
 }
 /******************************************************************************
  *  random number generators. Note they assume 'unsigned' of at least 32 bits *
