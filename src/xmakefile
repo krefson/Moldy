@@ -46,8 +46,8 @@ EPFLAGS=	-2r
 RM=             rm -f
 A2FLAGS=
 SHFILE=		$$file
-FILES = accel algorith alloc ansi auxil beeman convert dump ewald force input \
-	eigens kernel main matrix output quaterns rdf restart startup \
+FILES = accel algorith alloc ansi auxil convert dump ewald force input \
+	eigens kernel leapfrog main matrix output quaterns rdf restart startup \
 	values xdr parallel
 
 CFILES = $(FILES:%=%.c)

@@ -25,6 +25,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.19  1999/10/08 15:49:58  keith
+ *       Fully implemented new constant-pressure algorithm.
+ *       Select by "const-pressure=2" in control.
+ *
  *       Revision 2.18  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -226,7 +230,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/accel.c,v 2.18 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/accel.c,v 2.19 1999/10/08 15:49:58 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -244,9 +248,10 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/accel.c,v 2
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
 void            afree();	       /* Free allocated array	      	      */
-void            step_1();	       /* Step co-ordinates by Beeman algrthm */
-void            step_2();	       /* Step velocities at above            */
-void            beeman_2();	       /* As above for individual components  */
+void		leapf_com();
+void		leapf_vel();
+void		leapf_quat();
+void		leapf_avel();
 void            make_sites();	       /* Construct site coordinate arrays    */
 void            mol_force();	       /* Calculare molecular from site force */
 void            mol_torque();	       /* Calculate torques from site forces  */
@@ -429,9 +434,11 @@ spec_mp		species;
 	 if( spec->rdof > 0 )
 	 { 
 	    scale = sqrt(control.temp / temp_value[2*ispec+1]);
-	    vscale(4 * spec->nmols, scale, spec->qdot[0], 1);
+	    vscale(4 * spec->nmols, scale, spec->avel[0], 1);
+#if 0
 	    vscale(4 * spec->nmols, scale*scale, spec->qddot[0], 1);
 	    vscale(4 * spec->nmols, scale*scale, spec->qddoto[0], 1);
+#endif
 	 }
 	 
       }
@@ -473,6 +480,7 @@ spec_mp		species;
  *      bit 2:	use rolling averages rather than instantaneous "temperatures" *
  *	bit 3:  don't scale at all, but re-initialize from MB distribution.   *
  ******************************************************************************/
+#ifdef BEEMAN
 void
 nhtherm(sys, species)
 system_mp	sys;
@@ -493,7 +501,7 @@ spec_mp		species;
 	 /(1.5*spec->nmols*kB);
       if(spec->rdof > 0)                       /* Only if polyatomic species */
          temp_value[2*ispec+1] = 
-	    rot_ke(spec->quat, spec->qdotp, spec->inertia, spec->nmols)
+	    rot_ke(spec->quat, spec->avel, spec->inertia, spec->nmols)
 	    /(0.5*kB*spec->rdof*spec->nmols);
       else
 	 temp_value[2*ispec+1] = 0.0;
@@ -587,7 +595,6 @@ vec_mp		torque[];
    int             nspecies = sys->nspecies;
    spec_mt	   *spec;
    vec_mp	   vel_tmp = ralloc(sys->nmols);
-   quat_mp         qd_tmp;             /* Temporary for velocities   	      */
    double 	   *temp_value = dalloc(2*nspecies);
    double          ttemp = 0.0, rtemp = 0.0, alphat = 0.0, alphar = 0.0;
 
@@ -603,14 +610,10 @@ vec_mp		torque[];
                                            
 	    if (spec->rdof > 0)
             {
-               qd_tmp = qalloc(spec->nmols);
-               q_conj_mul(spec->quat, spec->qdotp, qd_tmp, spec->nmols); 
-	       vscale(4*spec->nmols, 2.0, qd_tmp[0], 1);
-               sys->rap[ispec] = gaussianr1(torque[spec-species], qd_tmp,
+               sys->rap[ispec] = gaussianr1(torque[spec-species], spec->avel,
                                           spec->nmols);
-	       temp_value[2*ispec+1] = gaussianr2(qd_tmp,  
+	       temp_value[2*ispec+1] = gaussianr2(spec->avel,  
                                                   spec->inertia, spec->nmols);
-               xfree(qd_tmp);
             } 
             else 
             {
@@ -680,6 +683,8 @@ vec_mp		torque[];
    xfree(vel_tmp);
    tfree((gptr*)temp_value);
 }
+
+#endif
 /******************************************************************************
  * Poteval	      Return potential evaluated at a single point.           *
  ******************************************************************************/
@@ -748,19 +753,6 @@ NOVECTOR
    xfree(site_count);
    return (c);
 }
-/******************************************************************************
- *  Shuffle    move down the 'acceleration' co-ordinates                      *
- *  current->old, old->very old, very old->oblivion to make room for the new  *
- *  ones at the next timestep.  Only the pointers are actually moved          *
- ******************************************************************************/
-static vec_mp   v_tmp;
-static quat_mp  q_tmp;
-static real     *atmp;
-#define shuffle(a, ao, avo, tmp)	{tmp = avo; \
-					avo = ao; \
-					ao  = a; \
-					a   = tmp; }
-
 /******************************************************************************
  *   do_step       This routine controls the main part of the calculation for *
  *   each timestep.   It performs the following actions:  It                  *
@@ -831,10 +823,7 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
    static boolean  init = true;
    static double   dist, distp;
    double          vol = det(sys->h);
-   int             iter;
    mat_mt          ke_dyad, hinv;
-   quat_mp         qd_tmp;             /* Temporary for velocities   	      */
-   vec_mp          acc_tmp, vel_tmp;   /* Temporaries for iteration	      */
    int		   nsitesxf, nmolsxf;  /* Count of non-framework sites, mols. */
 /*
  * Initialisation of distant potential constant - executed first time only
@@ -910,10 +899,17 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
    zero_real(site_force[1], nsarray);
    zero_real(site_force[2], nsarray);
    zero_double(pe, NPE);
+   zero_real(force_base, sys->nmols);
+   zero_real(torque_base, sys->nmols_r);
+   
+   invert(sys->h, hinv);
 /*
- * Initial co-ordinate step of Beeman algorithm.
+ * Initial co-ordinate step of leapfrog algorithm.
  */
-   step_1(sys);
+   leapf_com(control.step, sys->c_of_m, sys->vel, sys->nmols);
+   for (spec = species; spec < &species[nspecies]; spec++)
+      if( spec->rdof > 0 )
+	 leapf_quat(control.step, spec->quat, spec->avel, spec->inertia, spec->nmols);
 /*
  * Calculate the site positions at this timestep - loop over species
  */
@@ -1018,174 +1014,15 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
       stress[i][i] += distp / vol;
 
 /*
- * Shuffle the accelerations (acc -> acco, acco-> accvo, accvo -> acc) Don't
- * actually move the data - just the pointers
+ * Final MD update step
  */
-   shuffle(sys->acc, sys->acco, sys->accvo, v_tmp);
-   shuffle(sys->qddot, sys->qddoto, sys->qddotvo, q_tmp);
-   if (control.const_pressure)
-      shuffle(sys->hddot, sys->hddoto, sys->hddotvo, v_tmp);
-   if (control.const_temp == 1)
+   for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
    {
-      shuffle(sys->tadot, sys->tadoto, sys->tadotvo, atmp);
-      shuffle(sys->radot, sys->radoto, sys->radotvo, atmp);
-   }
-   for (spec = species; spec < &species[nspecies]; spec++)
-   {
-      inhibit_vectorization();      /* Inhibits (incorrect) vectorization */
-      shuffle(spec->acc, spec->acco, spec->accvo, v_tmp);
-      if (spec->rdof > 0)
-	 shuffle(spec->qddot, spec->qddoto, spec->qddotvo, q_tmp);
-   }
-
-/*
- * Now apply the Newton/Euler equations to find the accelerations and
- * quaternion second derivatives.
- */
-   for (spec = species; spec < &species[nspecies]; spec++)
-      newton(force[spec-species], spec->acc, spec->mass, spec->nmols);
-
-/*
- * Correction to centre of mass accelerations for constant pressure algorithm
- * First get scaled accelerations by multiplying by the inverse h matrix and
- * add P&R term. Then calculate the 'accelerations' of the unit cell matrix
- * and use the velocity predictor to step the cell "velocities".
- */
-   invert(sys->h, hinv);
-   mat_vec_mul(hinv, sys->acc, sys->acc, sys->nmols);
-   if (control.const_pressure)
-   {
-      zero_real(ke_dyad[0], 9);
-      for (spec = species; spec < &species[nspecies]; spec++)
-	 energy_dyad(ke_dyad, sys->h, spec->velp, spec->mass, spec->nmols);
-      rahman(stress, sys->h, sys->hddot, ke_dyad,
-	     control.pressure, control.pmass, 
-	     control.const_pressure==2?512:control.strain_mask);
-      beeman_2(sys->hdot[0], sys->hdotp[0], sys->hddot[0], sys->hddoto[0],
-	       sys->hddotvo[0], 9);
-   }
-/*
- * Iterate linear velocity dependant parts with beeman step 2 until convergence
- */
-   if (control.const_pressure || control.const_temp)
-   {
-      iter = 0;
-      acc_tmp = ralloc(sys->nmols);
-      vel_tmp = ralloc(sys->nmols);
-      do
-      {
-	 iter++;
-	 if(iter > ITER_MAX)
-	    message(NULLI, NULLP, FATAL, NCNVRG, iter, 
-		    vec_dist(vel_tmp[0], sys->velp[0], 3 * sys->nmols));
-         if (control.const_pressure)
-	    parinello(sys->h, sys->hdotp, sys->velp, sys->acc, acc_tmp,
-		      sys->nmols);
-         else 
-	    memcp(acc_tmp[0], sys->acc[0], 3 * sys->nmols * sizeof(real));
-/*
- * Nose-Hoover thermostat added by VVMurashov , started on 20.10.95
- *
- * Gaussian thermostat added by VVM , started on 3/11/95
- * General formular alpha = alpha1/alpha2, where alpha1 = SUM force*vel
- * and alpha2 = SUM mass * vel ^ 2. Sys->tap(rap) is used to store 
- * alpha1's and temp_value is used to store alpha2's temporarily.
- */
- 	 if (control.const_temp == 1)
-	 {
-	    nhtherm(sys, species);
-	    beeman_2(sys->ta, sys->tap, sys->tadot, sys->tadoto,
-		     sys->tadotvo, nspecies);
-#ifdef DEBUG3
-   printf("ta %8.4f tap %8.4f tadot %8.4f tadoto %8.4f\n", sys->ta[0],
-						 sys->tap[0],
-						 sys->tadot[0],
-						 sys->tadoto[0]);
-#endif
-	 }
-	 if (control.const_temp == 2)
-	    gtherm(sys, species, force, torque);
-         if (control.const_temp)
-         {
-            for (ispec = 0, j = 0, spec = species; ispec < nspecies; ispec++,
-                 spec++)
-            {
-	       if( ! spec->framework )
-	       {
-                 hoover_tr(sys->tap[ispec], acc_tmp+j, acc_tmp+j, 
-                         sys->velp+j, spec->nmols);
-               }
-               j+=spec->nmols;
-            }
-         }
-	 memcp(vel_tmp[0], sys->velp[0], 3 * sys->nmols * sizeof(real));
-	 beeman_2(sys->vel[0], sys->velp[0], acc_tmp[0], sys->acco[0],
-		  sys->accvo[0], 3 * sys->nmols);
-      } while (vec_dist(vel_tmp[0], sys->velp[0], 3 * sys->nmols) > CONVRG);
-#ifdef DEBUG
-      printf("Velocities converged in %d iterations \n", iter);
-#endif
-      memcp(sys->acc, acc_tmp, 3*sys->nmols * sizeof(real));
-      xfree(acc_tmp);
-      xfree(vel_tmp);
-   }
-/*
- * Iterate angular velocity dependant parts with beeman step 2 until convergence
- */
-   if (sys->nmols_r > 0)
-   {
-      iter = 0;
-      qd_tmp = qalloc(sys->nmols_r);
-      acc_tmp = ralloc(sys->nmols_r);
-      do
-      {
-	 iter++;
-	 if(iter > ITER_MAX)
-	    message(NULLI, NULLP, FATAL, NCNVRG, iter, 
-		    vec_dist(qd_tmp[0], sys->qdotp[0], 4 * sys->nmols_r));
- 	 if (control.const_temp == 1)
-	 {
-	    nhtherm(sys, species);
-	    beeman_2(sys->ra, sys->rap, sys->radot, sys->radoto,
-		     sys->radotvo, nspecies);
-	 }
-	 if (control.const_temp == 2)
-	    gtherm(sys, species, force, torque);
-#ifdef DEBUG3
-   printf("ra %8.4f rap %8.4f radot %8.4f radoto %8.4f\n", sys->ra[0],
-						 sys->rap[0],
-						 sys->radot[0],
-						 sys->radoto[0]);
-#endif
-         for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
-	    if (spec->rdof > 0)
-            {
-               if (control.const_temp)
-               {
-        /****************************************************************
-         *  VVM uses qd_tmp as a temp array to store angular velocities *
-         ****************************************************************/
-                  q_conj_mul(spec->quat, spec->qdotp, qd_tmp, spec->nmols); 
-		  vscale(4*spec->nmols, 2.0, qd_tmp[0], 1);
-                  hoover_rot(sys->rap[ispec], spec->inertia, 
-                             torque[spec-species], acc_tmp,
-                             qd_tmp, spec->nmols);
-               }
-               else
-	          memcp(acc_tmp[0], torque[spec-species], 3 * spec->nmols * 
-                        sizeof(real)); 
-	       euler(acc_tmp, spec->quat, spec->qdotp,
-		     spec->qddot, spec->inertia, spec->nmols);
-            }
-	 memcp(qd_tmp[0], sys->qdotp[0], 4 * sys->nmols_r * sizeof(real));
-	 beeman_2(sys->qdot[0], sys->qdotp[0], sys->qddot[0], sys->qddoto[0],
-		  sys->qddotvo[0], 4 * sys->nmols_r);
-      } while (vec_dist(qd_tmp[0], sys->qdotp[0], 4 * sys->nmols_r) > CONVRG);
-#ifdef DEBUG
-      printf("Quaternion derivatives converged in %d iterations \n", iter);
-#endif
-      xfree(qd_tmp);
-      xfree(acc_tmp);
+      leapf_vel(control.step, hinv, spec->vel, force[ispec], 
+		                            spec->mass, spec->nmols);
+      if( spec->rdof > 0 )
+	 leapf_avel(control.step, spec->avel, torque[ispec], 
+		                  spec->inertia, spec->nmols);
    }
 /*
  *  Apply constraint to any framework molecules.
@@ -1193,15 +1030,8 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
    for (spec = species; spec < &species[nspecies]; spec++)
       if( spec->framework )
       {
-	 zero_real(spec->acc[0], 3*spec->nmols);
 	 zero_real(spec->vel[0], 3*spec->nmols);
       }
-/*
- * Final MD update step
- */
-
-   step_2(sys);
-
 /*
  * Calculate mean-square forces and torques
  */

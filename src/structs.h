@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/md/moldy/RCS/structs.h,v 2.9 1996/09/25 18:11:24 keith Exp $
+ * $Header: /home/eeyore_data/keith/moldy/src/RCS/structs.h,v 2.9 1996/10/19 11:55:24 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.9  1996/10/19 11:55:24  keith
+ * Corrected bug in control struct and xdr write of thermostat vars.
+ *
  * Revision 2.8  1996/01/15 15:25:28  keith
  * Corrected definition of thermostat dynamic vars.
  *
@@ -210,36 +213,21 @@ typedef struct                  /* Whole system information                   */
                 /* and for quaternions and derivatives, [nmols_r][4]          */
    vec_mp       c_of_m,         /* Centre of mass positions                   */
                 vel,            /* " " " velocities                           */
-                velp,           /* Predicted C of M velocities                */
-                acc,            /* C of M accelerations                       */
-                acco,           /* " " at previous timestep                   */
-                accvo;          /* " " two timesteps before                   */
+                velp;           /* Predicted C of M velocities                */
    quat_mp      quat,           /* Quaternions for this component             */
-                qdot,           /* Quaternion derivatives                     */
-                qdotp,          /* Predicted quaternion derivatives           */
-                qddot,          /* Quaternion second derivatives              */
-                qddoto,         /* Old quaternion second derivatives          */
-                qddotvo;        /* Second derivatives two timesteps before    */
+                avel,           /* Quaternion derivatives                     */
+                avelp;          /* Predicted quaternion derivatives           */
    mat_mp       h,              /* Unit cell for zero-stress simulation       */
                 hdot,           /* Unit cell derivatives                      */
-                hdotp,          /* Predicted unit cell derivatives            */
-                hddot,          /* Unit cell second derivatives               */
-                hddoto,         /* Old unit cell second derivatives           */
-                hddotvo;        /* Very old unit cell second derivatives      */
+                hdotp;          /* Predicted unit cell derivatives            */
                 /*
                  *  Following variables ta..., ra.. have been introduced
                  *  by VVM and have dimensions of [nspecies]
                  */
    real        *ta,             /* N-H alpha for trans temp                   */
-               *tap,            /* Predicted N-H alpha for trans temp         */
-               *tadot,          /* Derivative of trans alpha                  */
-               *tadoto,         /* Old derivative of trans alpha              */
-               *tadotvo;        /* Very old derivative of trans alpha         */
+               *tap;            /* Predicted N-H alpha for trans temp         */
    real        *ra,             /* N-H alpha for trans temp                   */
-               *rap,            /* Predicted N-H alpha for trans temp         */
-               *radot,          /* Derivative of trans alpha                  */
-               *radoto,         /* Old derivative of trans alpha              */
-               *radotvo;        /* Very old derivative of trans alpha         */
+               *rap;            /* Predicted N-H alpha for trans temp         */
 } system_mt, *system_mp;
 
 
@@ -263,18 +251,10 @@ typedef struct                  /* Information for one species                */
                 /* If species is monatomic, quaternion pointers are null      */
    vec_mp       c_of_m,         /* Centre of mass positions                   */
                 vel,            /* " " " velocities                           */
-                velp,           /* Predicted C of M velocities                */
-                acc,            /* C of M accelerations                       */
-                acco,           /* " " at previous timestep                   */
-                accvo;          /* " " two timesteps before                   */
+                velp;           /* Predicted C of M velocities                */
    quat_mp      quat,           /* Quaternions for this species               */
-                qdot,           /* Quaternion derivatives                     */
-                qdotp,          /* Predicted quaternion derivatives           */
-                qddot,          /* Quaternion second derivatives              */
-                qddoto,         /* Old quaternion second derivatives          */
-                qddotvo;        /* Second derivatives two timesteps before    */
-   int          pad[2];         /* Needed for compatibility of binary restart */
-                                /* files due to historical cock-up.           */ 
+                avel,           /* Quaternion derivatives                     */
+                avelp;          /* Predicted quaternion derivatives           */
 } spec_mt, *spec_mp;
 
 typedef struct                  /* site info template.                        */

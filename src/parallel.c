@@ -22,6 +22,9 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.21  1998/07/17 14:54:06  keith
+ *       Ported SHMEM version to IRIX 6/ SGI Origin 2000
+ *
  *       Revision 2.21  1998/07/17 12:06:53  keith
  *       Ported SHMEM parallel interface to Irix for Origin systems
  *
@@ -76,7 +79,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/users/keith/data/moldy/src/RCS/parallel.c,v 2.21 1998/07/17 12:06:53 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/parallel.c,v 2.21 1998/07/17 14:54:06 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -1189,36 +1192,21 @@ system_mp	system;
    par_broadcast((gptr*)system->c_of_m,3*system->nmols, sizeof(real), 0);
    par_broadcast((gptr*)system->vel,   3*system->nmols, sizeof(real), 0);
    par_broadcast((gptr*)system->velp,  3*system->nmols, sizeof(real), 0);
-   par_broadcast((gptr*)system->acc,   3*system->nmols, sizeof(real), 0);
-   par_broadcast((gptr*)system->acco,  3*system->nmols, sizeof(real), 0);
-   par_broadcast((gptr*)system->accvo, 3*system->nmols, sizeof(real), 0);
    if(system->nmols_r > 0)
    {
       par_broadcast((gptr*)system->quat,    4*system->nmols_r, sizeof(real), 0);
-      par_broadcast((gptr*)system->qdot,    4*system->nmols_r, sizeof(real), 0);
-      par_broadcast((gptr*)system->qdotp,   4*system->nmols_r, sizeof(real), 0);
-      par_broadcast((gptr*)system->qddot,   4*system->nmols_r, sizeof(real), 0);
-      par_broadcast((gptr*)system->qddoto,  4*system->nmols_r, sizeof(real), 0);
-      par_broadcast((gptr*)system->qddotvo, 4*system->nmols_r, sizeof(real), 0);
+      par_broadcast((gptr*)system->avel,    4*system->nmols_r, sizeof(real), 0);
+      par_broadcast((gptr*)system->avelp,   4*system->nmols_r, sizeof(real), 0);
    }
    par_broadcast((gptr*)system->h,       9, sizeof(real), 0); 
    par_broadcast((gptr*)system->hdot,    9, sizeof(real), 0);
    par_broadcast((gptr*)system->hdotp,   9, sizeof(real), 0); 
-   par_broadcast((gptr*)system->hddot,   9, sizeof(real), 0);
-   par_broadcast((gptr*)system->hddoto,  9, sizeof(real), 0); 
-   par_broadcast((gptr*)system->hddotvo, 9, sizeof(real), 0);
 
    par_broadcast((gptr*)system->ta,      system->nspecies, sizeof(real), 0);
    par_broadcast((gptr*)system->tap,     system->nspecies, sizeof(real), 0);
-   par_broadcast((gptr*)system->tadot,   system->nspecies, sizeof(real), 0);
-   par_broadcast((gptr*)system->tadoto,  system->nspecies, sizeof(real), 0);
-   par_broadcast((gptr*)system->tadotvo, system->nspecies, sizeof(real), 0);
 					                   	      
    par_broadcast((gptr*)system->ra,      system->nspecies, sizeof(real), 0);
    par_broadcast((gptr*)system->rap,     system->nspecies, sizeof(real), 0);
-   par_broadcast((gptr*)system->radot,   system->nspecies, sizeof(real), 0);
-   par_broadcast((gptr*)system->radoto,  system->nspecies, sizeof(real), 0);
-   par_broadcast((gptr*)system->radotvo, system->nspecies, sizeof(real), 0);
 
    ap = av_ptr(&asize,0);	      /* get addr, size of database   */
    par_broadcast(ap, 1, asize,0);

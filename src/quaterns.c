@@ -23,6 +23,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: quaterns.c,v $
+ *       Revision 2.8  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.7  1994/06/08 13:22:31  keith
  *       Null update for version compatibility
  *
@@ -46,7 +51,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/quaterns.c,v 2.7 1994/06/08 13:22:31 keith stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/quaterns.c,v 2.8 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include <math.h>
@@ -118,6 +123,31 @@ int	n;			/* Number of quaternions in the arrays  (in)  */
    {
       p0 =  p[i][0]; p1 = -p[i][1]; p2 = -p[i][2]; p3 = -p[i][3];
       q0 =  q[i][0]; q1 =  q[i][1]; q2 =  q[i][2]; q3 =  q[i][3];
+
+      r[i][0] = p0*q0 - p1*q1 - p2*q2 - p3*q3;
+      r[i][1] = p1*q0 + p0*q1 - p3*q2 + p2*q3;
+      r[i][2] = p2*q0 + p3*q1 + p0*q2 - p1*q3;
+      r[i][3] = p3*q0 - p2*q1 + p1*q2 + p0*q3;
+   }
+}
+/******************************************************************************
+ * Quaternion multiplier.  Multiplies arrays of quaternions p(-1) by q to     *
+ * give r. Can be called with  r the same as p or q.                          *
+ ******************************************************************************/
+void q_mul_conj(p, q, r, n)
+quat_mp	p,			/* First Quaternion array [n][4]        (in)  */
+	q,			/* Second quaternion array [n][4]       (in)  */
+	r;			/* Resultant quaternions [n][4]        (out)  */
+int	n;			/* Number of quaternions in the arrays  (in)  */
+{
+   register	int	i;
+   register	real	p0, p1, p2, p3;
+   register	real	q0, q1, q2, q3;
+   
+   for(i = 0; i < n; i++)
+   {
+      p0 =  p[i][0]; p1 =  p[i][1]; p2 =  p[i][2]; p3 =  p[i][3];
+      q0 =  q[i][0]; q1 = -q[i][1]; q2 = -q[i][2]; q3 = -q[i][3];
 
       r[i][0] = p0*q0 - p1*q1 - p2*q2 - p3*q3;
       r[i][1] = p1*q0 + p0*q1 - p3*q2 + p2*q3;

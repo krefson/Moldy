@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.13  2000/04/24 15:06:17  keith
+ *       Fixed bug where ints were stored as booleans, losing value.
+ *
  *       Revision 2.12  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -151,14 +154,14 @@ system_mt *sp;
    return
       xdr_vector(xdrs, (gptr*)&sp->nsites, 8, sizeof(int), (xdrproc_t)xdr_int) &&
       /*
-       * This is an awful hack.  There are 28 real[3]* pointers
+       * This is an awful hack.  There are 13 real[3]* pointers
        * next.  Their stored values are NEVER re-used so we just
        * output a placeholder.  For compatibility of XDR/non-XDR
        * files on 4 byte big-endian ieee architectures we emit
        * 4 bytes each.  DON'T use sizeof as that would make XDR
        * file M/C dependent.
        */
-      xdr_opaque(xdrs, (gptr*)&sp->c_of_m, 28*XDR_4PTR_SIZE);
+      xdr_opaque(xdrs, (gptr*)&sp->c_of_m, 13*XDR_4PTR_SIZE);
 }
 
 /*
@@ -182,16 +185,14 @@ spec_mt *sp;
       xdr_vector(xdrs, (gptr*)&sp->nsites, 4, sizeof(int), (xdrproc_t)xdr_int) &&
       xdr_opaque(xdrs, sp->name, 32) &&
       /*
-       * This is an awful hack.  There are 14 real[3]* pointers
+       * This is an awful hack.  There are 8 real[3]* pointers
        * next.  Their stored values are NEVER re-used so we just
        * output a placeholder.  For compatibility of XDR/non-XDR
        * files on 4 byte big-endian ieee architectures we emit
        * 4 bytes each.  DON'T use sizeof as that would make XDR
        * file M/C dependent.
        */
-      xdr_opaque(xdrs, (gptr*)&sp->site_id, 14*XDR_4PTR_SIZE) &&
-      xdr_int(xdrs,(int*)&sp->pad[0]) &&
-      xdr_int(xdrs,(int*)&sp->pad[1]);
+      xdr_opaque(xdrs, (gptr*)&sp->site_id, 8*XDR_4PTR_SIZE);
 }
 
 bool_t xdr_site(xdrs, sp)

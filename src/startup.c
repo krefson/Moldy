@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.16  1999/12/20 15:19:26  keith
+ *      Check for rdf-limit or nbinds changed on restart, and handle
+ *      gracefully.
+ *
  *      Revision 2.15  1999/10/11 09:51:07  keith
  *      Fully implemented new constant-pressure algorithm.
  *      Select by "const-pressure=2" in control.
@@ -252,7 +256,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/startup.c,v 2.15 1999/10/11 09:51:07 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/startup.c,v 2.16 1999/12/20 15:19:26 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -575,21 +579,12 @@ spec_mt	species[];
     *  Set accelerations to zero.
     */
    zero_real(system->vel[0],   3*system->nmols);
-   zero_real(system->acc[0],   3*system->nmols);
-   zero_real(system->acco[0],  3*system->nmols);
-   zero_real(system->accvo[0], 3*system->nmols);
 
    zero_real(system->ta,      system->nspecies);
    zero_real(system->tap,     system->nspecies);
-   zero_real(system->tadot,   system->nspecies);
-   zero_real(system->tadoto,  system->nspecies);
-   zero_real(system->tadotvo, system->nspecies);
     
    zero_real(system->ra,      system->nspecies);
    zero_real(system->rap,     system->nspecies);
-   zero_real(system->radot,   system->nspecies);
-   zero_real(system->radoto,  system->nspecies);
-   zero_real(system->radotvo, system->nspecies);
    
    for (spec = species; spec < species+system->nspecies; spec++)
    {
@@ -608,24 +603,19 @@ spec_mt	species[];
 	 {
 	    for(i = 0; i < 3; i++)
 	       if(spec->inertia[i] != 0.0)
-		  root_kti[i] = 0.5*sqrt(kB * control.temp / spec->inertia[i]);
+		  root_kti[i] = sqrt(kB * control.temp / spec->inertia[i]);
 	       else
 		  root_kti[i] = 0.0;
 	    
 	    for(imol = 0; imol < spec->nmols; imol++)
 	    {
-	       spec->qdot[imol][0] = 0.0;
+	       spec->avel[imol][0] = 0.0;
 	       for(i = 0; i < 3; i++)	/* Centre of mass co-ords -1 < x < 1  */
-		  spec->qdot[imol][i+1] = root_kti[i] * gauss_rand();
-	       omega_sq = -SUMSQ2(spec->qdot[imol]);
-	       for(i = 0; i < 4; i++)
-		  spec->qddotvo[imol][i] = spec->qddoto[imol][i] =
-		     spec->qddot[imol][i] = omega_sq*spec->quat[imol][i];
+		  spec->avel[imol][i+1] = root_kti[i] * gauss_rand();
 	    }
 	 }
       }
    }
-   q_mul(system->quat, system->qdot, system->qdot, system->nmols_r);
    for (spec = species; spec < species+system->nspecies; spec++)
       if( !spec->framework)
       {
@@ -716,6 +706,7 @@ quat_mt		qpf[];			/* Quaternion rotation to princ.frame*/
          print_mat(inertia, " *D* Inertia Tensor");
 #endif
 	 eigens(inertia,v[0],spec->inertia,3);
+	 /*	 eigensort(v[0], spec->inertia, 3);*/
 	 rot_to_q(v, qpf[spec-species]);	/* make equivalent quaternion*/
 #ifdef	DEBUG
          print_mat(v," *D* Rotation Mat.");
@@ -780,9 +771,6 @@ spec_mt	species[];
    system->c_of_m = ralloc(system->nmols);
    system->vel    = ralloc(system->nmols);
    system->velp   = ralloc(system->nmols);
-   system->acc    = ralloc(system->nmols);
-   system->acco   = ralloc(system->nmols);
-   system->accvo  = ralloc(system->nmols);
 #ifdef	DEBUG
    printf(" *D* System Dynamic variables (all %d x 3 reals)\n",system->nmols);
    printf(afmt,"c_of_m",system->c_of_m,"vel",system->vel,"velp",system->velp,
@@ -791,41 +779,26 @@ spec_mt	species[];
 
    system->ta      = dalloc(system->nspecies);
    system->tap     = dalloc(system->nspecies);
-   system->tadot   = dalloc(system->nspecies);
-   system->tadoto  = dalloc(system->nspecies);
-   system->tadotvo = dalloc(system->nspecies);
 
    system->ra      = dalloc(system->nspecies);
    system->rap     = dalloc(system->nspecies);
-   system->radot   = dalloc(system->nspecies);
-   system->radoto  = dalloc(system->nspecies);
-   system->radotvo = dalloc(system->nspecies);
 
    if(system->nmols_r > 0)
    {
       system->quat   = qalloc(system->nmols_r);
-      system->qdot   = qalloc(system->nmols_r);
-      system->qdotp  = qalloc(system->nmols_r);
-      system->qddot  = qalloc(system->nmols_r);
-      system->qddoto = qalloc(system->nmols_r);
-      system->qddotvo= qalloc(system->nmols_r);
+      system->avel   = qalloc(system->nmols_r);
+      system->avelp  = qalloc(system->nmols_r);
    }
    else
-      system->quat = system->qdot = system->qdotp = 
-	             system->qddot = system->qddoto = system->qddotvo= 0;
+      system->quat = system->avel = system->avelp = 0;
 
 
    system->h       = ralloc(3);
    system->hdot    = ralloc(3);
    system->hdotp   = ralloc(3);
-   system->hddot   = ralloc(3);
-   system->hddoto  = ralloc(3);
-   system->hddotvo = ralloc(3);
    zero_real(system->h[0],       9);
    zero_real(system->hdot[0],    9);
-   zero_real(system->hddot[0],   9);
-   zero_real(system->hddoto[0],  9);
-   zero_real(system->hddotvo[0], 9);
+   zero_real(system->hdotp[0],   9);
 #ifdef	DEBUG
    printf(" *D* System Dynamic variables (all 9 reals)\n");
    printf(afmt,"h",system->h, "hdot",system->hdot, "hdotp",system->hdotp,
@@ -838,9 +811,6 @@ spec_mt	species[];
       spec->c_of_m = system->c_of_m + nmol_cum;
       spec->vel    = system->vel    + nmol_cum;
       spec->velp   = system->velp   + nmol_cum;
-      spec->acc    = system->acc    + nmol_cum;
-      spec->acco   = system->acco   + nmol_cum;
-      spec->accvo  = system->accvo  + nmol_cum;
 #ifdef	DEBUG
       printf(" *D* Species %d Dynamic variables (all %d x 3 reals)\n",
 	     spec-species, spec->nmols);
@@ -850,22 +820,18 @@ spec_mt	species[];
       if(spec->rdof > 0)
       {
          spec->quat    = system->quat    + nmolr_cum;
-         spec->qdot    = system->qdot    + nmolr_cum;
-         spec->qdotp   = system->qdotp   + nmolr_cum;
-         spec->qddot   = system->qddot   + nmolr_cum;
-         spec->qddoto  = system->qddoto  + nmolr_cum;
-         spec->qddotvo = system->qddotvo + nmolr_cum;
+         spec->avel    = system->avel    + nmolr_cum;
+         spec->avelp   = system->avelp   + nmolr_cum;
          nmolr_cum += spec->nmols;
 #ifdef	DEBUG
          printf(" *D* Species %d Dynamic variables (all %d x 4 reals)\n",
 		spec-species, spec->nmols);
-         printf(afmt,"quat",spec->quat, "qdot",spec->qdot, "qdotp",spec->qdotp,
+         printf(afmt,"quat",spec->quat, "avel",spec->avel, "avelp",spec->avelp,
              "qddot",spec->qddot,"qddoto",spec->qddoto,"qddotvo",spec->qddotvo);
 #endif
       }
       else
-	 spec->quat = spec->qdot = spec->qdotp = 
-	              spec->qddot = spec->qddoto = spec->qddotvo= 0;
+	 spec->quat = spec->avel = spec->avelp = 0;
       nmol_cum += spec->nmols;
    }
    /*
@@ -874,15 +840,9 @@ spec_mt	species[];
     */
    zero_real(system->ta,      system->nspecies);
    zero_real(system->tap,     system->nspecies);
-   zero_real(system->tadot,   system->nspecies);
-   zero_real(system->tadoto,  system->nspecies);
-   zero_real(system->tadotvo, system->nspecies);
     
    zero_real(system->ra,      system->nspecies);
    zero_real(system->rap,     system->nspecies);
-   zero_real(system->radot,   system->nspecies);
-   zero_real(system->radoto,  system->nspecies);
-   zero_real(system->radotvo, system->nspecies);
 }
 /******************************************************************************
  *  Interpolate_derivatives & interp.    Interp is a quadratic interpolation  *
@@ -924,6 +884,7 @@ double		step, step1;
    }
    ratio = step1/step;
    message(NULLI, NULLP, INFO, NEWTS, step, step1);
+#ifdef BEEMAN
    interp(ratio, sys->acc[0],   sys->acco[0],  sys->accvo[0],   3*sys->nmols);
    if( sys->nmols_r > 0 )
       interp(ratio, sys->qddot[0], sys->qddoto[0],sys->qddotvo[0], 
@@ -931,6 +892,7 @@ double		step, step1;
    interp(ratio, sys->hddot[0], sys->hddoto[0],sys->hddotvo[0], 9);
    interp(ratio, sys->tadot, sys->tadoto, sys->tadotvo, sys->nspecies);
    interp(ratio, sys->radot, sys->radoto, sys->radotvo, sys->nspecies);
+#endif
 }
 /******************************************************************************
  *  check_sysdef.   		Read in system specification from the restart *
@@ -1378,6 +1340,7 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
 
       if(control.step != old_step)
          interpolate_derivatives(system, old_step, control.step);
+#ifdef BEEMAN
       for(i = 0; i < 9; i++)		/* Zap cell velocities if constrained */
 	 if( (control.strain_mask >> i) & 1 )
 	    system->hddot[0][i] = system->hddoto[0][i] = system->hdot[0][i] = 0;
@@ -1386,7 +1349,7 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
 	 for(i = 0; i < 9; i++)		           /* Zap cell velocities etc */
 	    system->hddot[0][i] = system->hddoto[0][i] = system->hdot[0][i] = 0;
       }
-
+#endif
       (void)fclose(restart);
       message(NULLI, NULLP, INFO, RESUCC, control.restart_file);
    }               

@@ -34,6 +34,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ *       Revision 2.8  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.7  1994/06/08 13:17:00  keith
  *       Made database size a size_mt (unsigned long) for 16 bit machines.
  *
@@ -135,7 +140,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/values.c,v 2.7 1994/06/08 13:17:00 keith stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/values.c,v 2.8 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -455,6 +460,38 @@ mat_mt		stress_vir;	/* 'Potential' part of stress, or virial      */
    mat_mt	ke_dyad,
                 stress;
    double	vol = det(system->h);
+   static	double *tkep1, *tkem1, *tkem3, *tkem5;
+   static	double *rkep1, *rkem1, *rkem3, *rkem5;
+   static	boolean firstcall = true;
+
+   if( firstcall )
+   {
+      firstcall = false;
+      tkep1 = dalloc(system->nspecies);
+      tkem1 = dalloc(system->nspecies);
+      tkem3 = dalloc(system->nspecies);
+      tkem5 = dalloc(system->nspecies);
+      rkep1 = dalloc(system->nspecies);
+      rkem1 = dalloc(system->nspecies);
+      rkem3 = dalloc(system->nspecies);
+      rkem5 = dalloc(system->nspecies);
+      for(ispec=0; ispec < system->nspecies; ispec++)
+      {
+	 tkep1[ispec] = rkep1[ispec] = 
+	 tkem1[ispec] = rkem1[ispec] = 
+	 tkem3[ispec] = rkem3[ispec] = 
+	 tkem5[ispec] = rkem5[ispec] = -1.0;
+      }
+   }
+
+   /*
+    * Mazur's leapfrog KE predictor. [J. Comp. Phys (1997) 136, 354-365) Eq. 30]
+    */
+#ifndef KE1
+#define KEINT(a,b,c,d) (1.0/48.0*(15*a+45*b-15*c+3*d))
+#else
+#define KEINT(a,b,c,d) (a)
+#endif
 
    for(ipe = 0; ipe < NPE; ipe++)
    {
@@ -465,7 +502,13 @@ mat_mt		stress_vir;	/* 'Potential' part of stress, or virial      */
    for (spec = species; spec < &species[system->nspecies]; spec++)
    {
       ispec = spec-species;
-      e = trans_ke(system->h, spec->vel, spec->mass, spec->nmols);
+      tkem5[ispec] = tkem3[ispec]; 
+      tkem3[ispec] = tkem1[ispec]; 
+      tkem1[ispec] = tkep1[ispec];
+      tkep1[ispec] = trans_ke(system->h, spec->vel, spec->mass, spec->nmols);
+      if(tkem1[ispec] < 0.0)
+	 tkem1[ispec] = tkem3[ispec] = tkem5[ispec] = tkep1[ispec];
+      e = KEINT(tkep1[ispec], tkem1[ispec], tkem3[ispec], tkem5[ispec]);
       add_average(CONV_E * e, tke_n, ispec);	/* c of m  kinetic energy     */
       tot_ke += e;
 
@@ -473,7 +516,13 @@ mat_mt		stress_vir;	/* 'Potential' part of stress, or virial      */
 						/* c of mass temp.	      */
       if(spec->rdof > 0)			/* Only if polyatomic species */
       {
-         e = rot_ke(spec->quat, spec->qdot, spec->inertia, spec->nmols);
+	 rkem5[ispec] = rkem3[ispec]; 
+	 rkem3[ispec] = rkem1[ispec]; 
+	 rkem1[ispec] = rkep1[ispec];
+         rkep1[ispec] = rot_ke(spec->avel, spec->inertia, spec->nmols);
+	 if(rkem1[ispec] < 0.0)
+	    rkem1[ispec] = rkem3[ispec] = rkem5[ispec] = rkep1[ispec];
+	 e = KEINT(rkep1[ispec], rkem1[ispec], rkem3[ispec], rkem5[ispec]);
          add_average(CONV_E * e, rke_n, ispec);	/* Rotational kinetic energy  */
          tot_ke += e;
          add_average(e/(0.5*kB*spec->rdof*spec->nmols), rt_n, ispec);

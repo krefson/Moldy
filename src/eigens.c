@@ -179,3 +179,33 @@ for( J=1; J<=N; J++ )
 	E[J-1]=A[L-1];
 	}
 }
+
+/* Sort eigenvalues and vectors into ascending order */
+#define N 3
+void eigensort(ev, e, n)
+real ev[], e[];
+int  n;
+{
+   int i, j, min;
+   real swap;
+  
+   for(i=0; i<n-1; i++)
+   {
+      min = i;
+      for(j = i+1; j < n; j++)
+	 if(e[j] < e[min])
+	    min = j;
+      if( min != i)
+      {
+	 swap = e[min];
+	 e[min] = e[i];
+	 e[i] = swap;
+	 for(j=0; j<n; j++)
+	 {
+	    swap = ev[n*min+j];
+	    ev[n*min+j] = ev[n*i+j];
+	    ev[n*i+j] = swap;
+	 }
+      }
+   }
+}

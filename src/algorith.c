@@ -42,6 +42,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: algorith.c,v $
+ *       Revision 2.11  1999/09/14 13:31:31  keith
+ *       Experimental version implementing true const P (strain-mask=512).
+ *
  *       Revision 2.10  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -135,7 +138,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/algorith.c,v 2.10 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/algorith.c,v 2.11 1999/09/14 13:31:31 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -370,62 +373,6 @@ int		nmols;		/* Number of molecules                   (in) */
       }
 }
 /******************************************************************************
- * euler  Use the Euler equations and the second-order quaternion method to   *
- * calculate the second derivatives of the molecular quaternions from the     *
- * torques etc.  Test for zero moments of inertia is to handle case of linear *
- * molecule.                                                                  *
- ******************************************************************************/
-void euler(torque, quat, qdot, qddot, inertia, nmols)
-vec_mp		torque;		/* Space frame torques [nmols][3]        (in) */
-quat_mp		quat, qdot,     /* Quaternions for this species and d/dt (in) */
-		qddot;		/* Quaternion second derivatives        (out) */
-vec_mt		inertia;	/* Principal moments of inertia          (in) */
-int		nmols;		/* Number of molecules                   (in) */
-{
-   /* The following two quantities, though vectors, are stored in the last 3  *
-    * components of a quaternion array to allow easy application of the       *
-    * quaternion multiplication in the equations of motion.                   */
-   quat_mp	omega,		/* Principal frame angular velocities         */
-   		ang_acc=qalloc(nmols);	/* Principal frame ang accelerations  */
-   real		*qp;
-   register int	imol;
-   int		i, j, k;
-   register double	Iir, Ijk;	/* Temporaries for moments of inertia */
-
-   if(quat == NULL) return;  /* Molecule is point atom or ion - no action     */
-
-   omega = qddot;	/* Use the qddot array as workspace for angular vels  */
-
-   q_conj_mul(quat, qdot, omega, nmols);
-   vscale(4 * nmols, 2.0, omega[0], 1);
-
-   for(imol = 0; imol < nmols; imol++)
-   {
-      qp = qdot[imol];
-      ang_acc[imol][0] = -2.0 * 
-	 (qp[0]*qp[0] + qp[1]*qp[1] + qp[2]*qp[2] + qp[3]*qp[3]);
-   }
- 
-   for(i=1, j=2, k=3; i<4; i++, j=i%3+1, k=j%3+1)
-      if(inertia[i-1] != 0.0)
-      {
-         Iir = 1.0/inertia[i-1];  Ijk = inertia[j-1] - inertia[k-1];
-         for(imol = 0; imol < nmols; imol++)
-            ang_acc[imol][i] = Iir * 
-                      (torque[imol][i-1] + Ijk * omega[imol][j]*omega[imol][k]);
-      }
-      else
-         for(imol = 0; imol < nmols; imol++)
-            ang_acc[imol][i] = 0.0;
-
-   omega = NULL;		/* Omega not needed any more - re use as qddot*/
-
-   q_mul(quat, ang_acc, qddot, nmols);
-   vscale(4 * nmols, 0.5, qddot[0], 1);
-
-   xfree(ang_acc);
-}
-/******************************************************************************
  *  Parinello   Calculate the correction to the scaled centre of mass         *
  *  accelerations in the Parinello and Rahman zero-stress method.             *
  *  Parinello M. and Rahman A. J. Appl. Phys. 52(12), 7182-7190 (1981)        *
@@ -488,22 +435,17 @@ int	nmols;			/* Number of molecules			 (in) */
 /******************************************************************************
  *  rot_ke  calculate and return the rotational kinetic energy                *
  ******************************************************************************/
-double	rot_ke(quat, qdot, inertia, nmols)
-quat_mt	quat[],			/* Molecular quaternions		 (in) */
-	qdot[];			/* Quaternion derivatives		 (in) */
+double	rot_ke(omega_p, inertia, nmols)
+quat_mt	omega_p[];		/* Principal angular velocities    */
 vec_mt	inertia;		/* Principal moments of inertia		 (in) */
 int	nmols;			/* Number of molecules			 (in) */
 {
    double	ke = 0.0;
-   quat_mp	omega_p = qalloc(nmols);   /* Principal angular velocities    */
    int		i;
    
-   q_conj_mul(quat, qdot, omega_p, nmols); /* Calculate angular velocities    */
-   vscale(4 * nmols, 2.0, omega_p[0], 1);  /* omega = 2*q~*qdot               */
    for(i = 0; i < 3; i++)
       ke += inertia[i] * vdot(nmols, omega_p[0]+i+1, 4, omega_p[0]+i+1, 4);
 
-   xfree(omega_p);
    return(0.5 * ke);
 }
 /******************************************************************************

@@ -31,6 +31,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.12  1999/12/20 15:19:26  keith
+ *       Check for rdf-limit or nbinds changed on restart, and handle
+ *       gracefully.
+ *
  *       Revision 2.11  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -162,7 +166,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/restart.c,v 2.11 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/restart.c,v 2.12 1999/12/20 15:19:26 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -560,38 +564,23 @@ int		av_convert;
    cread(xfp,  (gptr*)system->c_of_m, lsizeof(real), 3*system->nmols, xdr_real);
    cread(xfp,  (gptr*)system->vel,    lsizeof(real), 3*system->nmols, xdr_real);
    cread(xfp,  (gptr*)system->velp,   lsizeof(real), 3*system->nmols, xdr_real);
-   cread(xfp,  (gptr*)system->acc,    lsizeof(real), 3*system->nmols, xdr_real);
-   cread(xfp,  (gptr*)system->acco,   lsizeof(real), 3*system->nmols, xdr_real);
-   cread(xfp,  (gptr*)system->accvo,  lsizeof(real), 3*system->nmols, xdr_real);
    if(system->nmols_r > 0)
    {
       cread(xfp,  (gptr*)system->quat,    lsizeof(real), 4*system->nmols_r, xdr_real);
-      cread(xfp,  (gptr*)system->qdot,    lsizeof(real), 4*system->nmols_r, xdr_real);
-      cread(xfp,  (gptr*)system->qdotp,   lsizeof(real), 4*system->nmols_r, xdr_real);
-      cread(xfp,  (gptr*)system->qddot,   lsizeof(real), 4*system->nmols_r, xdr_real);
-      cread(xfp,  (gptr*)system->qddoto,  lsizeof(real), 4*system->nmols_r, xdr_real);
-      cread(xfp,  (gptr*)system->qddotvo, lsizeof(real), 4*system->nmols_r, xdr_real);
+      cread(xfp,  (gptr*)system->avel,    lsizeof(real), 4*system->nmols_r, xdr_real);
+      cread(xfp,  (gptr*)system->avelp,   lsizeof(real), 4*system->nmols_r, xdr_real);
    }
    cread(xfp,  (gptr*)system->h,       lsizeof(real), 9, xdr_real);
    cread(xfp,  (gptr*)system->hdot,    lsizeof(real), 9, xdr_real);
    cread(xfp,  (gptr*)system->hdotp,   lsizeof(real), 9, xdr_real);
-   cread(xfp,  (gptr*)system->hddot,   lsizeof(real), 9, xdr_real);
-   cread(xfp,  (gptr*)system->hddoto,  lsizeof(real), 9, xdr_real);
-   cread(xfp,  (gptr*)system->hddotvo, lsizeof(real), 9, xdr_real);
 
    if( vmajor > 2 || (vmajor == 2 && vminor > 7) )
    {
       cread(xfp,  (gptr*)system->ta,      lsizeof(real), system->nspecies, xdr_real);
       cread(xfp,  (gptr*)system->tap,     lsizeof(real), system->nspecies, xdr_real);
-      cread(xfp,  (gptr*)system->tadot,   lsizeof(real), system->nspecies, xdr_real);
-      cread(xfp,  (gptr*)system->tadoto,  lsizeof(real), system->nspecies, xdr_real);
-      cread(xfp,  (gptr*)system->tadotvo, lsizeof(real), system->nspecies, xdr_real);
 
       cread(xfp,  (gptr*)system->ra,      lsizeof(real), system->nspecies, xdr_real);
       cread(xfp,  (gptr*)system->rap,     lsizeof(real), system->nspecies, xdr_real);
-      cread(xfp,  (gptr*)system->radot,   lsizeof(real), system->nspecies, xdr_real);
-      cread(xfp,  (gptr*)system->radoto,  lsizeof(real), system->nspecies, xdr_real);
-      cread(xfp,  (gptr*)system->radotvo, lsizeof(real), system->nspecies, xdr_real);
    }
 
    ap = av_ptr(&asize,av_convert);	      /* get addr, size of database   */
@@ -635,7 +624,7 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
    FILE		*save;
    XDR		xdrsw;
    xfp_mt	xfp;
-   char		*vsn = "$Revision: 2.11 $"+11;
+   char		*vsn = "$Revision: 2.12 $"+11;
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)
@@ -677,36 +666,21 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
    cwrite(xfp,  (gptr*)system->c_of_m, lsizeof(real), 3*system->nmols, xdr_real);
    cwrite(xfp,  (gptr*)system->vel,    lsizeof(real), 3*system->nmols, xdr_real);
    cwrite(xfp,  (gptr*)system->velp,   lsizeof(real), 3*system->nmols, xdr_real);
-   cwrite(xfp,  (gptr*)system->acc,    lsizeof(real), 3*system->nmols, xdr_real);
-   cwrite(xfp,  (gptr*)system->acco,   lsizeof(real), 3*system->nmols, xdr_real);
-   cwrite(xfp,  (gptr*)system->accvo,  lsizeof(real), 3*system->nmols, xdr_real);
    if(system->nmols_r > 0)
    {
       cwrite(xfp, (gptr*)system->quat,    lsizeof(real), 4*system->nmols_r, xdr_real);
-      cwrite(xfp, (gptr*)system->qdot,    lsizeof(real), 4*system->nmols_r, xdr_real);
-      cwrite(xfp, (gptr*)system->qdotp,   lsizeof(real), 4*system->nmols_r, xdr_real); 
-      cwrite(xfp, (gptr*)system->qddot,   lsizeof(real), 4*system->nmols_r, xdr_real);
-      cwrite(xfp, (gptr*)system->qddoto,  lsizeof(real), 4*system->nmols_r, xdr_real);
-      cwrite(xfp, (gptr*)system->qddotvo, lsizeof(real), 4*system->nmols_r, xdr_real);
+      cwrite(xfp, (gptr*)system->avel,    lsizeof(real), 4*system->nmols_r, xdr_real);
+      cwrite(xfp, (gptr*)system->avelp,   lsizeof(real), 4*system->nmols_r, xdr_real); 
    }
    cwrite(xfp,  (gptr*)system->h,       lsizeof(real), 9, xdr_real);
    cwrite(xfp,  (gptr*)system->hdot,    lsizeof(real), 9, xdr_real);
    cwrite(xfp,  (gptr*)system->hdotp,   lsizeof(real), 9, xdr_real);
-   cwrite(xfp,  (gptr*)system->hddot,   lsizeof(real), 9, xdr_real);
-   cwrite(xfp,  (gptr*)system->hddoto,  lsizeof(real), 9, xdr_real);
-   cwrite(xfp,  (gptr*)system->hddotvo, lsizeof(real), 9, xdr_real);
 
    cwrite(xfp,  (gptr*)system->ta,      lsizeof(real), system->nspecies, xdr_real);
    cwrite(xfp,  (gptr*)system->tap,     lsizeof(real), system->nspecies, xdr_real);
-   cwrite(xfp,  (gptr*)system->tadot,   lsizeof(real), system->nspecies, xdr_real);
-   cwrite(xfp,  (gptr*)system->tadoto,  lsizeof(real), system->nspecies, xdr_real);
-   cwrite(xfp,  (gptr*)system->tadotvo, lsizeof(real), system->nspecies, xdr_real);
 
       cwrite(xfp,  (gptr*)system->ra,      lsizeof(real), system->nspecies, xdr_real);
       cwrite(xfp,  (gptr*)system->rap,     lsizeof(real), system->nspecies, xdr_real);
-      cwrite(xfp,  (gptr*)system->radot,   lsizeof(real), system->nspecies, xdr_real);
-      cwrite(xfp,  (gptr*)system->radoto,  lsizeof(real), system->nspecies, xdr_real);
-      cwrite(xfp,  (gptr*)system->radotvo, lsizeof(real), system->nspecies, xdr_real);
 
    ap = av_ptr(&asize,0);			/* get addr, size of database */
    xdr_set_av_size_conv(asize,0);	 /* Pass asize to xdr_averages.  Ugh! */
