@@ -7,6 +7,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.11  89/12/15  12:57:00  keith
+ * Now prints elapsed as well as cpu time.
+ * 
  * Revision 1.10  89/11/20  18:04:15  keith
  * Moved initialisation of control and units to 'input.c'
  * Added 2nd command line arg to specify output file.
@@ -45,8 +48,13 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/main.c,v 1.10 89/11/20 18:04:15 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/main.c,v 1.11 89/12/15 12:57:00 keith Exp $";
 #endif
+/*========================== System include files ============================*/
+#include	<signal.h>
+#ifdef  SIGCPULIM			/* Alternative name to SIGXCPU.	      */
+#define SIGXCPU SIGCPULIM
+#endif		/* Unicos uses SIGCPULIM not SIGXCPU. */
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
@@ -70,6 +78,17 @@ double  rt_clock();
 contr_t		control;
 unit_t		input_unit;
 /*============================================================================*/
+/******************************************************************************
+ *  Signal handler.  Just set flag and return.				      *
+ ******************************************************************************/
+static int	sig_flag = 0;
+void	trap(sig)
+{
+   sig_flag = sig;
+}
+/******************************************************************************
+ *  Main program.							      *
+ ******************************************************************************/
 main(argc, argv)
 int	argc;
 char	*argv[];
@@ -89,8 +108,19 @@ char	*argv[];
 	    &system, &species, &site_info, &potpar);
    meansq_f_t = (vec_t (*)[2])ralloc(2*system.nspecies);
    
+   /*
+    *  Set signal handlers.
+    */
+   (void)signal(SIGTERM, trap);
+#ifdef SIGXCPU
+   (void)signal(SIGXCPU, trap);
+#endif
+   /*
+    *  Main MD timestep loop
+    */
    while( control.istep < control.nsteps &&
-	  cpu()-cpu_base+delta_cpu < control.cpu_limit)
+	  cpu()-cpu_base+delta_cpu < control.cpu_limit &&
+	  sig_flag == 0)
    {
       control.istep++;
       do_step(&system, species, site_info, potpar,
@@ -135,9 +165,12 @@ char	*argv[];
 
    }					/* End of main MD timestep loop	      */
    
-   if(control.istep < control.nsteps)	/* Run ended when CPU limit exceeded  */
+   if(control.istep < control.nsteps)	/* Run ended prematurely	      */
    {
-      note("Run ended after step %d - cpu limit exceeded", control.istep);
+      if(sig_flag == SIGTERM)
+	 note("Run ended after step %d - SIGTERM received", control.istep);
+      else
+	 note("Run ended after step %d - cpu limit exceeded", control.istep);
       write_restart(control.backup_file, &system, species, site_info, potpar);
    }
    else if(control.save_file[0] != '\0')
