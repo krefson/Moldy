@@ -38,6 +38,21 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: beeman.c,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
+ * Got rid of all global (external) data items except for
+ * "control" struct and constant data objects.  The latter
+ * (pot_dim, potspec, prog_unit) are declared with CONST
+ * qualifier macro which evaluates to "const" or nil
+ * depending on ANSI/K&R environment.
+ * Also moved as many "write" instantiations of "control"
+ * members as possible to "startup", "main" leaving just
+ * "dump".
+ *
+ * Declared as "static"  all functions which should be.
+ *
  * Revision 2.5  1994/01/18  13:32:13  keith
  * Null update for XDR portability release
  *
@@ -77,7 +92,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/beeman.c,v 2.5 1994/01/18 13:32:13 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/beeman.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -228,17 +243,23 @@ system_mp	sys;			/* pointer to whole-system record     */
 {
    beeman_1(sys->c_of_m[0],sys->vel[0],sys->acc[0],sys->acco[0], 3*sys->nmols);
    escape(sys->c_of_m, sys->nmols);
-   beeman_1(sys->quat[0],sys->qdot[0],sys->qddot[0],sys->qddoto[0],
-                                                               4*sys->nmols_r);
-   normalise(sys->quat, sys->nmols_r);
+   if( sys->nmols_r > 0 )
+   {
+      beeman_1(sys->quat[0],sys->qdot[0],sys->qddot[0],sys->qddoto[0],
+	       4*sys->nmols_r);
+      normalise(sys->quat, sys->nmols_r);
+   }
    if(control.const_pressure)
       beeman_1(sys->h[0], sys->hdot[0], sys->hddot[0], sys->hddoto[0], 9);
    
    predict(sys->vel[0], sys->velp[0], sys->acc[0], 
            sys->acco[0], sys->accvo[0], 3*sys->nmols);
-   predict(sys->qdot[0], sys->qdotp[0], sys->qddot[0], 
-           sys->qddoto[0], sys->qddotvo[0], 4*sys->nmols_r);
-   constrain(sys->quat, sys->qdotp, sys->nmols_r);
+   if( sys->nmols_r > 0 )
+   {
+      predict(sys->qdot[0], sys->qdotp[0], sys->qddot[0], 
+	      sys->qddoto[0], sys->qddotvo[0], 4*sys->nmols_r);
+      constrain(sys->quat, sys->qdotp, sys->nmols_r);
+   }
    if(control.const_pressure)
       predict(sys->h[0], sys->hdotp[0], sys->hdot[0],
               sys->hddoto[0], sys->hddotvo[0], 9);
@@ -255,9 +276,12 @@ system_mp	sys;			/* pointer to whole-system record     */
 {
    beeman_2(sys->vel[0], sys->vel[0], sys->acc[0], sys->acco[0],sys->accvo[0],
 	    3*sys->nmols);
-   beeman_2(sys->qdot[0], sys->qdot[0], sys->qddot[0], sys->qddoto[0],
+   if( sys->nmols_r > 0 )
+   {
+      beeman_2(sys->qdot[0], sys->qdot[0], sys->qddot[0], sys->qddoto[0],
 	    sys->qddotvo[0], 4*sys->nmols_r);
-   constrain(sys->quat, sys->qdot, sys->nmols_r);
+      constrain(sys->quat, sys->qdot, sys->nmols_r);
+   }
    if(control.const_pressure)
       beeman_2(sys->hdot[0], sys->hdot[0], sys->hddot[0], sys->hddoto[0],
 	       sys->hddotvo[0], 9);

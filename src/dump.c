@@ -43,6 +43,21 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
+ * Got rid of all global (external) data items except for
+ * "control" struct and constant data objects.  The latter
+ * (pot_dim, potspec, prog_unit) are declared with CONST
+ * qualifier macro which evaluates to "const" or nil
+ * depending on ANSI/K&R environment.
+ * Also moved as many "write" instantiations of "control"
+ * members as possible to "startup", "main" leaving just
+ * "dump".
+ *
+ * Declared as "static"  all functions which should be.
+ *
  * Revision 2.5  1994/02/01  14:33:45  keith
  * Revised consistency checks to safeguard existing files:
  * Now checks timestep in dump header.
@@ -142,7 +157,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -348,7 +363,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 2.5.1.1 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 2.6 $"+11,
 		                     sizeof dump_header.vsn-1);
 #ifdef USE_XDR
       if( control.xdr_write )
@@ -530,7 +545,11 @@ double		pe;
    {
       mat_vec_mul(system->h, system->c_of_m, scale_buf, nmols);
       real_to_float(scale_buf[0],    buf, 3*nmols);	buf += 3*nmols;
-      real_to_float(system->quat[0], buf, 4*nmols_r);	buf += 4*nmols_r;
+      if( system->nmols_r > 0 )
+      {
+	 real_to_float(system->quat[0], buf, 4*nmols_r);	
+	 buf += 4*nmols_r;
+      }
       real_to_float(system->h[0],    buf, 9);		buf += 9;
       real_to_float(&ppe, buf, 1);		buf += 1;
    }
@@ -538,20 +557,32 @@ double		pe;
    {
       mat_vec_mul(system->h, system->vel, scale_buf, nmols);
       real_to_float(scale_buf[0],    buf, 3*nmols);	buf += 3*nmols;
-      real_to_float(system->qdot[0], buf, 4*nmols_r);	buf += 4*nmols_r;
+      if( system->nmols_r > 0 )
+      {
+	 real_to_float(system->qdot[0], buf, 4*nmols_r);
+	 buf += 4*nmols_r;
+      }
       real_to_float(system->hdot[0],    buf, 9);	buf += 9;
    }
    if( control.dump_level & 4)
    {
       mat_vec_mul(system->h, system->acc, scale_buf, nmols);
       real_to_float(scale_buf[0],     buf, 3*nmols);	buf += 3*nmols;
-      real_to_float(system->qddot[0], buf, 4*nmols_r);	buf += 4*nmols_r;
+      if( system->nmols_r > 0 )
+      {
+	 real_to_float(system->qddot[0], buf, 4*nmols_r);
+	 buf += 4*nmols_r;
+      }
       real_to_float(system->hddot[0], buf, 9);		buf += 9;
    }
    if( control.dump_level & 8)
    {
       real_to_float(force[0],  buf, 3*nmols);	buf += 3*nmols;
-      real_to_float(torque[0], buf, 3*nmols_r);	buf += 3*nmols_r;
+      if( system->nmols_r > 0 )
+      {
+	 real_to_float(torque[0], buf, 3*nmols_r);
+	 buf += 3*nmols_r;
+      }
       real_to_float(stress[0], buf, 9);		buf += 9;
    }
    xfree(scale_buf);
