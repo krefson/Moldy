@@ -147,7 +147,20 @@ EXTRAS = $(EXTRA0) ewald-RIL.c
 
 HFILES=		structs.h defs.h string.h time.h stddef.h stdlib.h messages.h xdr.h
 
-DOC=		READ.ME BENCHMARK COPYING RELNOTES moldy.tex moldy.bbl
+FIGTEXPS=	fig_arralloc.tex fig_dostep-a.tex fig_dostep-b.tex \
+                fig_ewald.tex fig_link-cell.tex fig_main.tex \
+                fig_skewstart.tex fig_startup-a.tex fig_startup-b.tex \
+		fig_arralloc.ps fig_dostep-a.ps fig_dostep-b.ps \
+                fig_ewald.ps fig_link-cell.ps fig_main.ps \
+                fig_skewstart.ps fig_startup-a.ps fig_startup-b.ps    \
+		fig_arralloc-eepic.tex fig_dostep-a-eepic.tex \
+		fig_dostep-b-eepic.tex fig_ewald-eepic.tex \
+		fig_link-cell-eepic.tex fig_main-eepic.tex \
+                fig_skewstart-eepic.tex fig_startup-a-eepic.tex \
+		fig_startup-b-eepic.tex
+
+DOC=		READ.ME BENCHMARK COPYING RELNOTES moldy.tex moldy.bbl \
+		$(FIGTEXPS)
 
 VMSBUILD=	compile_moldy.com link_moldy.com defcomm.com\
 		compile_utils.com link_utils.com compile.com
@@ -176,6 +189,16 @@ mdshak:		mdshak.o $(SHAKOBJS) $(GETOPT)
 		$(CC) -o mdshak $(LDFLAGS1) mdshak.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) -lm
 
 utilities:	$(UTILS) mdshak
+
+$(FIGTEXPS):	
+		(cd figures; \
+		 transfig -L pstex -m 0.66; \
+		 $(MAKE); \
+		 mv *.ps *.tex ..;\
+		 transfig -L eepic -m 0.66;\
+		 $(MAKE); \
+		 rename 's/\.tex/-eepic.tex/' *.tex;\
+		 mv *.tex ..)
 
 protoize:	$(CFILES) $(HFILES)
 		protoize -k $(CFILES)
