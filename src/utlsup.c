@@ -378,10 +378,9 @@ int		sp_range[3];
  * range_in. Function for determining ranges of atom positions to include     *
  ******************************************************************************/
 int
-range_in(system, range, range_flag)
+range_in(system, range)
 system_mt	*system;
-real		range[3][2];
-int		*range_flag;
+real		range[3][3];
 {
    double	box[3], blimit;
    mat_mp	h = system->h;
@@ -392,7 +391,8 @@ int		*range_flag;
        box[i] = sqrt(SQR(h[0][i]) + SQR(h[1][i]) + SQR(h[2][i]));
        blimit = MAX3(box[0], box[1], box[2]);
 
-       if( range_flag[i])
+       if( range[i][2] )
+       {
           switch(i)
           {
            case 0:
@@ -408,6 +408,8 @@ int		*range_flag;
              range[i][1] = get_real("Enter z maximum: ", range[i][0],2.0*blimit);
              break;
           }    
+          range[i][2]--;
+       }
        else
        {
           range[i][0] = -1.0*blimit;
@@ -415,4 +417,23 @@ int		*range_flag;
        }
    }
    return 0;
+}
+/******************************************************************************
+ * in_region. Function for checking if atom lies within/out region            *
+ ******************************************************************************/
+int
+in_region(pos, range)
+vec_mt	        pos;
+real		range[3][3];
+{
+int	xi, yi, zi;
+
+    xi = ( pos[0] >= range[0][0] && pos[0] <= range[0][1] ) ? 0 : 1;
+    yi = ( pos[1] >= range[1][0] && pos[1] <= range[1][1] ) ? 0 : 1;        
+    zi = ( pos[2] >= range[2][0] && pos[2] <= range[2][1] ) ? 0 : 1;        
+
+    if( (range[0][2] == xi) && (range[1][2] == yi) && (range[2][2] == zi) )
+       return 1;   /* Molecule c_of_m lies within selected region */
+    else
+       return 0;   /* Molecule c_of_m isn't within selected region */ 
 }
