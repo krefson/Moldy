@@ -7,6 +7,16 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.16  91/08/15  18:12:06  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
  * Revision 1.15  91/03/12  15:43:04  keith
  * Tidied up typedefs size_t and include file <sys/types.h>
  * Added explicit function declarations.
@@ -61,7 +71,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.17 91/08/14 14:23:36 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.16 91/08/15 18:12:06 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -95,15 +105,27 @@ void            tfree();	       /* Free allocated memory	      	      */
 /*========================== External data definition ========================*/
 contr_t		control;
 unit_t		input_unit;
+char		backup_lockfile[L_name];
+char		dump_lockfile[L_name];
 /*============================================================================*/
 /******************************************************************************
  *  Signal handler.  Just set flag and return.				      *
  ******************************************************************************/
 static int	sig_flag = 0;
-void	trap(sig)
+void	shutdown(sig)
 int sig;
 {
    sig_flag = sig;
+}
+void	siglock(sig)
+int sig;
+{
+   if( backup_lockfile[0] )
+      remove(backup_lockfile);
+   if( dump_lockfile[0] )
+      remove(dump_lockfile);
+   signal(sig, SIG_DFL);
+   raise(sig);
 }
 /******************************************************************************
  *  Main program.							      *
@@ -135,12 +157,24 @@ char	*argv[];
    meansq_f_t = (vec_t (*)[2])ralloc(2*system.nspecies);
    
    /*
-    *  Set signal handlers.
+    *  Set signal handlers -- attempt clean shutdown
     */
-   (void)signal(SIGTERM, trap);
+   (void)signal(SIGTERM, shutdown);
 #ifdef SIGXCPU
-   (void)signal(SIGXCPU, trap);
+   (void)signal(SIGXCPU, shutdown);
 #endif
+   /*
+    *  Set signal handlers -- remove lock files and exit
+    *  Check that the signal is actually defined if it is non-ansi
+    */
+#ifdef SIGHUP
+   (void)signal(SIGHUP, siglock);
+#endif
+   (void)signal(SIGINT, siglock);
+#ifdef SIGQUIT
+   (void)signal(SIGQUIT, siglock);
+#endif
+   (void)signal(SIGABRT, siglock);
 #ifdef PARALLEL
 # ifdef ardent
    MT_SET_THREAD_NUMBER(&nthreads);
@@ -219,5 +253,9 @@ char	*argv[];
    note("Run used %.2fs of CPU time and %.2fs elapsed", cpu()-cpu_base,
 	rt_clock()-rt);
 
+   if( backup_lockfile[0] )
+      remove(backup_lockfile);
+   if( dump_lockfile[0] )
+      remove(dump_lockfile);
    return(0);
 }
