@@ -1,7 +1,10 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.7 90/03/27 17:36:12 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.8 90/04/06 11:09:22 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.8  90/04/06  11:09:22  keith
+ * Aquired definition of NPOTP from structs.
+ * 
  * Revision 1.7  90/03/27  17:36:12  keith
  * Moved O/S dependent conditionals to here, esp VPRINTF.
  * Reorganised configuration conditionals into one block.
@@ -34,17 +37,26 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.7 $"
-#define		 REVISION_DATE    "$Date: 90/03/27 17:36:12 $"
+#define          REVISION         "$Revision: 1.8 $"
+#define		 REVISION_DATE    "$Date: 90/04/06 11:09:22 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
  ******************************************************************************/
 /*
- *  Set symbol USG to identify system V variant of unix.
+ *  Set symbol USG to identify system V variant of unix, BSD for Berkeley.
  */
-#if unix && ( sysV || SysV || cray)
-# define USG
+#if defined(unix) && !defined(NOBSD)
+#include <errno.h>
+/*
+ * Berkeley error numbers appear to be very regular, so the following is
+ * pretty likely to get it right.  If it doesn't, do the define by hand.
+ * BSD is used to signal use of getrusage() rather than times() (unix only)
+ * and absence of mem*() and strchr() functions from library.
+ */
+#if EWOULDBLOCK==35 && EINPROGRESS==36 && EALREADY==37
+# define BSD
+#endif
 #endif
 /*
  * Define operating-system dependant default filenames
