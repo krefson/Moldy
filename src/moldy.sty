@@ -1,0 +1,25 @@
+\makeatletter
+
+\def\sideset#1#2#3{%
+  \setbox\z@\hbox{$\displaystyle{\vphantom{#3}}#1{#3}\m@th$}%
+  \setbox\tw@\hbox{$\displaystyle{#3}#2\m@th$}%
+  \hskip\wd\z@\hskip-\wd\tw@\mathop{\hskip\wd\tw@\hskip-\wd\z@
+  {\vphantom{#3}}#1{#3}#2}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%% Define superfig and partfigure environments for multi-page figures
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcounter{subfig}
+
+\newenvironment{superfig}{%
+\setcounter{subfig}{0}
+\addtocounter{figure}{1}
+}{\setcounter{subfig}{0}}
+
+\newenvironment{partfigure}[1][tbp]{%
+\addtocounter{subfig}{1}\addtocounter{figure}{-1}%
+\@float{figure}[#1]%
+\renewcommand{\thefigure}{\thechapter.\arabic{figure}(\alph{subfig})}%
+}{\end@float}
+\renewcommand{\l@figure}{\@dottedtocline{1}{1.5em}{3em}}
+\makeatother
