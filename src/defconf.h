@@ -39,7 +39,7 @@
 #endif
 
 
-#if defined(__unix__) || defined(__unix)
+#if defined(unix) || defined(__unix) || defined(__unix__)
 #   define STDC_HEADERS
 #   define LOCKEX		".lck"
 #   define ALLOC_ALIGN
