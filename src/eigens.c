@@ -190,13 +190,9 @@ void eigensort(real *ev, real *e, int n, vec_mt p)
    for(i=0; i<n-1; i++)
    {
       max = i;
-      swap = e[max];
       for(j = i+1; j < n; j++)
-	 if(e[j] > swap )
-	 {
+	 if(e[j] > e[max] )
 	   max = j;
-           swap = e[max];
-         }
       if( max != i)
       {
          swap = e[max];
