@@ -27,6 +27,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  * $Log: main.c,v $
+ * Revision 2.13  1998/05/07 17:06:11  keith
+ * Reworked all conditional compliation macros to be
+ * feature-specific rather than OS specific.
+ * This is for use with GNU autoconf.
+ *
  * Revision 2.12  1996/09/03 15:01:12  keith
  * Added test for divergent parallel trajectories.
  *
@@ -162,7 +167,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/main.c,v 2.12 1996/09/03 15:01:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/main.c,v 2.13 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -317,6 +322,10 @@ char	*argv[];
    while( control.istep < control.nsteps && sig_flag == 0)
    {
       control.istep++;
+
+      if((control.istep-control.begin_rdf) % control.rdf_out == 0) 
+	 memst((gptr*)rdf_base, 0, rdf_size*sizeof(int));
+
       do_step(&system, species, site_info, potpar,
 	      meansq_f_t, pe, dip_mom, stress_vir, 
 	      &restart_header, backup_restart);
@@ -354,13 +363,9 @@ char	*argv[];
       {
 #if defined(SPMD) && ! defined OLDRDF
 	 par_isum(rdf_base, rdf_size);
-	 if( ithread == 0 )
-	    print_rdf(&system, species, site_info);
-	 memst((gptr*)rdf_base, 0, rdf_size*sizeof(int));
-#else
-	 if( ithread == 0 )
-	    print_rdf(&system, species, site_info);
 #endif
+	 if( ithread == 0 )
+	    print_rdf(&system, species, site_info);
       }
 
       if(control.backup_interval > 0 && control.backup_file[0] &&
