@@ -22,6 +22,11 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.13  1995/12/22 11:42:04  keith
+ *       Modified buffer handling for BSP interface.  It used to complain and
+ *       stop if buffer was too small. Now it divides data into chunks smaller
+ *       than the buffer and transfers them one at a time.
+ *
  *       Revision 2.12  1995/12/06 10:44:50  keith
  *       Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
  *
@@ -61,6 +66,7 @@ static long	lval;
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 gptr		*av_ptr();
+gptr            *rdf_ptr();
 void		init_averages();
 void		allocate_dynamics();
 extern int 	ithread, nthreads;
@@ -91,8 +97,8 @@ static char tmpbuf[NBUFMAX];
  *  par_abort(int code) :  Terminate the run abnormally.  Return code if poss.*
  *  par_broadcast(void *buf, int n, size_mt size, int ifrom)		      *
  *			:  Broadcast the specified buffer from ifrom to all.  *
- *  par_{r,d}sum(void *buf, int n) :  Perform a global parallel sum reduction *
- *			   on the buffer containing n {reals,doubles}.	      *
+ *  par_{r,d,i}sum(void *buf, int n) :  Perform a global sum reduction        *
+ *			   on the buffer containing n {reals,doubles,ints}.   *
  *  par_imax(int *idat) :  Perform a global "maximum" reduction on the single *
  *       		   int argument.				      *
  *									      *
@@ -140,7 +146,7 @@ int *idat;
 }
 #endif
 #ifdef BSP
-void imax(i1, i2, i3, size)
+static void imax(i1, i2, i3, size)
 int *i1, *i2, *i3;
 int	size;
 {
@@ -165,6 +171,74 @@ int *idat;
 }
 #endif
 /******************************************************************************
+ * par_isum().  Calculate sum of int array over all processors.               *
+ ******************************************************************************/
+#ifdef TCGMSG
+void
+par_isum(buf, n)
+int *buf;
+int  n;
+{
+   IGOP_(ADDR(MSGINT), buf, &n, "+");
+}
+#endif
+#ifdef BSP
+static void viadd(res, x, y, nb)
+int res[], x[], y[];
+int nb;
+{
+   int i, n=nb/sizeof(int);
+   for(i = 0; i < n; i++)
+      res[i] = x[i] + y[i];
+}
+
+void
+par_isum(buf, n)
+int *buf;
+int  n;
+{
+   int m;
+   
+   /*
+    * BSP only allows operations on statically allocated buffers. *sigh*
+    * Use loop to perform general operation copying in and out of a
+    * fixed-size, static buffer.
+    */
+   while( n > 0 )
+   {
+      m = MIN(n, NBUFMAX/sizeof(int));
+      memcp(tmpbuf, buf, m*sizeof(int));
+      bspreduce(viadd, tmpbuf, tmpbuf, m*sizeof(int));
+      memcp(buf, tmpbuf, m*sizeof(int));
+      buf += m;
+      n -= m;
+   }
+}
+#endif
+#ifdef MPI
+/*
+ * MPI demands seperate send and receive buffers.  Malloc one and keep
+ * it around.  Extend if necessary.
+ */
+void
+par_isum(buf, n)
+int *buf;
+int  n;
+{
+   static int *tmpbuf = 0;
+   static int  tmpsize = 0;
+   if(n > tmpsize)
+   {
+      if( tmpbuf )
+	 free(tmpbuf);
+      tmpbuf = aalloc(n, int);
+      tmpsize = n;
+   }
+   MPI_Allreduce(buf, tmpbuf, n, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+   memcp(buf, tmpbuf, n*sizeof(int));
+}
+#endif
+/******************************************************************************
  * par_rsum()/dsum.  Calculate sum of "reals"/doubles  over all processors.   *
  ******************************************************************************/
 #ifdef TCGMSG
@@ -184,7 +258,7 @@ int  n;
 }
 #endif
 #ifdef BSP
-void vradd(res, x, y, nb)
+static void vradd(res, x, y, nb)
 real res[], x[], y[];
 int nb;
 {
@@ -192,7 +266,7 @@ int nb;
    for(i = 0; i < n; i++)
       res[i] = x[i] + y[i];
 }
-void vdadd(res, x, y, nb)
+static void vdadd(res, x, y, nb)
 double res[], x[], y[];
 int nb;
 {
@@ -239,7 +313,7 @@ int  n;
    {
       m = MIN(n, NBUFMAX/sizeof(double));
       memcp(tmpbuf, buf, m*sizeof(double));
-      bspreduce(vradd, tmpbuf, tmpbuf, m*sizeof(double));
+      bspreduce(vdadd, tmpbuf, tmpbuf, m*sizeof(double));
       memcp(buf, tmpbuf, m*sizeof(double));
       buf += m;
       n -= m;
@@ -312,7 +386,7 @@ size_mt	size;
 int	ifrom;
 {
    int m;
-   size_mt nbyt = n*size;
+   long nbyt = n*size;	/* Must have a signed type for loop test */
    
    /*
     * BSP only allows operations on statically allocated buffers. *sigh*
@@ -422,6 +496,7 @@ par_abort(code)
 int code;
 {
    Error("",code);
+   exit(code);
 }
 #endif
 #ifdef BSP
@@ -432,6 +507,7 @@ int code;
 #ifdef NOTYET
    bspabort(code);
 #endif
+   exit(code);
 }
 #endif
 #ifdef MPI
@@ -440,6 +516,7 @@ par_abort(code)
 int code;
 {
    MPI_Abort(MPI_COMM_WORLD, code);
+   exit(code);
 }
 #endif
 /******************************************************************************
@@ -497,6 +574,7 @@ system_mp	system;
 {
    gptr		*ap;			/* Pointer to averages database       */
    size_mt	asize;			/* Size of averages database	      */
+
 #ifdef SPMD
    par_broadcast((gptr*)system->c_of_m,3*system->nmols, sizeof(real), 0);
    par_broadcast((gptr*)system->vel,   3*system->nmols, sizeof(real), 0);
@@ -534,6 +612,12 @@ system_mp	system;
 
    ap = av_ptr(&asize,0);	      /* get addr, size of database   */
    par_broadcast(ap, 1, asize,0);
+
+   /*
+    * N.B. We do NOT broadcast the accumulated RDF info.  That would
+    * be incorrect since it is later summed. Leave on thread zero and
+    * zeros on other threads.  WHen globally summed it will be correct.
+    */
 #endif
 }
 /******************************************************************************
@@ -572,6 +656,11 @@ restrt_mt *restart_header;
        */
       init_averages(system->nspecies, (char*)0,
 		    control->roll_interval, control->roll_interval,&av_convert);
+      /*
+       * Initialise radial distribution function database.
+       */
+      if(control->rdf_interval > 0)
+         init_rdf(system);
    }
    /*
     * Copy the dynamic vars from the other processes.
