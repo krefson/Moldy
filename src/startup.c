@@ -37,6 +37,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.30  2001/05/24 16:26:43  keith
+ *      Updated program to store and use angular momenta, not velocities.
+ *       - added conversion routines for old restart files and dump files.
+ *      Got rid of legacy 2.0 and lower restart file reading code.
+ *
  *      Revision 2.29  2001/05/22 14:52:45  keith
  *      Added control param "dont-use-symm-rot" to switch between rotational
  *      leapfrog versions at runtime.
@@ -313,7 +318,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.29 2001/05/22 14:52:45 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/startup.c,v 2.30 2001/05/24 16:26:43 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -451,6 +456,7 @@ const match_mt	match[] = {
 {"cutoff",           "%lf",  "0.0",          (gptr*)&control.cutoff},
 {"subcell",          "%lf",  "0.0",          (gptr*)&control.subcell},
 {"density",          "%lf",  "1.0",          (gptr*)&control.density},
+{"ewald-accuracy",   "%lf",  "1.013e-5",     (gptr*)&control.ewald_accuracy},
 {"alpha",            "%lf",  "0.0",          (gptr*)&control.alpha},
 {"k-cutoff",         "%lf",  "0.0",          (gptr*)&control.k_cutoff},
 {"rdf-limit",        "%lf",  "10.0",         (gptr*)&control.limit},
@@ -943,32 +949,66 @@ void	check_sysdef(FILE *restart,     /* Restart file pointer               */
  * are the cutoffs which giva an accuracy of exp(-p). Here use 10^-5.         *
  * Any value explicity specified in the control file is left alone.           *
  ******************************************************************************/
-#define LOGACC   11.5 /* p =11.5 <=> acc = 10^-5 */
 #define TRoverTF 5.5  /* Ratio of indiv. interaction times - approx */
 void      init_cutoffs(double *alpha, double *cutoff, double *k_cutoff, 
 		       mat_mt h, int nsites)
 {
    double max_cutoff = MIN3(h[0][0], h[1][1], h[2][2]);
    double vol = det(h);
+   double sqrt_p, trial_cutoff, trial_k_cutoff, real_accuracy;
 
-   if( *alpha == 0.0 )
-      *alpha = pow(nsites*CUBE(PI)/SQR(vol)*TRoverTF, 1.0/6.0);
-   if( *alpha > 0.0 )
+
+   if( control.ewald_accuracy <= 0.0 )
+      message(NULLI, NULLP, FATAL, IVEWAC, control.ewald_accuracy);
+
+   if( control.ewald_accuracy < 1.0e-7 )
+      message(NULLI, NULLP, WARNING, ERFACC, control.ewald_accuracy);
+      
+   sqrt_p = sqrt(-log(control.ewald_accuracy));
+
+   if( *alpha < 0.0 )
    {
-      if( *cutoff == 0.0 )
+      if ( *cutoff <= 0.0 )
+	 message(NULLI, NULLP, FATAL, NOCUT, *cutoff);
+   }
+   else 
+   {
+      real_accuracy = control.ewald_accuracy;
+      if( *alpha == 0.0)
       {
-	 *cutoff = sqrt(LOGACC)/ *alpha;
-	 if( *cutoff > max_cutoff )
+	 *alpha = pow(nsites*CUBE(PI)/SQR(vol)*TRoverTF, 1.0/6.0);
+	 trial_cutoff = sqrt_p/ (*alpha);
+	 
+	 if( *cutoff > trial_cutoff )
+	    *alpha = sqrt_p/(*cutoff);
+	 else if( *cutoff == 0.0)
+	    *cutoff = trial_cutoff;
+      }
+      else if( *alpha > 0.0 )
+      {
+	 if( *cutoff == 0.0 )
 	 {
-	    message( NULLI, NULLP, WARNING, MAXCUT, *cutoff, max_cutoff);
-	    *cutoff = max_cutoff;
+	    *cutoff = sqrt_p/ (*alpha);
+	    if( *cutoff > max_cutoff )
+	    {
+	       message( NULLI, NULLP, WARNING, MAXCUT, *cutoff, max_cutoff);
+	       *cutoff = max_cutoff;
+	    }
 	 }
       }
+
+      trial_k_cutoff = 2.0* (*alpha) * sqrt_p;
       if( *k_cutoff == 0.0 )
-	 *k_cutoff = 2.0* (*alpha) * sqrt(LOGACC);
+	 *k_cutoff = trial_k_cutoff;
+
+      real_accuracy = MAX(exp(-SQR(*alpha* (*cutoff))),
+			  exp(-SQR(*k_cutoff/(2.0* (*alpha)))));
+
+      if( real_accuracy > 1.000001*control.ewald_accuracy)
+	 message(NULLI, NULLP, WARNING, EWINAC, real_accuracy, 
+		 control.ewald_accuracy);
+      control.ewald_accuracy = real_accuracy;
    }
-   else if ( *cutoff <= 0.0 )
-      message(NULLI, NULLP, FATAL, NOCUT, *cutoff);
 }
 /******************************************************************************
  * validate_control.  Determine whether control parameters are sensible.      *
@@ -1010,6 +1050,8 @@ void validate_control(void)
       message(&nerrs, NULLP, ERROR, INVVLF, control.pressure, "pressure");
    if( control.temp < 0.0 )
       message(&nerrs, NULLP, ERROR, INVVLF, control.temp, "temperature");
+   if( control.ewald_accuracy <= 0.0 )
+      message(&nerrs, NULLP, ERROR, IVEWAC, control.ewald_accuracy, "ewald-accuracy");   
    if( control.k_cutoff < 0.0 )
       message(&nerrs, NULLP, ERROR, INVVLF, control.k_cutoff, "k-cutoff");
    if( control.cutoff < 0.0 )

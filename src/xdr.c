@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.25  2001/07/31 17:58:19  keith
+ *       Incorporated all info from "species" struct into dump file headers.
+ *
  *       Revision 2.24  2001/07/31 09:56:04  keith
  *       Now prints both conserved hamiltonian and total system energy
  *       (T+V) in the same vertical column.
@@ -154,7 +157,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.24 2001/07/31 09:56:04 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/xdr.c,v 2.25 2001/07/31 17:58:19 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -190,9 +193,10 @@ bool_t xdr_contr(XDR *xdrs, contr_mt *cp)
       xdr_bool(xdrs, &cp->surface_dipole) &&
       xdr_bool(xdrs, &cp->lattice_start) &&
       xdr_opaque(xdrs, cp->sysdef, 6*L_name) &&
-      xdr_vector(xdrs, (gptr*)cp->spare, 22, sizeof(int), 
+      xdr_vector(xdrs, (gptr*)cp->spare, 20, sizeof(int), 
 		 (xdrproc_t)xdr_int) &&
       xdr_bool(xdrs, &cp->nosymmetric_rot) &&
+      xdr_double(xdrs, &cp->ewald_accuracy) &&
       xdr_double(xdrs, &cp->ttmass) &&
       xdr_double(xdrs, &cp->rtmass) &&
       xdr_int(xdrs, &cp->const_pressure) &&

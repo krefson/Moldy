@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.24  2001/05/22 14:52:45  keith
+ *       Added control param "dont-use-symm-rot" to switch between rotational
+ *       leapfrog versions at runtime.
+ *
  *       Revision 2.23  2001/02/21 17:04:25  keith
  *       Reordered "applied temperature" message in banner_page()
  *
@@ -235,7 +239,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.23 2001/02/21 17:04:25 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/output.c,v 2.24 2001/05/22 14:52:45 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -588,13 +592,16 @@ void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
       if(control.const_temp == 2)
          message(NULLI, NULLP, WARNING, GANDP);
    }
+   (void)printf(" Parameters controlling accuracy of potential function evaluation");
+   new_line();
    if( control.strict_cutoff )
       format_dbl("Interaction cut-off (strict)",control.cutoff,LUNIT_N);
    else
       format_dbl("Interaction cut-off (lazy)",control.cutoff,LUNIT_N);
    if(control.alpha != 0.0)
    {
-      format_dbl("Alpha parameter for Ewald sum",control.alpha,RLUNIT_N);
+      format_dbl("Ewald Sum accuracy", control.ewald_accuracy,"");
+      format_dbl("Ewald Sum Alpha parameter",control.alpha,RLUNIT_N);
       format_dbl("Reciprocal space cut-off",control.k_cutoff,RLUNIT_N);
       if( control.surface_dipole )
       {

@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.21 2001/07/26 17:30:17 keith Exp $
+ * $Header: /home/kr/CVS/moldy/src/structs.h,v 2.22 2001/07/31 17:58:19 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.22  2001/07/31 17:58:19  keith
+ * Incorporated all info from "species" struct into dump file headers.
+ *
  * Revision 2.21  2001/07/26 17:30:17  keith
  * Now prints both conserved hamiltonian and total system energy
  * (T+V) in the same vertical column.
@@ -224,8 +227,9 @@ typedef struct                  /* Control parameters for simulation          */
                 dump_file[L_name],      /* Name of file 'dump' writes to      */
                 backup_file[L_name],    /* Name of backup save file           */
                 temp_file[L_name];      /* Temporary file for writing restart */
-   int          spare[22];      /* Extra space for expansion (should be EVEN) */
+   int          spare[20];      /* Extra space for expansion (should be EVEN) */
    boolean      nosymmetric_rot;/* Don't use symm. variant of rot'l leapfrog  */
+   double	ewald_accuracy; /* Accuracy parameter for Ewald sum.          */
    double       ttmass,         /* Nose-Hoover trans temp mass parameter      */
                 rtmass;         /* Nose-Hoover rotat temp mass parameter      */
    int		const_pressure; /* Flag to turn on P&R CP method              */

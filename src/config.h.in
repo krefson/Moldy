@@ -1,23 +1,10 @@
-/* config.h.in.  Generated automatically from configure.in by autoheader.  */
-
-/* Define if on AIX 3.
-   System headers sometimes define this.
-   We just want to avoid a redefinition error message.  */
-#ifndef _ALL_SOURCE
-# undef _ALL_SOURCE
-#endif
+/* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to use BSP parallel interface */
 #undef BSP
 
 /* Define to use old BSP parallel interface */
 #undef BSP0
-
-/* Define to `long' if <sys/types.h> does not define. */
-#undef clock_t
-
-/* Define to empty if `const' does not conform to ANSI C. */
-#undef const
 
 /* Define if you have the <bsp.h> header file. */
 #undef HAVE_BSP_H
@@ -103,11 +90,11 @@
 /* Define if you have the `strftime' function. */
 #undef HAVE_STRFTIME
 
-/* Define if you have the <string.h> header file. */
-#undef HAVE_STRING_H
-
 /* Define if you have the <strings.h> header file. */
 #undef HAVE_STRINGS_H
+
+/* Define if you have the <string.h> header file. */
+#undef HAVE_STRING_H
 
 /* Define if you have the `strstr' function. */
 #undef HAVE_STRSTR
@@ -124,11 +111,11 @@
 /* Define if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
 
-/* Define if you have the <sys/time.h> header file. */
-#undef HAVE_SYS_TIME_H
-
 /* Define if you have the <sys/times.h> header file. */
 #undef HAVE_SYS_TIMES_H
+
+/* Define if you have the <sys/time.h> header file. */
+#undef HAVE_SYS_TIME_H
 
 /* Define if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
@@ -160,9 +147,6 @@
 /* Define to use Cray SHMEM parallel interface */
 #undef SHMEM
 
-/* Define to `unsigned' if <sys/types.h> does not define. */
-#undef size_t
-
 /* The size of a `float', as computed by sizeof. */
 #undef SIZEOF_FLOAT
 
@@ -178,15 +162,31 @@
 /* Define to use TCGMSG parallel interface */
 #undef TCGMSG
 
-/* Define to `long' if <sys/types.h> does not define. */
-#undef time_t
-
-/* Define if you can safely include both <sys/time.h> and <time.h>. */
-#undef TIME_WITH_SYS_TIME
-
 /* Define if the times system call returns a status flag instead of the RT
    clock */
 #undef TIMES_RETURNS_STATUS
 
+/* Define if you can safely include both <sys/time.h> and <time.h>. */
+#undef TIME_WITH_SYS_TIME
+
 /* Version number of package */
 #undef VERSION
+
+/* Define if on AIX 3.
+   System headers sometimes define this.
+   We just want to avoid a redefinition error message.  */
+#ifndef _ALL_SOURCE
+# undef _ALL_SOURCE
+#endif
+
+/* Define to `long' if <sys/types.h> does not define. */
+#undef clock_t
+
+/* Define to empty if `const' does not conform to ANSI C. */
+#undef const
+
+/* Define to `unsigned' if <sys/types.h> does not define. */
+#undef size_t
+
+/* Define to `long' if <sys/types.h> does not define. */
+#undef time_t

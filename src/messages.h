@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/messages.h,v 2.27 2001/07/31 14:14:13 keith Exp $
+ * $Header: /home/kr/CVS/moldy/src/messages.h,v 2.28 2001/08/01 11:56:37 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -175,3 +175,6 @@ Gaussian thermostat would interfere with each other."
 #define DPSCHG  "Surface dipole term switched ON but some species are charged\n     Expect non-conservation of energy and large, impulsive forces!"
 #define FIXROL "Changing roll-interval when converting pre 2.19 restart file is not supported"
 #define SAVINC "Save file would overwrite input restart file.  Filename changed to %s"
+#define IVEWAC "Ewald Sum accuracy parameter (%g) invalid.  Should be > 0"
+#define ERFACC "Error function approximation for real-space Ewald Sum can not meet requested level of accuracy (%g)\n     Algorithm changes in kernel.c would be needed.  See Abramowitz and Stegun p299."
+#define EWINAC "Explicitly specified Ewald sum parameters give accuracy parameter of %g, not %g as requested"
