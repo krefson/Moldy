@@ -99,7 +99,7 @@ dumpconvert:	dumpconvert.c $(HFILES)
 		$(CC) $(CFLAGS) $@.c -o $@
 
 mdshak:		mdshak.o $(SHAKOBJS)
-		$(CC) $(LDFLAGS) -o mdshak mdshak.o $(SHAKOBJS) -lm
+		$(CC) -o mdshak mdshak.o $(SHAKOBJS) $(LDFLAGS) -lm
 
 utilities:	$(UTILS) mdshak
 
@@ -110,10 +110,12 @@ proto-mdshak:	mdshak.c $(SHAKC)
 		protoize mdshak.c $(SHAKC)
 
 install:	moldy $(UTILS) mdshak
-		cp -p $? $(HOME)/bin
+		cp  $? $(HOME)/bin
+		chmod 755 $?
 
 install2:	moldy $(UTILS) mdshak
-		cp -p $? $(HOME)/bin.$(HOSTTYPE)
+		cp  $? $(HOME)/bin.$(HOSTTYPE)
+		chmod 755 $?
 
 Makefile:	xmakefile
 		@PATH=/usr/5bin:${PATH};\

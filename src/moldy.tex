@@ -8,9 +8,12 @@
 
 \newcommand{\moldy}{{\em Moldy}}
 \newcommand{\etc}{{\em etc}}
-\newcommand{\eg}{{\em e.g.\ }}
-\newcommand{\ie}{{\em i.e.\ }}
+\newcommand{\eg}{{\em e.g}.\ }
+\newcommand{\ie}{{\em i.e}.\ }
 \newcommand{\bm}[1]{\mbox{\boldmath \protect\(#1\protect\)}}
+
+\newcommand{\erf}{\mbox{erf}}
+\newcommand{\erfc}{\mbox{erfc}}
 \begin{document}
 \maketitle
 \tableofcontents
@@ -99,12 +102,14 @@ U = \sum_i \sum_{j > i} \sum_\alpha \sum_\beta \phi_{i\alpha j\beta}(
 \end{equation}
 The total force on molecule $i$ is
 \begin{equation}
+\label{eqn:comf}
 \bm{F}_i = \sum_j \sum_\beta \sum_\alpha \bm{f}_{i\alpha j\beta}
 \end{equation}
 where $\bm{f}_{i\alpha j\beta} = - \bm{\nabla} \phi_{i\alpha  j\beta}(
 \bm{r}_{i\alpha j\beta})$ is the force acting on site $\beta$ of molecule
 $j$ from site $\alpha$ of molecule $i$.  A torque
 \begin{equation}
+\label{eqn:comt}
 \bm{N}_i = \sum_\alpha (\bm{r}_{i \alpha} - \bm{R}_{i}) 
 \bm{\times f}_{i\alpha} 
 \end{equation}
@@ -113,7 +118,7 @@ m_{i\alpha} \bm{r}_{i\alpha}$ is the centre of mass of molecule $i$.
 
 The motion is governed by the Newton-Euler equations
 \begin{equation}
-M_i\ddot{\bm{R}_i} = \bm{F}_i
+M_i\ddot{\bm{R}_i} = \bm{F}_i \label{eqn:newton}
 \end{equation}
 \begin{equation}
 \bm{I_i \cdot} \dot{\bm{\omega}}_i - \bm{\omega_i \times I_i \cdot
@@ -131,12 +136,12 @@ is the atomic site co-ordinate relative to the molecular centre of mass.
 The orientations of the molecules are represented by {\em quaternions}
 as  has now  become common  practice.   They are  preferred over Euler
 angles for two reasons. Firstly they lead to equations of motion which
-are  free  of singularities   \cite{evans;77} which   means  that   no
+are  free  of singularities   \cite{evans:77} which   means  that   no
 special-case  code is required. This  leads to much improved numerical
-stability      of  the  simulation  \cite{evans&murad:77}.   Secondly,
+stability      of  the  simulation  \cite{evans:77b}.   Secondly,
 molecular symmetry   operations   and  combinations of  rotations  are
 elegantly expressed   in    terms  of     a     simple      quaternion
-algebra\cite{evans&murad:77,pawley&dove:85}.
+algebra\cite{evans:77b,pawley:85b}.
 
 A quaternion  is an ordered number  quartet  which obeys  the  algebra
 given  by   Pawley\cite{pawley:81}.  The multiplication   rule in that
@@ -159,13 +164,16 @@ q_0 \\ q_1 \\ q_2 \\ q_3
 \right)
 \end{equation}
 The quaternion $ {\bf \tilde{q}} $ conjugate to ${\bf q}$ is defined
-as ${\bf \tilde{q}} = (q_0,-q_1,-q_2,-q_3)$ so that 
-${\bf q\tilde{q}} = (q_0^2+q_1^2+q_2^2+q_3^2,0,0,0) $;
-the {\em norm} is defined as $ |{\bf q}| \equiv
+as ${\bf \tilde{q}} = (q_0,-q_1,-q_2,-q_3)$ so that
+\begin{equation}
+{\bf q\tilde{q}} = (q_0^2+q_1^2+q_2^2+q_3^2,0,0,0) .
+\label{eqn:qnorm}
+\end{equation}
+The {\em norm} is defined as $ |{\bf q}| \equiv
 \sqrt{q_0^2+q_1^2+q_2^2+q_3^2} $ and {\bf q} is called a {\em unit}
 quaternion if $ |{\bf q}| = 1 $ .  
 
-Any rotation may be represented by a unit quaternion. Du Val shows
+Any possible rotation can represented by a unit quaternion. Du Val shows
 \cite{duval:64} that if $ {\bf q} = (\cos \alpha/2, \bm{l} \sin
 \alpha/2) $ (where we have combined the last three components to form
 a 3-vector) and ${\bf p} = (0,\bm{r})$ then the operation
@@ -178,10 +186,11 @@ terms of the Euler angles as
 \footnote{The definition of quaternions used here differs from that used
 in Evans' paper \cite[equation 21]{evans:77} in the sign of $q_2$ or
 $\xi$.  This error has been compounded by subsequent authors
-\cite{sonnenschein:85} who also managed to permute the components
-which means that the parameters do not form an ordered number quartet
-which obeys quaternion algebra.  .  We follow the definition of of
-Goldstein \cite[pages 143 and 155]{goldstein:80}.} 
+\cite{sonnenschein:85,smith:82,laakonsen:85} who also managed to 
+permute the components which means that the parameters do not form an
+ordered number quartet which obeys quaternion algebra. Like Allen and
+Tidesley \cite[page 88]{allen:87} we follow the definition of of
+Goldstein \cite[pages 143 and 155]{goldstein:80}.}
 \begin{eqnarray}
 q_0 & = & \cos \frac{\phi+\psi}{2} \cos \frac{\theta}{2} \nonumber \\
 q_1 & = & \sin \frac{\phi-\psi}{2} \sin \frac{\theta}{2} \nonumber \\
@@ -189,11 +198,13 @@ q_2 & = & \cos \frac{\phi-\psi}{2} \sin \frac{\theta}{2} \nonumber \\
 q_3 & = & \sin \frac{\phi+\psi}{2} \cos \frac{\theta}{2}.
 \end{eqnarray}
 
-The relationship between the time  derivative of a  quaternion and the
-principal frame  angular velocity was  given  by Evans \cite{evans:77}
-and rewritten using quaternion algebra by Refson \cite{refson:87} as
+The relationship between the time derivative of a quaternion and the
+principal frame angular velocity was given by Evans \cite[Equation
+27]{evans:77} and rewritten using quaternion algebra by Refson
+\cite{refson:87a} as
 \begin{equation}
 2 {\bf \dot{q}} = {\bf q}(0,\bm{\omega}_p)
+\label{eqn:qomega}
 \end{equation}
 The second derivative is given by
 \begin{eqnarray}
@@ -203,19 +214,211 @@ The second derivative is given by
 Equations \ref{eqn:qddot} and \ref{eqn:euler} allow the simulation to
 be implemented using quaternions and their derivatives as the dynamic
 variables for rotational motion, and this is the method employed in
-\moldy.  Sonnenschein showed\cite{sonnenschein:85} that it gives
-substantially better stability than if angular velocities and
-accelerations are used as dynamic variables.
+\moldy.  This second order formulation was first used by Powles {\em et
+al}.\ \cite{powles:79} and Sonnenschein showed\cite{sonnenschein:85}
+that it gives substantially better stability than if angular
+velocities and accelerations are used as dynamic variables.
  
-% Normalisation of quaternions and quaternion constraints
-% stability 
-% linear molecules.
+Using equations~\ref{eqn:qddot} to describe the dynamics means that
+they are integrated as if all four components were independent.
+Therefore the normalisation condition $\bf q \tilde{q} = 1$ may not be
+exactly satisfied after performing an integration step.  \moldy\
+adopts the usual practice of scaling all components of the quaternion
+after each timestep to satisfy the normalisation condition
+\cite{evans:77b}.
+
+It is less widely realised that the second order equations
+(\ref{eqn:qddot}) intoduce a {\em second} ``unconstrained'' variable
+into the procedure.  Differentiating equation~\ref{eqn:qnorm} gives a
+constraint on the quaternion derivatives
+\begin{equation}
+q_0\dot{q_0} + q_1\dot{q_1} + q_2\dot{q_2} + q_3\dot{q_3} = 0
+\label{eqn:qconst} 
+\end{equation}
+which is just the $q_0$ component of equation~\ref{eqn:qomega}.
+Just as with the normalisation condition, the integration algorithm
+will not preserve this condition exactly unless explicit measures are
+taken.  After each timestep the constraint may be re-established by
+subtracting the discrepancy from the quaternion derivatives.  If
+$\delta = q_0\dot{q_0} + q_1\dot{q_1} + q_2\dot{q_2} + q_3\dot{q_3}$
+then the corrected quaternion derivatives are given by
+\begin{equation}
+{\bf \dot{q}^\prime } =  {\bf \dot{q}} - \delta {\bf q} .
+\label{eqn:qconcorr}
+\end{equation}
+Experiments conducted while developing \moldy\ show that enforcing
+this constraint significantly decreases the fluctuations in the total
+energy. 
+
+Linear molecules are a slightly special case as the moment of inertia
+about the molecular axis is zero.  Though there are unique methods to
+represent this situation \cite[page 90]{allen:87} \moldy\ uses a minor
+modification of the quaternion algorithm.  All that is necessary is a
+little special-case code to avoid dividing by the zero component of
+inertia in the solution of equation~\ref{eqn:euler} and to hold the
+components of angular velocity and acceleration about the molecular
+axis to zero.  This has the considerable advantage of uniform
+treatment of all kinds of molecules which is convenient when dealing
+with heterogeneous mixtures.
+
 \section{Integration Algorithms}
-% Beeman Ref to vel dep forces and recent paper
-% Velocity Dependent forces
+
+The dynamical equations~\ref{eqn:newton} and~\ref{eqn:euler} are
+integrated using this author's modification \cite{refson:85} of the
+Beeman algorithm \cite{beeman:76}.  For atomic systems it is
+equivalent to the commonly used Verlet algorithm \cite{verlet:67} but
+is preferable for polyatomic molecules because it gives velocities
+accurate to order $\delta t^3$ compared to order $\delta t^2$ for the
+Verlet algorithm.  This not only permits a more accurate determination
+of the kinetic energy, pressure and other dynamic quantities, but is
+essential if the (generalised) velocities enter the dynamical
+equations themselves.  
+
+Velocity-dependent forces occur in equations~\ref{eqn:euler}
+and~\ref{eqn:qddot} and in the Parinello-Rahman constant-pressure
+equations (section~\ref{sec:const-stress}). These usually present a
+problem to non ``predictor-corrector'' algorithms which are based on
+the assumption that the forces depend only on the co-ordinates.
+Fincham has devised a scheme to allow integration of the rotational
+equations using Verlet-like algorithms \cite{fincham:81}, which is
+widely used despite the potential problems caused by the low
+accuracy of the velocities being propagated into the dynamics.  The
+case of the Parinello-Rahman equations has been handled by
+reformulating them to avoid the velocity-dependence \cite{dove:??}.
+
+However both cases are easily and accurately handled by the
+modification to Beeman's equations proposed by the author
+\cite{refson:85}.  These may be summarised using the symbol $x$ 
+to represent any dynamic variable (centre-of-mass co-ordinate,
+qauternion or MD cell edge), $\dot{x}^{(p)}$ and $\dot{x}^{(c)}$ to
+represent ``predicted'' and ``corrected'' velocities respectively.
+
+\newlength{\myboxw}
+\addtolength{\myboxw}{\textwidth}
+\addtolength{\myboxw}{-15pt}
+\begin{minipage}{\myboxw}
+\begin{eqnarray}
+& &
+\begin{array}{llll}
+\makebox[0.5in][l]{\em i} & x(t+\delta t) &=& x(t) + \delta t \, \dot{x}(t) + 
+\frac{\delta t^2}{6} 
+\left [ 4 \ddot{x}(t) - \ddot{x}(t-\delta t) \right ] \\
+\makebox[0.5in][l]{\em ii}  & \dot{x}^{(p)}(t+\delta t) & = & \dot{x}(t) + 
+\frac{\delta t}{2} \left [ 3 \ddot{x}(t)- \ddot{x}(t-\delta t) \right ]
+\end{array} \nonumber \\
+& &
+\left .
+\begin{array}{llll}
+\makebox[0.5in][l]{\em iii}  & \ddot{x}(t+\delta t) & = & F(\{ x_i(t+\delta t),
+\dot{x}_i^{(p)}(t+\delta t)\}, i =  1\ldots n) \\
+\makebox[0.5in][l]{\em iv} & \dot{x}^{(c)}(t+\delta t) & = & \dot{x}(t) + \frac{\delta t}{6} 
+\left [ 2 \ddot{x}(t+\delta t) + 5 \ddot{x}(t)- \ddot{x}(t-\delta t) \right ]\\
+\makebox[0.5in][l]{\em v} & 
+\lefteqn{\mbox{Replace } \dot{x}^{(p)} \mbox{ with }
+\dot{x}^{(c)} \mbox{ and goto iii.  Iterate to convergence}}
+\end{array} 
+\right \}
+\end{eqnarray}
+\\
+\end{minipage}
+
+The predictor-corrector cycle of steps {\em iii} to {\em v} are
+iterated until the predicted and corrected velocities have converged
+to a relative precision of better than 1 part in $10^{-7}$, which in
+practice takes 2 or 3 cycles.  This iteration is not as inefficient as
+it might at first appear as it does {\em not} include the expensive
+part of the calculation --- the recalculation of the site forces.
+Only the angular accelerations and quaternion second derivatives must
+be evaluated at each iteration using equations~\ref{eqn:euler} and
+~\ref{eqn:qddot}, and this operation is relatively cheap.
+
 \section{The Ewald Sum}
 \label{sec:ewald}
-% Equations
+The long range Coulomb interactions are handled using the Ewald Sum
+technique in three dimensions \cite[p.\ 156]{berthaut:52,allen:87}.
+The electrostatic potential of a system of charges is expressed as a
+sum of short-range and long-range contributions.  Each term is written
+as a series,the first in real space and the second, obtained by
+Fourier transformation using the periodicity of the MD cell, in
+reciprocal space.  The expression for the Coulomb energy $U$ is
+
+\begin{eqnarray}
+\label{eqn:ewald}
+U & = &  \underbrace{\frac{1}{4 \pi \epsilon_0}
+\sum_{\bm{n}} \sum_{i=1}^{N} \sum_{j=i+1}^{N} q_iq_j
+\frac{\erfc( \alpha | \bm{r}_{ij} +  \bm{n} |)}{ | \bm{r}_{ij} +
+\bm{n} | }}_{\mbox{Real-space term}} 
+\nonumber \\
+ & + & \underbrace{\frac{1}{2 \epsilon_0 V} \sum_{\bm{k} \ne 0} \frac{1}{k^2}
+       e^{-\frac{k^2}{4 \alpha^2}} 
+\left \lbrace 
+\left | \sum_{i=1}^{N} q_i \cos(\bm{k.r}_i) \right |^2 + 
+\left | \sum_{i=1}^{N} q_i \sin(\bm{k.r}_i) \right |^2 
+\right \rbrace}_{\mbox{Reciprocal-space term}}\\
+ & - & 
+\underbrace{\frac{\alpha}{4 \pi^\frac{3}{2} \epsilon_0} 
+\sum_{i=1}^{N} q_i^2}_{\mbox{Point self-energy}} 
+ - \underbrace{\frac{1}{4 \pi \epsilon_0} \sum_{m=1}^M
+\sum_{\kappa=1}^{N_m} \sum_{\lambda=\kappa+1}^{N_m} q_{m\kappa} q_{m\lambda}
+\frac{\erf( \alpha | \bm{r}_{\kappa\lambda} |)}{ |
+\bm{r}_{\kappa\lambda}| }}_{\mbox{Intra-molecular self energy}}
+\nonumber
+\end{eqnarray}
+
+where we are using the notation
+
+\begin{tabular}{ll}
+$\bm{n}$	& Lattice vector of periodic array of MD cell images. \\
+$\bm{k}$	& Reciprocal lattice vector of periodic array of MD cell images.. \\
+$k$		& Modulus of $\bm{k}$. \\
+$i,j$		& absolute indices of all charged sites. \\
+$m$		& index of molecules. \\
+$\kappa,\lambda$ & indices of sites within a single molecule. \\
+$N$		& Total number of charged sites. \\
+$M$		& Total number of molecules. \\
+$N_m$		& Number of sites on molecule $m$. \\
+$q_i$		& Charge on absolute site $i$. \\
+$q_{m\kappa}$	& Charge on site $\kappa$ of molecule $m$. \\
+$\bm{r}_i$	& Cartesian co-ordinate of site $i$. \\
+$\bm{r}_{ij}$	& $\bm{r}_j - \bm{r}_i$. \\
+$\alpha$	& Real/reciprocal space partition parameter. \\
+$V$		& Volume of MD cell.
+\end{tabular}
+
+and the force on charge $i$ is given by
+\begin{eqnarray}
+\label{eqn:ewald-force}
+\bm{f}_i &=& - \nabla_{\bm{r}_i} U \nonumber \\
+& = &  \underbrace{\frac{1}{4 \pi \epsilon_0}
+\sum_{\bm{n}} \sum_{j \neq i}^{N} q_j \left \lbrace 
+\frac{\erfc( \alpha | \bm{r}_{ij} +  \bm{n} |)}{ | \bm{r}_{ij} +\bm{n} | } +
+\frac{2 \alpha}{\sqrt{\pi}}e^{- \alpha^2 | \bm{r}_{ij} +  \bm{n} |^2}
+\right \rbrace \frac{ \bm{r}_{ij} + \bm{n}}{ | \bm{r}_{ij} + \bm{n} |^2}
+}_{\mbox{Real-space term}} \nonumber \\
+ & + & \underbrace{\frac{1}{\epsilon_0 V} 
+\sum_{\bm{k} \ne 0} q_j \frac{\bm{k}}{k^2} e^{-\frac{k^2}{4 \alpha^2}} 
+\left \lbrace 
+\sin(\bm{k.r}_j) \sum_{i=1}^{N} q_i \cos(\bm{k.r}_i)  + 
+\cos(\bm{k.r}_j) \sum_{i=1}^{N} q_i \sin(\bm{k.r}_i) 
+\right \rbrace}_{\mbox{Reciprocal-space term}}
+\end{eqnarray}
+
+Both the real- and reciprocal-space series (the sums over $\bm{n}$ and
+$\bm{k}$) converge fairly rapidly so that only a few terms need be
+evaluated.  We define the {\em cut-off} distances $r_c$ and $k_c$ so
+that all terms with $| \bm{r}_{ij} +\bm{n} | < r_c$ and $\bm{k} < k_c$
+are included.
+
+Notice that the equation~\ref{eqn:ewald} for the energy contains a
+correction for the intra-molecular self-energy, but that for the
+forces (equation~\ref{eqn:ewald-force}) does not.  This term corrects
+for interactions between charges on the {\em same} molecule which are
+implicitly included in the reciprocal space sum, but are not required
+in the rigid-molecule model.  Though the site forces $\bm{f}_i$ do
+therefore include unwanted terms these sum to zero in the
+evaluation of the molecular centre-of-mass forces and torques
+(equations~\ref{eqn:comf} and \ref{eqn:comt}) (by the conservation
+laws for linear and angular momentum).
 % Self energies
 % uniform sheet correction
 % Surface dipole term
@@ -1115,7 +1318,7 @@ the same accuracy is attained with $\alpha = 0.45$\AA$^{-1}$, $r_{c} =
 
 The other relevant parameter is the switch \verb'surface-dipole' which
 includes the dipole surface energy term of De Leeuw, Perram and
-Smith\cite{deleeuw:8?}.  See the note in section~\ref{sec:ewald} for an
+Smith\cite{deleeuw:80}.  See the note in section~\ref{sec:ewald} for an
 explanation of why this term should {\em never} be used for an ionic
 (as opposed to dipolar) system.
 
@@ -1227,9 +1430,10 @@ on the operating system of the target machine.  At present it is
 available for:
 
 \begin{description}
-\item[unix]  The archive is a Bourne shell
-script called {\em moldy.shar}, and is unpacked by the command
-\verb'/bin/sh moldy.shar'.
+\item[unix]  The archive is either a tar archive called {\em
+moldy.tar} or a Bourne shell script called {\em moldy.shar}. The first
+is unpacked by the command \verb+tar xvf moldy.tar+ and the second by
+\verb+/bin/sh moldy.shar+.
 
 \item[VMS]  The archive is a DCL command file called {\em moldy.com},
 and is unpacked by the command \verb'@moldy'.
@@ -1293,14 +1497,21 @@ ease of portability {\em all system-dependent functions are in the
 module ``aux.c''} and {\em all preprocessor conditionals are in the
 header file ``defs.h''}.
 
-If the target operating system is the system V variant of UNIX, the
-preprocessor symbol \verb'USG' must be defined, either in ``defs.h'' or by
-setting the compiler option \verb'-DUSG' in the makefile. In addition, if
-the symbol \verb'HAVE_VPRINTF' is defined, it is assumed that the library
-contains the function  \verb'vprintf()', otherwise the replacement in
+If the target machine has ANSI conformant C libraries, all that must
+be done is to define the preprocessor symbol \verb+ANSI_LIBS+, either
+in ``defs.h'' or by using a compiler option {\em e.g}.\
+\verb+-DANSI_LIBS+.  This is done automatically in ``defs.h'' for
+several machines known to have conformant environments.  If the target
+operating system is the system V variant of UNIX, the preprocessor
+symbol \verb'USG' is defined automatically in ``defs.h''.  It is
+possible that some environments may defeat the selection making it
+necessary to define it by hand, either in ``defs.h'' or by setting
+the compiler option \verb'-DUSG' in the makefile. In addition, if the
+symbol \verb'HAVE_VPRINTF' is defined, it is assumed that the library
+contains the function \verb'vprintf()', otherwise the replacement in
 ``aux.c'' is used. If your system does not have \verb'vprintf()' but
-does have \verb'_doprnt()' then define the symbol \verb'HAVE_DOPRNT' to
-use it.
+does have \verb'_doprnt()' then define the symbol \verb'HAVE_DOPRNT'
+to use it.
 
 \subsection{System Dependencies}
 In this section, details of system-dependant functions are described
@@ -1308,13 +1519,16 @@ for the major operating systems.
 \begin{itemize}
 \item The ANSI header file ``string.h''	is missing
 from Berkeley unix, and incomplete in other systems.  A file,
-``string.h'' is supplied with \moldy\  which conditionally includes
-``strings.h'', or ``string.h'' for other systems. On a proper ANSI
-implementation it should be possible to remove this file altogether.
+``string.h'' is supplied with \moldy\ which conditionally includes
+``strings.h'', or ``string.h'' for other systems.  In addition the
+ANSI header files ``stddef.h'' and ``stdlib.h'' are missing from many
+unix systems and ``time.h'' does not contain the required
+declarations.  Replacements are included  which again may
+be dispensed with on an ANSI conformant system.
 \item The  ANSI typedefs \verb'time_t' and \verb'size_t' are not
 defined in some UNIX implementations. They are explicitly defined in
-``defs.h'' and the \verb'time()' function is explicitly declared in
-``aux.c''.
+``time.h'' and ``stddef.h'' and the \verb'time()' function is
+explicitly declared in ``aux.c''.
 \item The supplied \verb'clock()' function on UNIX systems resets to
 zero after 36 minutes.  Replacements, called \verb'cpu()' for both
 system V and Berkeley UNIXes are supplied in ``aux.c''. (Otherwise
@@ -1381,9 +1595,7 @@ vectorisation. Many compilers also have an option which directs it to
 ignore recurrences throughout the whole program, \eg \verb'-va' on the
 Convex, \verb'-va' and \verb'+CaliasFreePointers' for the Stellar and
 \verb'-h ivdep' on the Cray compilers. It should  normally be safe to
-use these options\footnote{Except that if the  \verb'-va' option is
-used to compile ``force.c'' on the Convex, the program crashed for an
-unknown reason.}.  Since highly optimizing and vectorizing compilers
+use these options.  Since highly optimizing and vectorizing compilers
 frequently contain bugs, and since some options generate ``unsafe''
 optimizations,  it may be necessary to restrict the highest
 optimisation level to those modules which contain critical code.
@@ -1433,13 +1645,18 @@ the following variables''.  In that case the directives must be
 inserted ``by hand'', though even then the \verb'VECTORIZE' directive
 al least identifies the appropriate loops.
 
+Unfortunately this method had been obsoleted by the ANSI C standard,
+which makes it impossible to insert directives using the preprocessor.
+With more modern compilers such as Cray scc the same effect may be
+achieved using ``ignore dependencies'' command-line directives.
+
 \section{Modifying Moldy}
 \subsection{Adding a New Potential}
 \label{sec:newpot}
 By default \moldy\  supports potential functions of the Lennard-Jones,
 six-exp and MCY forms.  However it should be very easy to add further
 types. The program is written in a highly modular fashion so that {\em
-the only code which need be altered is in file ``aux.c''} (and
+the only code which need be altered is in file ``kernel.c''} (and
 occasionally in ``defs.h''). 
 
 The calculation of the potential and forces is performed entirely in
@@ -1491,8 +1708,8 @@ files ``force.c'' and ``ewald.c''.
 The approach taken is to retain the vectorized inner loops and
 parallelize the the outer loops, over cells for ``force.c'' and {\bf
 k} vectors for ``ewald.c''.  The two parallel loops are structured by
-the method developed by the Kingston group\cite{clementi:8?}. That is, a loop
-of the form
+the method developed by the Kingston group\cite{wojcik:85}. That is, a
+loop of the form
 \begin{verbatim}
 	for(i = 0; i < N; i++)
 	   <body of loop>
@@ -1542,8 +1759,8 @@ Lennard-Jones
 1 1 ? ?
 \end{verbatim}
 \section{TIPS2 Water}
-This is the four-site water model of Jorgenson {\em et. al.\
-}\cite{jorgensen:??}.  Only the oxygen site interacts via the Lennard-Jones
+This is the four-site water model of Jorgenson 
+\cite{jorgensen:82}.  Only the oxygen site interacts via the Lennard-Jones
 potential, and the charge site, M, is displaced 0.15\AA from the Oxygen.
 \begin{verbatim}
 # Modified TIPS2 water
@@ -1558,12 +1775,13 @@ lennard-jones
 end
 \end{verbatim}
 \section{Aqueous MgCl$_2$ Solution}
-This is a three-component system consisting of MCY water\cite{matsuoka:75},
-Magnesium and Chloride ions.  The Mg$^{2+}$ potential was fitted to
-the SCF calculations of Dietz and Heinzinger\cite{dietz:8?} and the Cl$^-$
-to the calculations of Kistenmacher, Popkie and Clementi\cite{kistenmacher:7?}.
-Note that the potential parameters are expressed in kcal mol$^{-1}$,
-and the control file must set the parameter \verb'time-unit=4.8888213e-14'.
+This is a three-component system consisting of MCY
+water\cite{matsuoka:75}, Magnesium and Chloride ions.  The Mg$^{2+}$
+potential was fitted to the SCF calculations of Dietz and
+Heinzinger\cite{dietz:82} and the Cl$^-$ to the calculations of
+Kistenmacher, Popkie and Clementi\cite{kistenmacher:73b}.  Note that
+the potential parameters are expressed in kcal mol$^{-1}$, and the
+control file must set the parameter \verb'time-unit=4.8888213e-14'.
 \begin{verbatim}
 # MCY Water/ Mg2+ / Cl - solution
 Water 200
@@ -1599,4 +1817,8 @@ end
 \label{sec:dumpconvert}
 \section{Dumpextract}
 \section{Mdshak}
+
+\bibliography{simulation,mypubs}
+\bibliographystyle{unsrt}
+
 \end{document}
