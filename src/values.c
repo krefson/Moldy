@@ -13,10 +13,13 @@
  * averages()		Calculate and print averages()			      *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log:	values.c,v $
+ * Revision 1.1  89/04/20  16:00:58  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: values.c,v 1.1 89/04/20 16:00:58 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -404,7 +407,8 @@ void	averages()
       new_page();
    else
       new_lins(2);
-   (void)printf("   Averages over last %d timesteps",*av_cnt);   new_line();
+   (void)fprintf(control.out, "   Averages over last %d timesteps",*av_cnt);
+   new_line();
 
    for(iav = 0, av_p = av; iav < navs; iav++, av_p++)
    {
