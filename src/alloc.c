@@ -18,6 +18,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.9  90/05/16  18:39:36  keith
+ * Renamed own freer from cfree to tfree.
+ * 
  * Revision 1.8  90/05/16  14:19:23  keith
  * *** empty log message ***
  * 
@@ -45,7 +48,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.8 90/05/16 14:19:23 keith Exp $";
+static char *RCSid = "$Header: /mnt/keith/moldy/RCS/alloc.c,v 1.10 90/08/14 14:23:22 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
@@ -102,22 +105,44 @@ char	*p;
  *  tfree((char*) array);					     	      *
  *  (N.B. if lower bound of 1st dimension != 0 then free array+l.b.           *
  ******************************************************************************/
+#define CSA(a) ((char*)(a))
+#define ALIGN(a,base,b)	((int*)(CSA(base)+((CSA(a)-CSA(base))+(b)-1)/(b)*(b) ))
+
+void 	subarray(size, ndim, prdim, pp, qq, base, ap)
+size_t  size;
+int	ndim;
+long	prdim;
+int	***pp, **qq, *base;
+va_list	ap;
+{
+   int	*dd = ALIGN(qq,base,size),	**dpp = (int**)pp;
+   int i,	lb = va_arg(ap, int),
+		dim = va_arg(ap, int) - lb + 1;
+
+   if(ndim > 0)		/* General case - set up pointers to pointers  */
+   {
+      for( i = 0; i < prdim; i++)
+	 pp[i] = qq + i*dim - lb;
+
+      subarray(size, ndim-1, prdim*dim, (int***)qq, qq+prdim*dim, base, ap);
+   }
+   else			/* Last recursion - set up pointers to data   */
+      for( i = 0; i < prdim; i++)
+	 dpp[i] = dd + (i*dim - lb)*size/sizeof(int);
+}
+            
 #if ANSI || __STDC__
 #define	va_alist size_t size, int ndim, ...
 #define va_dcl /* */
 #endif
-
-#define	MAXDIM	11
-                 /*VARARGS*/
-typedef char	canon_t;
-canon_t		*arralloc(va_alist)
+                /*VARARGS*/
+char		*arralloc(va_alist)
 va_dcl
 {
-   int		lb[MAXDIM], ub[MAXDIM];
-   va_list	ap;
-   long		stride, idim, n_ptr, n_data;
-   typedef	int* 	ptr_t;
-   ptr_t	*pointer, *end, pointed, start;
+   va_list	ap, ap2;
+   int		**p, **start;
+   int		lb, ub, idim;
+   long		n_ptr = 0, n_data = 1;
 #if ANSI || __STDC__
    va_start(ap, ndim);
 #else
@@ -128,69 +153,34 @@ va_dcl
    size = va_arg(ap, size_t);
    ndim = va_arg(ap, int);
 #endif
-   if(ndim > MAXDIM)  message(NULLI, NULLP, FATAL, TOODIM, ndim, MAXDIM);
-   for(idim = 0; idim < ndim; idim++)
-   {
-      lb[idim] = va_arg(ap, int);
-      ub[idim] = va_arg(ap, int);
-   }
-   va_end(ap);
- 
-   n_ptr = 0; n_data = 1;
-   for(idim = 0; idim < ndim; idim++)
-   {
-#ifdef DEBUG
-      printf("[%d...%d]", lb[idim], ub[idim]);
-#endif
-      if(ub[idim] < lb[idim])
-         message(NULLI, NULLP, FATAL, INSIDE, lb[idim], ub[idim]);
-      n_data *= ub[idim] - lb[idim] + 1;
-   }
-#ifdef DEBUG
-   putchar('\n');
-#endif
-   for(idim = ndim-2; idim >= 0; idim--)
-      n_ptr = (1 + n_ptr) * (ub[idim] - lb[idim] + 1);
- 
-   if( size % sizeof(ptr_t*) != 0 )
+
+   if( size % sizeof(int) != 0 )  /* Code only works for 'word' objects */
       message(NULLI, NULLP, FATAL, WDPTR, size);
-
-   start = (ptr_t)talloc(1L, (size_t)(n_data*size + (n_ptr+1)*sizeof(ptr_t)),
-			   __LINE__, __FILE__);
-   size /= sizeof(ptr_t*);		/* Size is now in terms of "words"   */
-
-
-   pointer = (ptr_t *)start;
-   pointed = (ptr_t)(pointer + ub[0] - lb[0] + 1);
    /*
-    *  Set up pointers for all but last dimension
+    * Cycle over dims, checking bounds and accumulate # pointers & data items.
     */
-   for(idim = 1; idim < ndim-1 ; idim++)
+   ap2 = ap;			/* Save ap for later use by subarray() */
+   for(idim = 0; idim < ndim; idim++)
    {
-      end = (ptr_t *)pointed;
-      stride = ub[idim] - lb[idim] + 1;
-      for(; pointer < end; pointer++)
-      {
-	 *pointer = pointed - lb[idim];
-	 pointed += stride;
-      }
+      lb = va_arg(ap, int);
+      ub = va_arg(ap,int);
+      if(ub < lb)
+         message(NULLI, NULLP, FATAL, INSIDE, lb, ub);
+      n_data *= ub - lb + 1;
+      if( idim < ndim-1 )
+	 n_ptr  += n_data;
    }
    /*
-    *  Pointers to last dimension
+    *  Allocate space  for pointers and data.
     */
-   if( idim == ndim - 1 )
-   {
-      end = (ptr_t *)pointed;
-      pointed = start + ((pointed-start)+size-1)/size*size;
-      stride = ub[idim] - lb[idim] + 1;
-      for(; pointer < end; pointer++)
-      {
-	 *pointer = pointed - lb[idim]*size;
-	 pointed += stride*size;
-      }
-   }
-   if(ndim > 1)
-      return (canon_t*)(start - lb[0]);
-   else
-      return (canon_t*)(start - lb[0]*size);
+   start = (int**)talloc(1L, (size_t)((n_data+1)*size+n_ptr*sizeof(void**)),
+			  __LINE__, __FILE__);
+   /*
+    * Set up pointers to form dope-vector array.
+    */
+   subarray(size, ndim-1, 1L, &p, start, (int*)start, ap2);
+
+   va_end(ap);   
+
+   return (char*)p;
 }
