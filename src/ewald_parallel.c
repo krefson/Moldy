@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 2.3  93/10/28  10:28:59  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.1  93/09/02  12:34:44  keith
  * Optimized qsincos() -- should give up to 25% speed improvement on
  * compilers without assert no aliasing options.
@@ -144,7 +147,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 2.1 93/09/02 12:34:44 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 2.5 94/01/18 13:32:29 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -465,10 +468,10 @@ VECTORIZE
 #ifdef titan
 #pragma ipdep
 #pragma pproc ewald_inner
-#endif titan
+#endif /* titan */
 #ifdef __convexc__
 #pragma _CNX force_parallel
-#endif /* --convexc__ */
+#endif /* __convexc__ */
 #ifdef CRAY
 #pragma _CRI taskloop private(ithread) shared(nthreads, nhkl, hkl, nsites, \
 		  nsitesxf, chx, cky, clz, shx, sky, slz, chg, vol, r_4_alpha, \
