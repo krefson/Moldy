@@ -35,6 +35,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: leapfrog.c,v $
+ *       Revision 2.7  2001/02/13 17:45:08  keith
+ *       Added symplectic Parrinello-Rahman constant pressure mode.
+ *
  *       Revision 2.6  2000/12/06 17:45:31  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -67,7 +70,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.6 2000/12/06 17:45:31 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.7 2001/02/13 17:45:08 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -95,6 +98,9 @@ void	mat_mul(mat_mt a, mat_mt b, mat_mt c); /* 3 x 3 matrix multiplier     */
 void	mat_add(mat_mt a, mat_mt b, mat_mt c); /* Add 2 3x3 matrices          */
 void	mat_sca_mul(register real s, mat_mt a, mat_mt b); 
 					/* Multiply 3x3 matrix by scalar      */
+double  ke_cell(mat_mt hmom, real w);
+double  det(mat_mt );			/* Returns matrix determinant	     */
+void    mk_sigma(mat_mt h, mat_mt sigma);
 void	tfree(gptr *p);
 
 void	note(char *, ...);		/* Write a message to the output file */
@@ -156,7 +162,7 @@ void escape(vec_mp c_of_m, int nmols)
 /******************************************************************************
  * leapf_com(). Perform the centre-of-mass update of the leapfrog integration *
  ******************************************************************************/
-void leapf_com(real step, vec_mt (*c_of_m), vec_mt (*mom), 
+void leapf_com(double step, vec_mt (*c_of_m), vec_mt (*mom), 
 	       mat_mt h, real s, real mass, int nmols)
 {
    mat_mt G, G_inv,  h_tr;
@@ -172,7 +178,7 @@ void leapf_com(real step, vec_mt (*c_of_m), vec_mt (*mom),
 /******************************************************************************
  * leapf_mom().  Perform the linear momentum  update of the integration       *
  ******************************************************************************/
-void leapf_mom(real step, real (*h)[3], vec_mt (*mom), vec_mt (*force), int nmols)
+void leapf_mom(double step, real (*h)[3], vec_mt (*mom), vec_mt (*force), int nmols)
 {
    mat_mt h_tr;
 
@@ -281,7 +287,7 @@ void rot_substep(quat_mt (*rot), quat_mt (*amom), quat_mt (*quat), int nmols)
  *    exact for the case of a free rotor with two equal moments of inertia.   *
  *    Adapted for use with quaternions by K.R.				      *
  ******************************************************************************/
-void leapf_quat_b(real step, quat_mt (*quat), quat_mt (*avel), real *inertia, int nmols)
+void leapf_quat_b(double step, quat_mt (*quat), quat_mt (*avel), real *inertia, int nmols)
 {
    int imol,i;
    double idmin, idiff;
@@ -370,7 +376,7 @@ void leapf_quat_b(real step, quat_mt (*quat), quat_mt (*avel), real *inertia, in
  *    outlined in Dullweber et al (1997) J. Chem. Phys 107, 5840-5851.        *
  *    Adapted for use with quaternions by K.R.				      *
  ******************************************************************************/
-void leapf_quat_a(real step, quat_mt (*quat), quat_mt (*avel), real *inertia, int nmols)
+void leapf_quat_a(double step, quat_mt (*quat), quat_mt (*avel), real *inertia, int nmols)
 {
    int imol,i;
    quat_mt	*rot  = qalloc(nmols);
@@ -422,7 +428,7 @@ void leapf_quat_a(real step, quat_mt (*quat), quat_mt (*avel), real *inertia, in
 /******************************************************************************
  * leapf_quat().  Chooses which symplectic splitting method to use.           *
  ******************************************************************************/
-void leapf_quat(real step, quat_mt (*quat), quat_mt (*avel), real *inertia, int nmols)
+void leapf_quat(double step, quat_mt (*quat), quat_mt (*avel), real *inertia, int nmols)
 {
 #define SYMM_BODY
 #ifdef SYMM_BODY
@@ -435,7 +441,7 @@ void leapf_quat(real step, quat_mt (*quat), quat_mt (*avel), real *inertia, int 
  * leapf_avel().  Perform the angular velocity update step of the leapfrog    *
  *    integration algorithm.                                                  *
  ******************************************************************************/
-void leapf_avel(real step, quat_mt (*avel), vec_mt (*torque), real *inertia, int nmols)
+void leapf_avel(double step, quat_mt (*avel), vec_mt (*torque), real *inertia, int nmols)
 {
    int imol, i;
    real rinertia[3];
@@ -486,4 +492,53 @@ void leapf_h(double step, mat_mt h, mat_mt hmom, real s, real w)
    for(i=0; i<3; i++)
       for (j=0; j<3; j++)
 	 h[i][j] += r * hmom[i][j];
+}
+/******************************************************************************
+ * gleap_therm.  Update thermostat variable and momenta using generalized leap*
+ ******************************************************************************/
+void gleap_therm(double step, real mass, real gkt, real *s, real *smom)
+{
+   *smom = leapf_smom_a(step, *s, *smom, mass, gkt );
+   *s    = leapf_s     (step, *s, *smom, mass);
+   *smom = leapf_smom_b(step, *s, *smom, mass, gkt);
+}
+/******************************************************************************
+ * gleap_cell. Update cell variable and momenta using generalized leapfrog    *
+ ******************************************************************************/
+void gleap_cell(double step, real pmass, real s, real pressure, int strain_mask, 
+		mat_mt h, mat_mt hmom, real *smom)
+{
+  double vol;
+  mat_mt sigma;
+
+  vol = det(h);
+  mk_sigma(h, sigma);
+  
+  leapf_hmom(step, hmom, sigma, s, pressure, strain_mask);
+
+  if( control.const_temp )
+     *smom -= step*(ke_cell(hmom, pmass) + pressure*vol);
+  
+  leapf_h(step, h, hmom, s, pmass);
+  
+  mk_sigma(h, sigma);
+  leapf_hmom(step, hmom, sigma, s, pressure, strain_mask);
+}
+/******************************************************************************
+ * update_hmom().  Perform "simple" update of unit cell momenta.  This is used*
+ *                 to include all of the stress terms.			      *
+ ******************************************************************************/
+void update_hmom(double step, real s, mat_mt h,
+		 mat_mt stress_part, mat_mt hmom)
+{
+   double vol;
+   mat_mt sigma;
+   mat_mt tmp_mat;
+
+   vol = det(h);
+   mk_sigma(h, sigma);
+
+   mat_mul(stress_part, sigma, tmp_mat);
+   mat_sca_mul(step*s/vol, tmp_mat, tmp_mat);
+   mat_add(hmom, tmp_mat, hmom);
 }
