@@ -23,6 +23,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.8.1.3  1996/01/25 21:01:41  keith
+ *       Fixed bug in allocation of sites to processors which caused
+ *       crash on large # procs.
+ *
  *       Revision 2.8.1.2  1995/12/06 15:07:50  keith
  *       Fixed bug which caused core dump for small k-cutoff (hmax=0)
  *
@@ -181,20 +185,21 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.8.1.2 1995/12/06 15:07:50 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.8.1.3 1996/01/25 21:01:41 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
-#include "defs.h"
+#include 	"defs.h"
 /*========================== Library include files ===========================*/
 #ifdef stellar
 #   include 	<fastmath.h>
 #else
-#ifdef ardent
+#ifdef titan
 #   include 	<vmath.h>
 #else
 #   include 	<math.h>
 #endif
 #endif
+#include	"stddef.h"
 #include 	"stdlib.h"
 /*========================== Program include files ===========================*/
 #include 	"structs.h"
@@ -208,6 +213,9 @@ double	det();				/* Determinant of 3x3 matrix	      */
 void	invert();			/* Inverts a 3x3 matrix		      */
 void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
 void	mat_sca_mul();			/* Multiplies a 3x3 matrix by scalar  */
+void	transpose();			/* Transposes a 3x3 matrix	      */
+void    zero_real();            	/* Initialiser                        */
+void    zero_double();          	/* Initialiser                        */
 double	sum();				/* Sum of elements of 'real' vector   */
 #if defined(ANSI) || defined(__STDC__)
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
@@ -219,8 +227,8 @@ void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
-extern	contr_mt	control;	/* Main simulation control record     */
-extern  int	ithread, nthreads;
+extern	contr_mt	control;       	/* Main simulation control record     */
+extern int		ithread, nthreads;
 /*========================== Macros ==========================================*/
 #define astar hinvp[0]
 #define bstar hinvp[1]
@@ -229,6 +237,7 @@ extern  int	ithread, nthreads;
 #define modb(hmat) sqrt(SQR(hmat[0][1]) + SQR(hmat[1][1]))
 #define modc(hmat) sqrt(SQR(hmat[0][2]) + SQR(hmat[1][2]) + SQR(hmat[2][2]))
 /*============================================================================*/
+   struct s_hkl {double kx, ky, kz; int h,k,l;};
 /*****************************************************************************
  * qsincos().  Evaluate q sin(k.r) and q cos(k.r).  This is in a separate    *
  * function because some compilers (notably Stellar's) generate MUCH better  *
@@ -316,30 +325,32 @@ double		*pe;			/* Potential energy		(out) */
 mat_mt		stress;			/* Stress virial		(out) */
 {
    mat_mt	hinvp;			/* Matrix of reciprocal lattice vects*/
-   register	int	h, k, l;	/* Recip. lattice vector indices     */
-		int	i, j, is, ssite;/* Counters.			     */
-   		spec_mp	spec;		/* species[ispec]		     */
-   register	int	nsites = system->nsites;
-   register	real	pe_k,		/* Pot'l energy for current K vector */
-		        coeff, coeff2;	/* 2/(e0V) * A(K) & similar	     */
-   register	real	sqcoskr,sqsinkr,/* Sum q(i) sin/cos(K.r(i))          */
-   			sqcoskrn, sqsinkrn,
-			sqcoskrf, sqsinkrf;
-   real		sqexpkr[4];
-   mat_mt	stress_ew;
-   register	real	coss;
-		double	ksq;		/* Squared magnitude of K vector     */
-   		double	kx,ky,kz;
-   		vec_mt	kv;		/* (Kx,Ky,Kz)  			     */
-   real		*site_fx = site_force[0],
-   		*site_fy = site_force[1],
-   		*site_fz = site_force[2];
+   int		h, k, l;		/* Recip. lattice vector indices     */
+   int		i, j, is, ssite;	/* Counters.			     */
+   spec_mp	spec;			/* species[ispec]		     */
+   int		nsites = system->nsites;
+   double	pe_k,			/* Pot'l energy for current K vector */
+		coeff, coeff2;		/* 2/(e0V) * A(K) & similar	     */
+   double	r_4_alpha = -1.0/(4.0 * control.alpha * control.alpha);
+   double	sqcoskr,sqsinkr,	/* Sum q(i) sin/cos(K.r(i))          */
+		sqcoskrn, sqsinkrn,
+		sqcoskrf, sqsinkrf;
+   real		coss;
+   double	ksq,			/* Squared magnitude of K vector     */
+		kcsq = SQR(control.k_cutoff);
+   double	kx,ky,kz,kzt;
+   vec_mt	kv;			/* (Kx,Ky,Kz)  			     */
+   real		force_comp, kv0, kv1, kv2;
+   struct	s_hkl *hkl, *phkl;
+   int		nhkl = 0;
 /*
  * Maximum values of h, k, l  s.t. |k| < k_cutoff
  */
-		int	hmax = floor(control.k_cutoff/(2*PI)*moda(system->h)),
-			kmax = floor(control.k_cutoff/(2*PI)*modb(system->h)),
-			lmax = floor(control.k_cutoff/(2*PI)*modc(system->h));
+   int		hmax = floor(control.k_cutoff/(2*PI)*moda(system->h)),
+		kmax = floor(control.k_cutoff/(2*PI)*modb(system->h)),
+		lmax = floor(control.k_cutoff/(2*PI)*modc(system->h));
+   real		sqexpkr[4];
+   mat_mt	stress_ew;
 /*
  * lower and upper limits for parallel loops.  This doles out the sites
  * in parcels of "nsnode0" sites on "nns" threads and "nsnode0+1" sites
@@ -348,11 +359,11 @@ mat_mt		stress;			/* Stress virial		(out) */
  * N. B. The parcelling algorithm in W. Smith's paper FAILS if
  *       nthreads**2 > nsites.
  */
-   int   nsnode0 = nsites/nthreads;
-   int   nns = nthreads*(nsnode0 + 1 ) - nsites;
-   int	 nsnode = nsnode0 + ((ithread < nns)?0:1);
-   int	 ns0 = MIN(ithread, nns)*nsnode0 + MAX(ithread-nns,0)*(nsnode0+1);
-   int	 ns1 = ns0 + nsnode, ns0f, ns1f;
+   int		nsnode0 = nsites/nthreads;
+   int		nns = nthreads*(nsnode0 + 1 ) - nsites;
+   int		nsnode = nsnode0 + ((ithread < nns)?0:1);
+   int		ns0 = MIN(ithread, nns)*nsnode0 + MAX(ithread-nns,0)*(nsnode0+1);
+   int		ns1 = ns0 + nsnode, ns0f, ns1f;
 /*
  * Kludge to optimize performance on RS6000s with 4-way assoc. cache.
  */
@@ -366,24 +377,25 @@ mat_mt		stress;			/* Stress virial		(out) */
  * and pointers to a particular h,k or l eg coshx[is] = chh[2][is]
  */
    real		**chx = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, hmax, ns0, nsarray+ns0),
+					 0, hmax, 0, nsarray-1),
 		**cky = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, kmax, ns0, nsarray+ns0),
+					 0, kmax, 0, nsarray-1),
 		**clz = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, lmax, ns0, nsarray+ns0),
+					 0, lmax, 0, nsarray-1),
 		**shx = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, hmax, ns0, nsarray+ns0),
+					 0, hmax, 0, nsarray-1),
 		**sky = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, kmax, ns0, nsarray+ns0),
+					 0, kmax, 0, nsarray-1),
 		**slz = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, lmax, ns0, nsarray+ns0);
+					 0, lmax, 0, nsarray-1);
    real		*coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
    real		*c1, *s1, *cm1, *sm1;
    real		*site0, *site1, *site2;
-   real		*qcoskr = dalloc(nsarray)-ns0,	/* q(i) cos(K.R(i))	      */
-		*qsinkr = dalloc(nsarray)-ns0;	/* q(i) sin(K.R(i))	      */
-   real		force_comp, kv0, kv1, kv2;
-   double	r_4_alpha = -1.0/(4.0 * control.alpha * control.alpha);
+   real		*site_fx = site_force[0],
+   		*site_fy = site_force[1],
+   		*site_fz = site_force[2];
+   real		*qcoskr = dalloc(nsarray),	/* q(i) cos(K.R(i))	      */
+		*qsinkr = dalloc(nsarray);	/* q(i) sin(K.R(i))	      */
    double	vol = det(system->h);	/* Volume of MD cell		      */
    static	double	self_energy,	/* Constant self energy term	      */
    			sheet_energy;	/* Correction for non-neutral system. */
@@ -463,25 +475,50 @@ mat_mt		stress;			/* Stress virial		(out) */
 
    invert(system->h, hinvp);		/* Inverse of h is matrix of r.l.v.'s */
    mat_sca_mul(2*PI, hinvp, hinvp);
+   /*
+    * Build array hkl[] of k vectors within cutoff
+    */
+   hkl = aalloc(4*(hmax+1)*(kmax+1)*(lmax+1), struct s_hkl);
+   for(h = 0; h <= hmax; h++)
+      for(k = (h==0 ? 0 : -kmax); k <= kmax; k++)
+      {
+	 kx = h*astar[0] + k*bstar[0];
+	 ky = h*astar[1] + k*bstar[1];
+	 kzt = h*astar[2] + k*bstar[2];
+	 ksq = SQR(kx) + SQR(ky);
+	 for(l = (h==0 && k==0 ? 1 : -lmax); l <= lmax; l++)
+	 {
+	    kz = kzt + l*cstar[2];
+	    if( SQR(kz)+ksq < kcsq )
+	    {
+	       hkl[nhkl].h = h; hkl[nhkl].k = k; hkl[nhkl].l = l;
+	       hkl[nhkl].kx = kx;
+	       hkl[nhkl].ky = ky;
+	       hkl[nhkl].kz = kz;
+	       nhkl++;
+	    }
+	 }
+      }
 
 /*
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
  */
-   sinhx = shx[0]; sinky = sky[0]; sinlz = slz[0];
    coshx = chx[0]; cosky = cky[0]; coslz = clz[0];
+   sinhx = shx[0]; sinky = sky[0]; sinlz = slz[0];
 VECTORIZE
-   for(is = ns0; is < ns1; is++)
+   for(is = 0; is < nsnode; is++)
    {
       coshx[is] = cosky[is] = coslz[is] = 1.0;
       sinhx[is] = sinky[is] = sinlz[is] = 0.0;
    }      
 
-   site0 = site[0]; site1 = site[1]; site2 = site[2];
+   site0 = site[0]+ns0; site1 = site[1]+ns0; site2 = site[2]+ns0;
+   site_fx = site_force[0]+ns0, site_fy = site_force[1]+ns0, site_fz = site_force[2]+ns0;
    if( hmax >= 1 )
    {
       coshx = chx[1]; sinhx = shx[1];
 VECTORIZE
-      for(is = ns0; is < ns1; is++)
+      for(is = 0; is < nsnode; is++)
       {
 	 kx = astar[0]*site0[is]+astar[1]*site1[is]+astar[2]*site2[is];
 	 coshx[is] = cos(kx); sinhx[is] = sin(kx);
@@ -491,7 +528,7 @@ VECTORIZE
    {
       cosky = cky[1]; sinky = sky[1];
 VECTORIZE
-      for(is = ns0; is < ns1; is++)
+      for(is = 0; is < nsnode; is++)
       {
 	 ky = bstar[0]*site0[is]+bstar[1]*site1[is]+bstar[2]*site2[is];
 	 cosky[is] = cos(ky); sinky[is] = sin(ky);
@@ -501,7 +538,7 @@ VECTORIZE
    {
       coslz = clz[1]; sinlz = slz[1];
 VECTORIZE
-      for(is = ns0; is < ns1; is++)
+      for(is = 0; is < nsnode; is++)
       {
 	 kz = cstar[0]*site0[is]+cstar[1]*site1[is]+cstar[2]*site2[is];
 	 coslz[is] = cos(kz); sinlz[is] = sin(kz);
@@ -517,7 +554,7 @@ VECTORIZE
       cm1 = chx[h-1]; sm1 = shx[h-1];
       c1  = chx[1];   s1  = shx[1];
 VECTORIZE
-      for(is = ns0; is < ns1; is++)
+      for(is = 0; is < nsnode; is++)
       {
 	 coss      = cm1[is]*c1[is] - sm1[is]*s1[is];
 	 sinhx[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
@@ -531,7 +568,7 @@ VECTORIZE
       cm1 = cky[k-1]; sm1 = sky[k-1];
       c1  = cky[1];   s1  = sky[1];
 VECTORIZE
-      for(is = ns0; is < ns1; is++)
+      for(is = 0; is < nsnode; is++)
       {
 	 coss      = cm1[is]*c1[is] - sm1[is]*s1[is];
 	 sinky[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
@@ -545,7 +582,7 @@ VECTORIZE
       cm1 = clz[l-1]; sm1 = slz[l-1];
       c1  = clz[1];   s1  = slz[1];
 VECTORIZE
-      for(is = ns0; is < ns1; is++)
+      for(is = 0; is < nsnode; is++)
       {
 	 coss      = cm1[is]*c1[is] - sm1[is]*s1[is];
 	 sinlz[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
@@ -557,24 +594,18 @@ VECTORIZE
  * To avoid calculating K and -K, only half of the K-space box is covered. 
  * Points on the axes are included once and only once. (0,0,0) is omitted.
  */
-   for(h = 0; h <= hmax; h++)
-   for(k = (h==0 ? 0 : -kmax); k <= kmax; k++)
-   for(l = (h==0 && k==0 ? 1 : -lmax); l <= lmax; l++)
+   for(phkl = hkl; phkl < hkl+nhkl; phkl++)
    {
 /*
  * Calculate actual K vector and its squared magnitude.
  */
-      kv0 = kv[0] = h*astar[0] + k*bstar[0] + l*cstar[0]; 
-      kv1 = kv[1] = h*astar[1] + k*bstar[1] + l*cstar[1]; 
-      kv2 = kv[2] = h*astar[2] + k*bstar[2] + l*cstar[2];
-      
+      h  = phkl->h;	    k     = phkl->k;  l     = phkl->l;
+      kv0 = kv[0] = phkl->kx; 
+      kv1 = kv[1] = phkl->ky; 
+      kv2 = kv[2] = phkl->kz;
+
       ksq = SUMSQ(kv);
-      
-/*
- * Test whether K is within the specified cut-off and skip rest of loop if not
- */
-      if(ksq >= SQR(control.k_cutoff)) continue;
-      
+
 /*
  * Calculate pre-factors A(K) etc
  */
@@ -592,13 +623,13 @@ VECTORIZE
  * negative k and l by using sin(-x) = -sin(x), cos(-x) = cos(x). For
  * efficiency & vectorisation there is a loop for each case.
  */
-      qsincos(coshx+ns0,sinhx+ns0,cosky+ns0,sinky+ns0,coslz+ns0,sinlz+ns0,
-	      chg+ns0, qcoskr+ns0,qsinkr+ns0,k,l,ns1-ns0);
+      qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,chg+ns0, 
+	      qcoskr,qsinkr,k,l,nsnode);
       ns1f = MIN(ns1, nsitesxf); ns0f = MAX(ns0, nsitesxf);
-      sqexpkr[0] = sum(ns1f-ns0, qcoskr+ns0, 1);
-      sqexpkr[1] = sum(ns1f-ns0, qsinkr+ns0, 1);
-      sqexpkr[2] = sum(ns1-ns0f, qcoskr+ns0f, 1);
-      sqexpkr[3] = sum(ns1-ns0f, qsinkr+ns0f, 1);
+      sqexpkr[0] = sum(ns1f-ns0, qcoskr, 1);
+      sqexpkr[1] = sum(ns1f-ns0, qsinkr, 1);
+      sqexpkr[2] = sum(ns1-ns0f, qcoskr+(ns0f-ns0), 1);
+      sqexpkr[3] = sum(ns1-ns0f, qsinkr+(ns0f-ns0), 1);
 #ifdef SPMD
       par_rsum(sqexpkr, 4);
 #endif
@@ -622,6 +653,7 @@ VECTORIZE
 /*
  * Calculate long-range coulombic contribution to stress tensor
  */
+NOVECTOR
       for(i = 0; i < 3; i++)
       {
 	 stress_ew[i][i] += pe_k;
@@ -633,7 +665,7 @@ NOVECTOR
  * Evaluation of site forces.   Non-framework sites interact with all others
  */
 VECTORIZE
-      for(is = ns0; is < ns1f; is++)
+      for(is = 0; is < ns1f-ns0; is++)
       {
 	 force_comp = qsinkr[is]*sqcoskr - qcoskr[is]*sqsinkr;
 	 site_fx[is] += kv0 * force_comp;
@@ -644,23 +676,23 @@ VECTORIZE
  *  Framework sites -- only interact with non-framework sites
  */
 VECTORIZE
-      for(is = ns0f; is < ns1; is++)
+      for(is = ns0f-ns0; is < ns1-ns0; is++)
       {
 	 force_comp = qsinkr[is]*sqcoskrn - qcoskr[is]*sqsinkrn;
 	 site_fx[is] += kv0 * force_comp;
 	 site_fy[is] += kv1 * force_comp;
 	 site_fz[is] += kv2 * force_comp;
       }
+/*
+ * End of loop over K vectors.
+ */
    }
    *pe /= nthreads;
    for(i=0; i<3; i++)
       for(j=0; j<3; j++)
 	 stress[i][j] += stress_ew[i][j] / nthreads;
 
-/*
- * End of loop over K vectors.
- */
    afree((gptr*)chx); afree((gptr*)cky); afree((gptr*)clz); 
    afree((gptr*)shx); afree((gptr*)sky); afree((gptr*)slz);
-   xfree(qcoskr+ns0); xfree(qsinkr+ns0);
+   xfree(qcoskr); xfree(qsinkr);
 }
