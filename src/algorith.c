@@ -16,10 +16,13 @@
  * energy_dyad()	Calculate kinetic energy part of stress tensor	      *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log:	algorith.c,v $
+ * Revision 1.1  89/04/20  16:00:19  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/algorith.c,v 1.1 89/04/20 16:00:19 keith Stab $";
 #endif
 /*========================== Library include files ===========================*/
 #include 	<math.h>
@@ -153,17 +156,24 @@ int		nsites,		/* Number of sites on one molecule      (in)  */
  *  molecules from the principal-frame sites, the quaternions and the centre  *
  *  of mass co-ordinates.  Called once for each molecular species.            *
  ******************************************************************************/
-void make_sites(h, c_of_m_s , quat, p_f_sites, site, nmols, nsites)
+void make_sites(h, c_of_m_s , quat, p_f_sites, framework, site, nmols, nsites)
 mat_t		h;		/* Unit cell matrix h		     (in)     */
 vec_p		c_of_m_s,	/* Centre of mass co-ords [nmols][3] (in)     */
 		p_f_sites,	/* Principal-frame sites [nsites][3] (in)     */
 		site;		/* Sites [nmols*nsites][3]          (out)     */
+int		framework;	/* Flag to signal framework structure (in)    */
 quat_p		quat;		/* Quaternions [nmols][4]            (in)     */
 int		nmols,		/* Number of molecules                        */
 		nsites;		/* Number of sites on each molecule           */
 {
    int		imol, isite, i;	/* Counters				      */
    vec_t	c_of_m;		/* Unscaled centre of mass co-ordinates       */
+   register double	t;
+   double	lx   = h[0][0], lx_r = 1.0/lx,	/* Temporaries for unit       */
+		ly   = h[1][1], ly_r = 1.0/ly,	/* cell vectors and their     */
+		lz   = h[2][2], lz_r = 1.0/lz,	/* reciprocals; for use in    */
+		lxy  = h[0][1], lxz  = h[0][2],	/* applying the periodic      */
+		lyz  = h[1][2];			/* boundary conditions.       */
 
    for(imol = 0; imol < nmols; imol++)
    {
@@ -176,6 +186,17 @@ int		nmols,		/* Number of molecules                        */
          for(isite = 0; isite < nsites; isite++)
             site[imol*nsites+isite][i] += c_of_m[i];
    }
+
+   if( framework )			/* Apply pbc's to put sites into cell */
+      for( isite = 0; isite < nmols*nsites; isite++ )
+      {
+          site[isite][0] -= lx  *      floor(site[isite][0] * lx_r + 0.5);
+          site[isite][0] -= lxy * (t = floor(site[isite][1] * ly_r + 0.5));
+          site[isite][1] -= ly  * t;
+          site[isite][0] -= lxz * (t = floor(site[isite][2] * lz_r + 0.5));
+          site[isite][1] -= lyz * t;
+          site[isite][2] -= lz  * t;
+      }
 }
 /******************************************************************************
  *  newton   Apply newton's equation to calculate the acceleration of a       *
