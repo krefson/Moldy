@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.19  2000/05/23 15:23:08  keith
+ *      First attempt at a thermostatted version of the Leapfrog code
+ *      using either a Nose or a Nose-Poincare thermostat
+ *
  *      Revision 2.18  2000/04/27 17:57:11  keith
  *      Converted to use full ANSI function prototypes
  *
@@ -262,7 +266,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/startup.c,v 2.18 2000/04/27 17:57:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.19 2000/05/23 15:23:08 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -573,13 +577,6 @@ void	thermalise(system_mp system, spec_mt *species)
     *  Set accelerations to zero.
     */
    zero_real(system->vel[0],   3*system->nmols);
-#if BEEMAN
-   zero_real(system->ta,      system->nspecies);
-   zero_real(system->tap,     system->nspecies);
-    
-   zero_real(system->ra,      system->nspecies);
-   zero_real(system->rap,     system->nspecies);
-#endif
    system->ts = 1.0;
    system->rs = 1.0;
    system->tsmom = 0.0;
@@ -774,14 +771,6 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
           "acc",system->acc,"acco",system->acco,"accvo",system->accvo);
 #endif
 
-#if BEEMAN
-   system->ta      = dalloc(system->nspecies);
-   system->tap     = dalloc(system->nspecies);
-
-   system->ra      = dalloc(system->nspecies);
-   system->rap     = dalloc(system->nspecies);
-#endif
-
    if(system->nmols_r > 0)
    {
       system->quat   = qalloc(system->nmols_r);
@@ -841,13 +830,6 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
    system->rs = 1.0;
    system->tsmom = 0.0;
    system->rsmom = 0.0;
-#if BEEMAN
-   zero_real(system->ta,      system->nspecies);
-   zero_real(system->tap,     system->nspecies);
-    
-   zero_real(system->ra,      system->nspecies);
-   zero_real(system->rap,     system->nspecies);
-#endif
 }
 /******************************************************************************
  *  Interpolate_derivatives & interp.    Interp is a quadratic interpolation  *

@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.18  2000/10/20 15:15:48  keith
+ *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
+ *
  *       Revision 2.17  2000/04/27 17:57:10  keith
  *       Converted to use full ANSI function prototypes
 
@@ -205,7 +208,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.16.2.1 2000/08/29 17:27:45 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.18 2000/10/20 15:15:48 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -531,31 +534,10 @@ void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
       format_dbl("Applied Temperature",control.temp,"K");
    if(control.const_temp)
    {
-      (void)printf(" %s thermostat will be used", control.const_temp == 1
-                     ? "Nose-Hoover" : "Gaussian");
+      (void)printf(" Nose-Poincare thermostat will be used");
       new_line();
-      if( control.scale_options & 0x3)
-      {
-         (void)printf(" (for ");
-         if( control.scale_options & 0x2 )
-         {
-	    (void)printf("transl. and rotl.");
-	    if( control.scale_options & 0x1 )
-	       (void)printf(" and ");
-         }
-         if( control.scale_options & 0x1 )
-	    (void)printf("each species");
-	    
-	 (void)printf(" individually)");
-	 new_line();
-      }
-      if(control.const_temp == 1)
-      {
-         format_dbl("Translational temperature mass parameter ",
-		    control.ttmass*CONV_TM, CONV_TM_N);
-         format_dbl("Rotational temperature mass parameter    ",
-		    control.rtmass*CONV_TM, CONV_TM_N);
-      }
+      format_dbl("Temperature mass parameter ",
+		 control.ttmass*CONV_TM, CONV_TM_N);
    }
 
    if(control.const_pressure)

@@ -34,6 +34,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ *       Revision 2.11  2000/05/23 15:23:09  keith
+ *       First attempt at a thermostatted version of the Leapfrog code
+ *       using either a Nose or a Nose-Poincare thermostat
+ *
  *       Revision 2.10  2000/04/27 17:57:12  keith
  *       Converted to use full ANSI function prototypes
  *
@@ -146,7 +150,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/values.c,v 2.10 2000/04/27 17:57:12 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.11 2000/05/23 15:23:09 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -168,7 +172,7 @@ void	zero_double(double *r, int n);
 void	zero_dbls(double *r, size_mt n);
 void	energy_dyad(real (*ke_dyad)[3], real (*h)[3], real s, vec_mp vels, double mass, int nmols);
 double	trans_ke(real (*h)[3], vec_mt (*vel_s), real s, double mass, int nmols);
-double	rot_ke(quat_mt (*omega_p), real *inertia, int nmols);
+double	rot_ke(quat_mt (*omega_p), real, real *inertia, int nmols);
 double	precision(void);			/* Machine precision constant	      */
 char	*atime(void);
 void	new_line(void);
@@ -517,7 +521,7 @@ void	values(system_mp system, spec_mt *species, vec_mt (*meansq_f_t)[2], double 
 	 rkem5[ispec] = rkem3[ispec]; 
 	 rkem3[ispec] = rkem1[ispec]; 
 	 rkem1[ispec] = rkep1[ispec];
-         rkep1[ispec] = rot_ke(spec->avel, spec->inertia, spec->nmols);
+         rkep1[ispec] = rot_ke(spec->avel, system->ts, spec->inertia, spec->nmols);
 	 if(rkem1[ispec] < 0.0)
 	    rkem1[ispec] = rkem3[ispec] = rkem5[ispec] = rkep1[ispec];
 	 e = KEINT(rkep1[ispec], rkem1[ispec], rkem3[ispec], rkem5[ispec]);

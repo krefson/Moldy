@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.15  2000/04/27 17:57:12  keith
+ *       Converted to use full ANSI function prototypes
+ *
  *       Revision 2.14  2000/04/26 16:01:03  keith
  *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
  *
@@ -95,7 +98,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/xdr.c,v 2.14 2000/04/26 16:01:03 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.15 2000/04/27 17:57:12 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -151,14 +154,15 @@ bool_t xdr_system(XDR *xdrs, system_mt *sp)
    return
       xdr_vector(xdrs, (gptr*)&sp->nsites, 8, sizeof(int), (xdrproc_t)xdr_int) &&
       /*
-       * This is an awful hack.  There are 13 real[3]* pointers
+       * This is an awful hack.  There are 9 real[3]* pointers
        * next.  Their stored values are NEVER re-used so we just
        * output a placeholder.  For compatibility of XDR/non-XDR
        * files on 4 byte big-endian ieee architectures we emit
        * 4 bytes each.  DON'T use sizeof as that would make XDR
        * file M/C dependent.
        */
-      xdr_opaque(xdrs, (gptr*)&sp->c_of_m, 13*XDR_4PTR_SIZE);
+      xdr_opaque(xdrs, (gptr*)&sp->c_of_m, 9*XDR_4PTR_SIZE) &&
+      xdr_vector(xdrs, (gptr*)&sp->ts, 5, sizeof(real),(xdrproc_t)xdr_real);
 }
 
 /*

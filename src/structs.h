@@ -19,9 +19,13 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/CVS/moldy/src/structs.h,v 2.9.2.1 2000/04/24 17:05:45 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.11 2000/05/23 15:23:09 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.11  2000/05/23 15:23:09  keith
+ * First attempt at a thermostatted version of the Leapfrog code
+ * using either a Nose or a Nose-Poincare thermostat
+ *
  * Revision 2.9.2.1  2000/04/24 17:05:45  keith
  * Dullweber et al Leapfrog version
  *
@@ -230,10 +234,11 @@ typedef struct                  /* Whole system information                   */
                  *  Following variables ta..., ra.. have been introduced
                  *  by VVM and have dimensions of [nspecies]
                  */
-   real        ts,             /* Nose-Poincare trans temp co-ordinate       */
-               tsmom;          /* Nose-Poincare trans temp momentum          */
-   real        rs,             /* Nose-Poincare rot. temp co-ordinate        */
-               rsmom;          /* Nose-Poincare rot. temp momentum           */
+   real        ts,             /* Nose-Poincare temperature co-ordinate      */
+               tsmom;          /* Nose-Poincare temperature momentum         */
+   real	       H_0;	       /* Original value of Nose Hamiltonian         */
+   real        rs,             /* Reserved for future use.	 	     */
+               rsmom;          /* Reserved for future use.	 	     */
 } system_mt, *system_mp;
 
 

@@ -35,6 +35,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: leapfrog.c,v $
+ *       Revision 2.3  2000/05/23 15:23:08  keith
+ *       First attempt at a thermostatted version of the Leapfrog code
+ *       using either a Nose or a Nose-Poincare thermostat
+ *
  *       Revision 2.2  2000/04/27 17:57:08  keith
  *       Converted to use full ANSI function prototypes
  *
@@ -43,7 +47,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/leapfrog.c,v 2.2 2000/04/27 17:57:08 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.3 2000/05/23 15:23:08 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -154,69 +158,44 @@ void leapf_vel(real step, real (*hinv)[3], vec_mt (*vel), vec_mt (*force), real 
 /******************************************************************************
  * leapf_s().  Perform the thermostat co-ordinate update of the leapfrog.     *
  ******************************************************************************/
-void leapf_s(double step, real *s, real smom, double Q)
+double leapf_s(double step, real s, real smom, double Q)
 {
    double r = 0.5*step*smom/Q;
 
-   *s *= (1.0 + r)/(1.0 - r);
+   s *= (1.0 + r)/(1.0 - r);
 #ifdef DEBUG_THERMOSTAT1
    fprintf(stderr,"s = %f\n",*s);
 #endif
-}
-/******************************************************************************
- * leapf_smom().  Perform the thermostat momentum update of the leapfrog.     *
- *   This version performs a whole-step update, combining Eq. 35e and 35b.    *
- ***************************************x***************************************/
-void leapf_smom(double step, real s, real *smom, double kepold, double pe, double Q, double gkt, double H_0)
-{
-   double C, smomo=*smom, smomn;
-
-   C = -smomo-0.5*step*(kepold - 2.0*(pe + gkt*(log(s)+1) - H_0) - 0.5*SQR(smomo)/Q);
-
-   smomn = -2.0*C/(1.0 + sqrt(1.0-C*step/Q));
-#ifdef DEBUG_THERMOSTAT1
-   fprintf(stderr,"leapf_smom: C=%f\t(1-hC/Q)=%f\tSmom %f -> %f\tDelta=%20.16g\tstep=%f\n", 
-	   C, 1.0-C*step/Q, smomo, smomn, 0.25*step/Q*SQR(smomn)+(smomn)+C,step);
-#endif
-   *smom = smomn;
+   return s;
 }
 /******************************************************************************
  * leapf_smom_a().  Perform the thermostat momentum update of the leapfrog.   *
  *    Eq. 35b in Bond, Leimkuhler et al (1999)				      *
  ******************************************************************************/
-void leapf_smom_a(double step, real s, real *smom, double ke, double pe, double Q, double gkt, double H_0)
+double leapf_smom_a(double step, real s, real smomo,  double Q, double gkt)
 {
-   double C, smomo=*smom, smomn;
+   double C, smomn;
 
-   C = -smomo-0.5*step*(ke - pe - gkt*(log(s)+1) + H_0);
+   C = -smomo+0.5*step*gkt*(log(s)+1);
 
    smomn = -2.0*C/(1.0 + sqrt(1.0-C*step/Q));
 #ifdef DEBUG_THERMOSTAT1
    fprintf(stderr,"leapf_smom: C=%f\t(1-hC/Q)=%f\tSmom %f -> %f\tDelta=%20.16g\tstep=%f\n", 
 	   C, 1.0-C*step/Q, smomo, smomn, 0.25*step/Q*SQR(smomn)+(smomn)+C,step);
 #endif
-   *smom = smomn;
+   return smomn;
 }
 /******************************************************************************
  * leapf_smom_b().  Perform the thermostat momentum update of the leapfrog.   *
  *    Eq. 35e in Bond, Leimkuhler et al (1999)				      *
  ******************************************************************************/
-void leapf_smom_b(double step, real s, real *smom, double ke, double pe, double Q, double gkt, double H_0)
+double leapf_smom_b(double step, real s, real smomo, double Q, double gkt)
 {
-   double  smomo=*smom, smomn;
+   double  smomn;
 
-   smomn = smomo + 0.5*step*(2.0*ke-gkt)
-      -0.5*step*(ke+pe+SQR(smomo)/(2.0*Q)+gkt*log(s) - H_0);
+   smomn = smomo  -0.5*step*(SQR(smomo)/(2.0*Q)+gkt*(log(s)+1));
 
-   *smom = smomn;
-}
-/******************************************************************************
- * leapf_smom().  Perform the thermostat momentum update of the leapfrog.     *
- *                in the straighforward Nose Hamiltonian case.		      *
- ***************************************x***************************************/
-void leapf_smom_simple(double step, real *smom, double ke, double gkt)
-{
-   *smom += step*(ke - gkt);
+  return smomn;
 }
 /******************************************************************************
  * make_rot()  Construct the quaternion representing a rotation about a given *

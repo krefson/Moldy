@@ -43,6 +43,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.14  2000/10/20 14:38:47  keith
+ *       Brought up to date with fixed from Beeman branch.
+ *       Fixed a few other minor errors.
+ *
  *       Revision 2.10.2.2  2000/09/29 14:24:21  keith
  *       Added tests and made secure against buffer overflow in "vsn" field of
  *       dump and restart headers.  The 16-char buffer leads to overflows with
@@ -181,7 +185,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.10.2.2 2000/09/29 14:24:21 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.14 2000/10/20 14:38:47 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -289,7 +293,7 @@ void	dump(system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3]
    boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.10.2.2 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.14 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    if( ! strchr(control.dump_file, '%') )
@@ -552,6 +556,7 @@ static void	dump_convert(float *buf, system_mp system, vec_mt (*force), vec_mt (
 {
    int		nmols   = system->nmols,
    		nmols_r = system->nmols_r;
+   int		i;
    vec_mt	*scale_buf = ralloc(nmols);
    real		ppe = pe;
 
@@ -575,6 +580,8 @@ static void	dump_convert(float *buf, system_mp system, vec_mt (*force), vec_mt (
       if( system->nmols_r > 0 )
       {
 	 real_to_float(system->avel[0], buf, 4*nmols_r);
+	 for(i=0; i < 4*nmols_r; i++)
+	    buf[i] /= system->ts;
 	 buf += 4*nmols_r;
       }
       real_to_float(system->hdot[0],    buf, 9);	buf += 9;

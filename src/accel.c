@@ -26,12 +26,20 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
- *       Revision 2.23  2000/10/20 15:15:45  keith
- *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
+ *       Revision 2.22.2.3  2000/10/20 15:17:38  keith
+ *       Incorporated fix og 2.15c into this branch
  *
- *       Revision 2.22  2000/05/23 15:23:07  keith
- *       First attempt at a thermostatted version of the Leapfrog code
- *       using either a Nose or a Nose-Poincare thermostat
+ *       Revision 2.22.2.2  2000/10/20 13:59:31  keith
+ *       Incorporated new neightbour list stuff into accel.c.
+ *       Removed old "poteval" from accel.c.  Now use one in
+ *       force.
+ *       Other errors corrected and declarations tidied somewhat.
+ *
+ *       Revision 2.22.2.2  2000/10/20 11:48:50  keith
+ *       Incorporated new neighbour list indexing algorithm from 2.16
+ *
+ *       Revision 2.22.2.1  2000/05/24 11:53:08  keith
+ *       Split momentum update into 0.5*step at beginning of cycle\nand 0.5*step at end as written in the papers
  *
  *       Revision 2.21  2000/04/27 17:57:05  keith
  *       Converted to use full ANSI function prototypes
@@ -247,7 +255,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.23 2000/10/20 15:15:45 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.22.2.3 2000/10/20 15:17:38 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -273,14 +281,9 @@ void   leapf_quat(real step, quat_mt (*quat), quat_mt (*avel),
        	   real *inertia, int nmols);
 void   leapf_avel(real step, quat_mt (*avel), vec_mt (*torque), 
        	   real *inertia, int nmols);
-void   leapf_s(double step, real *s, real smom, double Q);
-void   leapf_smom(double step, real s, real *smom, double kepold, 
-       	   double pe, double Q, double gkt, double H_0);
-void   leapf_smom_simple(double step, real *smom, double ke, double gkt);
-void   leapf_smom_a(double step, real s, real *smom, double ke, 
-       	     double pe, double Q, double gkt, double H_0);
-void   leapf_smom_b(double step, real s, real *smom, double ke, 
-       	     double pe, double Q, double gkt, double H_0);
+double leapf_s(double step, real s, real smom, double Q);
+double leapf_smom_a(double step, real s, real smomo,  double Q, double gkt);
+double leapf_smom_b(double step, real s, real smomo, double Q, double gkt);
 void   make_sites(mat_mt, vec_mp c_of_m_s, quat_mp quat, 
        	   vec_mp p_f_sites, real **site, int nmols, int nsites, 
        	   int molflag);		/* Construct site coordinate arrays  */
@@ -288,15 +291,14 @@ void   mol_force(real **site_force, vec_mp force, int nsites, int nmols);
                                       /* Calculate molecular from site force */
 void   mol_torque(real **site_force, vec_mp site, vec_mp torque, quat_mp quat, 
        	   int nsites, int nmols);    /* Calculate torques from site forces  */
-void   rotate();		      /* Perform rotations given quaternions */
 void   newton(vec_mp force, vec_mp acc, double mass, int nmols); 
 				      /* Calculate accelerations from forces */
-void   euler();	                      /* Get quat 2nd derivatives            */
 void   parinello(mat_mt, mat_mt, vec_mp vel, vec_mp acc,
        	  vec_mp acc_out, int nmols); /* Get correction to c/m acceleration  */
 void   rahman(mat_mt stress_vir, mat_mt, mat_mt, 
               mat_mt ke_dyad, double press, double W, int mask); 
 					/* Get h 2nd derivatives             */
+void   escape(vec_mt *, int);
 void   energy_dyad(mat_mt ke_dyad, mat_mt, double s, vec_mp vels, double mass,  
        	    int nmols);			/* Calculate mvv for stress term     */
 void   force_calc(real **site, real **site_force, system_mt *system, 
@@ -330,7 +332,7 @@ void   thermalise(system_mp system, spec_mt *species);
                                       /* Randomize velocities to given temp  */
 double trans_ke(mat_mt, vec_mt (*vel_s), real s, double mass, int nmols);
                                      /* Compute translational kinetic energy */
-double rot_ke(quat_mt (*omega_p), real *inertia, int nmols); 
+double rot_ke(quat_mt (*omega_p), real s, real *inertia, int nmols); 
                                     /* Compute rotational kinetic energy     */
 void   hoover_tr(double alpha, vec_mp accel_in, vec_mp accel_out, vec_mp vel, 
        	  int nmols);		       /* Corrects forces due to thermostat  */
@@ -585,6 +587,22 @@ NOVECTOR
    return (c);
 }
 /******************************************************************************
+ * tot_ke().	   Evaluate total kinetic energy.			      *
+ ******************************************************************************/
+double tot_ke (system_mt *sys, spec_mt *species)
+{
+   double   ke = 0.0;
+   spec_mt  *spec;
+   int	    ispec;
+   for(spec=species, ispec = 0; ispec < sys->nspecies; spec++, ispec++)
+   {
+      ke += trans_ke(sys->h, spec->vel, sys->ts, spec->mass, spec->nmols) ;
+      if(spec->rdof > 0)                     /* Only if polyatomic species */
+	 ke += rot_ke(spec->avel, sys->ts, spec->inertia, spec->nmols);
+   }
+   return ke;
+}
+/******************************************************************************
  * eval_forces().  This is the master potential and force evaluation routine. *
  *                 It calls  force() and  ewald to evaluate the site forces   *
  *                 converts these to the molecular forces and torques which   *
@@ -617,25 +635,28 @@ eval_forces(system_mp sys,             /* Pointer to system info        (in) */
  * The following declarations are pointers to the force etc for the whole
  * system, and are set equal to (eg) force[0]
  */
-   int		nsarray = (sys->nsites - 1 | NCACHE - 1) + 1+NLINE;
+   int		nsarray = ((sys->nsites - 1) | (NCACHE - 1)) + 1+NLINE;
    real		**site = (real**)arralloc((size_mt)sizeof(real), 2,
 					  0, 2, 0, nsarray-1);
    real		**site_force = (real**)arralloc((size_mt)sizeof(real), 2,
 						0, 2, 0, nsarray-1);
-/*
- * Other local variables
- */
+   /*
+    * Other local variables
+    */
    real            *chg = dalloc(sys->nsites), *chg_ptr;
    vec_mp          c_of_m = ralloc(sys->nmols);
    spec_mp         spec, fspec /*Framework species */;
    int             nspecies = sys->nspecies;
-   int             ispec, imol, imol_r, isite;
+   int             ispec, imol, isite;
    int             i, j;
    double          vol = det(sys->h);
    int		   nsitesxf, nmolsxf;  /* Count of non-framework sites, mols. */
    static double   dist, distp;
    static boolean  init = true;
 
+   /*
+    * Initialisation of distant potential constant - executed first time only
+    */
    if (init)
    {
       dist  = distant_const(sys, species, potpar, control.cutoff,0);
@@ -659,7 +680,7 @@ eval_forces(system_mp sys,             /* Pointer to system info        (in) */
 /*
  * Set up arrays of pointers to sites, forces etc for each species
  */
-   isite = 0; imol = 0; imol_r = 0;
+   isite = 0;
    for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
    {
       for( i = 0; i < 3; i++ )
@@ -762,6 +783,7 @@ eval_forces(system_mp sys,             /* Pointer to system info        (in) */
 	 mol_torque(force_sp[ispec], spec->p_f_sites,
 		    torque[ispec], spec->quat, spec->nsites, spec->nmols);
    }
+
 /*
  * Add correction term to convert from site to molecular virial
  */
@@ -817,159 +839,146 @@ eval_forces(system_mp sys,             /* Pointer to system info        (in) */
  *                 and torques are in scope.                                  *
  ******************************************************************************/
 void
-do_step(system_mp sys,                   /* Pointer to system info        (in) */
-	spec_mt *species, 	         /* Array of species info         (in) */
-	site_mt *site_info, 	         /* Array of site info structures (in) */
-	pot_mt *potpar, 	         /* Array of potential parameters (in) */
-	vec_mt (*meansq_f_t)[2],         /* Mean square force and torque (out) */
-	double *pe, 		         /* Potential energy real/Ewald  (out) */
-	real *dip_mom, 		         /* Total system dipole moment   (out) */
-	mat_mt stress,	 	         /* Virial part of stress        (out) */
-	restrt_mt *restart_header,       /* What the name says.           (in) */
-	int backup_restart)	         /* Flag signalling backup restart (in)*/
+do_step(system_mt *sys,                 /* Pointer to system info        (in) */
+	spec_mt *species, 	        /* Array of species info         (in) */
+	site_mt *site_info, 	        /* Array of site info structures (in) */
+	pot_mt *potpar, 	        /* Array of potential parameters (in) */
+	vec_mt (*meansq_f_t)[2],        /* Mean square force and torque (out) */
+	double *pe, 		        /* Potential energy real/Ewald  (out) */
+	real *dip_mom, 		        /* Total system dipole moment   (out) */
+	mat_mt stress,	 	        /* Virial part of stress        (out) */
+	restrt_mt *restart_header,      /* What the name says.           (in) */
+	int backup_restart)	        /* Flag signalling backup restart (in)*/
 {
  /*
  * The following declarations are arrays of pointers to the forces
  * etc for each species.  That is force[i] is a pointer to the force on
  * molecule 0 of species i
  */
-   vec_mp	*force = palloc(sys->nspecies),
-		*torque = palloc(sys->nspecies);
+   vec_mp   *force  = palloc(sys->nspecies),
+            *torque = palloc(sys->nspecies);
 /*
  * The following declarations are pointers to the force etc for the whole
  * system, and are set equal to (eg) force[0]
  */
-   vec_mp          force_base = ralloc(sys->nmols),
-		   torque_base = sys->nmols_r?ralloc(sys->nmols_r):0;
-   double	   ke;		       /* (translationak) kinetic energy) */
-   static double   ke_old;	       /* ke before velocity update       */
-   static double   H_0 = -1.0;
-   static int reverse=-1;
+   vec_mp   force_base = ralloc(sys->nmols),
+            torque_base = sys->nmols_r?ralloc(sys->nmols_r):0;
+   static double   ke;		       /* (translational) kinetic energy) */
+   static boolean  init = true;
    mat_mt          hinv;
-   static boolean  init = true, inith0 = true;
-   double	   tsold, tsmomo;
+   double	   tsold;
    spec_mp         spec;
    int             ispec, imol, imol_r;
-   double          vol = det(sys->h);
    int		   nspecies = sys->nspecies;
    /*
- * Initialisation of distant potential constant - executed first time only
- */
-   if (init)
-   {
-      ke_old = 0.0;
-      for(spec=species, ispec = 0; ispec < nspecies; spec++, ispec++)
-	 ke_old += trans_ke(sys->h, spec->vel, sys->ts, spec->mass, spec->nmols);
-
-      /*      reverse = control.istep + 100;*/
-
-      init = false;
-   }
-   if(control.scale_interval > 0 && control.istep == 1+control.scale_end)   
-      inith0 = true;
-
-   zero_real(meansq_f_t[0][0], 6 * sys->nspecies);
-/*
- * Set up arrays of pointers to sites, forces etc for each species
- */
+    * Initialize force and torque arays.
+    */
    imol = 0; imol_r = 0;
    for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
    {
       force[ispec] = force_base+imol;
+      torque[ispec] = torque_base+imol_r;
       imol += spec->nmols;
-      {
-	 torque[ispec] = torque_base+imol_r; /* Assign entries even if we don't use */
-	 if (spec->quat)
-	    imol_r += spec->nmols;
-      }
+      if (spec->quat)
+	 imol_r += spec->nmols;
    }
-   invert(sys->h, hinv);
-/*
- * Initial co-ordinate step of Nose-Poincare themostat.
- */
-   tsold = sys->ts;
-   tsmomo = sys->tsmom;
-
-   if (control.const_temp == 1)
-      leapf_s(control.step, &sys->ts, sys->tsmom, control.ttmass);
- /*
- * Initial co-ordinate step of leapfrog algorithm.
- */
-   leapf_com(control.step *(0.5/sys->ts+0.5/tsold),
-	     sys->c_of_m, sys->vel, sys->nmols);
+   /*
+    * Evaluate initial KE on first step or when scaling switched off
+    */
+   if (init)
+   {
+      ke = tot_ke(sys, species);
+      init = false;
+   }
+   /*
+    * Half step for H1.  Also update the KE according to new value of s.
+    */
+   if( control.const_temp )
+   {
+      tsold = sys->ts;
+      sys->tsmom = leapf_smom_a(0.5*control.step, sys->ts, sys->tsmom, 
+				control.ttmass, sys->d_of_f*kB*control.temp);
+      sys->ts    = leapf_s     (0.5*control.step, sys->ts, sys->tsmom, 
+				control.ttmass);
+      sys->tsmom = leapf_smom_b(0.5*control.step, sys->ts, sys->tsmom, 
+				control.ttmass, sys->d_of_f*kB*control.temp);
+      ke *=SQR(tsold/sys->ts);
+   }
+   /*
+    * H2 half step
+    */
+   if( control.const_temp )
+      sys->tsmom += 0.5*control.step*ke;
+   leapf_com(0.5*control.step/sys->ts, sys->c_of_m, sys->vel, sys->nmols);
    for (spec = species; spec < &species[nspecies]; spec++)
       if( spec->rdof > 0 )
-	 leapf_quat(control.step, spec->quat, spec->avel, spec->inertia, spec->nmols);
-
-   if(control.istep == reverse)
-   {
-      note("Reversing simulation by changing sign of \"step\"");
-      control.step = - control.step;
-      xfree(force);
-      xfree(torque);
-      xfree(force_base);
-      if (torque_base != NULL)
-	 xfree(torque_base);
-      return;
-   }
-
+	 leapf_quat(0.5*control.step/sys->ts, spec->quat, spec->avel, 
+		    spec->inertia, spec->nmols);
+   /*
+    * H3 full step
+    */
    eval_forces(sys, species, site_info, potpar,
 	       pe, dip_mom, stress, force, torque);
- /*
- * Final MD update step
- */
+
+   invert(sys->h, hinv);
    for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
    {
       leapf_vel(control.step*sys->ts, hinv, spec->vel, force[ispec], 
 		                            spec->mass, spec->nmols);
       if( spec->rdof > 0 )
-	 leapf_avel(control.step, spec->avel, torque[ispec], 
-		                  spec->inertia, spec->nmols);
+	 leapf_avel(control.step*sys->ts, spec->avel, torque[ispec], 
+		                          spec->inertia, spec->nmols);
+   }
+   ke = tot_ke(sys, species);
+
+   if(control.istep == 1 
+      || control.scale_interval > 0 && control.istep == 1+control.scale_end)
+   {
+      sys->H_0 = ke + pe[0] + pe[1] 
+	            + SQR(sys->tsmom)/(2.0*control.ttmass) 
+                    + sys->d_of_f*kB*control.temp * log(sys->ts); 
    }
 
+   if( control.const_temp )
+      sys->tsmom -= control.step*(pe[0]+pe[1] - sys->H_0);
+
    /*
-    * Evaluate new kinetic energy
+    * Second H2 half step.
     */
-   ke = 0.0;
-   for(spec=species, ispec = 0; ispec < nspecies; spec++, ispec++)
-      ke += trans_ke(sys->h, spec->vel, sys->ts, spec->mass, spec->nmols);
+   if( control.const_temp )
+      sys->tsmom += 0.5*control.step*ke;
+   leapf_com(0.5*control.step/sys->ts, sys->c_of_m, sys->vel, sys->nmols);
+   for (spec = species; spec < &species[nspecies]; spec++)
+      if( spec->rdof > 0 )
+	 leapf_quat(0.5*control.step/sys->ts, spec->quat, spec->avel, 
+		    spec->inertia, spec->nmols);
    /*
-    * Evaluate initial KE on first step or when scaling switched off
+    * Final half step for H1.  Also update the KE according to new value of s.
     */
-   if( inith0 ) {
-      H_0 = 0.5*(ke+ke_old) + pe[0] + pe[1] 
-	 + SQR(sys->tsmom+tsmomo)/(8.0*control.ttmass) 
-	 + sys->d_of_f*kB*control.temp * log(sys->ts); 
-      inith0 = false;
+   if( control.const_temp )
+   {
+      tsold = sys->ts;
+      sys->tsmom = leapf_smom_a(0.5*control.step, sys->ts, sys->tsmom, 
+				control.ttmass, sys->d_of_f*kB*control.temp);
+      sys->ts    = leapf_s     (0.5*control.step, sys->ts, sys->tsmom, 
+				control.ttmass);
+      sys->tsmom = leapf_smom_b(0.5*control.step, sys->ts, sys->tsmom, 
+				control.ttmass, sys->d_of_f*kB*control.temp);
+      ke *=SQR(tsold/sys->ts);
    }
-/*
- * Final thermostat update step
- */
-   if (control.const_temp == 1)
-#define NOSE_SIMPLEx
-#ifdef NOSE_SIMPLE
-      leapf_smom_simple(control.step, &sys->tsmom, 
-		 ke + SQR(tsold/sys->ts)*ke_old, 
-		 sys->d_of_f*kB*control.temp);
-#else
-      leapf_smom(control.step, sys->ts, &sys->tsmom, 
-		 ke + SQR(tsold/sys->ts)*ke_old, 
-		 pe[0] + pe[1],  control.ttmass, 
-		 sys->d_of_f*kB*control.temp, H_0);
-#endif
+
 #ifdef DEBUG_THERMOSTAT
    if( control.istep%control.print_interval == 0)
    {
-      double H, HK, HV, HP, HS;
-      HP = (SQR(sys->tsmom+tsmomo))/(8.0*control.ttmass);
+      double H, HP, HS;
+      HP = SQR(sys->tsmom)/(2.0*control.ttmass);
       HS = sys->d_of_f*kB*control.temp * log(sys->ts);
-      H = 0.5*(ke+ke_old) + pe[0] + pe[1] + HP + HS;
-      fprintf(stderr,"do_step: Q= %f\ts= %f\tps= %f\tH= %f\tHK= %f\tHV= %f\tHP= %f\tHS= %f\t(H-H_0)s= %f\n",
-	      control.ttmass,sys->ts,sys->tsmom, H, 0.5*(ke+ke_old), pe[0] + pe[1], HP, HS,(H-H_0)*sys->ts);
+      H = ke + pe[0] + pe[1] + HP + HS;
+      fprintf(stderr,
+	      "do_step(exit):  Q= %f\ts= %f\tps= %f\tH= %f\tHK= %f\tHV= %f\tHP= %f\tHS= %f\t(H-H_0)s= %f\n",
+	      control.ttmass,sys->ts,sys->tsmom, H,ke, pe[0] + pe[1], HP, HS,(H-sys->H_0)*sys->ts);
    }
 #endif
-
-   ke_old = ke;
 
 /*
  *  Apply constraint to any framework molecules.
@@ -982,6 +991,7 @@ do_step(system_mp sys,                   /* Pointer to system info        (in) *
 /*
  * Calculate mean-square forces and torques
  */
+   zero_real(meansq_f_t[0][0], 6 * sys->nspecies);
    for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
    {
       mean_square(force[ispec], meansq_f_t[ispec][0], spec->nmols);
@@ -1001,12 +1011,9 @@ do_step(system_mp sys,                   /* Pointer to system info        (in) *
 	      backup_restart);
       
    }
-
-
+   xfree(force);
+   xfree(torque);
    xfree(force_base);
    if (torque_base != NULL)
       xfree(torque_base);
-   xfree(force);
-   xfree(torque);
-
 }

@@ -22,6 +22,9 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.25  2000/10/20 15:15:48  keith
+ *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
+ *
  *       Revision 2.24  2000/08/18 17:50:59  keith
  *       Updated for themostat version.
  *
@@ -92,7 +95,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2.21.2.1 2000/08/29 16:49:19 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2.25 2000/10/20 15:15:48 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -1111,13 +1114,6 @@ void	copy_dynamics(system_mp system)
    par_broadcast((gptr*)system->h,       9, sizeof(real), 0); 
    par_broadcast((gptr*)system->hdot,    9, sizeof(real), 0);
    par_broadcast((gptr*)system->hdotp,   9, sizeof(real), 0); 
-
-   par_broadcast((gptr*)&system->ts,      1, sizeof(real), 0);
-   par_broadcast((gptr*)&system->tsmom,   1, sizeof(real), 0);
-					                   	      
-   par_broadcast((gptr*)&system->rs,      1, sizeof(real), 0);
-   par_broadcast((gptr*)&system->rsmom,   1, sizeof(real), 0);
-
 
    ap = av_ptr(&asize,0);	      /* get addr, size of database   */
    par_broadcast(ap, 1, asize,0);
