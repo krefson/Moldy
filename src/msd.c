@@ -35,6 +35,14 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.1
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 1.18  1999/06/03  18:00:09  craig
+ *  Corrected memory freeing of dump, msd and species limits.
+ *  Corrected for case when only one time slice selected.
+ *  Modified init_inc input to read integer between limits.
+ *
+ *  Revision 1.17  1999/05/11  15:27:49  craig
+ *  Corrected species iteration error in msd routine.
+ *
  *  Revision 1.16  1998/10/23  10:31:23  craig
  *  Removed initialization of range_flag[3] since ANSI feature
  *  Removed unnecessary linking with lattice_start
@@ -244,7 +252,8 @@ va_dcl
 static char * mystrdup(s)
 char *s;
 {
-   char * t=malloc(strlen(s)+1);
+   char * t = NULL;
+   if(s) t=malloc(strlen(s)+1);
    return t?strcpy(t,s):0;
 }
 /******************************************************************************
@@ -616,7 +625,7 @@ int             mstart, mfinish, minc, max_av, it_inc;
 	 for(i=0; i<3; i++)
 	 {
 	    totmol=0;
-	    for( ispec = sp_range[0], spec = species; ispec <= sp_range[1];
+	    for( ispec = sp_range[0], spec = species+sp_range[0]; ispec <= sp_range[1];
 		 spec += sp_range[2], ispec += sp_range[2])
 	    {
 	       nmols = spec->nmols;
@@ -651,14 +660,14 @@ int             nmsd, sp_range[3];
        puts(spec->name);
        for( imsd = 0; imsd < nmsd; imsd++)
        {
-         for( i=0, totmsd = 0; i<3; i++)
+         totmsd = 0;
+         for( i=0; i<3; i++)
          {
            msd[imsd][ispec][i] /= max_av;
            totmsd += msd[imsd][ispec][i];
-           (void)printf("%9.7f ", msd[imsd][ispec][i]);
+           (void)printf("%10.7f ", msd[imsd][ispec][i]);
          }
-         (void)printf("%9.7f",totmsd);
-         (void)printf("\n");
+         (void)printf("%10.7f\n",totmsd);
        }
    }
    if( ferror(stdout) )
@@ -747,13 +756,13 @@ char	*argv[];
 	 dump_name = optarg;
 	 break;
        case 't':
-	 dumplims = optarg;
+	 dumplims = mystrdup(optarg);
          break;
        case 'm':
-	 msdlims = optarg;
+	 msdlims = mystrdup(optarg);
          break;
        case 'g':
-	 speclims = optarg;
+	 speclims = mystrdup(optarg);
 	 break;
        case 'i':
 	 it_inc = atoi(optarg);
@@ -871,19 +880,23 @@ char	*argv[];
       }
       if( dflag)
       {
+          (void)free(dumplims);
           dumplims = NULL;
       } 
    } while(dflag);
+
+   nslices = (finish-start)/inc+1;  /* no. of time slices in traj_cofm */
 
    /* Ensure initial time slice increment is valid for given dump range */
    do
    {
       iflag = 0;
-      if( it_inc <= 0)
+      if( (it_inc <= 0) || it_inc > nslices-2 )
       {
          fputs("Invalid initial time slice increment\n",stderr);
-         fputs("Please specify initial time slice increment\n",stderr);
-         it_inc=atoi(get_str("Increment? "));
+         fputs("Please specify initial time slice increment between",stderr);
+         fprintf(stderr," 1 and %d\n",nslices>2?nslices-2:1);
+         it_inc=get_int("Increment? ",1,nslices>2?nslices-2:1);
          iflag++;
       }
    } while(iflag);
@@ -903,13 +916,14 @@ char	*argv[];
            fputs(msdlims, stderr);
            fputs("\"\n", stderr);
          }
-         if( mstart*inc > finish-start || mfinish*inc > finish-start)
+         if( (mstart*inc > finish-start) || (mfinish*inc > finish-start))
          {
             mflag++;
             fputs("MSD interval exceeds dump range\n",stderr);
          }
          if( mflag )
          {
+            (void)free(msdlims);
             msdlims = NULL;
             fputs("Please specify msd intervals in form", stderr);
             fputs(" start-finish:increment\n", stderr);
@@ -919,11 +933,11 @@ char	*argv[];
    else
    {
      /* Use default values for msd interval limits */
-      mstart = 1;
-      if( finish > start + 1)
-          mfinish = (finish-start)/(2*inc); /* Midpoint of longest time span */
+      mstart = 0;
+      if(nslices == 2)
+         mfinish = 1;
       else
-          mfinish = 1;
+         mfinish = floor((nslices-1)/2); /* Midpoint of longest time span */
       minc = 1;
    }
 
@@ -950,6 +964,7 @@ char	*argv[];
          }
          if( sflag )
          {
+            (void)free(speclims);
             speclims = NULL;
             fputs("Please specify molecule selection in form", stderr);
             fputs(" start-finish:increment\n", stderr);
@@ -964,12 +979,11 @@ char	*argv[];
        sp_range[1] = sys.nspecies-1;
        sp_range[2] = 1;
    } 
+
   /*
    * Allocate buffer for data
    */
    dump_size = DUMP_SIZE(~0)*sizeof(float);
-
-   nslices = (finish-start)/inc+1; /* no. of time slices in traj_cofm */
 
   /* Allocate memory for trajectory data and zero */
    traj_cofm = (vec_mt**)arralloc(sizeof(vec_mt),2,0,nslices-1,0,sys.nmols-1);
@@ -1022,7 +1036,7 @@ char	*argv[];
    }
    xfree(dump_buf);
 
-#if defined (HAVE_POPEN) 
+#if defined (HAS_POPEN) 
    pclose(Dp);
 #else
    fclose(Dp);
@@ -1042,9 +1056,12 @@ char	*argv[];
      nmsd = (mfinish-mstart)/minc+1; /* No of msd time intervals */
      max_av = (nslices - mfinish)/it_inc; /* Max no of msd calcs to average over */
 
+     if (max_av < 1)
+          max_av = 1;
+
   /* Allocate memory for msd array and zero */
-     msd = (real***)arralloc(sizeof(real),3,0,nmsd-1,0,sys.nspecies-1,0,2);
-     zero_real(msd[0][0],nmsd*sys.nspecies*3);
+         msd = (real***)arralloc(sizeof(real),3,0,nmsd-1,0,sys.nspecies-1,0,2);
+         zero_real(msd[0][0],nmsd*sys.nspecies*3);
 
   /* Calculate and print msd values */
      msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, traj_cofm, msd);
