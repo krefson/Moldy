@@ -503,22 +503,22 @@ main(int argc, char **argv)
    /*
     *  Generate list of dump files if required
     */
-   if( strchr(argv[optind],'%') )
+   if (strstr(argv[optind],"%d") )
    {
+      dump_base = argv[optind];
       genflg++;
 #define MAXTRY 500
-      dump_base = argv[optind];
       idump0 = -1;
       if ( verbose )  fprintf(stderr,"Searching for dump file matching \"%s\"\n",dump_base);
       do                      /* Search for a dump file matching pattern */
-	 sprintf(cur_dump, dump_base, ++idump0);
+        sprintf(cur_dump, dump_base, ++idump0);
       while( (dump_file = fopen(cur_dump, "rb")) == NULL && idump0 < MAXTRY);
       if( dump_file == NULL )        /* If we didn't find one . .               */
       {
-	 fprintf(stderr,"I can't find any dump files to match \"%s\".\n",dump_base);
-	 exit(2);
+        fprintf(stderr,"No dump files found matching \"%s\".\n",dump_base);
+        exit(2);
       } else if (verbose) {
-	fprintf(stderr,"... found \"%s\"\n", cur_dump);
+        fprintf(stderr,"... found \"%s\"\n", cur_dump);
       }
       (void)fclose(dump_file);
    }
@@ -542,15 +542,18 @@ main(int argc, char **argv)
 	    break;
       }
 
-      if( verbose ) fprintf(stderr, "Checking I can open dump file \"%s\"\n",dump_name);
+      if( verbose )
+         fprintf(stderr, "Checking dump file \"%s\"\n",dump_name);
       if( (dump_file = open_dump(dump_name, "rb")) == NULL)
       {
 	 if( genflg )
+         {
+           if( verbose )
+              fputs("End of dump sequence reached\n",stderr);
 	    break;		/* Exit loop if at end of sequence */
+         }
 	 fprintf(stderr, "Failed to open dump file \"%s\"\n", dump_name);
 	 exit(2);
-      } else if (verbose) {
-        fprintf(stderr,"Checking dump file \"%s\"\n", dump_name);
       }
 
       /*
@@ -614,20 +617,21 @@ main(int argc, char **argv)
       cur->i = header.istep/header.dump_interval;
       cur->num = header.ndumps;
       insert(cur, &f_head);
-      if( verbose ) fprintf(stderr, "Dump file \"%s\" added to list to be processed\n",dump_name);
+      if( verbose )
+         fprintf(stderr, "Dump file \"%s\" added to list to be processed\n",dump_name);
 #ifdef DEBUG
       fprintf(stderr,"File \"%s\" \nslice %5d length %5d\n",
 	              dump_name, cur->i, cur->num);
 #endif
      if( xcpt == -1 )
      {
-       if( bflg )
+       if( bflg ) /* Binary output */
        {
 	 fwrite(&header, sizeof(header), 1, stdout);
 	 fwrite(dump_sysinfo, sizeof(*dump_sysinfo), 1, stdout);
        }
        else
-         {
+         {  /* Text output */
          if( nfiles > 1 )
            printf("\n");
          printf("File name\t\t\t= %s\n", dump_name);
@@ -748,7 +752,7 @@ main(int argc, char **argv)
       exit(3);
    }
    /*
-    * Open output file  if requested
+    * Open output file if requested
     */
    if( out_name )
       if( ! freopen(out_name, bflg?"wb":"w", stdout) )
@@ -771,6 +775,9 @@ main(int argc, char **argv)
 	 tslice += (cur->i + cur->num - tslice - 1) / inc * inc + inc;
       }
    }
+
+   if( verbose )
+      fprintf(stderr, "Data successfully extracted from \"%s\"\n",argv[optind]);
 
    return 0;
 }
