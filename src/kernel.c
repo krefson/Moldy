@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.7  1994/06/08 13:22:31  keith
+ *       Null update for version compatibility
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -136,7 +139,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/kernel.c,v 2.7 1994/06/08 13:22:31 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -261,9 +264,9 @@ VECTORIZE
 	     */
 	    r       = sqrt(r_sqr[jsite]);
 	    ar	    = alpha*r;
-	    r_r	 = 1.0 / r;
-	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
 	    t = 1.0/(1.0+PP*ar);
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+	    r_r	 = 1.0 / r;
 	    t = POLY5(t) * erfc_term * r_r;
 	    erfc_term = t + norm * erfc_term;
 	    r_sqr_r = SQR(r_r);
@@ -287,9 +290,9 @@ VECTORIZE
 	     */
 	    r       = sqrt(r_sqr[jsite]);
 	    ar	    = alpha*r;
-	    r_r	 = 1.0 / r;
-	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
 	    t = 1.0/(1.0+PP*ar);
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+	    r_r	 = 1.0 / r;
 	    t = POLY5(t) * erfc_term * r_r;
 	    erfc_term = t + norm * erfc_term;
 	    r_sqr_r = SQR(r_r);
@@ -312,9 +315,9 @@ VECTORIZE
 	     */
 	    r       = sqrt(r_sqr[jsite]);
 	    ar	    = alpha*r;
-	    r_r	 = 1.0 / r;
-	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
 	    t = 1.0/(1.0+PP*ar);
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+	    r_r	 = 1.0 / r;
 	    t = POLY5(t) * erfc_term * r_r;
 	    erfc_term = t + norm * erfc_term;
 	    r_sqr_r = SQR(r_r);
@@ -337,9 +340,9 @@ VECTORIZE
 	     */
 	    r       = sqrt(r_sqr[jsite]);
 	    ar	    = alpha*r;
-	    r_r	 = 1.0 / r;
-	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
 	    t = 1.0/(1.0+PP*ar);
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+	    r_r	 = 1.0 / r;
 	    t = POLY5(t) * erfc_term * r_r;
 	    erfc_term = t + norm * erfc_term;
 	    r_sqr_r = SQR(r_r);
@@ -384,9 +387,9 @@ VECTORIZE
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = 1.0 / r;
+	    exp_f1 = p1[jsite] * exp(-p2[jsite] * r);
 	    r_sqr_r = SQR(r_r);
 	    r_6_r   = p0[jsite] * r_sqr_r * r_sqr_r * r_sqr_r;
-	    exp_f1 = p1[jsite] * exp(-p2[jsite] * r);
 	    ppe +=  - r_6_r + exp_f1;
 	    forceij[jsite] = -r_sqr_r * 6.0 * r_6_r
 	                     + p2[jsite]*exp_f1 * r_r;
@@ -397,10 +400,10 @@ VECTORIZE
          for(jsite=jmin; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
+	    r_r	 = 1.0 / r;
 	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
 	    exp_f2 = -p2[jsite] * exp(-p3[jsite]*r);
 	    ppe += exp_f1 + exp_f2;
-	    r_r	 = 1.0 / r;
 	    forceij[jsite] = (p1[jsite]*exp_f1 + p3[jsite]*exp_f2) *r_r;
 	 }
 	 break; 
@@ -410,8 +413,8 @@ VECTORIZE
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = 1.0 / r;
-	    r_sqr_r = SQR(r_r);
 	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
+	    r_sqr_r = SQR(r_r);
 	    r_4_r = SQR(r_sqr_r);
 	    r_6_r = r_sqr_r * r_4_r;
 	    r_8_r = p5[jsite] * SQR(r_4_r);
