@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.13  91/08/24  16:55:18  keith
+ * Added pragmas for convex C240 parallelization
+ * 
  * Revision 1.12  91/08/15  18:13:17  keith
  * Modifications for better ANSI/K&R compatibility and portability
  * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
@@ -78,7 +81,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.12 91/08/15 18:13:17 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.13 91/08/24 16:55:18 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -406,8 +409,9 @@ VECTORIZE
    xfree(shx); xfree(sky); xfree(slz);
    xfree(pe_n);   xfree(stress_n);
    xfree(hkl);
-   if( nthreads > 1)
-      xfree(s_f_n);
+   for( ithread = 1; ithread < nthreads; ithread++)
+      xfree(s_f_n[ithread]);
+   xfree(s_f_n);
 }
 #ifdef PARALLEL
 #pragma opt_level 2

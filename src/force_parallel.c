@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.13 91/08/15 18:14:21 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.14 91/08/24 16:55:42 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -610,8 +610,8 @@ VECTORIZE
    xfree((potp+1));  xfree(c_ptr); 
    xfree(cell);        xfree(id); 
    xfree(pe_n);   xfree(stress_n);
-   if( nthreads > 1)
-      xfree(s_f_n);
+   for( ithread = 1; ithread < nthreads; ithread++)
+      xfree(s_f_n[ithread]);
 }
 #ifdef PARALLEL
 #pragma opt_level 2
