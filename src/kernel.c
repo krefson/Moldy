@@ -14,6 +14,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 1.5  89/11/20  13:29:26  keith
+ * Replaced separate arrays "types" and "npotp" with array of structs "potspec"
+ * 
  * Revision 1.4  89/10/12  16:42:37  keith
  * Eleminated a few inefficiencies in non-coulombic LJ and MCY loops.
  * 
@@ -29,10 +32,10 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/kernel.c,v 1.4 89/10/12 16:42:37 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/kernel.c,v 1.5 89/11/20 13:29:26 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
-#ifdef  convexvc
+#if  defined(convexvc) || defined(stellar)
 #include <fastmath.h>
 #else
 #include <math.h>

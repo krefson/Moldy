@@ -3,6 +3,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.5  89/11/01  17:29:10  keith
+ * Sin and cos loop vectorised - mat_vec_mul extracted from loop.
+ * 'Uniform charge sheet' term added in case of electrically charged system.
+ * 
  * Revision 1.5  89/10/26  11:29:26  keith
  * Sin and cos loop vectorised - mat_vec_mul extracted from loop.
  * 'Uniform charge sheet' term added in case of electrically charged layer.
@@ -25,10 +29,10 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/ewald.c,v 1.5 89/10/26 11:29:26 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/ewald.c,v 1.5 89/11/01 17:29:10 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
-#ifdef	convexvc
+#if  defined(convexvc) || defined(stellar)
 #include <fastmath.h>
 #else
 #include <math.h>
