@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.14.2.4.2.6  2002/09/19 11:25:51  kr
+ *       Corrected minor error in E6 potential correction term.
+ *
  *       Revision 2.14.2.4.2.6  2002/09/19 10:47:53  kr
  *       Corrected minor error in E6 potential correction term.
  *
@@ -207,7 +210,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/kernel.c,v 2.14.2.4.2.6 2002/09/19 10:47:53 kr Exp $";
+static char *RCSid = "$Header: /usr/users/moldydv/CVS/moldy/src/kernel.c,v 2.14.2.4.2.6 2002/09/19 11:25:51 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -219,7 +222,7 @@ static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/kernel.c,v 2.14.2.4.2
 /*========================== External function declarations ==================*/
 void	message(int *,...);		/* Write a warning or error message   */
 /*========================== Potential type specification ====================*/
-#define LJPOT 0		/* Lennard Jones.   U=p0*((p1/r)^6 - (p1/r)^12)       */
+#define LJPOT 0		/* Lennard Jones.   U=p0*((p1/r)^12 - (p1/r)^6)       */
 #define E6POT 1		/* 6-exp potential  U=-p0/r^6 + p1*exp(-p2*r)         */
 #define MCYPOT 2	/* MCY water pot.  J.Chem.Phys 64,1351(1976)          */
 			/*		    U= p0*exp(-p1*r) - p2*exp(-p3*r)  */
@@ -239,6 +242,7 @@ void	message(int *,...);		/* Write a warning or error message   */
 #define GENPOT46 9	/* "generic" potential with Ewald summation           */
 			/* U= p0*exp(-p1*r) + p2/r^12 - p3/r^4 -p4/r^6 -p5/r^8*/
 #define HIW7EWA 10      /* HIW + r**-7 + Windows, Analytical Ewald summation  */
+#define LJEWA6  11      /* Lennard-Jones with Ewald sum for r**-6             */
 
 const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 		              {"buckingham",3},
@@ -251,6 +255,7 @@ const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 			      {"hiwfl+win",6},
 		              {"generic46",6},
                               {"hiw7ewa",6},
+			      {"lennard-jones-ewald",2},
 		              {0,0}};	            /* MUST be null-terminated*/
 /*
  *  Array of dimensions of pot'l parameters.  Triplets contain powers
@@ -272,6 +277,7 @@ const dim_mt   pot_dim[][NPOTP]= {
    /* HIW7+Win      */  {{1,6,-2},{1,8,-2},{1,9,-2},{1,14,-2},{1,0,-2},{0,1,0}},
    /* Generic-4-6   */  {{1,2,-2},{0,-1,0},{1,14,-2},{1,6,-2},{1,8,-2},{1,10,-2}}, 
    /* HIW7EWA      */  {{1,6,-2},{1,8,-2},{1,9,-2},{1,14,-2},{1,0,-2},{0,1,0}},
+   /* L-J +Ewald   */	{{1,2,-2},{0,1,0}}
                                   };
 
 /*========================== Macros ==========================================*/
@@ -287,6 +293,7 @@ const dim_mt   pot_dim[][NPOTP]= {
 #define POLY5(t)   ((t)*(E1 + (t)*(E2 + (t)*(E3 + (t)*(E4 + (t)*E5)))))
 #define BPAR_TOL 1.0e-7
 
+#define SIXTH 0.16666666666666667
 /*============================================================================*/
 /******************************************************************************
  *  mkpot46(). Build 2d potential perameter arrays for Ewald -4-6 sum.        *
@@ -300,6 +307,15 @@ void mkpot46(real **pot4, real **pot6, real **pot7, int max_id, int ptype, pot_m
     default:
       message(NULLI, NULLP, FATAL, UNKPTY, ptype);
       /*FALLTHRU*/
+   case LJEWA6:
+      for( id = 1; id < max_id; id++)
+	 for( jd = 1; jd < max_id; jd++)
+	 {
+	    pot6[id][jd] = -potpar[id*max_id+jd].p[0]*pow(potpar[id*max_id+jd].p[1],6.0);
+            pot4[id][jd] = 0.0;
+            pot7[id][jd] = 0.0;
+	 }
+      break;
    case GENPOT46:
       for( id = 1; id < max_id; id++)
 	 for( jd = 1; jd < max_id; jd++)
@@ -392,6 +408,8 @@ double	dist_pot(real *potpar,          /* Array of potential parameters      */
 #else
          return( - potpar[3] /CUBE(CUBE(cutoff))/9.0);
 #endif
+   case LJEWA6:
+     return(0.0);
    }
 }
 /******************************************************************************
@@ -797,6 +815,41 @@ VECTORIZE
             forceij[jsite] =   prov+r_sqr_r * (erfc_term - r*fwin);  
          }
          break; 
+       case LJEWA6:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+	 {
+	    /*
+	     * Calculate r and coulombic part
+	     */
+	    rsq = r_sqr[jsite];
+	    r       = sqrt(rsq);
+	    ar	    = alpha*r;
+	    t = 1.0/(1.0+PP*ar);
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+	    r_r	 = 1.0 / r;
+	    t = POLY5(t) * erfc_term * r_r;
+	    erfc_term = t + norm * erfc_term;
+	    r_sqr_r = SQR(r_r);
+            /*
+	     * Non-coulombic ie potential-specific part
+	     */
+	    r_6_r = SQR(p1[jsite])* r_sqr_r;
+	    r_6_r   = CUBE(r_6_r);
+	    r_12_r  = SQR(r_6_r);
+	    /*
+	     * Ewald-like summation of r^-4 and r^-6
+	     */
+	    arfac = alpha46sq*rsq;
+	    arfacsq = SQR(arfac);
+	    exp_f2 = exp(-arfac);
+
+	    ppe += t + p0[jsite]*(r_12_r - (1.0+arfac+0.5*arfacsq)*r_6_r*exp_f2);
+	    forceij[jsite] = r_sqr_r*( 6.0*p0[jsite]*(2.0*r_12_r 
+                                     - (1.0+arfac+0.5*arfacsq+SIXTH*arfacsq*arfac)*r_6_r*exp_f2)
+				       + erfc_term);
+	 }
+	 break;      
       }
    else
       switch(ptype)
@@ -1049,6 +1102,33 @@ VECTORIZE
                                + 12.0 * r_12_r  - r*fwin); 
          }
          break; 
+       case LJEWA6:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+	 {
+	    /*
+	     * Calculate r and coulombic part
+	     */
+	    rsq = r_sqr[jsite];
+	    r_sqr_r	 = 1.0 / rsq;
+            /*
+	     * Non-coulombic ie potential-specific part
+	     */
+	    r_6_r = SQR(p1[jsite])* r_sqr_r;
+	    r_6_r   = CUBE(r_6_r);
+	    r_12_r  = SQR(r_6_r);
+	    /*
+	     * Ewald-like summation of r^-4 and r^-6
+	     */
+	    arfac = alpha46sq*rsq;
+	    arfacsq = SQR(arfac);
+	    exp_f2 = exp(-arfac);
+
+	    ppe += p0[jsite]*(r_12_r - (1.0+arfac+0.5*arfacsq)*r_6_r*exp_f2);
+	    forceij[jsite] = r_sqr_r*( 6.0*p0[jsite]*(2.0*r_12_r 
+				    - (1.0+arfac+0.5*arfacsq+SIXTH*arfacsq*arfac)*r_6_r*exp_f2));
+	 }
+	 break;      
       }     
    *pe += ppe;
 }
