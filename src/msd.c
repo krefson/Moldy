@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.9 1997/10/15 13:13:09 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.10 1997/11/26 10:06:00 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,10 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.9 
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 1.10  1997/11/26 10:06:00  keith
+ *  Corrected usage message.
+ *  Made -r and -s options mutually exclusive.
+ *
  *  Revision 1.9  1997/10/15 13:13:09  keith
  *  Minor tirying up by CF.
  *
@@ -982,7 +986,7 @@ char	*argv[];
         if( irec == 0)
 	{
           range_in(&sys, range, range_flag);
-          traj_con(species, 0, traj_cofm[irec/inc], sp_range);
+          traj_con(species, (vec_mt*)0, traj_cofm[irec/inc], sp_range);
 	}
 	else
           traj_con(species, traj_cofm[irec/inc-1], traj_cofm[irec/inc], sp_range);
