@@ -23,6 +23,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.4  89/07/05  18:42:06  keith
+ * Eliminated 'dump-offset' - renumbering starts at 1 for new dump run.
+ * 
  * Revision 1.3  89/05/15  17:54:12  keith
  * Added members 'vsn' and 'dump_size' to header (cf structs.h r1.3)
  * Fixed bugs in call of write and ftell to write data correctly.
@@ -37,7 +40,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: dump.c,v 1.3 89/05/15 17:54:12 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/dump.c,v 1.4 89/07/05 18:42:06 keith Stab Locker: keith $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -61,12 +64,11 @@ void		note();
 extern contr_t	control;
 extern restrt_t restart_header;
 /*========================== Macros ==========================================*/
-#define DUMP_SIZE(level)	(((level & 1)+(level & 2) + \
-			  (level & 4) ) * \
-			 (3*system->nmols + 4*system->nmols_r + 9)+ \
-			  (level & 8) * \
-			 (3*system->nmols + 3*system->nmols_r + 9) +\
-			  (level & 1))
+#define DUMP_SIZE(level)  (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
+			            (3*system->nmols + 4*system->nmols_r + 9)+ \
+			     (level>>3 & 1) * \
+			            (3*system->nmols + 3*system->nmols_r + 9) +\
+			     (level & 1))
 /*============================================================================*/
 
 void	dump(system, force, torque, stress, pe)
@@ -153,7 +155,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 1.3 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 1.4 $"+11,
 		                     sizeof dump_header.vsn-1);
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;
