@@ -27,6 +27,20 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.13   2002/05/02 14:57:19  fisher
+ *  Modified sys-spec output routine to add dopant (solute) species to end of list.
+ *  Check added to see if dopant species already present in system.
+ *  Sorting of substituted positions list for improved efficiency.
+ *  If no potentials specified, assume same pots as first site of substituted species.
+ *  Substitution aborted if solute and solvent species have same name.
+ *  External data files now only read if no. of solute particles > 0
+ *  Tidied up error messages.
+ *
+ *  Revision 1.12  2001/08/09 11:46:55  keith
+ *  Tidied up against some compiler warnings.
+ *  Added license file for SgInfo routines with permission of
+ *  Ralf W. Grosse-Kunstleve
+ *
  *  Revision 1.11  2001/08/08 16:31:52  keith
  *  Incorporated Craig's modifications.
  *  Compiles but not properly tested.
@@ -105,7 +119,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ransub.c,v 1.11 2001/08/08 16:31:52 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/ransub.c,v 1.12 2001/08/09 11:46:55 keith Exp $";
 #endif  
 
 #include "defs.h"
@@ -257,6 +271,7 @@ int   nunits;
          input_unit.t = E2A;
          break;
       }
+
       conv_potentials(&prog_unit, &input_unit, potpar, system->n_potpar,
           system->ptype, site_info, system->max_id);
 
@@ -272,12 +287,13 @@ sys_spec_out(system_mt *system, spec_mt *species, char *molname, spec_data *dopa
    spec_mt      *spec;
    double       a, b, c, alpha, beta, gamma;
    mat_mp       h = system->h;
-   int          i, imol, isite;
-   int		specmol;
+   int          i=0, imol, isite, ipos=0;
+   int		specmol, id = -1;
    int          idi, idj, idij, ip;
    int          n_potpar = system->n_potpar;
    char         *specname;
    int          max_id = system->max_id;
+   int          dflag = 0;
 
    a = sqrt(SQR(h[0][0]) + SQR(h[1][0]) + SQR(h[2][0]));
    b = sqrt(SQR(h[0][1]) + SQR(h[1][1]) + SQR(h[2][1]));
@@ -292,10 +308,23 @@ sys_spec_out(system_mt *system, spec_mt *species, char *molname, spec_data *dopa
 /* Write site data for each molecule */
    for(spec = species; spec < species+system->nspecies; spec++)
    {
+      /* Check if species matches species to be substituted */
       if( (molname != NULL) && !strcmp(strlower(spec->name), molname) )
-         specmol = spec->nmols - dopant->nmols; /* Subtract number of substituting species */
+      {
+          specmol = spec->nmols - dopant->nmols; /* Subtract number of substituting species */
+          id = i;
+      }
       else
          specmol = spec->nmols;
+
+      /* Check if dopant species already present in system */
+      if( (dopant->name != NULL) && !strcmp(strlower(spec->name),dopant->name) )
+      {
+          specmol += dopant->nmols;
+          dflag++;
+      }
+
+      i++;
 
       (void)printf("%s  %d  %s\n", spec->name, specmol,
                     spec->framework ? "framework" : "");
@@ -308,27 +337,25 @@ sys_spec_out(system_mt *system, spec_mt *species, char *molname, spec_data *dopa
                         site_info[spec->site_id[isite]].mass,
                         site_info[spec->site_id[isite]].charge,
                         site_info[spec->site_id[isite]].name);
-
-      if( (molname != NULL) && (dopant->name != NULL) )
-        if( !strcmp(strlower(spec->name), molname) && dopant->nmols > 0 )
-        {
-           (void)printf("%s  %d  %s\n", dopant->name, dopant->nmols,
-                    spec->framework ? "framework" : "");
-           (void)printf("%d %9g %9g %9g %9g %9g %s\n",
-                        max_id,
-                        spec->p_f_sites[0][0],
-                        spec->p_f_sites[0][1],
-                        spec->p_f_sites[0][2],
-             dopant->mass < 0 ? site_info[spec->site_id[0]].mass:dopant->mass,
-             dopant->charge == 1e6 ? site_info[spec->site_id[0]].charge:dopant->charge,
-             !strcmp(dopant->symbol,"") ? site_info[spec->site_id[0]].name:dopant->symbol);
-        }
+   }
+   if( !dflag && id >= 0 )
+   {
+      (void)printf("%s  %d  %s\n", dopant->name, dopant->nmols,
+              (species+id)->framework ? "framework" : "");
+      (void)printf("%d %9g %9g %9g %9g %9g %s\n",
+               max_id,
+               (species+id)->p_f_sites[0][0],
+               (species+id)->p_f_sites[0][1],
+               (species+id)->p_f_sites[0][2],
+      dopant->mass < 0 ? site_info[(species+id)->site_id[0]].mass:dopant->mass,
+      dopant->charge == 1e6 ? site_info[(species+id)->site_id[0]].charge:dopant->charge,
+      !strcmp(dopant->symbol,"") ? site_info[(species+id)->site_id[0]].name:dopant->symbol);
    }
    (void)printf("end\n");
 
 /* Write potential parameters for pairs of site_ids */
 
-   if( dopant->nmols > 0 )
+   if( !dflag && dopant->nmols > 0 )
        max_id++;
 
    (void)printf("%s\n",potspec[system->ptype].name);
@@ -342,8 +369,18 @@ sys_spec_out(system_mt *system, spec_mt *species, char *molname, spec_data *dopa
             (void)printf(" %10g",potpar[idij].p[ip]);
          (void)putchar('\n');
       }
-      if( dopant->nmols > 0 )
+      if( !dflag && dopant->nmols > 0 )
       {
+         if( id >=0 && !strcmp(dopant->symbol,"") )
+         {
+            if( idi < system->max_id)
+               idij = (species+id)->site_id[0]+system->max_id*idi;
+            else
+               idij = (species+id)->site_id[0]+system->max_id*
+                                         (species+id)->site_id[0];
+         }
+         potpar[idi-1] = potpar[idij];
+
          (void)printf("%5d %5d", idi, idj);
          for(ip = 0; ip < n_potpar; ip++)
             (void)printf(" %10g",potpar[idi-1].p[ip]);
@@ -364,9 +401,11 @@ sys_spec_out(system_mt *system, spec_mt *species, char *molname, spec_data *dopa
         specname = spec->name;
         if( molname != NULL)
            if( !strcmp(strlower(spec->name), molname))
-             for( i = 0; i < dopant->nmols; i++)
-                if( dopant->pos[i] == imol )
-                   specname = dopant->name;
+              if( dopant->pos[ipos] == imol )
+              {
+                 specname = dopant->name;
+                 ipos++;
+              }
         (void)printf("%-*s  ", NLEN,specname);
         for( i = 0; i < 3; i++)
           (void)printf("%9g ",
@@ -407,6 +446,23 @@ random_pos(int totmol, int submol, int *subpos)
 
        subpos[i] = ranpos;
    }
+}
+/******************************************************************************
+ * sort_pos. Sort positions to be replaced into ascending order               *
+ ******************************************************************************/
+void
+sort_pos(int *pos, int n)   /* A simple bubble sort algorithm */
+{
+int  i,j,temp;
+
+   for( i = 0; i < n; i++)
+     for(j = i + 1; j < n; j++)
+        if( pos[i] > pos[j])
+        {
+           temp = pos[i];
+           pos[i] = pos[j];
+           pos[j] = temp;
+        }
 }
 /******************************************************************************
  * main().   Driver program for substituting species in MOLDY sys_spec files  *
@@ -451,7 +507,7 @@ main(int argc, char **argv)
 
    comm = argv[0];
 
-   while( (c = getopt(argc, argv, "cr:s:d:t:m:n:u:o:w:q:z:e:y:") ) != EOF )
+   while( (c = getopt(argc, argv, "cr:s:m:n:u:o:w:q:z:e:y:") ) != EOF )
       switch(c)
       {
        case 'c':
@@ -560,38 +616,6 @@ main(int argc, char **argv)
    maxmol = sys.nmols;
 
   /*
-   * Request species to be replaced if not already provided
-   */
-   do
-   {
-      mflag = 0;
-      if( molname == NULL)
-         if( strcmp(dopant.name,"") || dopant.nmols > 0)
-         {
-            fputs("What is the name of the species to be replaced",stderr);
-            molname = get_str("? ");
-         }
-         else
-            mflag++;
-
-      if( molname != NULL)
-      {
-         for(spec = species; spec < species+sys.nspecies; spec++)
-            if( !strcmp(strlower(spec->name), molname) )
-         {
-             maxmol = spec->nmols;
-             mflag++;
-         }
-         if(!mflag)
-         {
-             fprintf(stderr,"Species \"%s\" cannot be found\n", molname);
-             (void)free(molname);
-             molname = NULL;
-         }
-      }
-   } while (!mflag);
-
-  /*
    * Request substituting species if not already provided
    */
    do
@@ -606,10 +630,51 @@ main(int argc, char **argv)
          uflag++;
    } while (!uflag);
 
-   if( (molname != NULL || strcmp(dopant.name,"")) && dopant.nmols <= 0 )
+  /*
+   * Request species to be replaced if not already provided
+   */
+   do
    {
+      mflag = 0;
+      if( molname == NULL)
+      {
+         if( strcmp(dopant.name,"") || dopant.nmols > 0)
+         {
+            fputs("What is the name of the species to be replaced",stderr);
+            molname = get_str("? ");
+         }
+         else
+            mflag++;
+      }
+
+      if( molname != NULL)
+      {
+         for(spec = species; spec < species+sys.nspecies; spec++)
+            if( !strcmp(strlower(spec->name), molname) )
+            {
+               maxmol = spec->nmols;
+               mflag++;
+            }
+         if(!mflag)
+         {
+             message(NULLI,NULLP,WARNING,"Species \"%s\" not found\n", molname);
+             (void)free(molname);
+             molname = NULL;
+         }
+      }
+   } while (!mflag);
+
+   if( (molname != NULL || strcmp(dopant.name,"")) )
+   {
+      /* Halt program if names of solute and solvent species identical */
+      if( !strcmp(molname,dopant.name) )
+         error("Solute and solvent species identical - substitution aborted\n");
+
+      if( dopant.nmols <= 0 )
+      {
         fprintf(stderr, "How many %s species do you want to replace", molname);
 	dopant.nmols = get_int("? ",0,maxmol);
+      }
    }
 
    if( dopant.nmols < 0 )
@@ -622,35 +687,39 @@ main(int argc, char **argv)
 
    data_source = intyp;
 
-   /* Create full path name, but don't exceed max length of string */
-   strncat(strncat(elefile, ELEPATH, PATHLN-strlen(elefile)), elename, PATHLN-strlen(elefile));
-
-   /* Read dopant species data from element data file if available */
-   if( (n_elem = read_ele(element, elefile)) && dopant.nmols >= 0 )
+   if( dopant.nmols > 0 )
    {
-      for( irec=0; irec < n_elem; irec++)
-        if( !strcmp(strlower(dopant.name),strlower((element+irec)->name)) )
-        {
-           if( !strcmp(dopant.symbol, "") )
-              strcpy(dopant.symbol, (element+irec)->symbol);
-           if( dopant.mass < 0)
-              dopant.mass = (element+irec)->mass;
-           if( dopant.charge == 1e6)
-              dopant.charge = (element+irec)->charge;
-        }
-   }
-   else
-      message(NULLI,NULLP,WARNING,NOELEM,elefile);
+      /* Create full path name, but don't exceed max length of string */
+      strncat(strncat(elefile, ELEPATH, PATHLN-strlen(elefile)), elename, PATHLN-strlen(elefile));
 
-   /* If potential parameter file exists, read in data */
-   if( (potname != NULL) && (read_pot2(potfile, &potpar, sys.max_id, site_info, &dopant) < 0) )
-        message(NULLI,NULLP,WARNING,NOPOTL,potfile);
+      /* Read dopant species data from element data file if available */
+      if( (n_elem = read_ele(element, elefile)) )
+      {
+         for( irec=0; irec < n_elem; irec++)
+           if( !strcmp(strlower(dopant.name),strlower((element+irec)->name)) )
+           {
+              if( !strcmp(dopant.symbol, "") )
+                 strcpy(dopant.symbol, (element+irec)->symbol);
+              if( dopant.mass < 0)
+                 dopant.mass = (element+irec)->mass;
+              if( dopant.charge == 1e6)
+                 dopant.charge = (element+irec)->charge;
+           }
+      }
+      else
+         message(NULLI,NULLP,WARNING,NOELEM,elefile);
+
+      /* If potential parameter file exists, read in data */
+      if( (potname != NULL) && (read_pot2(potfile, &potpar, sys.max_id, site_info, &dopant) < 0) )
+           message(NULLI,NULLP,WARNING,NOPOTL,potfile);
+   }
 
    switch(data_source)                  /* To read configurational data       */
    {
     case 's':                           /* Lattice_start file                 */
         lattice_start(Fp, &sys, species, qpf);
         random_pos(maxmol, dopant.nmols, (&dopant)->pos);
+        sort_pos((&dopant)->pos,dopant.nmols);
         sys_spec_out(&sys, species, molname, &dopant, site_info, potpar);
       break;
     case 'r':                           /* Restart file                       */
@@ -659,6 +728,7 @@ main(int argc, char **argv)
                       &av_convert);
         read_restart(Fp, restart_header.vsn, &sys, av_convert);
         random_pos(maxmol, dopant.nmols, (&dopant)->pos);
+        sort_pos((&dopant)->pos,dopant.nmols);
         sys_spec_out(&sys, species, molname, &dopant, site_info, potpar);
       break;
     default:
