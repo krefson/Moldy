@@ -1,17 +1,21 @@
 #!/usr/bin/env perl
 
 use Set::IntSpan  qw(grep_set map_set);
-#use Getopt::Long;
-use Getopt::Std;
+use Getopt::Long;
 
 $[ = 1;			# set array base to 1
 $, = ' ';		# set output field separator
 $\ = "\n";		# set output record separator
 
 #Define -f option as an string
-#&GetOptions("f=s")|| &usage();
-getopts('f:')|| &usage();
+&GetOptions("f=s","r")|| &usage();
 $fields = $opt_f if $opt_f;
+if ( $opt_r ) {
+  $sepre="^-------- Rolling";
+} else {
+  $sepre="^======== Timestep";
+}
+
 
 die "Invalid range $fields" unless valid Set::IntSpan $fields;
 $set = new   Set::IntSpan $fields;
@@ -25,9 +29,12 @@ while (<>) {
 	print "#Size of Step ",$size_of_step;
     }
 
-    if ( /^========/ ) {
+    if ( /^======== Timestep/ ) {
                         @Fld = split;
                         $timestep = $Fld[3] * $size_of_step;
+    }
+                          
+    if ( /$sepre/ ) {
                         $/ = '--------'; # change the record separator
                         $_ = <>;
                         @Fld = split;

@@ -76,13 +76,15 @@ UTILS = moldyext dumpconv dumpext  manalyze bdist
 
 UTILS2= mdshak msd mdavpos mdbond ransub mdvaf
 
+UTILS3= plotrdf moldyext2
+
 UTILC= $(UTILS:%=%.c) $(UTILS2:%=%.c)
 
 UTILO= $(UTILC:%.c=%.o) ReadDCD.o utlsup.o molout.o
 
 EXTRA0 = $(UTILC) getopt.c ReadDCD.c ReadDCD.h configure.in config.h.in \
 	 defconf.h aclocal.m4 config.guess config.sub list.h \
-	 plotrdf utlsup.c utlsup.h molout.c elem.h
+	 utlsup.c utlsup.h molout.c elem.h $(UTILS3)
 
 EXTRAS= $(EXTRA0) ewald-RIL.c configure Makefile.in install-sh 
 
@@ -177,7 +179,7 @@ protoize:	$(CFILES) $(HFILES)
 proto-utils:	$(UTILC)
 		protoize $(UTILC) $(SHAKC)
 
-install:	moldy $(UTILS) $(UTILS2)
+install:	moldy $(UTILS) $(UTILS2) $(UTILS3)
 		for file in $?; do $(INSTALL) $$file $(bindir); done
 
 Makefile.in:	xmakefile
