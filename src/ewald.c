@@ -943,6 +943,7 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
                 *site_fz = dalloc(nsarray);
    static int	*site_idx;
    static int   *site_permute;
+   boolean	dopot4, dopot6;
    int	        rel;
    real		*coskr,		/* q(i) cos(K.R(i))	      */
                 *sinkr;		/* q(i) sin(K.R(i))	      */
@@ -1103,10 +1104,10 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
       /*
        * Calculate pre-factors A(K) etc
        */
-      ak4 = -0.5*PISQ*kmod*erfc_k2a + alpha*PI32*exp_k24a2;
-      dak4dk = -0.5*PISQ*erfc_k2a;
-      ak6 = PISQ/24.0*kmod*ksq*erfc_k2a + PI32/6.0*alpha*(SQR(alpha)-0.5*ksq)*exp_k24a2;
-      dak6dk = (1.0/24.0)*PI32*(3.0*ROOTPI*erfc_k2a*ksq - 6.0*alpha*kmod*exp_k24a2);
+      ak4 = (-0.5*PISQ*kmod*erfc_k2a + alpha*PI32*exp_k24a2) * 2.0/vol;
+      dak4dk = (-0.5*PISQ*erfc_k2a) * 2.0/vol;
+      ak6 = (PISQ/24.0*kmod*ksq*erfc_k2a + PI32/6.0*alpha*(SQR(alpha)-0.5*ksq)*exp_k24a2) * 2.0/vol;
+      dak6dk = ((1.0/24.0)*PI32*(3.0*ROOTPI*erfc_k2a*ksq - 6.0*alpha*kmod*exp_k24a2)) * 2.0/vol;
       
       /*
        * Set pointers to array of cos (h*astar*x) (for efficiency & vectorisation)
@@ -1139,31 +1140,25 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
       {
 	 for(idj=1; idj < system->max_id; idj++)
 	 {
-	    if(fabs(pot4[idi][idj]) > POTZERO_TOL) 
+	    dopot4 = fabs(pot4[idi][idj]) > POTZERO_TOL;
+	    dopot6 = fabs(pot6[idi][idj]) > POTZERO_TOL;
+	    coeff = 0.0;
+	    if(dopot4) 
 	    {
 	       struct_factor_4_sq += pot4[idi][idj]*(scoskr[idi]*scoskr[idj]+ssinkr[idi]*ssinkr[idj]);
-	       /*
-		* Evaluation of site forces. 
-		*/
-	       coeff = 2.0*pot4[idi][idj]*ak4/vol;
-	       for(js = site_idx[idj-1]; js < site_idx[idj]; js++)
-	       {
-		  force_comp = coeff*(sinkr[js]*scoskr[idi]-coskr[js]*ssinkr[idi]);
-		  sfx =  site_fx[js] + kv0 * force_comp;
-		  sfy =  site_fy[js] + kv1 * force_comp;
-		  site_fz[js] +=       kv2 * force_comp;
-		  site_fx[js] = sfx;
-		  site_fy[js] = sfy;
-	       }
+	       coeff += pot4[idi][idj]*ak4;
 	    }
 
-	    if(fabs(pot6[idi][idj]) > POTZERO_TOL) 
+	    if(dopot6) 
 	    {
 	       struct_factor_6_sq += pot6[idi][idj]*(scoskr[idi]*scoskr[idj]+ssinkr[idi]*ssinkr[idj]);
+	       coeff += pot6[idi][idj]*ak6;
+	    }
+	    if( dopot4 || dopot6 )
+	    {
 	       /*
 		* Evaluation of site forces. 
 		*/
-	       coeff = 2.0*pot6[idi][idj]*ak6/vol;
 	       for(js = site_idx[idj-1]; js < site_idx[idj]; js++)
 	       {
 		  force_comp = coeff*(sinkr[js]*scoskr[idi]-coskr[js]*ssinkr[idi]);
@@ -1177,13 +1172,13 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
 	 }
       }
 
-      pe_k = 2.0*(ak4*struct_factor_4_sq+ak6*struct_factor_6_sq)/vol;
+      pe_k = ak4*struct_factor_4_sq+ak6*struct_factor_6_sq;
       *pe += pe_k;
 
       /*
        * Calculate contribution to stress tensor
        */
-      coeff = 2.0*(dak4dk*struct_factor_4_sq+dak6dk*struct_factor_6_sq)/(kmod*vol);
+      coeff = (dak4dk*struct_factor_4_sq+dak6dk*struct_factor_6_sq)/kmod;
       stress[0][0] += pe_k + coeff * kv[0] * kv[0];
       stress[0][1] +=        coeff * kv[0] * kv[1];
       stress[0][2] +=        coeff * kv[0] * kv[2];
