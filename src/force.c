@@ -29,6 +29,11 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.17  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.16  1998/01/27 15:47:15  keith
  *       tidied up macro __STDC__ to include ANSI for consistency.
  *
@@ -127,7 +132,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.16 1998/01/27 15:47:15 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/force.c,v 2.17 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -203,7 +208,7 @@ static irvec_mt *ifloor; /*Lookup tables for int "floor()"    */
  * to increase this from 1, your system must be *highly* inhomogeneous
  * and may not make sense!
  */
-#define         NMULT 3.0
+#define         NMULT 1.5
 #define         TOO_CLOSE       0.25    /* Error signalled if r**2 < this     */
 #define         NCELL(ix,iy,iz) ((iz)+(nz)*((iy)+(ny)*(ix)))
 #define         LOCATE(r,eps)   NCELL(cellbin(r[0], nx, eps), \
@@ -621,6 +626,30 @@ int     *frame_type;                    /* Framework type counter        (out)*/
    }
 }
 /******************************************************************************
+ * Max_density()							      *
+ *  Get the total number of sites in each cell and return the max. density    *
+ ******************************************************************************/
+double	max_density(cell, vol, ncells)
+cell_mt   **cell;
+double    vol;
+int       ncells;
+{
+   int icell, nscell, nsmax=0;
+   cell_mt *cell_p;
+
+   for(icell = 0; icell < ncells; icell++)
+   {
+      nscell = 0;
+      for(cell_p = cell[icell]; cell_p; cell_p = cell_p->next)
+	 nscell += cell_p->num;
+      nsmax = MAX(nscell, nsmax);
+   }
+#if DEBUG8
+   printf("Max sites/cell = %d\n", nsmax);
+#endif
+   return nsmax*ncells/vol;
+}
+/******************************************************************************
  *  site_neightbour list.  Build the list of sites withing interaction radius *
  *                         from the lists of sites in cells.                  *
  ******************************************************************************/
@@ -786,12 +815,7 @@ mat_mt          stress;                 /* Stress virial                (out) */
    double       subcell = control.subcell; /* Local copy. May change it.      */
    int          *id   = ialloc(nsites), /* Array of site_id[nsites]           */
                 *id_ptr;                /* Pointer to 'id' array              */
-   int          n_nab_sites = nsites*   /* Dimension of site n'bor list arrays*/
-#ifdef DEBUG2 
-                                MAX(1.0,NMULT*4.19*CUBE(cutoff)/det(system->h));
-#else
-                                NMULT*4.19*CUBE(cutoff)/det(system->h);
-#endif
+   int          n_nab_sites;            /* Dimension of site n'bor list arrays*/
    ivec_mt      *nabor, *rdf_nabor;     /* Lists of neighbour cells           */
    int          n_nabors, n_rdf_nabors; /* Number of elements in lists.       */
    int          icell, ncells;          /* Subcell counter and total = nxnynz */
@@ -807,7 +831,7 @@ mat_mt          stress;                 /* Stress virial                (out) */
    cell_mt      **cell;                 /* Array of list heads for subcells   */
    spec_mt      *spec;                  /* Temp. loop pointer to species.     */
    mat_mt       htr, htrinv;            /* Transpos and inverse of h matrix   */
-   
+   double       vol = det(system->h);
 #ifdef DEBUG2
    double ppe, rr[3], ss[3];
    int im, is, i;
@@ -905,7 +929,17 @@ NOVECTOR
    else
       nabor = neighbour_list(&n_nabors, system->h, cutoff, nx, ny, nz, 1);
    
-   
+   /*
+    * Calculate size needed for site neighbour list arrays
+    */
+   if(control.strict_cutoff)
+      n_nab_sites=NMULT*4.19*CUBE(cutoff+subcell)*max_density(cell, vol, ncells);
+   else
+      n_nab_sites=NMULT*4.19*CUBE(cutoff)*max_density(cell, vol, ncells);
+#ifdef DEBUG2 
+   n_nab_sites = nsites;
+#endif
+
 #ifdef DEBUG2
    ppe = 0;
    spec = species; isite = 0;
@@ -953,8 +987,8 @@ NOVECTOR
        control.istep >= control.begin_rdf &&
        control.istep % control.rdf_interval == 0)
    {
-      n_nab_sites = nsites*
-                    NMULT*4.19*CUBE(control.limit+mol_diam)/det(system->h);
+      n_nab_sites = NMULT*4.19*CUBE(control.limit+mol_diam)
+	                                       *max_density(cell, vol, ncells);
       rdf_nabor = strict_neighbour_list(&n_rdf_nabors, system->h, 
                                         control.limit+mol_diam, nx, ny, nz, 0);
       rdf_inner(ithread, nthreads, site, id, n_nab_sites, n_rdf_nabors, 
