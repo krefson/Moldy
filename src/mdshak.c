@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/mdshak.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/mdshak.c,v 2.7 1994/06/08 11:58:35 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -57,6 +57,8 @@ void	init_averages();
 int	getopt();
 gptr	*talloc();
 FILE	*popen();
+/*======================== Global vars =======================================*/
+int ithread=0, nthreads=1;
 /******************************************************************************
  * Dummies of 'moldy' routines so that mdshak may be linked with moldy library*
  ******************************************************************************/
