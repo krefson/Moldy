@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.h,v $
+ *       Revision 2.8  1996/03/07 15:01:57  keith
+ *       Made "malloc in types.h" macro protection conditional on "ANSI_LIBS"
+ *
  *       Revision 2.7  1994/06/08 13:22:31  keith
  *       Null update for version compatibility
  *
@@ -57,6 +60,9 @@ what you give them.   Help stamp out software-hoarding!  */
  * Support for XDR backup/dump routines.
  * 
  */
+#ifndef lint
+static char *RCSidh = "$Header: /home/eeyore_data/keith/md/moldy/RCS/xdr.h,v 2.9 1996/09/25 16:28:13 keith Exp $";
+#endif
 /*========================== Library include files ===========================*/
 #ifdef USE_XDR
 
@@ -103,6 +109,7 @@ typedef bool_t (*xdrproc_t)();
 bool_t xdr_real();
 bool_t xdr_contr();
 bool_t xdr_system();
+bool_t xdr_system_2();
 bool_t xdr_species();
 bool_t xdr_site();
 void   xdr_set_npotpar();
