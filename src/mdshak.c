@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/mdshak.c,v 2.21 1999/11/29 10:48:56 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdshak.c,v 2.22 2000/04/27 17:57:09 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -60,9 +60,6 @@ contr_mt		control;
 #define DCD 3
 #define PDB 4
 #define CSSR 5
-#define DUMP_SIZE(level)  (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
-           (3*sys.nmols + 4*sys.nmols_r + 9)+ (level>>3 & 1) * \
-           (3*sys.nmols + 3*sys.nmols_r + 9) + (level & 1))
 /******************************************************************************
  * main().   Driver program for generating SCHAKAL input files from MOLDY     *
  * files.    Acceptable inputs are sys-spec files, or restart files. Actual   *
@@ -316,7 +313,7 @@ main(int argc, char **argv)
 	/*
 	 * Allocate buffer for data
          */
-	dump_size = DUMP_SIZE(~0)*sizeof(float);
+	dump_size = DUMP_SIZE(~0,sys.nmols,sys.nmols_r)*sizeof(float);
 	if( (dump_buf = (float*)malloc(dump_size)) == 0)
 	   error("malloc failed to allocate dump record buffer (%d bytes)",
 		 dump_size);
@@ -352,7 +349,7 @@ main(int argc, char **argv)
                if( irec == start )
                {
                    prev_cofm = aalloc(sys.nmols, vec_mt);
-                   zero_real(prev_cofm, 3*sys.nmols);
+                   zero_real(prev_cofm[0], 3*sys.nmols);
                }
                traj_con(&sys, prev_cofm, irec-start);
            }

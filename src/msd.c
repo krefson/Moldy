@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/msd.c,v 2.0 1999/11/18 09:58:33 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/msd.c,v 2.1 2000/04/27 17:57:10 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/msd.c,v 2.0
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 2.1  2000/04/27 17:57:10  keith
+ *  Converted to use full ANSI function prototypes
+ *
  *  Revision 2.0  1999/11/18 09:58:33  keith
  *  checked in with -k by keith at 1999/11/25 14:27:58
  *
@@ -172,6 +175,7 @@ void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr,
 void	allocate_dynamics(system_mp system, spec_mt *species);
 void	read_restart(FILE *restart, char *vsn, system_mp system, int av_convert);
 void	init_averages(int nspecies, char *vsn, long int roll_interval, long int old_roll_interval, int *av_convert);
+int     in_region(real *pos, real (*range)[3]);
 int	getopt(int, char *const *, const char *);
 gptr	*talloc(int n, size_mt size, int line, char *file);
 void    tfree(gptr *p);
@@ -184,9 +188,6 @@ int ithread=0, nthreads=1;
 #define IDL  1
 #define INNER 1
 #define OUTER 2
-#define DUMP_SIZE(level)  (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
-           (3*sys.nmols + 4*sys.nmols_r + 9)+ (level>>3 & 1) * \
-           (3*sys.nmols + 3*sys.nmols_r + 9) + (level & 1))
 /******************************************************************************
  * traj_gnu().  Output routine for displaying trajectories                    *
  *		- coords vs time for each species/atom for GNUplot            * 
@@ -362,7 +363,7 @@ main(int argc, char **argv)
    real         ***msd;
    int		it;
 
-   zero_real(range,9);
+   zero_real(range[0],9);
 
 #define MAXTRY 100
    control.page_length=1000000;
@@ -632,11 +633,11 @@ main(int argc, char **argv)
   /*
    * Allocate buffer for data
    */
-   dump_size = DUMP_SIZE(~0)*sizeof(float);
+   dump_size = DUMP_SIZE(~0, sys.nmols, sys.nmols_r)*sizeof(float);
 
   /* Allocate memory for trajectory data and zero */
    traj_cofm = (vec_mt**)arralloc(sizeof(vec_mt),2,0,nslices-1,0,sys.nmols-1);
-   zero_real(traj_cofm[0], nslices*sys.nmols*3);
+   zero_real(traj_cofm[0][0], nslices*sys.nmols*3);
 
   /* Allocate array to store unit cell matrices */
    hmat = aalloc(nslices, mat_mt);

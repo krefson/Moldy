@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/mdvaf.c,v 1.7 1999/11/18 09:31:47 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdvaf.c,v 1.8 2000/04/27 17:57:10 keith Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/mdvaf.c,v 1
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.8  2000/04/27 17:57:10  keith
+ *  Converted to use full ANSI function prototypes
+ *
  *  Revision 1.7  1999/11/18 09:31:47  keith
  *  Fixed bug in zeroing vaf array.
  *
@@ -513,7 +516,7 @@ main(int argc, char **argv)
 
   /* Allocate memory for velocity data and zero */
    vel = (vec_mt**)arralloc(sizeof(vec_mt),2,0,nslices-1,0,sys.nmols-1);
-   zero_real(vel[0], nslices*sys.nmols*3);
+   zero_real(vel[0][0], nslices*sys.nmols*3);
 
    if( (dump_buf = (float*)malloc(dump_size)) == 0)
       error("malloc failed to allocate dump record buffer (%d bytes)",

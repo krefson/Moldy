@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/mdavpos.c,v 2.12 1999/10/29 16:44:28 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.13 2000/04/27 17:57:09 keith Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *
@@ -28,6 +28,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/mdavpos.c,v
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.13  2000/04/27 17:57:09  keith
+ *  Converted to use full ANSI function prototypes
+ *
  *  Revision 2.12  1999/10/29 16:44:28  keith
  *  Updated usage message
  *  Corrected interface to traj_con().
@@ -153,9 +156,6 @@ contr_mt                control;
 #define DCD 3
 #define PDB 4
 #define CSSR 5
-#define DUMP_SIZE(level)  (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
-           (3*sys.nmols + 4*sys.nmols_r + 9)+ (level>>3 & 1) * \
-           (3*sys.nmols + 3*sys.nmols_r + 9) + (level & 1))
 /******************************************************************************
  * copy_spec().  Duplicate species data in another array    	              *
  ******************************************************************************/
@@ -447,11 +447,11 @@ main(int argc, char **argv)
   /*
    * Allocate buffer for data
    */
-     dump_size = DUMP_SIZE(~0)*sizeof(float);
+     dump_size = DUMP_SIZE(~0, sys.nmols, sys.nmols_r)*sizeof(float);
 
   /* create arrays for previous c_of_m`s for each species */
      prev_cofm = aalloc(sys.nmols, vec_mt);
-     zero_real(prev_cofm,3*sys.nmols);
+     zero_real(prev_cofm[0],3*sys.nmols);
      avpos = aalloc(sys.nspecies, spec_mt);
   
      if( (dump_buf = (float*)malloc(dump_size)) == 0)

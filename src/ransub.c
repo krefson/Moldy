@@ -27,6 +27,9 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.7  2000/04/27 17:57:11  keith
+ *  Converted to use full ANSI function prototypes
+ *
  *  Revision 1.6  2000/02/16 11:46:09  craig
  *  checked in with -k by keith at 2000/04/14 14:50:07
  *
@@ -94,7 +97,7 @@ what you give them.   Help stamp out software-hoarding! */
 #include "utlsup.h"
 
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/ransub.c,v 1.6 2000/02/16 11:46:09 craig Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ransub.c,v 1.7 2000/04/27 17:57:11 keith Exp $";
 #endif  
 char	*strlower(char *s);
 void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_info, pot_mp *pot_ptr);
@@ -120,9 +123,6 @@ contr_mt                control;
 #define KJMOL 1.0e-13;			/* kilojoules per mole */
 #define KCALS 4.88882131e-14;		/* kilocalories per mole */
 #define E2A 2.682811715e-15;		/* electron charge squared per angstrom */
-#define DUMP_SIZE(level)  (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
-           (3*sys.nmols + 4*sys.nmols_r + 9)+ (level>>3 & 1) * \
-           (3*sys.nmols + 3*sys.nmols_r + 9) + (level & 1))
 /*========================== External data references ========================*/
 
 extern  const pots_mt   potspec[];          /* Potential type specification */
@@ -454,6 +454,7 @@ main(int argc, char **argv)
    {
       mflag = 0;
       if( molname == NULL)
+      {
          if( dop.name != NULL || dop.mols > 0)
          {
             fputs("What is the name of the species to be replaced",stderr);
@@ -461,6 +462,7 @@ main(int argc, char **argv)
          }
          else
             mflag++;
+      }
 
       if( molname != NULL)
       {
@@ -581,7 +583,7 @@ main(int argc, char **argv)
     /*
      * Allocate buffer for data
      */
-     dump_size = DUMP_SIZE(~0)*sizeof(float);
+     dump_size = DUMP_SIZE(~0, sys.nmols, sys.nmols_r)*sizeof(float);
 
      if( (dump_buf = (float*)malloc(dump_size)) == 0)
        error("malloc failed to allocate dump record buffer (%d bytes)",

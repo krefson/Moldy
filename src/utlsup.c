@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/utlsup.c,v 1.5 1999/11/25 14:26:17 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/utlsup.c,v 1.6 2000/04/27 17:57:11 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -248,9 +248,6 @@ forstr(char *instr, int *start, int *finish, int *inc)
  * dump_to_moldy.  Fill the 'system' arrays with the dump data in 'buf' (see  *
  * dump.c for format), expanding floats to doubles if necessary.              *
  ******************************************************************************/
-#define DUMP_SIZE(level)  (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
-           (3*sys.nmols + 4*sys.nmols_r + 9)+ (level>>3 & 1) * \
-           (3*sys.nmols + 3*sys.nmols_r + 9) + (level & 1))
 void
 dump_to_moldy(float *buf, system_mt *system)
 {
