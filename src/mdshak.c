@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdshak.c,v 2.10 1996/09/25 18:49:43 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdshak.c,v 2.10 1996/09/26 14:39:36 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -761,6 +761,7 @@ char	*argv[];
 	 error("Couldn't open restart file \"%s\" for reading -\n%s\n", 
 	       filename, strerror(errno));
       re_re_header(Fp, &restart_header, &control);
+      control.rdf_interval = 0;       /* Don't attempt to read RDF data */
       re_re_sysdef(Fp, restart_header.vsn, &sys, &species, &site_info, &potpar);
       break;
     default:
