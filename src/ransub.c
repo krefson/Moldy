@@ -27,6 +27,10 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.17.10.4  2004/01/29 07:56:55  moldydv
+ *  Corrected error in initial settings for aligning dopant cofms.
+ *  Renamed some variables for improved clarity.
+ *
  *  Revision 1.17.10.3  2003/09/03 04:40:54  moldydv
  *  Removed attempted correction to rounding errors in values of charge.
  *
@@ -149,7 +153,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/ransub.c,v 1.17.10.3 2003/09/03 04:40:54 moldydv Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/ransub.c,v 1.17.10.4 2004/01/29 07:56:55 moldydv Exp $";
 #endif  
 
 #include "defs.h"
@@ -377,6 +381,7 @@ ran_quat(system_mt *system, spec_mt *species, char *molname)
  * sys_spec_out().  Write a system configuration to stdout in the form of a   *
  * system specification file for MOLDY                                        *
  ******************************************************************************/
+#define LTR(i,j) (((i)*(i)+(i))/2+(j))
 void
 sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname,
                   int *positions, site_mt *site_info, double *euler, pot_mt *potpar)
@@ -385,7 +390,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    double       a, b, c, alpha, beta, gamma;
    mat_mp       h = system->h;
    mat_mt       hinv;
-   int          i, imol, isite, ipos;
+   int          i,j, imol, isite, ipos;
    int          idi, idj, idij, ip;
    int          specmol, id=-1;
    int          n_potpar = system->n_potpar;
@@ -396,11 +401,14 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    quat_mt      quaternion;
    boolean	quat_valid = true;
    vec_mt       *site = ralloc(dopant->nsites);
-   vec_mt       dop_centre, dop_origin;
-   vec_mt       spec_origin;
-   mat_mt       rot_mat;
+   vec_mt       solvent_pos;    /* Position vector of dopant relative to solvent cofm */
+   vec_mt       solute_pos;     /* Position vector of dopant relative to solvent cofm */
+   mat_mt       rot_mat;        /* Rotation matrix */
+   real		inertia[6];     /* Inertia tensor for rot to principal frame */
+   double	mass;		/* Temporary storage for dopant site mass */
 
-   zero_real(dop_centre,3);
+   zero_real(solvent_pos,3);
+   zero_real(solute_pos,3);
    invert(h,hinv);
 
    a = sqrt(SQR(h[0][0]) + SQR(h[1][0]) + SQR(h[2][0]));
@@ -410,33 +418,50 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    beta  = 180/PI*acos((h[0][0]*h[0][2]+h[1][0]*h[1][2]+h[2][0]*h[2][2])/a/c);
    gamma = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/a/b);
 
-   if( site_info[0].pad )                               /* Calculate dopant centre of mass */
+   if( site_info[0].pad )                /* Calculate dopant centre of mass */
    {
       if( dopant->nsites > 1 )
       {
+         zero_real(inertia,6);
          for( isite = 0; isite < dopant->nsites; isite++)
          {
             if( site_info[dopant->site_id[isite]].mass < 0)
                site_info[dopant->site_id[isite]].mass = 0;
             if( site_info[dopant->site_id[isite]].charge == 1e6)
                site_info[dopant->site_id[isite]].charge = 0;
-
+            mass = site_info[dopant->site_id[isite]].mass;
+            /* Calculate dopant centre of mass */
             for( i=0; i < 3; i++)
-               dop_centre[i] += dopant->p_f_sites[isite][i]*site_info[dopant->site_id[isite]].mass;
-            dopant->mass += site_info[dopant->site_id[isite]].mass;
+               solute_pos[i] += dopant->p_f_sites[isite][i]*site_info[dopant->site_id[isite]].mass;
+            dopant->mass += mass;
+            for(i=0; i < 3; i++)              /* Finish calculation of c. of mass. */
+               solute_pos[i] /= dopant->mass;
          }
          if(dopant->mass < 1.0)              /* Lighter than 1 amu ?              */
             message(NULLI,NULLP,FATAL,ZMASS,dopant->name,dopant->mass);
 
-         for( i=0; i < 3; i++)
+         for( isite = 0; isite < dopant->nsites; isite++)
          {
-            dop_centre[i] /= dopant->mass;             /* Dopant centre of mass in local frame */
-            dop_centre[i] -= dopant->p_f_sites[0][i];  /* COFM relative to first site in molecule */
+            for(i=0; i < 3; i++)           /* Subtract c_of_m from co-ordinates */
+            {
+               dopant->p_f_sites[isite][i] -= solute_pos[i];
+
+            /* Calculate inertia tensor          */
+               inertia[LTR(i,i)] += mass * SUMSQ(dopant->p_f_sites[isite]);
+               for(j=0; j <= i; j++)
+                  inertia[LTR(i,j)] -= mass * dopant->p_f_sites[isite][i]
+                                            * dopant->p_f_sites[isite][j];
+            }
+
          }
+         eigens(inertia, rot_mat[0], dopant->inertia, 3);
+         /* Rotate coordinates to principal frame */
+         mat_vec_mul(rot_mat, dopant->p_f_sites, dopant->p_f_sites, dopant->nsites);
+
       }
       else
          for( i=0; i < 3; i++)
-            dop_centre[i] = dopant->p_f_sites[0][i];
+            solute_pos[i] = -1.0*(dopant->p_f_sites[0][i]);
    }
 
 /* Write header for sys_spec file */
@@ -550,14 +575,14 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
                if( quat_valid)
                {
                   q_to_rot(quaternion, rot_mat);
-                  mat_vec_mul(rot_mat, (vec_mt*)spec->p_f_sites[0], (vec_mt*)spec_origin, 1);
+                  mat_vec_mul(rot_mat, (vec_mt*)spec->p_f_sites[0], (vec_mt*)solvent_pos, 1);
                }
                else
                {
                   for(i = 0; i < 3; i++)
-                     spec_origin[i] = spec->p_f_sites[0][i];
+                     solvent_pos[i] = spec->p_f_sites[0][i];
                }
-               mat_vec_mul(hinv, (vec_mt*)spec_origin, (vec_mt*)spec_origin, 1);    /* Convert to fractional coords */
+               mat_vec_mul(hinv, (vec_mt*)solvent_pos, (vec_mt*)solvent_pos, 1);   /* Convert to fractional coords */
 
                if( dopant->nsites > 1 && ! spec->framework )
                {
@@ -573,23 +598,17 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
 		  quat_valid = true;
                }
 
-               if( !site_info[0].pad )  /* Place dopant first atom at solvent molecule cofm */
+               if( site_info[0].pad )      /* Place first atom of dopant at solvent molecule cofm */
                {
                   if( quat_valid )
                   {
                      q_to_rot(quaternion, rot_mat);
-                     mat_vec_mul(rot_mat, (vec_mt*)dop_centre, (vec_mt*)dop_origin, 1);
+                     mat_vec_mul(rot_mat, (vec_mt*)solute_pos, (vec_mt*)solute_pos, 1);
                   }
-                  else
-                  {
-                     for(i = 0; i < 3; i++)
-                        dop_origin[i] = dop_centre[i];
-                  }
-               
-                  mat_vec_mul(hinv, (vec_mt*)dop_origin, (vec_mt*)dop_origin, 1);    /* Convert to fractional coords */
+                  mat_vec_mul(hinv, (vec_mt*)solute_pos, (vec_mt*)solute_pos, 1);    /* Convert to fractional coords */
 
                   for(i = 0; i < 3; i++)
-                     spec->c_of_m[imol][i] += spec_origin[i]+dop_origin[i];  /* Shift c_of_m to dopant's pf origin */
+                     spec->c_of_m[imol][i] += (solvent_pos[i] - solute_pos[i]);      /* Shift cofm so 1st sites match */
                }
                if( dopant->nsites == 1 )
 		  quat_valid = false;
@@ -598,7 +617,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
             }
          }
 
-         (void)printf("%-*s  ", namelength,specname);          /* Write species name and coords */
+         (void)printf("%-*s  ", namelength, specname);          /* Write species name and coords */
          for( i = 0; i < 3; i++)
            (void)printf("%9g ",
               spec->c_of_m[imol][i]+0.5 - floor(spec->c_of_m[imol][i]+0.5));
@@ -748,7 +767,7 @@ main(int argc, char **argv)
    double       simbox[3];
    real		euler[3];
    boolean      strict_match = OFF;
-   boolean      cofm_match = ON;
+   boolean      shift_cofm = OFF;
    boolean      new_quat = OFF;
 
 #define MAXTRY 100
@@ -809,7 +828,7 @@ main(int argc, char **argv)
          strict_match = ON;  /* Match atoms/ions by name and charge rather than name only */
          break;
        case 'h':
-         cofm_match = OFF;   /* Position molecules using first sites rather than COFMs */
+         shift_cofm = ON;    /* Position molecules using first sites rather than COFMs */
          break;
        case 'k':
          dopspec.rdof = 1;   /* Generate new quaternions for all dopant molecules */
@@ -1046,7 +1065,7 @@ main(int argc, char **argv)
       }
 
       dopsite = (site_mt*)arralloc(sizeof(site_mt),1,0,ndopsites-1);
-      if( cofm_match )
+      if( shift_cofm )
          site_info[0].pad = ON;
       else
          site_info[0].pad = OFF;
@@ -1155,7 +1174,7 @@ main(int argc, char **argv)
                {
                   if( (dopsite+newsites)->mass < 0)
                      (dopsite+newsites)->mass = (element+irec)->mass;
-                  if( (dopsite+newsites)->charge == 1e6 || !strict_match )
+                  if( (dopsite+newsites)->charge == 1e6 && !strict_match )
                      (dopsite+newsites)->charge = (element+irec)->charge;
                }
             }

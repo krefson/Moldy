@@ -34,6 +34,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: algorith.c,v $
+ *       Revision 2.21  2002/09/19 09:26:27  kr
+ *       Tidied up header declarations.
+ *       Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *       Revision 2.20  2002/02/15 14:53:59  kr
  *       Fixed make-sites to correctly PBC wrap site co-ords even if h matrix not upper-triangular.
  *
@@ -180,7 +184,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/algorith.c,v 2.20 2002/02/15 14:53:59 kr Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/algorith.c,v 2.21 2002/09/19 09:26:27 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -224,8 +228,8 @@ void	message(int *, ...);		/* Write a warning or error message   */
 static
 void rotate(vec_mp r_in,        /* Co-ordinates to be rotated [n][3] (in)     */ 
 	    vec_mp r_out        /* Resulting co-ordinates [n][3]    (out)     */, 
-	    int nvec, 	        /* Quaternions for the rotation.     (in)     */
-	    quat_mp quat        /* Number of co-ordinates.           (in)     */, 
+	    int nvec, 	        /* Number of co-ordinates.           (in)     */
+	    quat_mp quat,	/* Quaternions for the rotation.     (in)     */
 	    int nquat, 	        /* Number of quaternions             (in)     */
 	    invrot inv_mat)     /* Flag to do inverse rotations      (in)     */
 {
@@ -316,9 +320,9 @@ VECTORIZE
  ******************************************************************************/
 void make_sites(mat_mt h,        /* Unit cell matrix h                   (in) */
 		vec_mp c_of_m_s, /* Centre of mass co-ords [nmols][3]    (in) */
-		quat_mp quat, 	 /* Principal-frame sites [nsites][3]    (in) */
-		vec_mp p_f_sites,/* Sites [nmols*nsites][3]             (out) */ 
-		real **site, 	 /* Quaternions [nmols][4]               (in) */
+		quat_mp quat, 	 /* Quaternions [nmols][4]               (in) */
+		vec_mp p_f_sites,/* Principal-frame sites [nsites][3]    (in) */ 
+		real **site, 	 /* Sites [nmols*nsites][3]             (out) */
 		int nmols, 	 /* Number of molecules                  (in) */
 		int nsites, 	 /* Number of sites on each molecule     (in) */
 		int molflag)	 /* Whether to apply pbc to sites or cofm(in) */

@@ -157,7 +157,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.29.4.6 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.29.4.7 $ $}
 \newcommand{\moldyversion}{2.16}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -420,8 +420,8 @@ expressed in terms of the Euler angles as\footnote{The definition of
   of Goldstein\cite[pages 143 and 155]{goldstein:80}.}
 \begin{eqnarray}
 q_0 & = & \cos \frac{\phi+\psi}{2} \cos \frac{\theta}{2} \nonumber \\
-q_1 & = & \sin \frac{\phi-\psi}{2} \sin \frac{\theta}{2} \nonumber \\
-q_2 & = & \cos \frac{\phi-\psi}{2} \sin \frac{\theta}{2} \nonumber \\
+q_1 & = & \cos \frac{\phi-\psi}{2} \sin \frac{\theta}{2} \nonumber \\
+q_2 & = & \sin \frac{\phi-\psi}{2} \sin \frac{\theta}{2} \nonumber \\
 q_3 & = & \sin \frac{\phi+\psi}{2} \cos \frac{\theta}{2}.
 \label{eqn:qeuler}
 \end{eqnarray}
@@ -889,7 +889,7 @@ This situation is completely non-physical but is easily avoided.
 However the problem may also arise more subtly even when there are no
 mobile ions if a framework is being simulated
 (section~\ref{sec:frameworks}).  The framework is treated as a set of
-discrete but fixed atoms rather than a molecular unit.  If the shape
+discrete, but fixed, atoms rather than a molecular unit.  If the shape
 of the unit cell is allowed to vary then ions constituting the
 framework may indeed cross MD cell boundaries causing the
 aforementioned problems.
@@ -5844,7 +5844,7 @@ species is replacing an existing polyatomic species, by default the same quatern
  If the species being replaced is monatomic, quaternions are generated randomly for the dopant molecules unless one or more of
  options \Lit{-f}, \Lit{-t} or \Lit{-p} are specified. The \Lit{-k} option randomly generates
 new quaternions for the substituting molecules regardless of whether the species it replaces is
-monatomic or polyatomic. This option is overridden by options \Lit{-f}, \Lit{-t} and \Lit{-p}.
+monatomic or polyatomic. This option is overridden by options \Lit{-f}, \Lit{-t} and \Lit{-p}. The Euler angles follow the same convention as that used in Allen and Tildesley\cite{allen:87}.
 
 Options \Lit{-f}, \Lit{-t} and \Lit{-p} are used to align all polyatomic solute molecules in the same direction, 
 specified in terms of Euler angles \phi, \theta and \psi (equations~\ref{eqn:qeuler}). Angles should be between -360 and 360{\textdegree}.
@@ -5855,11 +5855,11 @@ Euler angles specified with \Lit{-f}, \Lit{-t} and \Lit{-p} are used for the sol
 
 By default, the centre of mass of a dopant molecule is positioned on the centre of mass of the solvent molecule it
 is replacing. Specifying the \Lit{-h} option instead matches the position of the first site of the dopant molecule with
-the first site of the solvent molecule. In both cases, the principal frame coordinates of both species in the
-header file are written relative to the first site (\ie the first site is taken as the principal frame origin). \textbf{N.B.} It
+the first site of the solvent molecule. In both cases, the site coordinates of both species in the
+header file are written relative to the first site. \textbf{N.B.} It
 is possible to add a systematic shift (using \Lit{-h}) or positional disorder (using \Lit{-h} and \Lit{-k}) to dopant positions 
 by specifying a structure file that contains only a single atom. This atom's
-principal frame coordinates (in {\AA}) should correspond to the desired shift vector (relative to the first site 
+site coordinate vector (in {\AA}) should correspond to the desired shift vector (relative to the first site 
 of the species being
 replaced).
 
@@ -5926,15 +5926,24 @@ to the potential parameter file format.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \emph{Syswrite} is a utility for creating \moldy\ system specification
 and initial configuration files from either Cambridge CSSR, Brookhaven
-PDB, Schakal or Insight XTL structural data files. This utility
+PDB, Schakal, Insight XTL or XYZ structural data files. This utility
 is useful for automating the creation of \moldy\ input files from the output
 of standard molecular graphics packages.
- At present \emph{syswrite} treats all species
-as monatomic; polyatomic species can be added using the ransub utility after
-creating a system specification file containing the species' centres of mass
-using syswrite.
+ If the structural data file contains a periodic system (\ie\, includes lattice parameter and space group information), 
+\emph{syswrite} assumes the \emph{lattice start} method is to be used, and appends
+the initial configuration info to the system specification file.
+If no lattice information is supplied 
+(for example when reading from an XYZ file or CSSR files written in non-periodic mode),
+all atoms are assumed to belong to the same species, and a system specification file
+suitable for using with the \emph{skew start} method is created. In this case the number
+of molecules of the species can be specified using option \Lit{-n}. The default is 1.
 
-The physical properties of each species not already contained in the
+In the case of periodic systems, \emph{syswrite} treats all species
+as monatomic; polyatomic species can be introduced subsequent to
+creating a system specification file (containing each molecule's centre of mass)
+using the \emph{ransub} utility.
+
+The physical properties of each atom/species not already contained in the
 structure files are read in automatically from the text file
 \Fname{elements.dat}. An alternative
 file name can be specified using option \Lit{-e}. If a potential
@@ -5945,9 +5954,11 @@ included in the system specification file (output).
 The command line options are:
 \begin{center}
 \Lit{syswrite}
-\Lit{[-i} \textit{input-file} \Lit{|}
-\Lit{[-e} \textit{species-data-file}\Lit{]} 
-\Lit{[-y} \textit{potential-parameter-file}\Lit{]} 
+\Lit{[-i} \textit{input-file} \Lit{]}
+\Lit{[-e} \textit{species-data-file}\Lit{]}
+\Lit{[-y} \textit{potential-parameter-file}\Lit{]}
+\Lit{[-n} \textit{number-of-molecules}\Lit{]}
+\Lit{[-l} \textit{species-label}\Lit{]}
 \Lit{[-o} \textit{output-file}\Lit{]}
 \end{center}
 
@@ -5974,6 +5985,8 @@ from the file specified. This is a text file of format:
 \end{displaymath}
 where the number of parameters, their values, order and units are the same
 as in a system specification file (see section~\ref{sec:sys-spec}).
+\item[-n] number of molecules of species. Only used for non-periodic systems, otherwise ignored.
+\item[-l] name or label of species for non-periodic system. Default is to use name of input file (without extension).
 \item[-o] name of output file. Defaults to standard output.
 \end{Argdescription}
 
@@ -5991,9 +6004,9 @@ recompiling \emph{syswrite}). Further details about the species data
 and potential parameters file can be found in appendix~\ref{sec:ransub}.
 
 Since both symbol and charge are specified in the potential parameter file,
-\emph{syswrite} is able to handle species of the same name but different charge.
-In this case, \emph{syswrite} modifies the species names by appending consecutive
-numbers to distinguish between them, \eg\ Ce$^{+3}$ and Ce$^{+4}$ would be labelled
+\emph{syswrite} is able to handle (monatomic) species of the same element but different charge.
+In this case, \emph{syswrite} modifies the species' names by appending consecutive
+numbers to distinguish them, \eg\ Ce$^{+3}$ and Ce$^{+4}$ would be labelled
 \Lit{cerium} and \Lit{cerium1}, respectively, if appearing in this order in the same
 structure file. If no potential parameter file is specified, all
 parameters are given default values of 0 and the potential type is given

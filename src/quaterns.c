@@ -23,6 +23,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: quaterns.c,v $
+ *       Revision 2.12  2002/09/19 09:26:30  kr
+ *       Tidied up header declarations.
+ *       Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *       Revision 2.11  2000/12/06 17:45:32  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -64,7 +68,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/quaterns.c,v 2.11 2000/12/06 17:45:32 keith Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/quaterns.c,v 2.12 2002/09/19 09:26:30 kr Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include <math.h>
@@ -142,7 +146,7 @@ void q_conj_mul(quat_mp p,      /* First Quaternion array [n][4]        (in)  */
    }
 }
 /******************************************************************************
- * Quaternion multiplier.  Multiplies arrays of quaternions p(-1) by q to     *
+ * Quaternion multiplier.  Multiplies arrays of quaternions p by q(-1) to     *
  * give r. Can be called with  r the same as p or q.                          *
  ******************************************************************************/
 void q_mul_conj(quat_mp p,      /* First Quaternion array [n][4]        (in)  */ 

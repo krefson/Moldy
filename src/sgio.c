@@ -979,7 +979,7 @@ int ParseHallSymbol(const char *hsym, T_SgInfo *SgInfo)
     "Error: Illegal origin shift value";
 
   static const char *Err_Too_ori_shi_val =
-    "Error: Too much origin shift values";
+    "Error: Too many origin shift values"; /* Corrected by C.Fisher 2004 */
 
 
   Centric = 0;

@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.32  2002/09/19 09:26:30  kr
+ *      Tidied up header declarations.
+ *      Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *      Revision 2.31  2002/02/27 17:48:34  kr
  *      Reworked auto-setting of Ewald parameters.
  *        Added new control parameter "ewald-accuracy" to refine auto-setting.
@@ -324,7 +328,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/startup.c,v 2.31 2002/02/27 17:48:34 kr Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/startup.c,v 2.32 2002/09/19 09:26:30 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -410,7 +414,7 @@ static	char	afmt[] = "    %8s = %8X %8s = %8X %8s = %8X %8s = %8X\
 #define FICTICIOUS_MASS_TOL 1.0e-6
 /*========================== Control file keyword template ===================*/
 /*
- * format SFORM is defined as %NAMLENs in structs.h, to avoid overflow.
+ * format SFORM is defined as %NAMLENs in defs.h, to avoid overflow.
  */
 const match_mt	match[] = {
 {"title",            SFORM,  "Test Simulation",(gptr*) control.title},
@@ -619,7 +623,7 @@ void	skew_start(system_mp system, spec_mt *species)
 /******************************************************************************
  * random_start.  This function generates a completely random starting        *
  * configuration.  Molecules are placed at random locations and orientations  *
- * in md box, whose size is chosed to give the required density.	      *
+ * in md box, whose size is chosen to give the required density.	      *
  ******************************************************************************/
 #ifdef NOT_FOR_NOW
 void	random_start(system, species)
