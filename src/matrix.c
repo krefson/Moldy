@@ -11,6 +11,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	matrix.c,v $
+ * Revision 1.4  89/12/18  17:54:23  keith
+ * Rewrote transpose() to compile correctly under -va option (for Stellar).
+ * 
  * Revision 1.3  89/10/26  11:26:55  keith
  * Mat_vec_mul() vectorised.
  * 
@@ -22,7 +25,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/matrix.c,v 1.4 89/12/18 17:48:43 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/matrix.c,v 1.4 89/12/18 17:54:23 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -53,6 +56,7 @@ vec_p		in_vec,		/* Input vector, [number][3]          (in/out)*/
     * and trying to re-use the 'old' values.
     */
    if(in_vec == out_vec)	/* ie parameters point to the same array      */
+   {
 VECTORIZE
       for(i = 0; i < number; i++)
       {
@@ -62,7 +66,9 @@ VECTORIZE
          in_vec[i][1] = m[1][0]*a0 + m[1][1]*a1 + m[1][2]*a2;
          in_vec[i][2] = m[2][0]*a0 + m[2][1]*a1 + m[2][2]*a2;
       }
+   }
    else if(ABS(in_vec-out_vec) >= number) /* parameters are distinct arrays  */
+   {
 VECTORIZE
       for(i = 0; i < number; i++)
       {
@@ -72,6 +78,7 @@ VECTORIZE
          out_vec[i][1] = m[1][0]*a0 + m[1][1]*a1 + m[1][2]*a2;
          out_vec[i][2] = m[2][0]*a0 + m[2][1]*a1 + m[2][2]*a2;
       }
+   }
    else			/* in_vec and out_vec overlap, but are not identical  */
       message(NULLI, NULLP, FATAL, OVRLP1, in_vec, out_vec, number);
 }

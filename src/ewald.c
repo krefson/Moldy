@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.14  90/08/29  11:01:19  keith
+ * Modified to keep consistency with ewald_parallel.c r1.8
+ * 
  * Revision 1.13  90/08/02  15:50:17  keith
  * Modified to exclude framework-framework interactions.
  * N.B. Excluded from pe and stress but NOT forces (as they sum to 0).
@@ -57,13 +60,17 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /mnt/keith/moldy/RCS/ewald.c,v 1.14 90/08/22 10:32:44 keith Exp $";
+static char *RCSid = "$Header: /mnt/keith/moldy/RCS/ewald.c,v 1.14 90/08/29 11:01:19 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
-#include <fastmath.h>
+#   include <fastmath.h>
 #else
-#include <math.h>
+#ifdef ardent
+#   include <vmath.h>
+#else
+#   include <math.h>
+#endif
 #endif
 #include "stdlib.h"
 /*========================== Program include files ===========================*/
@@ -109,6 +116,7 @@ int  k,l,nsites;
    
    if( k >= 0 )
       if( l >= 0 )
+      {
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
@@ -117,7 +125,9 @@ VECTORIZE
 	    qcoskr[is] = chg[is]*(chxky*coslz[is] - shxky*sinlz[is]);
 	    qsinkr[is] = chg[is]*(shxky*coslz[is] + chxky*sinlz[is]);
 	 }
+      }
       else
+      {
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
@@ -126,8 +136,10 @@ VECTORIZE
 	    qcoskr[is] = chg[is]*(chxky*coslz[is] +shxky*sinlz[is]);
 	    qsinkr[is] = chg[is]*(shxky*coslz[is] - chxky*sinlz[is]);
 	 }
+      }
    else
       if( l >= 0 )
+      {
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
@@ -136,7 +148,9 @@ VECTORIZE
 	    qcoskr[is] = chg[is]*(chxky*coslz[is] - shxky*sinlz[is]);
 	    qsinkr[is] = chg[is]*(shxky*coslz[is] + chxky*sinlz[is]);
 	 }
+      }
       else
+      {
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
@@ -145,7 +159,7 @@ VECTORIZE
 	    qcoskr[is] = chg[is]*(chxky*coslz[is] + shxky*sinlz[is]);
 	    qsinkr[is] = chg[is]*(shxky*coslz[is] - chxky*sinlz[is]);
 	 }
-
+     }
 }
 /******************************************************************************
  *  Ewald  Calculate reciprocal-space part of coulombic forces		      *

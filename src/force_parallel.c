@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.5 90/05/16 14:20:52 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.6 90/05/16 18:41:00 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -523,9 +523,11 @@ mat_t           stress;                 /* Stress virial                (out) */
 /*   Build arrays of pot. pars [max_id][nsites] for access in vector loops    */
    for(ipot = 0; ipot < n_potpar; ipot++)
       for(i_id = 1; i_id < max_id; i_id++)
+      {
 VECTORIZE
          for(isite = 0; isite < nsites; isite++)
             potp[i_id][ipot][isite] = potpar[i_id*max_id+id[isite]].p[ipot];
+      }
 
    fill_cells(system->c_of_m, system->nmols, site, species, system->h,
 	      c_ptr, cell, &n_frame_types);
@@ -585,6 +587,7 @@ VECTORIZE
 	    stress[i][j] += stress_n[ithread][i][j];
    }
    for(ithread = 0; ithread < nthreads-1; ithread++)
+   {
 VECTORIZE
       for(isite = 0; isite < nsites; isite++)
       {
@@ -592,7 +595,7 @@ VECTORIZE
 	 site_force[1][isite] += s_f_n[ithread][1][isite];
 	 site_force[2][isite] += s_f_n[ithread][2][isite];
       }
-
+   }
 #ifdef DEBUG2
    histout();
 #endif

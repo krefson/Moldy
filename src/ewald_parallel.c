@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.8  90/08/29  11:00:49  keith
+ * Speeded up loop at 231 to improve parallel efficiency.
+ * 
  * Revision 1.7  90/08/01  19:11:40  keith
  * Modified to exclude framework-framework interactions.
  * N.B. Excluded from pe and stress but NOT forces (as they sum to 0).
@@ -55,13 +58,17 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /mnt/keith/moldy/RCS/ewald_parallel.c,v 1.8 90/08/20 17:49:24 keith Exp $";
+static char *RCSid = "$Header: /mnt/keith/moldy/RCS/ewald_parallel.c,v 1.8 90/08/29 11:00:49 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
-#include <fastmath.h>
+#   include <fastmath.h>
 #else
-#include <math.h>
+#ifdef ardent
+#   include <vmath.h>
+#else
+#   include <math.h>
+#endif
 #endif
 #include "stdlib.h"
 /*========================== Program include files ===========================*/
@@ -322,6 +329,7 @@ VECTORIZE
 	    stress[i][j] += stress_n[ithread][i][j];
    }
    for(ithread = 0; ithread < nthreads-1; ithread++)
+   {
 VECTORIZE
       for(is = 0; is < nsites; is++)
       {
@@ -329,7 +337,7 @@ VECTORIZE
 	 site_force[1][is] += s_f_n[ithread][1][is];
 	 site_force[2][is] += s_f_n[ithread][2][is];
       }
-
+   }
    
    tfree((char*)chx); tfree((char*)cky); tfree((char*)clz); 
    tfree((char*)shx); tfree((char*)sky); tfree((char*)slz);
@@ -354,6 +362,7 @@ int  k,l,nsites;
    
    if( k >= 0 )
       if( l >= 0 )
+      {
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
@@ -362,7 +371,9 @@ VECTORIZE
 	    qcoskr[is] = chg[is]*(chxky*coslz[is] - shxky*sinlz[is]);
 	    qsinkr[is] = chg[is]*(shxky*coslz[is] + chxky*sinlz[is]);
 	 }
+      }
       else
+      {
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
@@ -371,8 +382,10 @@ VECTORIZE
 	    qcoskr[is] = chg[is]*(chxky*coslz[is] +shxky*sinlz[is]);
 	    qsinkr[is] = chg[is]*(shxky*coslz[is] - chxky*sinlz[is]);
 	 }
+      }
    else
       if( l >= 0 )
+      {
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
@@ -381,7 +394,9 @@ VECTORIZE
 	    qcoskr[is] = chg[is]*(chxky*coslz[is] - shxky*sinlz[is]);
 	    qsinkr[is] = chg[is]*(shxky*coslz[is] + chxky*sinlz[is]);
 	 }
+      }
       else
+      {
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
@@ -390,7 +405,7 @@ VECTORIZE
 	    qcoskr[is] = chg[is]*(chxky*coslz[is] + shxky*sinlz[is]);
 	    qsinkr[is] = chg[is]*(shxky*coslz[is] - chxky*sinlz[is]);
 	 }
-
+     }
 }
 /*****************************************************************************
  *  Ewald_inner().  Part of Ewald sum to run in parallel on multi-stream or  *

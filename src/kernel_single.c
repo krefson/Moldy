@@ -1,9 +1,13 @@
 #ifndef lint
-static char *RCSid = "$Header: kernel_single.c,v 1.1 89/04/20 16:01:53 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/kernel_single.c,v 1.2 89/07/04 18:43:11 keith Exp $";
 #endif
 
 /*
  * $Log:	kernel_single.c,v $
+ * Revision 1.2  89/07/04  18:43:11  keith
+ * Fixed error in kernel and force which led to sites being allocated the
+ * wrong potential parameters.  Needed extra parameter to kernel.
+ * 
  * Revision 1.1  89/04/20  16:01:53  keith
  * Initial revision
  * 
@@ -12,10 +16,14 @@ static char *RCSid = "$Header: kernel_single.c,v 1.1 89/04/20 16:01:53 keith Exp
  * 
  */
 
-#ifdef  convex
-#include <fastmath.h>
+#if  defined(convexvc) || defined(stellar)
+#   include <fastmath.h>
 #else
-#include <math.h>
+#ifdef ardent
+#   include <vmath.h>
+#else
+#   include <math.h>
+#endif
 #endif
 #include "defs.h"
 #include "messages.h"

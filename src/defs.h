@@ -1,7 +1,10 @@
 /*
- * $Header: /usr/data/keith/moldy/RCS/defs.h,v 1.11 90/08/22 10:58:42 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.12 90/09/05 10:30:57 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.12  90/09/05  10:30:57  keith
+ * Support for cray scc added - directives and ANSI_LIBS macro set.
+ * 
  * Revision 1.11  90/08/22  10:58:42  keith
  * Changed ANSI libraries conditional compilation to rely on own
  * symbol ANSI_LIBS rather than __STDC__.
@@ -48,8 +51,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.11 $"
-#define		 REVISION_DATE    "$Date: 90/08/22 10:58:42 $"
+#define          REVISION         "$Revision: 1.12 $"
+#define		 REVISION_DATE    "$Date: 90/09/05 10:30:57 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -125,8 +128,13 @@
 #   define VECTORIZE __dir NO_RECURRENCE :
 #   define NOVECTOR  __dir SCALAR :
 #else
+#ifdef ardent
+#   define VECTORIZE # pragma ivdep
+#   define NOVECTOR  # pragma novector
+#else
 #   define VECTORIZE /* Canny  vectorise on this machine!*/
 #   define NOVECTOR  /* */
+#endif
 #endif
 #endif
 #endif

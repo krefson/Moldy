@@ -14,6 +14,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 1.9  90/05/21  15:29:00  keith
+ * Moved definition of struct pot_dim[][] from convert.c to kernel.c.
+ * 
  * Revision 1.8  90/05/02  13:04:52  keith
  * Tidied up and restructured code to improve readability.
  * Reduced number of scalar temporaries in vector loops - this is
@@ -44,13 +47,17 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.8 90/05/02 13:04:52 keith Exp $";
+static char *RCSid = "$Header: /usr/data/keith/moldy/RCS/kernel.c,v 1.9 90/05/21 15:29:00 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
-#include <fastmath.h>
+#   include <fastmath.h>
 #else
-#include <math.h>
+#ifdef ardent
+#   include <vmath.h>
+#else
+#   include <math.h>
+#endif
 #endif
 /*========================== Program include files ===========================*/
 #include "structs.h"
