@@ -14,6 +14,17 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	values.c,v $
+ * Revision 1.10  91/08/19  16:48:51  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
+ * 
  * Revision 1.9  91/03/12  15:43:29  keith
  * Tidied up typedefs size_t and include file <sys/types.h>
  * Added explicit function declarations.
@@ -44,7 +55,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.10 91/08/15 18:12:19 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.12 92/03/19 15:20:01 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -54,6 +65,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.10 9
 #include	<stdio.h>
 #include	<math.h>
 #include	"stddef.h"
+#include	"string.h"
 /*========================== External function declarations ==================*/
 void	mat_vec_mul();
 void	q_conj_mul();			/* Quaternion multiply conjugated     */
@@ -87,16 +99,34 @@ typedef struct
    		roll[MAX_ROLL_INTERVAL],
    		roll_mean,
    		roll_sd;
-} av_t;
+} old_av_t;
 
 typedef	union
 {
-   av_t		av;
+   old_av_t		av;
    struct
    {	
       int	av, roll;
    }		cnt;
-} av_u_t;
+} old_av_u_t;
+
+typedef struct
+{   double	value,
+   		sum,
+   		sum_sq,
+		mean,
+		sd,
+   		roll[1];
+} av_t;
+
+typedef	struct
+{	
+   int		nav, 
+   		nroll, 
+		iroll, 
+		pad;
+   double align;
+} av_head_t;
 
 typedef struct
 {
@@ -105,7 +135,7 @@ typedef struct
    int		field_width;
    char		*format;
    int		mult;
-   av_t		*p;
+   av_t		**p;
 } av_info_t;
 /*========================== Global variables ================================*/
 av_info_t av_info[] = { {tke_n, "Trans KE",   CONV_E_N,	11, "%11.5g",-1, NULL},
@@ -126,12 +156,16 @@ av_info_t av_info[] = { {tke_n, "Trans KE",   CONV_E_N,	11, "%11.5g",-1, NULL},
 			{msqf_n,"<F**2>",     CONV_F_N,	10, "%10.5g",-3, NULL},
 			{msqt_n,"<N**2>",     CONV_N_N,	10, "%10.5g",-3, NULL},
 			{dip_n, "Dip Mom",    CONV_D_N,	 8, "%8.2g", 3,  NULL}};
+static  int	av_size;		/* Size of averages database          */
+static  int	av_t_size;		/* Size of entry inaverages database  */
+static  av_head_t  *av_head;
 static	av_t	*av;			/* Dynamic array of averages structs  */
-static	int	*av_cnt;		/* Number of terms summed so far      */
-static	int	*roll_cnt;		/* Number of rolling average data     */
 static	int	navs = 0;		/* Size of array av                   */
 static	int	max_row = 0;		/* Largest number of components       */
 static  int	max_col = (int)press_n;	/* Number to print across page        */
+static  int	av_convert = 0;
+static  int     av_tmp_size;
+static  gptr    *av_tmp;
 /*========================== Macros ==========================================*/
 #define NPRINT			(int)end
 /*============================================================================*/
@@ -145,12 +179,14 @@ static  int	max_col = (int)press_n;	/* Number to print across page        */
  *  following rule - a positive entry is the true multiplicity and a negative *
  *  one is multiplied by the number of species for the true multiplicity.     *
  ******************************************************************************/
-void	init_averages(nspecies)
+void	init_averages(nspecies, vsn, roll_interval, old_roll_interval)
 int	nspecies;
+char	*vsn;
+int	roll_interval, old_roll_interval;
 {
    av_t		*av_p;
-   av_u_t	*av_u;
-   int		i;
+   int		i, imult;
+   int		major, minor, cmajor=1, cminor=13;
 
    for(i = 0; i < (int)end; i++)	/* cycle over enum types av_n         */
    {
@@ -161,25 +197,122 @@ int	nspecies;
          max_row = av_info[i].mult;
    }
 
-   /*  Allocate space and set pointers av_cnt and av.                         */
-   av_u = aalloc( navs+1, av_u_t );
-   av_cnt   = &av_u[0].cnt.av;
-   roll_cnt = &av_u[0].cnt.roll;
-   av       = &av_u[1].av;
+   /* Determine size of database, Allocate space and set pointers             */
+   av_t_size = sizeof(av_t)+(roll_interval-1)*sizeof(double);
+   av_size = sizeof(av_head_t) + navs*av_t_size;
+   av_head  = (av_head_t*)aalloc( av_size, char);
+   av       = (av_t*)(av_head+1);
    
    av_p = av;
    for(i = 0; i < (int)end; i++)	/* Set up pointers to area of array   */
    {					/* reserved for each type, size=mult. */
-      av_info[i].p = av_p;
-      av_p += av_info[i].mult;
-   }   
-
-   if(control.roll_interval > MAX_ROLL_INTERVAL)
+      av_info[i].p = aalloc(av_info[i].mult, av_t*);
+      for(imult = 0; imult < av_info[i].mult; imult++)
+      {
+	 av_info[i].p[imult] = av_p;
+	 av_p = (av_t*)((char*)av_p + av_t_size);
+      }
+   } 
+   /*
+    * Do we have to do any conversion on averages read from restart file?
+    * We just allocate buffers and set flags here.
+    */
+   if( vsn )
    {
-      note("requested roll_interval is greater than maximum - reset to %d",
-         MAX_ROLL_INTERVAL);
-      control.roll_interval = MAX_ROLL_INTERVAL;
+      /*
+       * First check whether restart was written by 1.13 or earlier.
+       */
+      if( sscanf(vsn, "%d.%d", &major, &minor) < 2 )
+	 message(NULLI, NULLP, FATAL, INRVSN, vsn);
+      if( major < cmajor || (major==cmajor && minor <= cminor ) )
+      {
+	 av_tmp_size = (navs+1)*sizeof(old_av_u_t);
+	 av_tmp = aalloc(av_tmp_size, char);
+	 av_convert = 1;
+      }
+      /*
+       * Has size of rolling average store changed?
+       */
+      else if (roll_interval != old_roll_interval )
+      {
+	 av_tmp_size =  sizeof(av_head_t) 
+	             + navs*(sizeof(av_t)+(old_roll_interval-1)*sizeof(double));
+	 av_tmp = aalloc(av_tmp_size, char);
+	 av_convert = 2;	 
+      }
    }
+}
+/******************************************************************************
+ * convert_averages.  Update averages database if roll_interval changed or    *
+ * if restart file written using old "static" scheme.			      *
+ ******************************************************************************/
+void	convert_averages(roll_interval, old_roll_interval)
+int	roll_interval, old_roll_interval;
+{
+   int iav, old_nroll, old_iroll, rbl, prev_av_t_size;
+   old_av_u_t *old_av_p=(old_av_u_t *)av_tmp;
+   av_head_t	*prev_av_head = (av_head_t *)av_tmp;
+   av_t	        *av_p, *prev_av_p;
+
+   switch(av_convert)
+   {
+    case 0:					/* No conversion needed       */
+      break;
+    case 1:					/* Convert from static scheme */
+      old_nroll = old_av_p[0].cnt.roll;
+      old_iroll = control.istep % old_roll_interval;
+      av_head->nroll = MIN(old_nroll,roll_interval);
+      av_head->iroll = av_head->nroll % roll_interval;
+      av_head->nav   = old_av_p[0].cnt.av;
+      rbl = MIN(old_iroll, av_head->nroll);
+      old_av_p++;
+      av_p = av_info[0].p[0];
+      for(iav = 0; iav < navs; iav++)
+      {
+	 av_p->value  = old_av_p->av.value;
+	 av_p->sum    = old_av_p->av.sum;
+	 av_p->sum_sq = old_av_p->av.sum_sq;
+	 av_p->mean   = old_av_p->av.mean;
+	 av_p->sd     = old_av_p->av.sd;
+	 (void)memcpy((gptr*)(av_p->roll + av_head->nroll - rbl),
+		      (gptr*)(old_av_p->av.roll + old_iroll - rbl),
+		      rbl*sizeof(double));
+	 (void)memcpy((gptr*)av_p->roll, 
+		      (gptr*)(old_av_p->av.roll+old_nroll-av_head->nroll+rbl),
+		      (av_head->nroll-rbl)*sizeof(double));
+	 av_p = (av_t*)((char*)av_p + av_t_size);
+	 old_av_p++;
+      }
+      break;
+    case 2:					/* Change roll_interval       */
+      prev_av_t_size = sizeof(av_t)+(old_roll_interval-1)*sizeof(double);
+      old_nroll = prev_av_head->nroll;
+      old_iroll = prev_av_head->iroll;
+      av_head->nroll = MIN(old_nroll,roll_interval);
+      av_head->iroll = av_head->nroll % roll_interval;
+      av_head->nav   = prev_av_head->nav;
+      rbl = MIN(old_iroll, av_head->nroll);
+      prev_av_p = (av_t *)(prev_av_head+1);
+      av_p = av_info[0].p[0];
+      for(iav = 0; iav < navs; iav++)
+      {
+	 /*
+	  * Can do a struct copy -- will only pick up 1st roll entry
+	  */
+	 *av_p = *prev_av_p;
+	 (void)memcpy((gptr*)(av_p->roll + av_head->nroll - rbl),
+		      (gptr*)(prev_av_p->roll + old_iroll - rbl),
+		      rbl*sizeof(double));
+	 (void)memcpy((gptr*)av_p->roll, 
+		      (gptr*)(prev_av_p->roll+old_nroll-av_head->nroll+rbl),
+		      (av_head->nroll-rbl)*sizeof(double));
+
+	 av_p      = (av_t*)((char*)av_p + av_t_size);
+	 prev_av_p = (av_t*)((char*)prev_av_p + prev_av_t_size);
+      }
+      break;
+   }
+   av_convert = 0;
 }
 /******************************************************************************
  * av_ptr   Return a pointer to averages database and its size (for restart)  *
@@ -187,9 +320,19 @@ int	nspecies;
 gptr	*av_ptr(size)
 size_t	*size;
 {
-   *size = (navs+1)*sizeof(av_u_t);
-   if(av != NULL)
-      return((gptr*)av_cnt);
+   switch(av_convert)
+   {
+    case 0:
+      *size = av_size;
+      if(av_head != NULL)
+	 return((gptr*)av_head);
+      break;
+    case 1:
+    case 2:
+      *size = av_tmp_size;
+      if(av_tmp != NULL)
+	 return(av_tmp);
+   }
    message(NULLI, NULLP, FATAL, AVNOC, "av_ptr");
    return(NULL);					/* To satisfy lint    */
 }
@@ -205,7 +348,7 @@ int	offset;				/* Sub-type or which component        */
    if(offset < 0 || offset > av_info[(int)type].mult - 1)
       message(NULLI, NULLP, FATAL, AVBNDS, offset, av_info[(int)type].name);
 
-   av_p = av_info[(int)type].p + offset;
+   av_p = av_info[(int)type].p[offset];
  
    av_p->value = datum;
    if(control.istep >= control.begin_average)
@@ -213,7 +356,7 @@ int	offset;				/* Sub-type or which component        */
       av_p->sum += datum;
       av_p->sum_sq += datum * datum;
    }
-   av_p->roll[(control.istep - 1) % control.roll_interval] = datum;
+   av_p->roll[av_head->iroll] = datum;
 }
 /******************************************************************************
  * values   Calculate the values of the thermodynamic quantities, maintain and*
@@ -235,11 +378,6 @@ mat_t		stress_vir;	/* 'Potential' part of stress, or virial      */
                 stress;
    double	vol = det(system->h);
 
-   if(control.istep >= control.begin_average)
-      (*av_cnt)++;
-   if(*roll_cnt < control.roll_interval)
-      (*roll_cnt)++;
-   
    for(ipe = 0; ipe < NPE; ipe++)
    {
       add_average(CONV_E * pe[ipe], pe_n, ipe);
@@ -302,6 +440,14 @@ mat_t		stress_vir;	/* 'Potential' part of stress, or virial      */
 
    for(i = 0; i < 3; i++)
       add_average(CONV_D * dipole[i], dip_n, i);
+   /*
+    * Update counters.
+    */
+   if(control.istep >= control.begin_average)
+      (av_head->nav)++;
+   if(av_head->nroll < control.roll_interval)
+      (av_head->nroll)++;
+   av_head->iroll = (av_head->iroll+1) % control.roll_interval;
 }
 /******************************************************************************
  *  value,  roll_av,  roll_sd.   Functions returning the value, rolling       *
@@ -311,7 +457,7 @@ double value(type, comp)
 av_n	type;
 int	comp;
 {
-   return(av_info[(int)type].p[comp].value);
+   return(av_info[(int)type].p[comp]->value);
 }
 
 double	roll_av(type, comp)
@@ -321,9 +467,9 @@ int	comp;
    int	i;
    double	mean = 0.0;
 
-   for(i = 0; i < *roll_cnt; i++)
-      mean += av_info[(int)type].p[comp].roll[i];
-   return(mean/ *roll_cnt);
+   for(i = 0; i < av_head->nroll; i++)
+      mean += av_info[(int)type].p[comp]->roll[i];
+   return(mean/ av_head->nroll);
 }
 
 double	roll_sd(type, comp)
@@ -334,12 +480,12 @@ int	comp;
    double	*roll, ssq = 0.0, mean = roll_av(type, comp), var,
 		bottom = -32.0*sqrt((double)control.roll_interval)*precision();
 
-   roll = av_info[(int)type].p[comp].roll;
-   for(i = 0; i < *roll_cnt; i++)
+   roll = av_info[(int)type].p[comp]->roll;
+   for(i = 0; i < av_head->nroll; i++)
       ssq += roll[i] * roll[i];
 
-   var = ssq/ *roll_cnt - mean*mean;
-   if( var * *roll_cnt < ssq * bottom)
+   var = ssq/ av_head->nroll - mean*mean;
+   if( var * av_head->nroll < ssq * bottom)
       message(NULLI, NULLP, WARNING, NEGVAR, "roll_sd", var,
 	      av_info[(int)type].name);
 
@@ -407,7 +553,7 @@ void	output()
    (void)sprintf(s, "Timestep %d      Current values", control.istep);
    print_frame('=', s, value);
 
-   (void)sprintf(s,"Rolling averages over last %d timesteps", *roll_cnt);
+   (void)sprintf(s,"Rolling averages over last %d timesteps", av_head->nroll);
    print_frame('-', s, roll_av);
    print_frame('-', "Standard deviations", roll_sd);
    (void)fflush(stdout);
@@ -419,13 +565,13 @@ void	averages()
 {
    int	i, iav, col;
    double	variance,
-		bottom = -32.0*sqrt((double)*av_cnt)*precision();
+		bottom = -32.0*sqrt((double)av_head->nav)*precision();
    av_t	*av_p;
 
-   if(av_cnt == NULL)
+   if(av_head == NULL)
       message(NULLI, NULLP, FATAL, AVNOC, "averages");
 
-   if(*av_cnt == 0)
+   if(av_head->nav == 0)
    {
       note("no sums accumulated for averages");
       return;
@@ -435,7 +581,7 @@ void	averages()
       new_page();
    else
       new_lins(2);
-   (void)printf( "   Averages over last %d timesteps",*av_cnt);
+   (void)printf( "   Averages over last %d timesteps",av_head->nav);
    new_line();
 
    av_p = av;
@@ -443,9 +589,9 @@ void	averages()
    {
       for(i = 0; i < av_info[iav].mult; i++)
       {
-	 av_p->mean = av_p->sum / *av_cnt;
-	 variance = av_p->sum_sq/ *av_cnt - av_p->mean * av_p->mean;
-	 if(variance * *av_cnt  < av_p->sum_sq * bottom)
+	 av_p->mean = av_p->sum / av_head->nav;
+	 variance = av_p->sum_sq/ av_head->nav - av_p->mean * av_p->mean;
+	 if(variance * av_head->nav  < av_p->sum_sq * bottom)
 	    message(NULLI, NULLP, WARNING, NEGVAR, "averages", variance,
 		    av_info[(int)iav].name);
 	 av_p->sd   = variance > 0.0 ? sqrt(variance) : 0.0;
@@ -453,7 +599,7 @@ void	averages()
 	 av_p++;
       }
    }
-   *av_cnt = 0;
+   av_head->nav = 0;
 
    for(iav = 0; iav < (int)end; iav++)
    {
@@ -466,9 +612,9 @@ void	averages()
             new_line();
             col = printf("                     ");
          }
-         col += printf( av_info[iav].format, av_info[iav].p[i].mean);
+         col += printf( av_info[iav].format, av_info[iav].p[i]->mean);
          col += printf(" +/- ");
-         col += printf(av_info[iav].format, av_info[iav].p[i].sd);
+         col += printf(av_info[iav].format, av_info[iav].p[i]->sd);
          if(i < av_info[iav].mult - 1)
             col += printf(",");
       }
