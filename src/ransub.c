@@ -27,6 +27,9 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.17  2002/09/20 15:45:08  kr
+ *  Corrected some C errors/removed dependence on gcc extensions.
+ *
  *  Revision 1.16  2002/09/19 09:26:30  kr
  *  Tidied up header declarations.
  *  Changed old includes of string,stdlib,stddef and time to <> form
@@ -131,7 +134,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/ransub.c,v 1.16.2.1 2002/09/20 15:41:08 kr Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/ransub.c,v 1.17 2002/09/20 15:45:08 kr Exp $";
 #endif  
 
 #include "defs.h"
@@ -165,9 +168,11 @@ char    *atime(void);
 double  det(mat_mt a);
 char	*read_ftype(char *filename);
 int     read_ele(spec_data *element, char *filename);
-int     read_pdb(char *, mat_mp, char (*)[32], vec_mp, double *, char *, char *);
-int     read_cssr(char *, mat_mp, char (*)[32], vec_mp, double *, char *, char *);
-int     read_shak(char *, mat_mp, char (*)[32], vec_mp, double *, char *, double *);
+int     read_pdb(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
+int     read_cssr(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
+int     read_shak(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, double *);
+int     read_xtl(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
+int     read_xyz(char *, mat_mp, char (*)[NLEN], vec_mp, char *);
 
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
@@ -329,10 +334,10 @@ quat_gen(quat_mt quaternion)  /* Randomly generates Euler angles and converts th
       euler[i] *= PI/180.0;       /* Convert to radians */
    }
 
-   quaternion[0] = cos(0.5*euler[0])*cos(0.5*(euler[1]+euler[2]));
-   quaternion[1] = sin(0.5*euler[0])*cos(0.5*(euler[1]-euler[2]));
-   quaternion[2] = sin(0.5*euler[0])*sin(0.5*(euler[1]-euler[2]));
-   quaternion[3] = cos(0.5*euler[0])*sin(0.5*(euler[1]+euler[2]));
+   quaternion[0] = cos(0.5*euler[1])*cos(0.5*(euler[0]+euler[2]));
+   quaternion[1] = sin(0.5*euler[1])*cos(0.5*(euler[0]-euler[2]));
+   quaternion[2] = sin(0.5*euler[1])*sin(0.5*(euler[0]-euler[2]));
+   quaternion[3] = cos(0.5*euler[1])*sin(0.5*(euler[0]+euler[2]));
 
    return;
 }
@@ -358,7 +363,8 @@ ran_quat(system_mt *system, spec_mt *species, char *molname)
  * system specification file for MOLDY                                        *
  ******************************************************************************/
 void
-sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname, int *positions, site_mt *site_info, pot_mt *potpar)
+sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname,
+                  int *positions, site_mt *site_info, double *euler, pot_mt *potpar)
 {
    spec_mt      *spec;
    double       a, b, c, alpha, beta, gamma;
@@ -371,8 +377,9 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    char         *specname;
    int          max_id = system->max_id;
    int          dflag = 0;
+   int		namelength = 0;
    quat_mt      quaternion;
-   boolean	quat_valid = 1;
+   boolean	quat_valid = true;
    vec_mt       *site = ralloc(dopant->nsites);
    vec_mt       pf_cofm, pf_origin;
    vec_mt       spec_origin;
@@ -436,7 +443,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
       if( (dopant->name != NULL) && !strcmp(strlower(spec->name),dopant->name) )
       {
          specmol += dopant->nmols;
-         message(NULLI,NULLP,WARNING,"Species %s already present in system - properties left unchanged",dopant->name);
+         message(NULLI,NULLP,WARNING,"Species `%s' already present in system - properties left unchanged",dopant->name);
          dflag++;
       }
 
@@ -449,13 +456,17 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
          for(isite=0; isite < spec->nsites; isite++)
             (void)printf("%d %9g %9g %9g %9g %9g %s\n",
                         spec->site_id[isite],
-                        spec->p_f_sites[isite][0]-spec->p_f_sites[0][0],
-                        spec->p_f_sites[isite][1]-spec->p_f_sites[0][1],
-                        spec->p_f_sites[isite][2]-spec->p_f_sites[0][2],
+                        fabs(spec->p_f_sites[isite][0]-spec->p_f_sites[0][0]) > 1e-6 ?
+                             spec->p_f_sites[isite][0]-spec->p_f_sites[0][0] : 0.0,
+                        fabs(spec->p_f_sites[isite][1]-spec->p_f_sites[0][1]) > 1e-6 ?
+                             spec->p_f_sites[isite][1]-spec->p_f_sites[0][1] : 0.0,
+                        fabs(spec->p_f_sites[isite][2]-spec->p_f_sites[0][2]) > 1e-6 ?
+                             spec->p_f_sites[isite][2]-spec->p_f_sites[0][2] :0.0,
                         site_info[spec->site_id[isite]].mass,
                         site_info[spec->site_id[isite]].charge,
                         site_info[spec->site_id[isite]].name);
       }
+      namelength = MAX(namelength,strlen(spec->name)+1);
    }
    if( !dflag && id >= 0 && dopant->nmols > 0 && strncmp("#",dopant->name,1) )  /* Write data for species added */
    {
@@ -466,9 +477,12 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
       {
          (void)printf("%d %9g %9g %9g %9g %9g %s\n",
                dopant->site_id[isite],
-               dopant->p_f_sites[isite][0]-dopant->p_f_sites[0][0],
-               dopant->p_f_sites[isite][1]-dopant->p_f_sites[0][1],
-               dopant->p_f_sites[isite][2]-dopant->p_f_sites[0][2],
+               fabs(dopant->p_f_sites[isite][0]-dopant->p_f_sites[0][0]) > 1e-6 ?
+                    dopant->p_f_sites[isite][0]-dopant->p_f_sites[0][0] : 0.0,
+               fabs(dopant->p_f_sites[isite][1]-dopant->p_f_sites[0][1]) > 1e-6 ?
+                    dopant->p_f_sites[isite][1]-dopant->p_f_sites[0][1] : 0.0,
+               fabs(dopant->p_f_sites[isite][2]-dopant->p_f_sites[0][2]) > 1e-6 ?
+                    dopant->p_f_sites[isite][2]-dopant->p_f_sites[0][2] : 0.0,
          site_info[dopant->site_id[isite]].mass < 0 ? site_info[(species+id)->site_id[0]].mass:
                     site_info[dopant->site_id[isite]].mass,
          site_info[dopant->site_id[isite]].charge == 1e6 ? site_info[(species+id)->site_id[0]].charge:
@@ -499,7 +513,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    (void)printf("%g  %g  %g  %g  %g  %g  1  1  1\n",
           a,b,c,alpha,beta,gamma);
 
-/* Followed by the molecules' centre of mass positions */
+/* Followed by the molecules' centres of mass */
    for(spec = species; spec < species+system->nspecies; spec++)
    {
       ipos = 0;
@@ -514,9 +528,10 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
 
          if( molname != NULL && !strcmp(strlower(spec->name), molname) && dopant->nmols > 0 ) /* Species being replaced */
          {
-            if( positions[ipos] == imol )  /* Match species position with list of substituted positions */
+            if( ipos < dopant->nmols && positions[ipos] == imol )  /* Match species position with list of substituted positions */
             {
                specname = dopant->name;
+               
                if( quat_valid)
                {
                   q_to_rot(quaternion, rot_mat);
@@ -529,12 +544,23 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
                }
                mat_vec_mul(hinv, (vec_mt*)spec_origin, (vec_mt*)spec_origin, 1);    /* Convert to fractional coords */
 
-               if( ((dopant->nsites > 1) && (spec->quat == NULL) && ! spec->framework) || dopant->rdof > 0)
-                  quat_gen(quaternion);
+               if( dopant->nsites > 1 && ! spec->framework )
+               {
+                  if( euler[0]+euler[1]+euler[2] != 3e6)   /* Use euler angles if specified */
+                  {
+                     quaternion[0] = cos(0.5*euler[1])*cos(0.5*(euler[0]+euler[2]));
+                     quaternion[1] = sin(0.5*euler[1])*cos(0.5*(euler[0]-euler[2]));
+                     quaternion[2] = sin(0.5*euler[1])*sin(0.5*(euler[0]-euler[2]));
+                     quaternion[3] = cos(0.5*euler[1])*sin(0.5*(euler[0]+euler[2]));
+                  }
+                  else if( spec->quat == NULL || dopant->rdof > 0)
+                     quat_gen(quaternion); /* Generate quaternions for poly replacing monoatomic species */
+		  quat_valid = true;
+               }
 
                if( site_info[0].pad )  /* Place dopant pf origin at solvent pf origin */
                {
-                  if( quat_valid)
+                  if( quat_valid )
                   {
                      q_to_rot(quaternion, rot_mat);
                      mat_vec_mul(rot_mat, (vec_mt*)pf_cofm, (vec_mt*)pf_origin, 1);
@@ -544,10 +570,11 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
                      for(i = 0; i < 3; i++)
                         pf_origin[i] = pf_cofm[i];
                   }
+               
                   mat_vec_mul(hinv, (vec_mt*)pf_origin, (vec_mt*)pf_origin, 1);    /* Convert to fractional coords */
 
                   for(i = 0; i < 3; i++)
-                     spec->c_of_m[imol][i] += (pf_origin[i] + spec_origin[i]);  /* Shift c_of_m to dopant's pf origin */
+                     spec->c_of_m[imol][i] += spec_origin[i]+pf_origin[i];  /* Shift c_of_m to dopant's pf origin */
                }
                if( dopant->nsites == 1 )
 		  quat_valid = false;
@@ -556,7 +583,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
             }
          }
 
-         (void)printf("%-*s  ", NLEN,specname);          /* Write species name and coords */
+         (void)printf("%-*s  ", namelength,specname);          /* Write species name and coords */
          for( i = 0; i < 3; i++)
            (void)printf("%9g ",
               spec->c_of_m[imol][i]+0.5 - floor(spec->c_of_m[imol][i]+0.5));
@@ -668,7 +695,7 @@ main(int argc, char **argv)
    int          intyp = 0;
    int          start, finish, inc;
    int          rflag, mflag, uflag;
-   int          i,j,irec;
+   int          i,j,k,irec;
    int          n_elem = -1;       /* No of records read from element data file */
    char         *filename = NULL, *dump_name = NULL;
    char         *dumplims = NULL;
@@ -676,8 +703,8 @@ main(int argc, char **argv)
    char         *elename = "elements.dat";
    char         *potname = NULL;
    char         *dopfile = NULL;
-   char         elefile[50];
-   char         potfile[50];
+   char         elefile[PATHLN] = "";
+   char         potfile[PATHLN] = "";
    char         *tempname;
    char         dumpcommand[256];
    int          dump_size;
@@ -707,6 +734,7 @@ main(int argc, char **argv)
    int          newsites=0;
    int          insw = -1;
    double       simbox[3];
+   real		euler[3];
    boolean      strict_match = OFF;
    boolean      cofm_shift = OFF;
    boolean      new_quat = OFF;
@@ -715,13 +743,15 @@ main(int argc, char **argv)
    control.page_length=1000000;
    dopspec.nmols = dopspec.rdof = 0;
    zero_real(h[0],9);
+   zero_real(charge,MAX_ATOMS);
+   euler[0] = euler[1] = euler[2] = 1e6;
+   strcpy(spgr,"P 1");
 
    comm = argv[0];
    if( strstr(comm, "ranquat") )
      new_quat = ON;
 
-
-   while( (c = getopt(argc, argv, "cr:s:d:t:m:n:u:o:w:q:z:e:y:a:hxkj") ) != EOF )
+   while( (c = getopt(argc, argv, "cr:s:m:n:u:o:w:q:z:e:y:a:hxkjf:t:p:") ) != EOF )
       switch(c)
       {
        case 'c':
@@ -776,6 +806,15 @@ main(int argc, char **argv)
          new_quat = ON;   /* Generate new quaternions for all polyatomic molecules */
          dopspec.rdof = 0;    /* New quaternions for dopant molecules redundant */
          break;
+       case 'f':
+         euler[0] = atof(optarg);   /* Euler angle 'phi' */
+         break;
+       case 't':
+         euler[1] = atof(optarg);   /* Euler angle 'theta' */
+         break;
+       case 'p':
+         euler[2] = atof(optarg);   /* Euler angle 'psi' */
+         break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error("failed to open file \"%s\" for output", optarg);
@@ -790,8 +829,9 @@ main(int argc, char **argv)
       fprintf(stderr,
              "Usage: %s [-r restart-file | -s sys-spec-file] ",comm);
       fputs("[-c] [-m solvent-species] ",stderr);
-      fputs("[-u solute-species] [-n no-of-substitutions] [-a solute-structure-file]",stderr);
-      fputs("[-w mass] [-q charge] [-z symbol] [-x] [-h] [-k] [-o output-file]\n",stderr);
+      fputs("[-u solute-species] [-n no-of-substitutions] [-w mass] [-q charge] [-z symbol] ",stderr);
+      fputs("[-a solute-structure-file] [-f] [-t] [-p] ",stderr);
+      fputs("[-x] [-h] [-k] [-o output-file]\n",stderr);
       exit(2);
    }
 
@@ -935,7 +975,7 @@ main(int argc, char **argv)
   
    if( dopspec.nmols > 0 )
    {
-      /* If dopant molecular structure file exists, read in data */
+      /* If dopant molecular structure file specified, read in data */
       if( dopfile != NULL )
       {
          if( !strncmp(strlower(read_ftype(dopfile)),"pdb",3) )
@@ -946,6 +986,12 @@ main(int argc, char **argv)
             else
                if( !strncmp(strlower(read_ftype(dopfile)),"shak",4) )
                   insw = SHAK;
+               else
+                  if( !strncmp(strlower(read_ftype(dopfile)),"xtl",3) )
+                     insw = XTL;
+                  else
+                     if( !strncmp(strlower(read_ftype(dopfile)),"xyz",3) )
+                        insw = XYZ;
 
          switch(insw)  /* Read in data according to format selected */
          {
@@ -958,12 +1004,21 @@ main(int argc, char **argv)
             case SHAK:
                ndopsites = read_shak(dopfile, h, label, p_f_coords, charge, title, simbox);
                break;
+            case XTL:
+               ndopsites = read_xtl(dopfile, h, label, p_f_coords, charge, title, spgr);
+               break;
+            case XYZ:
+               ndopsites = read_xyz(dopfile, h, label, p_f_coords, title);
+               break;
             default:
                error("Configuration file \"%s\" of unknown format", dopfile);
          }
 
          if( ndopsites < 0)
             message(NULLI,NULLP,WARNING,NOSUB,dopfile);
+
+         if( strcmp(spgr,"P 1")  && ndopsites > 0 )
+            ndopsites = sgexpand(MAX_ATOMS, ndopsites, p_f_coords, label, charge, spgr);
 
          if( det(h) != 0 )
              mat_vec_mul(h, p_f_coords, p_f_coords, ndopsites);   /* Convert to Cartesian coords */
@@ -992,20 +1047,34 @@ main(int argc, char **argv)
       dopspec.quat = NULL;
       dopspec.mass = 0.0;
 
+      /* Check Euler angles for polyatomic dopants */
+      if( ndopsites > 1)
+        if( euler[0] != 1e6 || euler[1] != 1e6 || euler[2] != 1e6)
+           for(i = 0; i < 3; i++)
+           {
+              if( euler[i] == 1e6)
+                 euler[i] = 0.0;
+	      else
+                 euler[i] = fmod(euler[i],360.0);
+              euler[i] *= PI/180.0;       /* Convert to radians */
+           }
+
       for( i=0; i < ndopsites; i++) /* Add polyatomic info to dopant species and site_info */
       {
          dopspec.site_id[i] = 0;   /* Initialize site id */
 
-         dopspec.p_f_sites[i][0] = p_f_coords[i][0];  /* Site coords */
-         dopspec.p_f_sites[i][1] = p_f_coords[i][1];
-         dopspec.p_f_sites[i][2] = p_f_coords[i][2];
+         for( k=0; k < 3; k++)
+            if( fabs(p_f_coords[i][k]) >= 1e-6)
+               dopspec.p_f_sites[i][k] = p_f_coords[i][k];  /* Site coords */
+            else
+               dopspec.p_f_sites[i][k] = 0.0;
 
          /* Compare sites in new molecule with existing sites */
          for( j=0; j < sys.max_id; j++)
          {
             if( strict_match )   /* Match both atom name and charge if strict match selected */
             {
-               if( !strcmp(label[i],(site_info+j)->name) && (abs((site_info+j)->charge-charge[i]) < 1e-10) )
+               if( !strcmp(label[i],(site_info+j)->name) && (fabs((site_info+j)->charge-charge[i]) < 1e-10) )
                {
                   dopspec.site_id[i] = j;
                   break;
@@ -1026,7 +1095,7 @@ main(int argc, char **argv)
          {
             if( strict_match )   /* Match both atom name and charge if strict match selected */
             {
-               if( !strcmp(label[i],(dopsite+j)->name) && (abs(charge[j]-charge[i]) < 1e-10) )
+               if( !strcmp(label[i],(dopsite+j)->name) && (fabs(charge[j]-charge[i]) < 1e-10) )
                {
                   dopspec.site_id[i] = sys.max_id+j;
                   break;
@@ -1104,7 +1173,7 @@ main(int argc, char **argv)
         if( new_quat && molname != NULL)
            ran_quat(&sys, species, molname);
         random_pos(maxmol, dopspec.nmols, pos);
-        sys_spec_out(&sys, species, &dopspec, molname, pos, totsite, new_pot);
+        sys_spec_out(&sys, species, &dopspec, molname, pos, totsite, euler,  new_pot);
       break;
     case 'r':                           /* Restart file                       */
         init_averages(sys.nspecies, restart_header.vsn,
@@ -1114,7 +1183,7 @@ main(int argc, char **argv)
         if( new_quat && molname != NULL)
            ran_quat(&sys, species, molname);
         random_pos(maxmol, dopspec.nmols, pos);
-        sys_spec_out(&sys, species, &dopspec, molname, pos, totsite, new_pot);
+        sys_spec_out(&sys, species, &dopspec, molname, pos, totsite, euler, new_pot);
       break;
     default:
       break;
