@@ -7,6 +7,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.17  92/06/11  20:31:49  keith
+ * Added file locking against multiple runs using same dump or backup files.
+ * 
  * Revision 1.16  91/08/15  18:12:06  keith
  * Modifications for better ANSI/K&R compatibility and portability
  * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
@@ -71,7 +74,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.16 91/08/15 18:12:06 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.17 92/06/11 20:31:49 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -174,7 +177,9 @@ char	*argv[];
 #ifdef SIGQUIT
    (void)signal(SIGQUIT, siglock);
 #endif
+#ifdef SIGABRT
    (void)signal(SIGABRT, siglock);
+#endif
 #ifdef PARALLEL
 # ifdef ardent
    MT_SET_THREAD_NUMBER(&nthreads);

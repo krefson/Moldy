@@ -1,7 +1,10 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.19 92/06/10 15:53:33 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.20 92/06/11 21:40:41 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.20  92/06/11  21:40:41  keith
+ * Added LOCKEX macro for system-dependent lock extension.
+ * 
  * Revision 1.19  92/06/10  15:53:33  keith
  * Added new potential type "generic" for Neal.
  * 
@@ -81,8 +84,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.19 $"
-#define		 REVISION_DATE    "$Date: 92/06/10 15:53:33 $"
+#define          REVISION         "$Revision: 1.20 $"
+#define		 REVISION_DATE    "$Date: 92/06/11 21:40:41 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -280,7 +283,7 @@ typedef quat_t	*quat_p;
 typedef real    mat_t[3][3];
 typedef vec_t	*mat_p;
 
-#if defined(ANSI) || defined(__STDC__)
+#if (defined(ANSI) || defined(__STDC__)) && !defined(VMS)
 typedef void	gptr;
 #else
 typedef char	gptr;
