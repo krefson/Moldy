@@ -38,6 +38,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: beeman.c,v $
+ * Revision 2.7  1994/06/08  13:09:29  keith
+ * Protected against possible bus error for systems with no
+ * rotational freedom by making all references to "quat" etc conditional
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -92,7 +96,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/beeman.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/beeman.c,v 2.7 1994/06/08 13:09:29 keith stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -138,7 +142,7 @@ quat_mp		quat;			/* Quaternions       (update)         */
 /******************************************************************************
  *   Constrain the quaternion derivatives				      *
  ******************************************************************************/
-static void constrain(quat, qdot ,n)
+void constrain(quat, qdot ,n)
 int		n;			/* Number of quaternions  (in)        */
 quat_mp		quat;			/* Quaternions            (in)        */
 quat_mp		qdot;			/* Quaternion derivatives (update)    */
@@ -248,10 +252,11 @@ system_mp	sys;			/* pointer to whole-system record     */
       beeman_1(sys->quat[0],sys->qdot[0],sys->qddot[0],sys->qddoto[0],
 	       4*sys->nmols_r);
       normalise(sys->quat, sys->nmols_r);
+   
    }
    if(control.const_pressure)
       beeman_1(sys->h[0], sys->hdot[0], sys->hddot[0], sys->hddoto[0], 9);
-   
+
    predict(sys->vel[0], sys->velp[0], sys->acc[0], 
            sys->acco[0], sys->accvo[0], 3*sys->nmols);
    if( sys->nmols_r > 0 )
@@ -259,10 +264,21 @@ system_mp	sys;			/* pointer to whole-system record     */
       predict(sys->qdot[0], sys->qdotp[0], sys->qddot[0], 
 	      sys->qddoto[0], sys->qddotvo[0], 4*sys->nmols_r);
       constrain(sys->quat, sys->qdotp, sys->nmols_r);
+   
+      if (control.const_temp)
+         predict(sys->ra, sys->rap, sys->radot, sys->radoto,
+                 sys->radotvo, sys->nspecies);
    }
    if(control.const_pressure)
       predict(sys->h[0], sys->hdotp[0], sys->hdot[0],
               sys->hddoto[0], sys->hddotvo[0], 9);
+
+   if (control.const_temp)
+      predict(sys->ta, sys->tap, sys->tadot, sys->tadoto,
+              sys->tadotvo, sys->nspecies);
+#ifdef DEBUG3
+   printf("Step1\n");
+#endif 
 }
    
 /******************************************************************************
@@ -281,8 +297,20 @@ system_mp	sys;			/* pointer to whole-system record     */
       beeman_2(sys->qdot[0], sys->qdot[0], sys->qddot[0], sys->qddoto[0],
 	    sys->qddotvo[0], 4*sys->nmols_r);
       constrain(sys->quat, sys->qdot, sys->nmols_r);
+
+      if (control.const_temp)
+         beeman_2(sys->ra, sys->ra, sys->radot, sys->radoto,
+                  sys->radotvo, sys->nspecies);
+
    }
    if(control.const_pressure)
       beeman_2(sys->hdot[0], sys->hdot[0], sys->hddot[0], sys->hddoto[0],
 	       sys->hddotvo[0], 9);
+
+   if (control.const_temp)
+      beeman_2(sys->ta, sys->ta, sys->tadot, sys->tadoto,
+               sys->tadotvo, sys->nspecies);
+#ifdef DEBUG3
+   printf("Step2\n");
+#endif 
 }

@@ -25,6 +25,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ * Revision 2.9  1994/07/12  16:20:26  keith
+ * Fixed bug whereby "dip_mom" left uninitialized for non-coulomb system.
+ *
  * Revision 2.8  1994/07/07  16:57:01  keith
  * Updated for parallel execution on SPMD machines.
  * Interface to MP library routines hidden by par_*() calls.
@@ -186,7 +189,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.8 1994/07/07 16:57:01 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.9 1994/07/12 16:20:26 keith stab $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -194,7 +197,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.8 199
 #include	<math.h>
 #include	"string.h"
 #include	"stddef.h"
-#if defined(DEBUG6) || defined(DEBUG7)
+#if defined(DEBUG10) || defined(DEBUG2)
 #include	<stdio.h>
 #endif
 /*========================== program include files ===========================*/
@@ -233,6 +236,12 @@ double          vdot();		       /* Fast vector dot product	      */
 void            vscale();	       /* Vector by constant multiply	      */
 double          vec_dist();	       /* normalised vector distance	      */
 void		thermalise();	       /* Randomize velocities to given temp  */
+void            hoover_tr();           /* Corrects forces due to thermostat   */
+void            hoover_rot();          /* Corrects forces due to thermostat   */
+double          gaussiant();           /* Return Force*vel                    */
+double          gaussianr1();          /* Return Torque*omega                 */
+double          gaussianr2();          /* Return omega*I*omega                */
+void            q_conj_mul();          /* Quat. conjugated x by quat. dot     */
 void	inhibit_vectorization();       /* Self-explanatory dummy              */
 #if defined(ANSI) || defined(__STDC__)
 gptr		*arralloc(size_mt,int,...); /* Array allocator		      */
@@ -261,7 +270,7 @@ extern int 	ithread, nthreads;
  *	bit 0:	scale temperature for each species separately.		      *
  *	bit 1:  scale rotational and translational velocities separately      *
  *      bit 2:	use rolling averages rather than instantaneous "temperatures" *
- *	bit 3:  don't scale at all, but re-inititlize from MB distribution.   *
+ *	bit 3:  don't scale at all, but re-initialize from MB distribution.   *
  ******************************************************************************/
 void
 rescale(system, species)
@@ -419,6 +428,7 @@ NOVECTOR
  ******************************************************************************/
 static vec_mp   v_tmp;
 static quat_mp  q_tmp;
+static real     *atmp;
 #define shuffle(a, ao, avo, tmp)	{tmp = avo; \
 					avo = ao; \
 					ao  = a; \
@@ -495,9 +505,16 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
    double          vol = det(sys->h);
    int             iter;
    mat_mt          ke_dyad, hinv;
-   quat_mp         qd_tmp;	       /* Temporary for velocities   	      */
+   quat_mp         qd_tmp;             /* Temporary for velocities   	      */
    vec_mp          acc_tmp, vel_tmp;   /* Temporaries for iteration	      */
    int		   nsitesxf, nmolsxf;  /* Count of non-framework sites, mols. */
+   double 	   *temp_value = dalloc(2*nspecies);
+   double          rtemp_mass, ttemp_mass;
+   double          ttemp = 0.0, rtemp = 0.0, alphat = 0.0, alphar = 0.0;
+   int             tdof=0, rdof=0;
+#ifdef DEBUG10
+   FILE            *ftempr;            /* File for temperature data           */
+#endif
 /*
  * Initialisation of distant potential constant - executed first time only
  */
@@ -685,7 +702,11 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
    shuffle(sys->qddot, sys->qddoto, sys->qddotvo, q_tmp);
    if (control.const_pressure)
       shuffle(sys->hddot, sys->hddoto, sys->hddotvo, v_tmp);
-
+   if (control.const_temp == 1)
+   {
+      shuffle(sys->tadot, sys->tadoto, sys->tadotvo, atmp);
+      shuffle(sys->radot, sys->radoto, sys->radotvo, atmp);
+   }
    for (spec = species; spec < &species[nspecies]; spec++)
    {
       inhibit_vectorization();      /* Inhibits (incorrect) vectorization */
@@ -716,7 +737,189 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
       rahman(stress, sys->h, sys->hddot, ke_dyad,
 	     control.pressure, control.pmass, control.strain_mask);
    }
+/*
+ * Nose-Hoover thermostat added by VVMurashov , started on 20.10.95
+ */
+   if (control.const_temp == 1)
+   {
+      for(ispec = 0; ispec < nspecies; ispec++)
+      {
+	 temp_value[2*ispec  ] = value(tt_n,ispec);
+	 temp_value[2*ispec+1] = value(rt_n,ispec);
+      }
+   /*
+    *  Get average of translational and rotational temps (per species)
+    */
+      if( ! (control.scale_options & 0x2) )
+      {   
+         for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+         {
+	    if( ! spec->framework )
+	       temp_value[2*ispec  ] = temp_value[2*ispec+1] = 
+	          (3*temp_value[2*ispec  ] + spec->rdof*temp_value[2*ispec+1]) /
+		     (3+spec->rdof);
+         }
+         ttemp_mass = rtemp_mass = 0.5*(control.ttmass + control.rtmass);
+      }
+      else {
+         ttemp_mass = control.ttmass;
+         rtemp_mass = control.rtmass;
+   /*
+    * ttemp_mass and rtemp_mass are used here to make easier introduction
+    * of different thermal masses for different species later on, provided such
+    * necessity rises
+    */
+      }
+	 
+   /*
+    *  Perform average over species if thermostatting together.
+    */
+      if( ! (control.scale_options & 0x1) )
+      {
+         for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+	    if( ! spec->framework )
+	    {
+	       ttemp += 3*spec->nmols*temp_value[2*ispec  ]; 
+	       tdof += 3*spec->nmols;
+	       rtemp += spec->rdof*spec->nmols*temp_value[2*ispec+1]; 
+	       rdof += spec->rdof*spec->nmols;
+	    }
+         ttemp /= tdof;
+         if( rdof > 0 )
+	    rtemp /= rdof;
+         for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+	    if( ! spec->framework )
+	    {
+	       temp_value[2*ispec  ] = ttemp;
+	       temp_value[2*ispec+1] = rtemp;
+	    }
+      }
+      /*
+       * It might be necessary to zero total momenta of species of each type
+       * if thermostating together
+       */
 
+   /*
+    *  Find alphadot for Nose-Hoover thermostat
+    */
+      for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+      {
+	 if( ! spec->framework )
+	 {
+            sys->tadot[ispec] = (temp_value[2*ispec] - control.temp) /
+                                 ttemp_mass;
+            sys->radot[ispec] = (temp_value[2*ispec+1] - control.temp) /
+                                 rtemp_mass;
+         }
+      }
+   }   
+/*
+ * Gaussian thermostat added by VVM , started on 3/11/95
+ * General formular alpha = alpha1/alpha2, where alpha1 = SUM force*vel
+ * and alpha2 = SUM mass * vel ^ 2. Sys->tap(rap) is used to store 
+ * alpha1's and temp_value is used to store alpha2's temporarily.
+ */
+   if (control.const_temp == 2)
+   {
+      vel_tmp = ralloc(sys->nmols);
+      mat_vec_mul(sys->h, sys->velp, vel_tmp, sys->nmols);
+      for(ispec = 0, spec = species, j = 0; ispec < nspecies; ispec++, spec++)
+      {
+	 if( ! spec->framework )
+         {
+            sys->tap[ispec] = gaussiant(force[ispec], vel_tmp+j,  
+                                       spec->nmols);
+	    temp_value[2*ispec] = spec->mass *  gaussiant(vel_tmp+j, vel_tmp+j,
+                                       spec->nmols);
+                                           
+	    if (spec->rdof > 0)
+            {
+               qd_tmp = qalloc(spec->nmols);
+               q_conj_mul(spec->quat, spec->qdotp, qd_tmp, spec->nmols); 
+	       vscale(4*spec->nmols, 2.0, qd_tmp[0], 1);
+               sys->rap[ispec] = gaussianr1(torque[spec-species], qd_tmp[0],
+                                          spec->nmols);
+	       temp_value[2*ispec+1] = gaussianr2(qd_tmp[0],  
+                                                  spec->inertia, spec->nmols);
+               xfree(qd_tmp);
+            } 
+            else 
+            {
+               temp_value[2*ispec+1] = 0.0;
+               sys->rap[ispec] = 0.0;
+            }
+         }
+         j+= spec->nmols;
+      }
+   /*
+    *  Get average of translational and rotational alpha's (per species)
+    */
+      if( ! (control.scale_options & 0x2) )
+         for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+	    if( ! spec->framework )
+            {
+               sys->tap[ispec] = sys->rap[ispec] += sys->tap[ispec]; 
+	       temp_value[2*ispec] = temp_value[2*ispec+1] += 
+	                             temp_value[2*ispec];
+            }
+   /*
+    *  Perform average over species if thermostatting together.
+    */
+      if( ! (control.scale_options & 0x1) )
+      {
+         ttemp = 0.0;
+         rtemp = 0.0;
+         for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+	    if( ! spec->framework )
+	    {
+	       ttemp += temp_value[2*ispec  ]; 
+	       rtemp += temp_value[2*ispec+1]; 
+               alphat += sys->tap[ispec];
+               alphar += sys->rap[ispec];
+	    }
+         for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+         {
+	    if( ! spec->framework )
+	    {
+	       temp_value[2*ispec  ] = ttemp;
+	       temp_value[2*ispec+1] = rtemp;
+               sys->tap[ispec] = alphat;
+               sys->rap[ispec] = alphar;
+	    }
+	 }
+      }
+      /*
+       * It might be necessary to zero total momenta of species of each type
+       * if thermostating together
+       */
+
+   /*
+    * Finally find alpha = alpha1/alpha2
+    */
+      for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+	 if( ! spec->framework )
+	 {
+            if (temp_value[2*ispec] != 0.0)
+               sys->tap[ispec] /= temp_value[2*ispec];
+            else  sys->tap[ispec] = 0.0;
+                                       
+            if (temp_value[2*ispec+1] != 0.0)
+               sys->rap[ispec] /= temp_value[2*ispec+1];
+            else  sys->rap[ispec] = 0.0;
+                
+         }
+   xfree(vel_tmp);
+   }
+   tfree((gptr*)temp_value);
+#ifdef DEBUG10
+   if ((ftempr = fopen("temper.asc", "a"))==NULL)
+      printf("File for temperature data could not be opened\n");
+   fprintf(ftempr, "%4d ", control.istep);
+   for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+      if( ! spec->framework )
+         fprintf(ftempr, " %12.4f %8.4f\n",value(tt_n,ispec),value(rt_n,ispec));
+   close(ftempr);
+#endif
 /*
  * Iterate velocity dependant parts with beeman step 2 until convergence
  */
@@ -724,16 +927,45 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
    {
       iter = 0;
       qd_tmp = qalloc(sys->nmols_r);
+      acc_tmp = ralloc(sys->nmols_r);
+
+      if (control.const_temp == 1)
+         beeman_2(sys->ra, sys->rap, sys->radot, sys->radoto,
+                  sys->radotvo, nspecies);
+
+#ifdef DEBUG3
+   printf("ra %8.4f rap %8.4f radot %8.4f radoto %8.4f\n", sys->ra[0],
+						 sys->rap[0],
+						 sys->radot[0],
+						 sys->radoto[0]);
+#endif
+
       do
       {
 	 iter++;
 	 if(iter > ITER_MAX)
 	    message(NULLI, NULLP, FATAL, NCNVRG, iter, 
 		    vec_dist(qd_tmp[0], sys->qdotp[0], 4 * sys->nmols_r));
-	 for (spec = species; spec < &species[nspecies]; spec++)
+         for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
 	    if (spec->rdof > 0)
-	       euler(torque[spec-species], spec->quat, spec->qdotp,
+            {
+               if (control.const_temp)
+               {
+        /****************************************************************
+         *  VVM uses qd_tmp as a temp array to store angular velocities *
+         ****************************************************************/
+                  q_conj_mul(spec->quat, spec->qdotp, qd_tmp, spec->nmols); 
+		  vscale(4*spec->nmols, 2.0, qd_tmp[0], 1);
+                  hoover_rot(sys->rap[ispec], spec->inertia, 
+                             torque[spec-species], acc_tmp[0],
+                             qd_tmp[0], spec->nmols);
+               }
+               else
+	          memcp(acc_tmp[0], torque[spec-species], 3 * spec->nmols * 
+                        sizeof(real)); 
+	       euler(acc_tmp[0], spec->quat, spec->qdotp,
 		     spec->qddot, spec->inertia, spec->nmols);
+            }
 	 memcp(qd_tmp[0], sys->qdotp[0], 4 * sys->nmols_r * sizeof(real));
 	 beeman_2(sys->qdot[0], sys->qdotp[0], sys->qddot[0], sys->qddoto[0],
 		  sys->qddotvo[0], 4 * sys->nmols_r);
@@ -742,17 +974,45 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
       printf("Quaternion derivatives converged in %d iterations \n", iter);
 #endif
       xfree(qd_tmp);
+      xfree(acc_tmp);
    }
-   if (control.const_pressure)
+   if (control.const_pressure || control.const_temp)
    {
       acc_tmp = ralloc(sys->nmols);
       vel_tmp = ralloc(sys->nmols);
-      beeman_2(sys->hdot[0], sys->hdotp[0], sys->hddot[0], sys->hddoto[0],
-	       sys->hddotvo[0], 9);
+      if (control.const_pressure)
+         beeman_2(sys->hdot[0], sys->hdotp[0], sys->hddot[0], sys->hddoto[0],
+	          sys->hddotvo[0], 9);
+      if (control.const_temp == 1)
+         beeman_2(sys->ta, sys->tap, sys->tadot, sys->tadoto,
+                  sys->tadotvo, nspecies);
+#ifdef DEBUG3
+   printf("ta %8.4f tap %8.4f tadot %8.4f tadoto %8.4f\n", sys->ta[0],
+						 sys->tap[0],
+						 sys->tadot[0],
+						 sys->tadoto[0]);
+#endif
       do
       {
-	 parinello(sys->h, sys->hdotp, sys->velp, sys->acc, acc_tmp,
-		   sys->nmols);
+         if (control.const_pressure)
+	    parinello(sys->h, sys->hdotp, sys->velp, sys->acc, acc_tmp,
+		      sys->nmols);
+         else 
+	    memcp(acc_tmp[0], sys->acc[0], 3 * sys->nmols * sizeof(real));
+
+         if (control.const_temp)
+         {
+            for (ispec = 0, j = 0, spec = species; ispec < nspecies; ispec++,
+                 spec++)
+            {
+	       if( ! spec->framework )
+	       {
+                 hoover_tr(sys->tap[ispec], acc_tmp+j, acc_tmp+j, 
+                         sys->velp+j, spec->nmols);
+               }
+               j+=spec->nmols;
+            }
+         }
 	 memcp(vel_tmp[0], sys->velp[0], 3 * sys->nmols * sizeof(real));
 	 beeman_2(sys->vel[0], sys->velp[0], acc_tmp[0], sys->acco[0],
 		  sys->accvo[0], 3 * sys->nmols);
@@ -773,6 +1033,7 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
 /*
  * Final MD update step
  */
+
    step_2(sys);
 
 /*
@@ -784,6 +1045,7 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
       if (spec->rdof > 0)
 	 mean_square(torque[ispec], meansq_f_t[ispec][1], spec->nmols);
    }
+
    if( ithread == 0 )
    {
 /*
@@ -799,7 +1061,7 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
       if (control.dump_interval > 0 && control.dump_level != 0 &&
 	 control.istep >= control.begin_dump &&
 	  (control.istep - control.begin_dump) % control.dump_interval == 0)
-	 dump(sys, force_base, torque_base, stress, pe[0] + pe[1], restart_header,
+       dump(sys, force_base, torque_base, stress, pe[0] + pe[1], restart_header,
 	      backup_restart);
    }
 /*

@@ -37,6 +37,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ * Revision 2.8  1994/07/07  17:04:29  keith
+ * Updated for parallel execution on SPMD machines.
+ * Interface to MP library routines hidden by par_*() calls.
+ * Compile with -DSPMD to activate.
+ *
  * Revision 2.7  1994/06/08  13:15:58  keith
  * Changed all timestep-related parameters to type "long". This means
  * that 16-bit DOS compilers can do more than 32767 timesteps.
@@ -159,7 +164,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/output.c,v 2.7 1994/06/08 13:15:58 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/output.c,v 2.8 1994/07/07 17:04:29 keith stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -527,16 +532,49 @@ restrt_mt	*restart_header;
 	    new_line();
 	 }
       }
-      format_dbl("Applied Temperature",control.temp,"K");
       format_long("No. steps between scalings",control.scale_interval);
       format_long("End scaling at step",control.scale_end);
    }
+   if((control.scale_interval > 0) || (control.const_temp == 1))
+      format_dbl("Applied Temperature",control.temp,"K");
+   if(control.const_temp)
+   {
+      (void)printf(" %s thermostat will be used", control.const_temp == 1
+                     ? "Nose-Hoover" : "Gaussian");
+      new_line();
+      if( control.scale_options & 0x3)
+      {
+         (void)printf(" (for ");
+         if( control.scale_options & 0x2 )
+         {
+	    (void)printf("transl. and rotl.");
+	    if( control.scale_options & 0x1 )
+	       (void)printf(" and ");
+         }
+         if( control.scale_options & 0x1 )
+	    (void)printf("each species");
+	    
+	 (void)printf(" individually)");
+	 new_line();
+      }
+      if(control.const_temp == 1)
+      {
+         format_dbl("Translational temperature mass parameter ",control.ttmass,
+                     TMUNIT_N);
+         format_dbl("Rotational temperature mass parameter    ",control.rtmass,
+                     TMUNIT_N);
+      }
+   }
+
    if(control.const_pressure)
    {
       (void)printf(" Constant stress ensemble will be used");
       new_line();
       format_dbl("Applied pressure", CONV_P*control.pressure,CONV_P_N);
       format_dbl("Mass parameter W",control.pmass,MUNIT_N);
+
+      if(control.const_temp == 2)
+         message(NULLI, NULLP, WARNING, GANDP);
    }
    format_dbl("Interaction cut-off",control.cutoff,LUNIT_N);
    if(control.alpha != 0.0)

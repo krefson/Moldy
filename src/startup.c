@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: startup.c,v $
+ * Revision 2.9  1995/01/03  13:56:39  keith
+ * Added auto-generation of Ewald Sum parameters using Fincham's formulae.
+ *
  * Revision 2.8  1994/07/07  16:57:01  keith
  * Updated for parallel execution on SPMD machines.
  * Interface to MP library routines hidden by par_*() calls.
@@ -219,7 +222,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 2.8 1994/07/07 16:57:01 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/startup.c,v 2.9 1995/01/03 13:56:39 keith stab $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -299,6 +302,7 @@ CONST match_mt	match[] = {
 {"text-mode-save",   "%d",   "0",            (gptr*)&control.print_sysdef},
 {"new-sys-spec",     "%d",   "0",            (gptr*)&control.new_sysdef},
 {"scale-options"   , "%d",   "0",            (gptr*)&control.scale_options},
+{"therm-options"   , "%d",   "0",            (gptr*)&control.scale_options},
 {"surface-dipole",   "%d",   "0",            (gptr*)&control.surface_dipole},
 {"lattice-start",    "%d",   "0",            (gptr*)&control.lattice_start},
 {"sys-spec-file",    SFORM,  "",             (gptr*)control.sysdef},
@@ -316,6 +320,7 @@ CONST match_mt	match[] = {
 {"page-length",      "%d",   "44",           (gptr*)&control.page_length},
 {"scale-interval",   "%ld",  "10",           (gptr*)&control.scale_interval},
 {"const-pressure",   "%d",   "0",            (gptr*)&control.const_pressure},
+{"const-temp",       "%d",   "0",            (gptr*)&control.const_temp},
 {"reset-averages",   "%d",   "0",            (gptr*)&control.reset_averages},
 {"scale-end",        "%ld",  "1000000",      (gptr*)&control.scale_end},
 {"begin-average",    "%ld",  "1001",         (gptr*)&control.begin_average},
@@ -333,11 +338,13 @@ CONST match_mt	match[] = {
 {"temperature",      "%lf",  "0.0",          (gptr*)&control.temp},
 {"pressure",         "%lf",  "0.0",          (gptr*)&control.pressure},
 {"w",                "%lf",  "100.0",        (gptr*)&control.pmass},
-{"cutoff",           "%lf",  "0.0",          (gptr*)&control.cutoff},
+{"rtmass",           "%lf",  "0.01",         (gptr*)&control.rtmass},
+{"ttmass",           "%lf",  "0.01",         (gptr*)&control.ttmass},
+{"cutoff",           "%lf",  "10.0",         (gptr*)&control.cutoff},
 {"subcell",          "%lf",  "0.0",          (gptr*)&control.subcell},
 {"density",          "%lf",  "1.0",          (gptr*)&control.density},
-{"alpha",            "%lf",  "0.0",          (gptr*)&control.alpha},
-{"k-cutoff",         "%lf",  "0.0",          (gptr*)&control.k_cutoff},
+{"alpha",            "%lf",  "0.3",          (gptr*)&control.alpha},
+{"k-cutoff",         "%lf",  "2.0",          (gptr*)&control.k_cutoff},
 {"rdf-limit",        "%lf",  "10.0",         (gptr*)&control.limit},
 {"cpu-limit",        "%lf",  "1.0e20",       (gptr*)&control.cpu_limit},
 {"mass-unit",        "%lf",  "1.6605655e-27",(gptr*)&input_unit.m},
@@ -541,6 +548,18 @@ spec_mt	species[];
    zero_real(system->acc[0],   3*system->nmols);
    zero_real(system->acco[0],  3*system->nmols);
    zero_real(system->accvo[0], 3*system->nmols);
+
+   zero_real(system->ta,      system->nspecies);
+   zero_real(system->tap,     system->nspecies);
+   zero_real(system->tadot,   system->nspecies);
+   zero_real(system->tadoto,  system->nspecies);
+   zero_real(system->tadotvo, system->nspecies);
+    
+   zero_real(system->ra,      system->nspecies);
+   zero_real(system->rap,     system->nspecies);
+   zero_real(system->radot,   system->nspecies);
+   zero_real(system->radoto,  system->nspecies);
+   zero_real(system->radotvo, system->nspecies);
    
    for (spec = species; spec < species+system->nspecies; spec++)
    {
@@ -739,6 +758,19 @@ spec_mt	species[];
    printf(afmt,"c_of_m",system->c_of_m,"vel",system->vel,"velp",system->velp,
           "acc",system->acc,"acco",system->acco,"accvo",system->accvo);
 #endif
+
+   system->ta      = dalloc(system->nspecies);
+   system->tap     = dalloc(system->nspecies);
+   system->tadot   = dalloc(system->nspecies);
+   system->tadoto  = dalloc(system->nspecies);
+   system->tadotvo = dalloc(system->nspecies);
+
+   system->ra      = dalloc(system->nspecies);
+   system->rap     = dalloc(system->nspecies);
+   system->radot   = dalloc(system->nspecies);
+   system->radoto  = dalloc(system->nspecies);
+   system->radotvo = dalloc(system->nspecies);
+
    if(system->nmols_r > 0)
    {
       system->quat   = qalloc(system->nmols_r);
@@ -747,15 +779,12 @@ spec_mt	species[];
       system->qddot  = qalloc(system->nmols_r);
       system->qddoto = qalloc(system->nmols_r);
       system->qddotvo= qalloc(system->nmols_r);
-#ifdef	DEBUG
-   printf(" *D* System Dynamic variables (all %d x 4 reals)\n",system->nmols);
-   printf(afmt,"quat",system->quat, "qdot",system->qdot, "qdotp",system->qdotp,
-       "qddot",system->qddot,"qddoto",system->qddoto,"qddotvo",system->qddotvo);
-#endif
    }
    else
       system->quat = system->qdot = system->qdotp = 
 	             system->qddot = system->qddoto = system->qddotvo= 0;
+
+
    system->h       = ralloc(3);
    system->hdot    = ralloc(3);
    system->hdotp   = ralloc(3);
@@ -809,6 +838,21 @@ spec_mt	species[];
 	              spec->qddot = spec->qddoto = spec->qddotvo= 0;
       nmol_cum += spec->nmols;
    }
+   /*
+    * These may not be initialised if reading an old restart file,
+    * so zero them here for safety.
+    */
+   zero_real(system->ta,      system->nspecies);
+   zero_real(system->tap,     system->nspecies);
+   zero_real(system->tadot,   system->nspecies);
+   zero_real(system->tadoto,  system->nspecies);
+   zero_real(system->tadotvo, system->nspecies);
+    
+   zero_real(system->ra,      system->nspecies);
+   zero_real(system->rap,     system->nspecies);
+   zero_real(system->radot,   system->nspecies);
+   zero_real(system->radoto,  system->nspecies);
+   zero_real(system->radotvo, system->nspecies);
 }
 /******************************************************************************
  *  Interpolate_derivatives & interp.    Interp is a quadratic interpolation  *
@@ -855,6 +899,8 @@ double		step, step1;
       interp(ratio, sys->qddot[0], sys->qddoto[0],sys->qddotvo[0], 
 	     4*sys->nmols_r);
    interp(ratio, sys->hddot[0], sys->hddoto[0],sys->hddotvo[0], 9);
+   interp(ratio, sys->tadot[0], sys->tadoto[0], sys->tadotvo[0], sys->nspecies);
+   interp(ratio, sys->radot[0], sys->radoto[0], sys->radotvo[0], sys->nspecies);
 }
 /******************************************************************************
  *  check_sysdef.   		Read in system specification from the restart *
@@ -1071,7 +1117,8 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
 		    control.roll_interval, control.roll_interval,&av_convert);
       if(control.rdf_interval > 0)
          init_rdf(system);		/* Prepare to calculate rdf	      */
-      read_restart(backup, system, av_convert);	/* Saved dynamic vars etc     */
+      read_restart(backup, backup_header.vsn, system, av_convert); 
+                                        /* Saved dynamic vars etc             */
       convert_averages(control.roll_interval, control.roll_interval,av_convert);
       (void)fclose(backup);
       (*backup_restart)++;
@@ -1110,7 +1157,7 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
       else	
          skew_start(system, *species);		/* Start from skew lattice    */
       thermalise(system, *species);		/* Initialise velocities      */
-
+      
       init_averages(system->nspecies, (char*)0,
 		    control.roll_interval, control.roll_interval ,&av_convert);
       if( control.rdf_interval > 0 )
@@ -1190,9 +1237,11 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
 		    control.roll_interval, old_roll_interval, &av_convert);
       if(control.rdf_interval > 0)
          init_rdf(system);		/* Prepare to calculate rdf	      */
-      read_restart(restart, system, av_convert);  /* Saved dynamic vars etc    */
+      read_restart(restart, restart_header->vsn, system, av_convert);  
+                                        /* Saved dynamic vars etc             */
       convert_averages(control.roll_interval, old_roll_interval, av_convert);
       control.reset_averages = 0;                /* This flag never propagated.*/
+
       if(control.step != old_step)
          interpolate_derivatives(system, old_step, control.step);
       for(i = 0; i < 9; i++)		/* Zap cell velocities if constrained */
