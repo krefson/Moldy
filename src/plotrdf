@@ -98,6 +98,7 @@ $be = 0;
 $hdr = "";
 $nrdfblocks=0;
 $firstblock = 1;
+$iline=0;
 while ( <> ) {
     #
     # Reading phase
@@ -124,42 +125,42 @@ while ( <> ) {
 	    @rdf = ();
 	    $hdr = "";
 	}
-    }
-    # 
-    # Record column header and binwidth
-    #
-    $hdr=$1 if (/^\s([^\s]+-[^\s]+) RDF$/);
-    if  (/^\sRadial Distribution Functions\sBin width=([0-9.]+)$/)
-    {
-	$binw=$1 ;
-	$nrdfblocks++;
-    }
-    #
-    # Record data block
-    #
-    if ( /^[0-9.e ]+/ ) {
-	chop;
-	@line = split;
-	@rdf = (@rdf, @line);
-    }
-    #
-    # RDF block is delimited by lined of underscores
-    #
-    if ( /^_+$/) {
-	if ($be == 0) {
-	    @rdf=();
-	    $be++;
-	} else {
-	    #
-	    # End of RDF block.  Print out results
-	    #
-	    $be = 0;
-	    $firstblock = 0;
-	    if( ! $aflag ) {
-		rdfout(\%rdflist, $binw, $plotfd, 1.0);
-		gpout([keys %rdflist], $plotfile) if ($gpflag);
+	# 
+	# Record column header and binwidth
+	#
+	$hdr=$1 if (/^\s([^\s]+-[^\s]+) RDF$/);
+	if  (/^\sRadial Distribution Functions\sBin width=([0-9.]+)$/)
+	  {
+	      $binw=$1 ;
+	      $nrdfblocks++;
+	  }
+	#
+	# Record data block
+	#
+	if ( /^[0-9.e ]+/ ) {
+	    chop;
+	    @line = split;
+	    @rdf = (@rdf, @line);
+	}
+	#
+	# RDF block is delimited by lined of underscores
+	#
+	if ( /^_+$/) {
+	    if ($be == 0) {
+		@rdf=();
+		$be++;
+	    } else {
+		#
+		# End of RDF block.  Print out results
+		#
+		$be = 0;
+		$firstblock = 0;
+		if( ! $aflag ) {
+		    rdfout(\%rdflist, $binw, $plotfd, 1.0);
+		    gpout([keys %rdflist], $plotfile) if ($gpflag);
+		}
+		
 	    }
-	
 	}
     }
 }
