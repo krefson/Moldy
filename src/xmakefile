@@ -184,8 +184,10 @@ FIGTEXPS=	fig_arralloc.ftx fig_dostep-a.ftx fig_dostep-b.ftx \
                 fig_skewstart-eepic.ftx fig_startup-a-eepic.ftx \
 		fig_startup-b-eepic.ftx
 
+FIGS= $(FIGTEXPS:%=figures/%)
+
 DOC=		READ.ME BENCHMARK COPYING RELNOTES moldy.tex moldy.bbl \
-		$(FIGTEXPS) moldy.sty moldy.perl
+		$(FIGS) moldy.sty moldy.perl
 
 VMSBUILD=	compile_moldy.com link_moldy.com defcomm.com\
 		compile_utils.com link_utils.com compile.com
@@ -221,7 +223,7 @@ mdavpos:	mdavpos.o $(SHAKOBJS) $(GETOPT)
 
 utilities:	$(UTILS) $(UTILS2)
 
-$(FIGTEXPS):	
+$(FIGS):	
 		(set -x;cd figures; \
 		 transfig -L pstex -m 0.66; \
 		 $(MAKE); \
@@ -310,7 +312,7 @@ tags:		$(CFILES) $(HFILES)
 
 clean:		
 		$(RM) $(OFILES) $(LFILES) moldy $(UTILS) $(UTILS2) \
-			mdshak.o msd.o mdavpos.o moldy.dvi moldy.toc moldy.log
+			mdshak.o msd.o mdavpos.o moldy.ps moldy.dvi moldy.toc moldy.log
 
 spotless:	
 		$(MAKE) clean
@@ -352,10 +354,10 @@ moldy.shar.Z:	moldy.shar
 
 moldy.zip:	$(CFILES) $(HFILES)  Makefile xmakefile \
 		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
-		$(ZIP) -l moldy.zip\
+		$(ZIP) -l -q moldy.zip\
 		$(CFILES)  $(HFILES) Makefile xmakefile \
 		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD);\
-		$(ZIP) -r -j moldy.zip $(W32BIN)
+		$(ZIP) -r -j  -q moldy.zip $(W32BIN)
 
 cray:		$(CFILES) $(HFILES)  
 		./cray_make $(CFILES)  $(HFILES) > cray.job
@@ -390,18 +392,18 @@ moldy.com.Z:	moldy.com
 		compress moldy.com
 
 moldy.ps:	moldy.dvi
-		dvips -t a4 moldy -o moldy.ps
+		TEXINPUTS=figures:: dvips -t a4 moldy -o moldy.ps
 
-moldy.dvi:	moldy.tex moldy.bbl $(FIGTEXPS)
-		latex moldy
-		latex moldy
+moldy.dvi:	moldy.tex moldy.bbl $(FIGS)
+		TEXINPUTS=figures:: latex moldy
+		TEXINPUTS=figures:: latex moldy
 		@touch moldy.bbl
 
 moldy.bbl:	moldy.aux
 		-bibtex moldy
 
 moldy.aux:	moldy.tex
-		latex moldy
+		TEXINPUTS=figures:: latex moldy
 
 $(LFILES):	$(HFILES)
 
@@ -439,7 +441,7 @@ force.o:	force.c structs.h defs.h
 #
 #  Rule for checking out source under RCS
 #
-$(CFILES) $(HFILES) $(EXTRA0) moldy.tex BENCHMARK COPYING READ.ME xmakefile:
+$(CFILES) $(HFILES) $(EXTRA0) moldy.tex moldy.sty BENCHMARK COPYING READ.ME xmakefile:
 	co $@
 
 ewald-RIL.c:
