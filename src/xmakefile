@@ -5,75 +5,92 @@ SHELL=/bin/sh
 #
 #  USE_XDR.  Uncomment this line to enable XDR support.
 XDR=-DUSE_XDR
+#
+#  Parallel library support.  Uncomment as needed, and set paths to
+#  include directories and library paths.
+#
+# TCGMSG library
+#PARLIBC=-DSPMD -DTCGMSG -I/usr/local/include/tcgmsg
+#PARLIBL=-L/usr/local/lib -ltcgmsg
+# BSP library
+#PARLIBC=-DSPMD -DBSP
+#PARLIBL=-L/usr/local/lib -lbsp
+# MPI library
+#PARLIBC=-DSPMD -DMPI -I/usr/local/include/mpi
+#PARLIBL=-L/usr/local/lib -lmpi
 #  **** MSDOS with Turbo C ****
 #CC=tcc
 #CFLAGS= -A -DANSI_LIBS -f287 -mh -O -Z -G $(CFLAGS0)
 #GETOPT=getopt.o
 #LDFLAGS1= -mh $(LDFLAGS0)
 #  **** Scalar machines using default C compiler ****
-CFLAGS=	-O  $(XDR) $(CFLAGS0)
+CFLAGS=	-O  $(XDR) $(PARLIBC) $(CFLAGS0)
 #LDFLAGS= $(LDFLAGS0)
 #INLINE=
 #  **** Scalar machines using gcc - can compile with -g ****
 #CC=	gcc
-#CFLAGS= -O2 -ffast-math $(XDR) $(CFLAGS0)
+#CFLAGS= -O2 -ffast-math $(XDR) $(PARLIBC) $(CFLAGS0)
 #CFLAGSAUX=-funroll-loops
-#LDFLAGS= $(LDFLAGS0)
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #INLINE=
 #  **** IBM RS6000 ****
 #CC=c89
-#CFLAGS=	-O -DRS6000 $(XDR) $(CFLAGS0)
-#LDFLAGS= $(LDFLAGS0)
+#CFLAGS=	-O3 -DRS6000 $(XDR) $(PARLIBC) $(CFLAGS0)
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #INLINE=
-#  **** MIPS for SGI etc ****
-#CFLAGS=	-O2 -mips2  $(XDR) $(CFLAGS0)
-#LDFLAGS= $(LDFLAGS0) -lsun -lmalloc -lfastm
+#  **** MIPS for SGI, IRIX 5 ****
+#CFLAGS=	-O2 -mips2  $(XDR) $(PARLIBC) $(CFLAGS0)
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lsun -lmalloc -lfastm
+#INLINE=
+##  **** MIPS for SGI, IRIX 6/TFP ****
+#CFLAGS= -DANSI_LIBS -O2 -mips4 -woff 1174 $(XDR) $(PARLIBC) $(CFLAGS0)
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #INLINE=
 #  **** Sun (unbundled) CC -- fastest options & better than gcc 2.0
 #  About the same as gcc-2.3.3.
-#CFLAGS= -cg89 -libmil -dalign  -O4 $(XDR) $(CFLAGS0)
+#CFLAGS= -cg89 -libmil -dalign  -O4 $(XDR) $(PARLIBC) $(CFLAGS0)
 #CFLAGS2= 
-#LDFLAGS= $(LDFLAGS0)
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #INLINE=
 #  **** gcc on Suns with unbundled ANSI CC ****
 #CC=	gcc
-#CFLAGS= -O2 -ffast-math -DANSI_LIBS $(XDR) $(CFLAGS0)
+#CFLAGS= -O2 -ffast-math -DANSI_LIBS $(PARLIBC) $(XDR) $(CFLAGS0)
 #CFLAGSAUX=-funroll-loops
-#LDFLAGS= -L/usr/lang/SC1.0/ansi_lib -lansi $(LDFLAGS0)
+#LDFLAGS= -L/usr/lang/SC1.0/ansi_lib -lansi $(PARLIBL) $(LDFLAGS0)
 #INLINE=
 #  **** Solaris 2 using gcc  ****
 #CC=	gcc
-#CFLAGS= -O2 -ffast-math -DANSI_LIBS $(XDR) $(CFLAGS0)
+#CFLAGS= -O2 -ffast-math -DANSI_LIBS $(PARLIBC) $(XDR) $(CFLAGS0)
 #CFLAGSAUX=-funroll-loops
-#LDFLAGS= $(LDFLAGS0) -lnsl
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lnsl
 #INLINE=
 #  **** DEC Alpha ****
-#CFLAGS=	-O2 $(XDR) $(CFLAGS0) -D_FASTMATH -DANSI_LIBS -std
+#CFLAGS=	-O2 $(XDR) $(PARLIBC) $(CFLAGS0) -D_FASTMATH -DANSI_LIBS -std
 #CFLAGS2=
-#LDFLAGS= $(LDFLAGS0)
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #  **** HP 700 ****
-#CFLAGS=	+O3 +Om1 -J $(XDR) $(CFLAGS0)
+#CFLAGS=	+O3 +Om1 -J $(XDR) $(PARLIBC) $(CFLAGS0)
 #CFLAGS2=
-#LDFLAGS= $(LDFLAGS0)
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #  **** Stellar ****
 #CFLAGS= -g -O2 -va -na -nv $(XDR) $(CFLAGS0)
 #CFLAGS2= +CaliasFreePointers
 #LDFLAGS= $(LDFLAGS0) -g -z 
 #INLINE=
 #  **** Titan ****
-#CFLAGS= -O2 -vector_c -vreport $(XDR) $(CFLAGS0)
+#CFLAGS= -O2 -vector_c -vreport $(XDR) $(PARLIBC) $(CFLAGS0)
 #CFLAGS2=  -safe=ptrs
-#LDFLAGS= $(LDFLAGS0) 
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) 
 #CFLAGSAUX=-catalog=auxil.in 
 #INLINE= -inline -Npaths=auxil.in
 #  **** convex ****
-#CFLAGS= -O2 -na -nv -fi $(XDR) $(CFLAGS0)
+#CFLAGS= -O2 -na -nv -fi $(XDR) $(PARLIBC) $(CFLAGS0)
 #CFLAGS2= -va -alias standard -alias ptr_args
 #CFLAGSP= -O3 -re
-#LDFLAGS= $(LDFLAGS0) -fi -lveclib 
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -fi -lveclib 
 #INLINE=
 #  **** Cray **** (SCC 3.0)
-#CFLAGS= -h nostdc,vector3,scalar3,report=itvf,ivdep,fastaddr $(XDR) $(CFLAGS0)
+#CFLAGS= -h nostdc,vector3,scalar3,report=itvf,ivdep,fastaddr $(XDR) $(PARLIBC) $(CFLAGS0)
 #LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" -lsci
 #INLINE=
 #  ***** End *****
@@ -86,7 +103,7 @@ A2FLAGS=
 SHFILE=		$$file
 FILES = accel algorith alloc auxil beeman convert dump ewald force input \
 	eigens kernel main matrix output quaterns rdf restart startup \
-	values xdr
+	values xdr parallel
 
 CFILES = $(FILES:%=%.c)
 
@@ -112,8 +129,8 @@ EXTRAS = $(UTILS:%=%.c) mdshak.c ewald_parallel.c force_parallel.c
 
 HFILES=		structs.h defs.h string.h time.h stddef.h stdlib.h messages.h xdr.h
 
-DOC=		READ.ME BENCHMARK water-canon.out COPYING \
-			moldy.tex moldy.bbl
+DOC=		READ.ME BENCHMARK COPYING RELNOTES\
+			water-canon.out moldy.tex moldy.bbl
 
 VMSBUILD=	compile_moldy.com link_moldy.com defcomm.com\
 		compile_utils.com link_utils.com compile.com
@@ -287,7 +304,7 @@ moldy.com.Z:	moldy.com
 		compress moldy.com
 
 moldy.ps:	moldy.dvi
-		dvi3ps -r -o a4 moldy > moldy.ps
+		dvips -t a4 moldy -o moldy.ps
 
 moldy.dvi:	moldy.tex moldy.bbl
 		latex moldy
