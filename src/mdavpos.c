@@ -1,5 +1,6 @@
 /* MOLecular DYnamics simulation code, Moldy.
-Copyright (C) 1988, 1992, 1993 Keith Refson
+Copyright (C) 1997 Craig Fisher
+Copyright (C) 1988, 1992, 1993, 1997 Keith Refson
  
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -20,10 +21,16 @@ You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of	    		              *       
- *              centres of mass of molecules from MolDy dump files		      *
+ *              molecules and average box dimensions from MolDy dump files	      *
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 1.3  1997/08/15 15:20:10  craig
+ *  Init_h function replaced with call to memcpy
+ *  Calculation now performed entirely in scaled coords
+ *  Error in shakal_out corrected - outputs scaled coords instead of real coords 
+ *  Centre_mass and shift functions called correctly
+ *
  *  Revision 1.2  1997/07/10 11:15:23  craig
  *  Options for different output formats added
  *
@@ -323,6 +330,7 @@ system_mt *system;
    float	*c_of_m = buf;
    float	*quat   = buf+3*system->nmols;
    float	*h      = buf+3*system->nmols + 4*system->nmols_r;
+   mat_mt	hinv;
 
 /* $dir no_recurrence */
    for(i = 0; i < system->nmols; i++)
@@ -346,6 +354,8 @@ system_mt *system;
       system->h[i][1] = h[3*i+1];
       system->h[i][2] = h[3*i+2];
    }
+   invert(system->h, hinv);
+   mat_vec_mul(hinv, system->c_of_m, system->c_of_m, system->nmols);
 }
 /******************************************************************************
  ******************************************************************************/
@@ -376,25 +386,13 @@ spec_mt		species[];
 spec_mt		prev_slice[];
 {
    spec_mt	*spec;
-   mat_mt       hinv;
-   mat_mp       h = system->h;
    int		i, imol;
 
-   invert(h, hinv);
-   mat_vec_mul(hinv, system->c_of_m, system->c_of_m, system->nmols);
-
    for(spec = species; spec < species+system->nspecies; prev_slice++, spec++) 
-   {
-      mat_vec_mul(hinv, prev_slice->c_of_m, prev_slice->c_of_m, spec->nmols);
       for( imol=0; imol<spec->nmols; imol++)
-      {
         for (i = 0; i < 3; i++)
              spec->c_of_m[imol][i] = spec->c_of_m[imol][i] - floor(
                 (spec->c_of_m[imol][i]-prev_slice->c_of_m[imol][i])+0.5);
-      }
-      mat_vec_mul(hinv, prev_slice->c_of_m, prev_slice->c_of_m, spec->nmols);
-   }
-   mat_vec_mul(h, system->c_of_m, system->c_of_m, system->nmols);
 }
 /******************************************************************************
  * shakal_out().  Write a system configuration to stdout in the form of an    *
@@ -470,15 +468,12 @@ mat_mp		avh;
 {
    double	**site = (double**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
-   mat_mp	h = avh;
-   mat_mt	hinv;				
+   mat_mp       h = avh;
    spec_mt	*spec;
    double	a,b,c, alpha, beta, gamma;
    int		imol, isite, itot=1, ispec=1;
    int		is;
    
-   invert(h,hinv);
-
    a = sqrt(SQR(h[0][0]) + SQR(h[1][0]) + SQR(h[2][0]));
    b = sqrt(SQR(h[0][1]) + SQR(h[1][1]) + SQR(h[2][1]));
    c = sqrt(SQR(h[0][2]) + SQR(h[1][2]) + SQR(h[2][2]));
@@ -494,7 +489,6 @@ mat_mp		avh;
    {
       make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
 		 spec->framework, site, spec->nmols, spec->nsites);
-      mat_vec_mul3(hinv,site, spec->nsites*spec->nmols);
 
       isite = 0;
       for(imol = 0; imol < spec->nmols; imol++)
@@ -519,7 +513,7 @@ mat_mp		avh;
       error("Error writing output - \n%s\n", strerror(errno));
 }
 /******************************************************************************
- * xyz_out().  Write a system configuration to stdout in the form of an    *
+ * xyz_out().  Write a system configuration to stdout in the form of an       *
  * input data file for the graphics program XYZ (rasmol -xyz file)            *
  ******************************************************************************/
 void
@@ -535,9 +529,10 @@ char            *insert;
                                             0,2,0,system->nsites-1);
    spec_mt      *spec;
    double       a, b, c, alpha, beta, gamma;
-   mat_mp       h = avh;
    mat_mt       hinv;
    int          imol, isite, is;
+
+   invert(avh, hinv);
 
 /* We count the number of atoms */
    isite=0;
@@ -559,7 +554,7 @@ char            *insert;
 
    for(spec = avpos; spec < avpos+system->nspecies; spec++)
    {
-      make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
+      make_sites(avh, spec->c_of_m, spec->quat, spec->p_f_sites,
                  spec->framework, site, spec->nmols, spec->nsites);
       isite = 0;
       for(imol = 0; imol < spec->nmols; imol++)
@@ -633,7 +628,7 @@ vec_mt  s;
 }
 /******************************************************************************
  * moldy_out.  Select output routine and handle file open/close               *
- * Translate system relative to either centre of mass of posn of framework.   *
+ * Translate system relative to either centre of mass or posn of framework.   *
  ******************************************************************************/
 void
 moldy_out(n, system, site_info, insert, avpos, avh, outsw)
@@ -653,12 +648,13 @@ char            *insert;
          frame_spec = spec;
 
    if( frame_spec != NULL )
-      shift(system->c_of_m, system->nmols, frame_spec->c_of_m[0]);
+      shift(avpos->c_of_m, system->nmols, frame_spec->c_of_m[0]);
    else
    {
       centre_mass(avpos, system->nspecies, c_of_m);
-      shift(system->c_of_m, system->nmols, c_of_m);
-   }
+      shift(avpos->c_of_m, system->nmols, c_of_m);
+   } 
+
    switch (outsw)
    {
     case SHAK:
@@ -690,6 +686,7 @@ spec_mt		dupl_spec[];
         dupl_spec->nsites = spec->nsites;
         dupl_spec->framework = spec->framework;
         dupl_spec->site_id = spec->site_id;
+	dupl_spec->mass = spec->mass;
      
         for( i=0; i<32; i++)
              dupl_spec->name[i] = spec->name[i];
@@ -729,20 +726,6 @@ spec_mt		init_spec[];
          init_spec->c_of_m = ralloc(spec->nmols);
 }
 /******************************************************************************
- * init_h().  Initialise average h array with initial system values	      *
- ******************************************************************************/
-void
-init_h(system, avh)
-system_mt	*system;
-mat_mp		avh;
-{
-   int		i,j;
-
-   for( i=0; i<3; i++)
-      for( j=0; j<3; j++)
-         avh[i][j] = system->h[i][j];
-}
-/******************************************************************************
  * summate().  Summate positions of each species			      *
  ******************************************************************************/
 void
@@ -765,7 +748,6 @@ mat_mp		avh;
       for( imol=0; imol<spec->nmols; imol++)
          for( i=0; i<3; i++)
             avpos->c_of_m[imol][i] += spec->c_of_m[imol][i];
-
       if( spec->rdof > 1)
       {
          for( i=0; i< spec->nsites; i++)
@@ -1020,9 +1002,9 @@ char	*argv[];
         if( irec == start)
         {
  	   init_species(&sys, species, prev_slice); 
- 	   init_species(&sys, species, avpos);	   
- 	   copy_spec(&sys, species, avpos);
- 	   init_h(&sys,&avh);      
+ 	   init_species(&sys, species, avpos);	 
+ 	   copy_spec(&sys, species, avpos); 
+           memcpy(avh, sys.h, sizeof(mat_mt));
  	}       
         else
         {
