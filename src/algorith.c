@@ -17,6 +17,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	algorith.c,v $
+ * Revision 1.1.1.2  89/10/24  17:17:25  keith
+ * Modified pbc algorithm to use floor() library function.
+ * Now works with non-orthorhombic cell.
+ * 
  * Revision 1.1.1.1  89/10/06  16:23:57  keith
  * Make_sites() modified to wrap sites of framework back into MD box.
  * 
@@ -25,7 +29,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/algorith.c,v 1.1.1.1 89/10/06 16:23:57 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/algorith.c,v 1.1.1.2 89/10/24 17:17:25 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include 	<math.h>
@@ -52,7 +56,7 @@ void	vscale();
 void	message();			/* Error message and exit handler     */
 /*========================== Macros ==========================================*/
 #define	veccpy(v1,v2,n) (void)memcpy((char*)(v1),(char*)(v2),(n)*sizeof(vec_t))
-#define MATMUL(i, m, r) (m[i][0]*r[0] + m[i][1]*r[1] + m[i][2]*r[2])
+#define MATMUL(i, m, r, o) (m[i][0]*r[0][o] + m[i][1]*r[1][o] + m[i][2]*r[2][o])
 /*============================================================================*/
 /******************************************************************************
  *  rotate        Perform the rotation described by the quaternions in the    *
@@ -116,8 +120,8 @@ int	n;			/* Length ie v1[n], v2[n]		      */
  *  molecules given the site forces and the site co-ordinates.                *
  ******************************************************************************/
 void mol_force(site_force, force, nsites, nmols)
-vec_p		site_force,	/* Site forces [nsites*nmols][3]        (in)  */
-		force;		/* Centre of mass forces [nmols][3]    (out)  */
+real		**site_force;	/* Site forces [nsites*nmols][3]        (in)  */
+vec_p		force;		/* Centre of mass forces [nmols][3]    (out)  */
 int		nsites,		/* Number of sites on one molecule      (in)  */
 		nmols;		/* Number of molecules                  (in)  */
 {
@@ -125,15 +129,15 @@ int		nsites,		/* Number of sites on one molecule      (in)  */
 
    for(imol = 0; imol < nmols; imol++)
       for(i = 0; i < 3; i++)
-         force[imol][i] = sum(nsites, site_force[imol*nsites]+i, 3);
+         force[imol][i] = sum(nsites, site_force[i]+imol*nsites, 1);
 }
 /******************************************************************************
  *  molecule_torque    Calculate the torque on a number of identical          *
  *  molecules given the space frame site forces and co-ordinates.             *
  ******************************************************************************/
 void mol_torque(site_force, site, torque, quat, nsites, nmols)
-vec_p		site_force,	/* Principal frame site forces          (in)  */
-		site,		/* Principal frame site co-ordinates    (in)  */
+real		**site_force;	/* Principal frame site forces          (in)  */
+vec_p		site,		/* Principal frame site co-ordinates    (in)  */
 		torque;		/* Molecular torques [nmols][3]        (out)  */
 quat_p		quat;		/* Molecular quaternions [nmols][4]     (in)  */
 int		nsites,		/* Number of sites on one molecule      (in)  */
@@ -144,7 +148,11 @@ int		nsites,		/* Number of sites on one molecule      (in)  */
 
    for(imol = 0; imol < nmols; imol++)
    {
-      rotate(site_force+imol*nsites, princ_force, nsites, quat+imol, 1, inv);
+      for(i = 0; i < 3; i++)
+VECTORIZE
+	 for(isite = 0; isite < nsites; isite++)
+	    princ_force[isite][i] = site_force[i][isite+imol*nsites];
+      rotate(princ_force, princ_force, nsites, quat+imol, 1, inv);
       for(i = 0, j = 1, k = 2; i < 3; i++, j=(j+1)%3, k=(k+1)%3)
       {
          torque[imol][i] = 0.0;
@@ -163,8 +171,8 @@ int		nsites,		/* Number of sites on one molecule      (in)  */
 void make_sites(h, c_of_m_s , quat, p_f_sites, framework, site, nmols, nsites)
 mat_t		h;		/* Unit cell matrix h		     (in)     */
 vec_p		c_of_m_s,	/* Centre of mass co-ords [nmols][3] (in)     */
-		p_f_sites,	/* Principal-frame sites [nsites][3] (in)     */
-		site;		/* Sites [nmols*nsites][3]          (out)     */
+		p_f_sites;	/* Principal-frame sites [nsites][3] (in)     */
+real		**site;		/* Sites [nmols*nsites][3]          (out)     */
 int		framework;	/* Flag to signal framework structure (in)    */
 quat_p		quat;		/* Quaternions [nmols][4]            (in)     */
 int		nmols,		/* Number of molecules                        */
@@ -172,6 +180,7 @@ int		nmols,		/* Number of molecules                        */
 {
    int		imol, isite, i;	/* Counters				      */
    vec_t	c_of_m;		/* Unscaled centre of mass co-ordinates       */
+   vec_t	*ssite = ralloc(nsites);
    register double	t;
    mat_t	hinv;
    double	lx   = h[0][0], lxy  = h[0][1],
@@ -183,24 +192,31 @@ int		nmols,		/* Number of molecules                        */
    {
       mat_vec_mul(h,c_of_m_s+imol,(vec_p)c_of_m, 1);/* Get real c-of-m co-ords*/
       if(quat)
-         rotate(p_f_sites,site+imol*nsites,nsites,quat+imol,1,noinv);
+      {
+         rotate(p_f_sites,ssite,nsites,quat+imol,1,noinv);
+	 for(i = 0; i < 3; i++)
+	    for(isite = 0; isite < nsites; isite++)
+	       site[i][imol*nsites+isite] = ssite[isite][i] + c_of_m[i];
+      }
       else
-         veccpy(site+imol*nsites, p_f_sites, nsites);
-      for(i = 0; i < 3; i++)
-         for(isite = 0; isite < nsites; isite++)
-            site[imol*nsites+isite][i] += c_of_m[i];
+      {
+	 for(i = 0; i < 3; i++)
+	    for(isite = 0; isite < nsites; isite++)
+	       site[i][imol*nsites+isite] = p_f_sites[isite][i] + c_of_m[i];
+      }
    }
 
    if( framework )			/* Apply pbc's to put sites into cell */
       for( isite = 0; isite < nmols*nsites; isite++ )
       {
-          site[isite][0] -= lx  *      floor(MATMUL(0,hinv,site[isite]) + 0.5);
-          site[isite][0] -= lxy * (t = floor(MATMUL(1,hinv,site[isite]) + 0.5));
-          site[isite][1] -= ly  * t;
-          site[isite][0] -= lxz * (t = floor(MATMUL(2,hinv,site[isite]) + 0.5));
-          site[isite][1] -= lyz * t;
-          site[isite][2] -= lz  * t;
+          site[0][isite] -= lx  *      floor(MATMUL(0,hinv,site,isite) + 0.5);
+          site[0][isite] -= lxy * (t = floor(MATMUL(1,hinv,site,isite) + 0.5));
+          site[1][isite] -= ly  * t;
+          site[0][isite] -= lxz * (t = floor(MATMUL(2,hinv,site,isite) + 0.5));
+          site[1][isite] -= lyz * t;
+          site[2][isite] -= lz  * t;
       }
+   cfree((char*) ssite);
 }
 /******************************************************************************
  *  newton   Apply newton's equation to calculate the acceleration of a       *
