@@ -118,7 +118,7 @@
 %%%%%%%%%%% No option defaults to ``hypertex'' using LaTeX and  %%%%%%%%
 %%%%%%%%%%% ``pdftex'' using pdflatex.                          %%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\usepackage{hyperref}
+%\usepackage{hyperref}
 %
 % Comment this out for LaTeX2html translation
 %
@@ -137,7 +137,6 @@
 \newcommand{\erf}{\mbox{erf}}
 \newcommand{\erfc}{\mbox{erfc}}
 \newcommand{\insqrt}{\sqrt{\mathstrut}}
-\newcommand{\saferagged}{\let\temp=\\\protect\raggedright\let\\=\temp}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% Hyphenation                                         %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -145,7 +144,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.15 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.16 $ $}
 \newcommand{\moldyversion}{2.13}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -190,7 +189,8 @@ versions.
 The initial implementation of the Nos\'{e}-Hoover and Gaussian
 thermostats was by Vladimir Murashov at Dalhousie University.
 Rafael R. Pappalardo contributed the modifications to ``mdshak'' to
-write XYZ format molecular graphics files.
+write XYZ format molecular graphics files. Craig Fisher contributed
+the ``msd'' and ``mdavpos'' programs.
 
 Thanks are due to Craig Fisher and Jos\'{e} Manuel Martinez Fernandez
 for diligent proofreading of several versions of the manual and many
@@ -731,17 +731,17 @@ and the force on charge $i$ is given by
   \label{eqn:ewald-force}
   \bm{f}_i &=& - \nabla_{\bm{r}_i} U \nonumber \\
   & = & \underbrace{\frac{q_i}{4 \pi \epsilon_0}
-    \sideset{}{^\dag}\sum_{\bm{n}} \sum_{\genfrac{}{}{0pt}{}{j=1}{j \neq
-        i}}^{N} q_j \left \lbrace \frac{\erfc( \alpha | \bm{r}_{ij} +
-        \bm{n} |)}{| \bm{r}_{ij} +\bm{n} | } + \frac{2
-        \alpha}{\sqrt{\pi}}e^{- \alpha^2 | \bm{r}_{ij} + \bm{n} |^2}
-    \right \rbrace \frac{\bm{r}_{ij} + \bm{n}}{| \bm{r}_{ij} + \bm{n}
-      |^2}
+    \sideset{}{^\dag}\sum_{\bm{n}} \sum_{\substack{j=1\\j \neq i}}^{N}
+    q_j \left \lbrace \frac{\erfc( \alpha | \bm{r}_{ij} + \bm{n} |)}{|
+        \bm{r}_{ij} +\bm{n} | } + \frac{2 \alpha}{\sqrt{\pi}}e^{-
+        \alpha^2 | \bm{r}_{ij} + \bm{n} |^2} \right \rbrace
+    \frac{\bm{r}_{ij} + \bm{n}}{| \bm{r}_{ij} + \bm{n} |^2}
     }_{\textnormal{Real-space term}} \nonumber \\
   & + & \underbrace{\frac{2}{\epsilon_0 V} \sum_{\bm{k} > 0} q_i
     \frac{\bm{k}}{k^2} e^{-\frac{k^2}{4 \alpha^2}} \left \lbrace
-      \sin(\bm{k \cdot r}_i) \sum_{j=1}^{N} q_j \cos(\bm{k \cdot r}_j) -
-      \cos(\bm{k \cdot r}_i) \sum_{j=1}^{N} q_j \sin(\bm{k \cdot r}_j)
+      \sin(\bm{k \cdot r}_i) \sum_{j=1}^{N} q_j \cos(\bm{k \cdot r}_j)
+      - \cos(\bm{k \cdot r}_i) \sum_{j=1}^{N} q_j \sin(\bm{k \cdot
+        r}_j)
     \right \rbrace}_{\textnormal{Reciprocal-space term}}\\
   & + & \underbrace{\left [ \frac{q_i}{6 \epsilon_0 V} \left (
         \sum_{j=1}^N q_j \bm{r}_j \right ) \right
@@ -3048,11 +3048,11 @@ Then just type \Lit{make} to compile and link \moldy\  and
   straightforward and has the advantage over Cygnus that the
   executable files do not depend on a DLL file and are therefore more
   portable. Both are available over the internet via the URL
-  \htmladdnormallink{http://www.fu.is.saga-u.ac.jp/\%7Ecolin/gcc.html}%
-{http://www.fu.is.saga-u.ac.jp/\%7Ecolin/gcc.html} which contains links
+  \Lit{\htmladdnormallink{http://www.fu.is.saga-u.ac.jp/\%7Ecolin/gcc.html}%
+{http://www.fu.is.saga-u.ac.jp/\%7Ecolin/gcc.html}} which contains links
   to both distributions. (The mirror site in the USA
-  \htmladdnormallink{http://www.geocities.com/Tokyo/Towers/6162/gcc.html}%
-{http://www.geocities.com/Tokyo/Towers/6162/gcc.html} may be
+  \Lit{\htmladdnormallink{http://www.geocities.com/Tokyo/Towers/6162/gcc.html}%
+{http://www.geocities.com/Tokyo/Towers/6162/gcc.html}} may be
   faster).  Both ports contain the GNU make program and will work with
   the supplied \Fname{Makefile}.  Simply edit \Fname{Makefile} and
   uncomment the appropriate set of compiler options before invoking
@@ -3102,17 +3102,23 @@ multiprocessors and many distributed-memory parallel machines.
 \raggedright
 \item[MPI] The MPICH implementation can be downloaded by anonymous ftp
   from the URL
-  \htmladdnormallink{\Lit{ftp://info.mcs.anl.gov/pub/mpi/mpich.tar.gz}}{ftp://info.mcs.anl.gov/pub/mpi/mpich.tar.gz}\ and with other information at
-  \htmladdnormallink{\Lit{http://www.mcs.anl.gov/mpi/index.html}}{http://www.mcs.anl.gov/mpi/index.html}.
+   \Lit{\htmladdnormallink{ftp://info.mcs.anl.gov/pub/mpi/mpich.tar.gz}%
+{ftp://info.mcs.anl.gov/pub/mpi/mpich.tar.gz}}\ and with other information at
+   \Lit{\htmladdnormallink{http://www.mcs.anl.gov/mpi/index.html}%
+{http://www.mcs.anl.gov/mpi/index.html}}.
 
   The CHIMP implementation can be downloaded by anonymous ftp
-  from \htmladdnormallink{\Lit{ftp://ftp.epcc.ed.ac.uk/pub/chimp/release/chimp.tar.Z}}{ftp://ftp.epcc.ed.ac.uk/pub/chimp/release/chimp.tar.Z}.
+  from
+   \Lit{\htmladdnormallink{ftp://ftp.epcc.ed.ac.uk/pub/chimp/release/chimp.tar.Z}%
+{ftp://ftp.epcc.ed.ac.uk/pub/chimp/release/chimp.tar.Z}}.
 \item[TCGMSG] This may be obtained by anonymous ftp from
-  \htmladdnormallink{\Lit{ftp://ftp.tcg.anl.gov/pub/tcgmsg/tcgmsg.4.04.tar.Z}}{ftp://ftp.tcg.anl.gov/pub/tcgmsg/tcgmsg.4.04.tar.Z}.
+   \Lit{\htmladdnormallink{ftp://ftp.tcg.anl.gov/pub/tcgmsg/tcgmsg.4.04.tar.Z}%
+{ftp://ftp.tcg.anl.gov/pub/tcgmsg/tcgmsg.4.04.tar.Z}}.
 \item[BSP] The Oxford BSP Library is available through Oxford
   Parallel's WWW server
-  \htmladdnormallink{\Lit{http://www.BSP-Worldwide.org/implmnts/oxtool.htm}}{http://www.BSP-Worldwide.org/implmnts/oxtool.htm}\ or by anonymous ftp
-  \htmladdnormallink{\Lit{ftp://ftp.comlab.ox.ac.uk/pub/Packages/BSP/}}{ftp://ftp.comlab.ox.ac.uk/pub/Packages/BSP/}.
+   \Lit{\htmladdnormallink{http://www.BSP-Worldwide.org/implmnts/oxtool.htm}{http://www.BSP-Worldwide.org/implmnts/oxtool.htm}}\ or by anonymous ftp
+   \Lit{\htmladdnormallink{ftp://ftp.comlab.ox.ac.uk/pub/Packages/BSP/}%
+{ftp://ftp.comlab.ox.ac.uk/pub/Packages/BSP/}}.
 %v1.3\_bsplib\_toolset.tar.gz}.
 \item[SHMEM] The CRI native communications library for T3D and T3E
   systems.
