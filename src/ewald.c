@@ -23,6 +23,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.21  2000/12/06 17:45:29  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.20  2000/04/27 17:57:07  keith
  *       Converted to use full ANSI function prototypes
  *
@@ -237,7 +244,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.20 2000/04/27 17:57:07 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.21 2000/12/06 17:45:29 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -314,11 +321,10 @@ void      qsincos(real *coshx, real *sinhx, real *cosky,
 		  real *sinky, real *coslz, real *sinlz, 
 		  real *qcoskr, real *qsinkr, 
 		  real *coshxky, real *sinhxky, 
-		  int h, int k, int l, int nsites)
+		  int h, int k, int l, int hlast, int klast, int nsites)
 {
    int is;
    real qckr, chxky;
-   static int hlast=-1000000,klast=-1000000;
    
    if( h != hlast || k != klast ) 
    {
@@ -530,6 +536,10 @@ void	ewald(real **site,              /* Site co-ordinate arrays       (in) */
                 kmax = floor(control.k_cutoff/(2*PI)*modb(system->h)),
                 lmax = floor(control.k_cutoff/(2*PI)*modc(system->h));
    /*
+    * Saved previous h and k to signal validity of coshxky, sinhxky caches.
+    */
+   int		hlast=-1000000,klast=-1000000;
+   /*
     * lower and upper limits for parallel loops.   
     */
 #if defined(SPMD) && defined(MPPMANY)
@@ -739,7 +749,7 @@ void	ewald(real **site,              /* Site co-ordinate arrays       (in) */
        * efficiency & vectorisation there is a loop for each case.
        */
       qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,
-	      qcoskr,qsinkr,sinhxky, coshxky, h, k, l, nsites);
+	      qcoskr,qsinkr,sinhxky, coshxky, h, k, l, hlast, klast, nsites);
       sqcoskrn = sum(nsitesxf, qcoskr, 1);
       sqsinkrn = sum(nsitesxf, qsinkr, 1);
       sqcoskrf = sum(nsites-nsitesxf, qcoskr+nsitesxf, 1);
