@@ -25,6 +25,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	accel.c,v $
+ * Revision 2.3  93/10/28  10:27:32  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.0  93/03/15  14:47:36  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
@@ -155,7 +158,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.0 93/03/15 14:47:36 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.3 93/10/28 10:27:32 keith Stab $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -302,7 +305,8 @@ spec_mp		species;
 	    rdof += spec->rdof*spec->nmols;
 	 }
       ttemp /= tdof;
-      rtemp /= rdof;
+      if( rdof > 0 )
+	 rtemp /= rdof;
       for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
 	 if( ! spec->framework )
 	 {
