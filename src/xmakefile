@@ -67,7 +67,7 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #INLINE=
 #  **** Solaris 2 using gcc  ****
 #CC=	gcc
-#CFLAGS= -O2 -ffast-math -DANSI_LIBS $(PARLIBC) $(XDR) $(CFLAGS0)
+#CFLAGS= -O2 -ffast-math $(PARLIBC) $(XDR) $(CFLAGS0)
 #CFLAGSAUX=-funroll-loops
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lnsl
 #INLINE=
@@ -132,7 +132,7 @@ INFILES = 	control.water control.tip4p control.mgclh2o control.clay \
 		argon-example.out tips2-example.out \
 		quartz-example.out
 
-SHAKS=	algorith alloc auxil eigens kernel input matrix\
+SHAKS=	algorith alloc auxil ansi eigens kernel input matrix\
 		quaterns restart startup values xdr
 
 SHAKC= $(SHAKS:%=%.c)
