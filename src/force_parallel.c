@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.24 92/06/05 13:28:05 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.25 92/06/15 16:51:50 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -314,6 +314,7 @@ int	*frame_type;			/* Framework type counter	 (out)*/
 	    list->frame_type = *frame_type;
 	    list->next = cell[icell];
 	    cell[icell] = list++;
+	    list->next = NULL;
 	 }
 	 (*frame_type)++;
       }
@@ -325,6 +326,7 @@ int	*frame_type;			/* Framework type counter	 (out)*/
 	 list->frame_type = 0;
 	 list->next = cell[icell];
 	 cell[icell] = list++;
+	 list->next = NULL;
 	 isite += spec->nsites;
       }
    }
@@ -440,7 +442,7 @@ mat_t           stress;                 /* Stress virial                (out) */
    int          nsites = system->nsites,/* Local copy to keep optimiser happy */
                 n_potpar = system->n_potpar,
    		max_id = system->max_id;
-   int          ncells;			/* Total number of cells	      */
+   int          icell, ncells;		/* Total number of cells	      */
    int          tx, ty, tz;             /* Temporaries for # unit cell shifts */
    int		ix, iy, iz;
    int		*id      = ialloc(nsites),   	/* Array of site_id[nsites]   */
@@ -483,7 +485,12 @@ mat_t           stress;                 /* Stress virial                (out) */
    s_f_n = aalloc(nthreads, real**);
    s_f_n[0] = site_force;
    for(ithread = 1; ithread < nthreads; ithread++)
+   {
       s_f_n[ithread] = (real**)arralloc(sizeof(real), 2, 0, 2, 0, nsites-1);
+      zero_real(s_f_n[ithread][0],3*nsites);
+   }
+   zero_real(stress_n,9*nthreads);
+   zero_double(pe_n, nthreads);
 
    if(control.subcell <= 0.0) control.subcell = control.cutoff/5.0;
    nx = system->h[0][0]/control.subcell+0.5;
@@ -513,9 +520,6 @@ mat_t           stress;                 /* Stress virial                (out) */
                      }
       onx = nx; ony = ny; onz = nz;
    }
-#ifdef titan
-#pragma asis
-#endif
    if(init)
    {
       for(spec = species; spec < species+system->nspecies; spec++)
@@ -530,6 +534,8 @@ mat_t           stress;                 /* Stress virial                (out) */
    nabor = neighbour_list(&n_nabors, system->h, control.cutoff);
    
    cell = aalloc(ncells, cell_t *);
+   for( icell=0; icell < ncells; icell++)
+      cell[icell] = NULL;
 
 /*  Construct and fill expanded site-identifier array, id                     */
    id_ptr = id;

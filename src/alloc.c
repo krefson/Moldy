@@ -18,6 +18,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.17  92/06/05  13:37:02  keith
+ * Conditionally undefed va_dcl for ANSI, stdarg.h case --
+ * just prevents warning from gcc.
+ * 
  * Revision 1.16  91/10/17  14:22:21  keith
  * Added debugging code
  * 
@@ -82,7 +86,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.16 91/10/17 14:22:21 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.17 92/06/05 13:37:02 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
@@ -130,7 +134,6 @@ char	*file;
    if(p == NULL && (n*size != 0))
      THREAD_SYS(message(NULLI, NULLP, FATAL, NOMEM, line, file,
 	       (int)n, (unsigned long)size))
-   (void)memset((gptr*)p, 0, n*size);
 #ifdef DEBUGX
    fprintf(stderr,"Alloc: %16s line %3d: %x to %x\n", file, line, p, p+n*size);
 #endif

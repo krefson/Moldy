@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.17  92/02/26  14:33:48  keith
+ * Got rid of pstrip pragmas for convex -- they just broke things
+ * 
  * Revision 1.16  91/11/27  15:15:56  keith
  * Corrected calculation of sheet energy term for charged framework.
  * Split force loop so as to omit frame-frame force (and stress) terms.
@@ -91,7 +94,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.16 91/11/27 15:15:56 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.17 92/02/26 14:33:48 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -201,7 +204,12 @@ mat_t		stress;			/* Stress virial		(out) */
    s_f_n = aalloc(nthreads, real**);
    s_f_n[0] = site_force;
    for(ithread = 1; ithread < nthreads; ithread++)
+   {
       s_f_n[ithread] = (real**)arralloc(sizeof(real), 2, 0, 2, 0, nsites-1);
+      zero_real(s_f_n[ithread][0],3*nsites);
+   }
+   zero_real(stress_n,9*nthreads);
+   zero_double(pe_n, nthreads);
 
 /*
  * First call only - evaluate self energy term and store for subsequent calls
@@ -308,12 +316,16 @@ mat_t		stress;			/* Stress virial		(out) */
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
  */
    coshx = chx[0]; cosky = cky[0]; coslz = clz[0];
+   sinhx = shx[0]; sinky = sky[0]; sinlz = slz[0];
 #ifdef ardent
 #pragma no_parallel
 #endif
 VECTORIZE
    for(is = 0; is < nsites; is++)
+   {
       coshx[is] = cosky[is] = coslz[is] = 1.0;
+      sinhx[is] = sinky[is] = sinlz[is] = 0.0;
+   }      
 
    coshx = chx[1]; cosky = cky[1]; coslz = clz[1];
    sinhx = shx[1]; sinky = sky[1]; sinlz = slz[1];

@@ -3,6 +3,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.20  91/11/26  10:26:34  keith
+ * Corrected calculation of sheet energy term for charged framework.
+ * Split force loop so as to omit frame-frame force (and stress) terms.
+ * 
  * Revision 1.19  91/08/15  18:11:52  keith
  * Modifications for better ANSI/K&R compatibility and portability
  * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
@@ -85,7 +89,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.19 91/08/15 18:11:52 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.20 91/11/26 10:26:34 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -326,14 +330,14 @@ mat_t		stress;			/* Stress virial		(out) */
 /*
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
  */
+   sinhx = shx[0]; sinky = sky[0]; sinlz = slz[0];
    coshx = chx[0]; cosky = cky[0]; coslz = clz[0];
 VECTORIZE
    for(is = 0; is < nsites; is++)
    {
-      coshx[is] = 1.0;
-      cosky[is] = 1.0;
-      coslz[is] = 1.0;
-   }
+      coshx[is] = cosky[is] = coslz[is] = 1.0;
+      sinhx[is] = sinky[is] = sinlz[is] = 0.0;
+   }      
 
    coshx = chx[1]; cosky = cky[1]; coslz = clz[1];
    sinhx = shx[1]; sinky = sky[1]; sinlz = slz[1];

@@ -14,6 +14,13 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	values.c,v $
+ * Revision 1.12  92/03/24  12:41:31  keith
+ * Fixed bug introduced in last revision which calculated
+ * averages wrongly.
+ * Added code to zero averages database if reset-averages
+ * is set OR if the info in restart averages database is
+ * out of date.  (ie ig begin-averages is within current run).
+ * 
  * Revision 1.11  92/03/19  15:45:42  keith
  * Added support for dynamic allocation of rolling average arrays,
  * conversion of existing restart files is done on fly.
@@ -59,7 +66,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.11 92/03/19 15:45:42 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.12 92/03/24 12:41:31 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -206,8 +213,10 @@ int	roll_interval, old_roll_interval;
    av_t_size = sizeof(av_t)+(roll_interval-1)*sizeof(double);
    av_size = sizeof(av_head_t) + navs*av_t_size;
    av_head  = (av_head_t*)aalloc( av_size, char);
+   av_head->nav = av_head->nroll = av_head->iroll = 0;
    av       = (av_t*)(av_head+1);
-   
+   zero_double(av, navs*av_t_size/sizeof(double));
+
    av_p = av;
    for(i = 0; i < (int)end; i++)	/* Set up pointers to area of array   */
    {					/* reserved for each type, size=mult. */

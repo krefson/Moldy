@@ -8,6 +8,16 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.13  91/08/15  18:12:12  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
  * Revision 1.12  91/03/12  15:43:14  keith
  * Tidied up typedefs size_t and include file <sys/types.h>
  * Added explicit function declarations.
@@ -52,7 +62,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.14 91/08/14 14:23:46 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.13 91/08/15 18:12:12 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -96,6 +106,7 @@ system_p	system;				/* System info struct	      */
 
    rdf = aalloc(max_id, int ** );
    rdf_base = ialloc(control.nbins * max_id * (max_id - 1) / 2);
+   (void)memset(rdf_base, 0, control.nbins * max_id * (max_id - 1) / 2*sizeof(int));
    for(idi = 1; idi < max_id; idi++)
       rdf[idi] = aalloc(max_id, int * );
    for(idi = 1; idi < max_id; idi++)
