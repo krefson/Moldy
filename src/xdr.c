@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.27  2002/03/04 16:08:12  kr
+ *       Fixed a number of bugs in dumpext and dumpconv related to reading the
+ *       sysinfo section of the dump files.
+ *
  *       Revision 2.26  2002/02/27 17:48:34  kr
  *       Reworked auto-setting of Ewald parameters.
  *         Added new control parameter "ewald-accuracy" to refine auto-setting.
@@ -163,12 +167,12 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/xdr.c,v 2.26 2002/02/27 17:48:34 kr Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/xdr.c,v 2.27 2002/03/04 16:08:12 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
 /*========================== Library include files ===========================*/
-#include	"stddef.h"
+#include	<stddef.h>
 #include 	"xdr.h"
 /*============================================================================*/
 

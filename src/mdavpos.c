@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/mdavpos.c,v 2.17 2001/08/08 16:31:52 keith Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/mdavpos.c,v 2.18 2002/06/21 11:29:07 kr Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *
@@ -28,6 +28,9 @@ static char *RCSid = "$Header: /home/kr/CVS/moldy/src/mdavpos.c,v 2.17 2001/08/0
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.18  2002/06/21 11:29:07  kr
+ *  Got rid of K&R varargs-compatibility stuff.
+ *
  *  Revision 2.17  2001/08/08 16:31:52  keith
  *  Incorporated Craig's modifications.
  *  Compiles but not properly tested.
@@ -141,9 +144,9 @@ static char *RCSid = "$Header: /home/kr/CVS/moldy/src/mdavpos.c,v 2.17 2001/08/0
 #include <stdarg.h>
 #include <errno.h>
 #include <math.h>
-#include "stdlib.h"
-#include "stddef.h"
-#include "string.h"
+#include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
 #include <stdio.h>
 #include "structs.h"
 #include "messages.h"

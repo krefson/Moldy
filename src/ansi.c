@@ -29,9 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
 #endif
 /*========================== Library include files ===========================*/
 #include 	<stdarg.h>
-#include 	"string.h"
-#include	"stddef.h"
-#include	"stdlib.h"
+#include 	<string.h>
+#include	<stddef.h>
+#include	<stdlib.h>
 #include	<stdio.h>
 #ifndef STDC_HEADERS
 /******************************************************************************

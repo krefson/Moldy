@@ -24,6 +24,9 @@ what you give them.   Help stamp out software-hoarding! */
  **************************************************************************************
  *  Revision Log
  *  $Log: spgrexp.c,v $
+ *  Revision 2.3  2002/06/21 11:29:07  kr
+ *  Got rid of K&R varargs-compatibility stuff.
+ *
  *  Revision 2.2  2001/08/09 11:46:56  keith
  *  Tidied up against some compiler warnings.
  *  Added license file for SgInfo routines with permission of
@@ -45,9 +48,9 @@ what you give them.   Help stamp out software-hoarding! */
 #include <stdarg.h>
 #include <errno.h>
 #include <math.h>
-#include "stdlib.h"
-#include "stddef.h"
-#include "string.h"
+#include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
 #include "messages.h"
 #include "defs.h"
 

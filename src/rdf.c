@@ -29,6 +29,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: rdf.c,v $
+ *       Revision 2.12  2000/12/06 17:45:33  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.11  2000/10/20 15:15:48  keith
  *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
  *
@@ -160,7 +167,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/rdf.c,v 2.11 2000/10/20 15:15:48 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/rdf.c,v 2.12 2000/12/06 17:45:33 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -170,7 +177,7 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/rdf.c,v 2.11 2
 #else
 #include <math.h>
 #endif
-#include 	"string.h"
+#include 	<string.h>
 #include	<stdio.h>
 /*========================== Program include files ===========================*/
 #include	"structs.h"

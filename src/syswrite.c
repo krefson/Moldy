@@ -25,6 +25,11 @@ what you give them.   Help stamp out software-hoarding! */
  **************************************************************************************
  *  Revision Log
  *  $Log: syswrite.c,v $
+ *  Revision 2.5  2002/09/18 09:59:19  kr
+ *  Rolled in several changes by Craig Fisher:
+ *  Ransub can now read polyatomic species
+ *  Syswrite can handle polyatomics from CSSR PDB or SCHACKAL files
+ *
  *  Revision 2.4  2002/06/21 11:29:07  kr
  *  Got rid of K&R varargs-compatibility stuff.
  *
@@ -45,16 +50,16 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/syswrite.c,v 2.4 2002/06/21 11:29:07 kr Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/syswrite.c,v 2.5 2002/09/18 09:59:19 kr Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
-#include "stdlib.h"
-#include "stddef.h"
-#include "string.h"
+#include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
 #include <ctype.h>
 #include "structs.h"
 #include "messages.h"
@@ -73,7 +78,11 @@ extern  const pots_mt   potspec[];           /* Potential type specification  */
 
 double  det(mat_mt a);
 char	*read_ftype(char *filename);
-
+int     read_ele(spec_data *element, char *filename);
+int     read_pdb(char *, mat_mp, char (*)[32], vec_mp, double *, char *, char *);
+int     read_cssr(char *, mat_mp, char (*)[32], vec_mp, double *, char *, char *);
+int     read_shak(char *, mat_mp, char (*)[32], vec_mp, double *, char *, double *);
+int     sgexpand(int , int , vec_mt *, char (*)[NLEN], double *, char *);
 /******************************************************************************
  * add_suffix().  Add numerical suffix to string.                             *
  ******************************************************************************/

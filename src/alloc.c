@@ -34,6 +34,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: alloc.c,v $
+ *       Revision 2.15  2001/02/14 15:19:28  keith
+ *       Rejigged definition of word_mt in alloc.c for machines where
+ *       sizeof(float) < sizeof(int). (ie Cray T3E)
+ *
  *       Revision 2.14  2000/12/06 17:45:28  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -175,22 +179,22 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/alloc.c,v 2.14 2000/12/06 17:45:28 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/alloc.c,v 2.15 2001/02/14 15:19:28 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
 #include "messages.h"
 /*========================== Library include files ===========================*/
 #include <stdarg.h>
-#include "stdlib.h"
+#include <stdlib.h>
 #if defined(DEBUGX) || defined (DEBUGY)
 #include <stdio.h>
 #endif
 #ifdef DEBUGZ
-#include "string.h"
+#include <string.h>
 #endif
 #ifdef DBMALLOC
-#include	"stddef.h"
+#include	<stddef.h>
 typedef size_mt size_t;
 #include <dbmalloc.h>
 #endif

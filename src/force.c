@@ -29,6 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.27  2002/03/04 16:08:12  kr
+ *       Reworked cellbin() to use floor() - to try out icc "-rcd" option.
+ *
  *       Revision 2.26  2001/02/22 10:30:16  keith
  *       Reinstated capability of "molecular" cutoffs.
  *
@@ -240,14 +243,14 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/force.c,v 2.26 2001/02/22 10:30:16 keith Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/force.c,v 2.27 2002/03/04 16:08:12 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
 /*========================== Library include files ===========================*/
 #include        <math.h>
-#include        "stddef.h"
-#include        "string.h"
+#include        <stddef.h>
+#include        <string.h>
 /*========================== Program include files ===========================*/
 #include        "structs.h"
 #include        "messages.h"

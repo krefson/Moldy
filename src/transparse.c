@@ -35,7 +35,7 @@ what you give them.   Help stamp out software-hoarding! */
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
-#include "string.h"
+#include <string.h>
 #include <math.h>
 
 #include "sginfo.h"

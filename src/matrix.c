@@ -31,6 +31,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: matrix.c,v $
+ *       Revision 2.12  2001/02/17 11:48:23  keith
+ *       Added trace_sqr().
+ *
  *       Revision 2.11  2001/02/13 17:45:08  keith
  *       Added symplectic Parrinello-Rahman constant pressure mode.
  *
@@ -121,13 +124,13 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/matrix.c,v 2.11 2001/02/13 17:45:08 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/matrix.c,v 2.12 2001/02/17 11:48:23 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
 #include 	"messages.h"
 /*========================== Library include files ===========================*/
-#include	"string.h"
+#include	<string.h>
 /*========================== External function declarations ==================*/
 void		message(int *, ...);	/* Write a warning or error message   */
 /*============================================================================*/

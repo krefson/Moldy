@@ -23,6 +23,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: convert.c,v $
+ *       Revision 2.13  2000/12/06 17:45:28  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.12  2000/11/09 16:25:48  keith
  *       Fixed const argument consistency warning
  *
@@ -99,7 +106,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/convert.c,v 2.12 2000/11/09 16:25:48 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/convert.c,v 2.13 2000/12/06 17:45:28 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"

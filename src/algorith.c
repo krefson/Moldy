@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: algorith.c,v $
+ *       Revision 2.20  2002/02/15 14:53:59  kr
+ *       Fixed make-sites to correctly PBC wrap site co-ords even if h matrix not upper-triangular.
+ *
  *       Revision 2.19  2001/05/24 16:26:43  keith
  *       Updated program to store and use angular momenta, not velocities.
  *        - added conversion routines for old restart files and dump files.
@@ -177,7 +180,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/algorith.c,v 2.19 2001/05/24 16:26:43 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/algorith.c,v 2.20 2002/02/15 14:53:59 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"

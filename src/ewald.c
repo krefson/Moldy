@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.23  2001/03/02 11:43:30  keith
+ *       Corrected fix for cache re-use bug.  The fix meant cache was never re-used!
+ *
  *       Revision 2.22  2001/02/15 15:55:09  keith
  *       Fixed bug where qsincos  could incorrectly attempt to use
  *       cache coshxky etc on first iteration when unassigned.
@@ -248,7 +251,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.22 2001/02/15 15:55:09 keith Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/ewald.c,v 2.23 2001/03/02 11:43:30 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -262,9 +265,9 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.22
 #   include 	<math.h>
 #endif
 #endif
-#include	"stddef.h"
-#include 	"stdlib.h"
-#include        "string.h"
+#include	<stddef.h>
+#include 	<stdlib.h>
+#include        <string.h>
 /*========================== Program include files ===========================*/
 #include 	"structs.h"
 #include 	"messages.h"

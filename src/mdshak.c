@@ -19,14 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdshak.c,v 2.25 2000/12/06 17:45:31 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/mdshak.c,v 2.26 2001/05/18 17:10:56 keith Exp $";
 #endif
 
 #include "defs.h"
 #include <stdarg.h>
 #include <errno.h>
-#include "stdlib.h"
-#include "string.h"
+#include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include "structs.h"
 #include "utlsup.h"

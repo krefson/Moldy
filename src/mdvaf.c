@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdvaf.c,v 1.11 2001/02/19 18:06:04 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/mdvaf.c,v 1.12 2001/05/18 11:02:00 keith Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,9 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdvaf.c,v 1.11
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.12  2001/05/18 11:02:00  keith
+ *  Added "-3" option to calculate and print XYZ components separately
+ *
  *  Revision 1.11  2001/02/19 18:06:04  keith
  *  Fix to work with a mixture of polyatomic and monatomic species.
  *
@@ -79,9 +82,9 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdvaf.c,v 1.11
 #include <stdarg.h>
 #include <errno.h>
 #include <math.h>
-#include "stdlib.h"
-#include "stddef.h"
-#include "string.h"
+#include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
 #include <stdio.h>
 #include "structs.h"
 #include "messages.h"

@@ -37,6 +37,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.31  2002/02/27 17:48:34  kr
+ *      Reworked auto-setting of Ewald parameters.
+ *        Added new control parameter "ewald-accuracy" to refine auto-setting.
+ *        If cutoff > necessary, optimize execution time by decreasing alpha and k_cutoff
+ *          and moving more of calculation to real space
+ *
  *      Revision 2.30  2001/05/24 16:26:43  keith
  *      Updated program to store and use angular momenta, not velocities.
  *       - added conversion routines for old restart files and dump files.
@@ -318,14 +324,14 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/startup.c,v 2.30 2001/05/24 16:26:43 keith Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/startup.c,v 2.31 2002/02/27 17:48:34 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
 #include	<math.h>
-#include 	"string.h"
-#include	"stdlib.h"
+#include 	<string.h>
+#include	<stdlib.h>
 #include	<stdio.h>
 /*========================== Program include files ===========================*/
 #include	"structs.h"

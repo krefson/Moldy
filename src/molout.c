@@ -1,13 +1,13 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/molout.c,v 1.10 2002/03/04 11:41:45 kr Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/molout.c,v 1.11 2002/06/17 09:06:03 kr Exp $";
 #endif
 
 #include "defs.h"
 #include <stdarg.h>
 #include <errno.h>
 #include <math.h>
-#include "stdlib.h"
-#include "string.h"
+#include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include "structs.h"
 #include "ReadDCD.h"

@@ -19,11 +19,15 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/dumpconv.c,v 2.16 2001/08/01 11:56:36 keith Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/dumpconv.c,v 2.17 2002/03/04 16:08:12 kr Exp $";
 #endif
 
 /*
  * $Log: dumpconv.c,v $
+ * Revision 2.17  2002/03/04 16:08:12  kr
+ * Fixed a number of bugs in dumpext and dumpconv related to reading the
+ * sysinfo section of the dump files.
+ *
  * Revision 2.16  2001/08/01 11:56:36  keith
  * Incorporated all info from "species" struct into dump file headers.
  * - fixed utilities and a few bugs.
@@ -133,12 +137,13 @@ static char *RCSid = "$Header: /home/kr/CVS/moldy/src/dumpconv.c,v 2.16 2001/08/
 
 #include "defs.h"
 #include "messages.h"
-#include "stdlib.h"
-#include "stddef.h"
+#include <stdlib.h>
+#include <stddef.h>
 #include "structs.h"
-#include "string.h"
+#include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <ctype.h>
 #ifdef USE_XDR
 #include "xdr.h"
 XDR	 xdrs;

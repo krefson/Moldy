@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.40  2002/09/18 09:03:20  kr
+ *       Merged H_0 NVT bugfix for ewald46 branch
+ *
  *       Revision 2.39  2001/07/31 09:51:02  keith
  *       Merged H0halfstep branch.
  *       Calculates H_0 at half-step, which corresponds to on-step in VTV
@@ -346,13 +349,13 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/accel.c,v 2.39 2001/07/31 09:51:02 keith Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/accel.c,v 2.40 2002/09/18 09:03:20 kr Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include        "defs.h"
 /*========================== Library include files ===========================*/
 #include        <math.h>
-#include        "string.h"
+#include        <string.h>
 #if defined(DEBUG10) || defined(DEBUG2) || defined(DEBUG_THERMOSTAT)
 #include        <stdio.h>
 #endif

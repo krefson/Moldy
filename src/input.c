@@ -29,6 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: input.c,v $
+ *       Revision 2.15  2001/07/31 14:11:45  keith
+ *       Reader now won't barf on DOS linebreaks.
+ *
  *       Revision 2.14  2000/12/06 17:45:30  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -223,14 +226,14 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/input.c,v 2.14 2000/12/06 17:45:30 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/input.c,v 2.15 2001/07/31 14:11:45 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
 #include	<ctype.h>
 #include	<math.h>
-#include 	"string.h"
+#include 	<string.h>
 #include	<stdio.h>
 /*========================== Program include files ===========================*/
 #include	"structs.h"

@@ -19,10 +19,10 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #include "defs.h"
-#include "string.h"
+#include <string.h>
 #include <stdarg.h>
-#include "stdlib.h"
-#include "stddef.h"
+#include <stdlib.h>
+#include <stddef.h>
 #include <stdio.h>
 
 int	getopt(int, char *const *, const char *);

@@ -6,6 +6,9 @@ Copyright (C) 1999 Craig Fisher */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: bdist.c,v $
+ *  Revision 1.6  2000/04/27 17:57:06  keith
+ *  Converted to use full ANSI function prototypes
+ *
  *  Revision 1.5  1999/11/01 17:16:43  keith
  *  Fixed lint complaints.
  *
@@ -32,8 +35,8 @@ Copyright (C) 1999 Craig Fisher */
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
-#include "stdlib.h"
-#include "string.h"
+#include <stdlib.h>
+#include <string.h>
 #include "list.h"
 
 /*

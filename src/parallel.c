@@ -22,6 +22,11 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.29  2001/05/24 16:26:43  keith
+ *       Updated program to store and use angular momenta, not velocities.
+ *        - added conversion routines for old restart files and dump files.
+ *       Got rid of legacy 2.0 and lower restart file reading code.
+ *
  *       Revision 2.28  2001/02/13 17:45:08  keith
  *       Added symplectic Parrinello-Rahman constant pressure mode.
  *
@@ -115,16 +120,16 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2.28 2001/02/13 17:45:08 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/parallel.c,v 2.29 2001/05/24 16:26:43 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
 #include	"structs.h"
-#include	"stdlib.h"
+#include	<stdlib.h>
 #include	"messages.h"
 /*========================== system  include files ===========================*/
 #include	<signal.h>
-#include	"string.h"
+#include	<string.h>
 #ifdef BSP
 #include	<bsp.h>
 #include	<bsp_level1.h>

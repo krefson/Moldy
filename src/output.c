@@ -37,6 +37,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.25  2002/02/27 17:48:34  kr
+ *       Reworked auto-setting of Ewald parameters.
+ *         Added new control parameter "ewald-accuracy" to refine auto-setting.
+ *         If cutoff > necessary, optimize execution time by decreasing alpha and k_cutoff
+ *           and moving more of calculation to real space
+ *
  *       Revision 2.24  2001/05/22 14:52:45  keith
  *       Added control param "dont-use-symm-rot" to switch between rotational
  *       leapfrog versions at runtime.
@@ -239,15 +245,15 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/output.c,v 2.24 2001/05/22 14:52:45 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/output.c,v 2.25 2002/02/27 17:48:34 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
 /*========================== Library include files ===========================*/
 #include 	<stdarg.h>
 #include 	<math.h>
-#include 	"stdlib.h"
-#include 	"string.h"
+#include 	<stdlib.h>
+#include 	<string.h>
 #include        <stdio.h>
 /*========================== Program include files ===========================*/
 #include "structs.h"

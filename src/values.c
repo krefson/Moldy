@@ -34,6 +34,15 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ *       Revision 2.20  2001/07/26 17:30:18  keith
+ *       Now prints both conserved hamiltonian and total system energy
+ *       (T+V) in the same vertical column.
+ *
+ *       Got rid of old code to read old restart files from moldy 2.
+ *       Added code to convert V2.19 and below restart files.
+ *
+ *       Corrected minor mistake in initialization of NPPR unit cell variables.
+ *
  *       Revision 2.19  2001/05/24 16:26:44  keith
  *       Updated program to store and use angular momenta, not velocities.
  *        - added conversion routines for old restart files and dump files.
@@ -193,7 +202,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.19 2001/05/24 16:26:44 keith Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/values.c,v 2.20 2001/07/26 17:30:18 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -201,7 +210,7 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.1
 #include	"messages.h"
 /*========================== Library include files ===========================*/
 #include	<math.h>
-#include	"string.h"
+#include	<string.h>
 #include	<stdio.h>
 /*========================== External function declarations ==================*/
 void	mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);

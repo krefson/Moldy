@@ -23,6 +23,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: quaterns.c,v $
+ *       Revision 2.11  2000/12/06 17:45:32  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.10  2000/04/27 17:57:10  keith
  *       Converted to use full ANSI function prototypes
  *
@@ -57,7 +64,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/quaterns.c,v 2.10 2000/04/27 17:57:10 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/quaterns.c,v 2.11 2000/12/06 17:45:32 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include <math.h>

@@ -19,11 +19,15 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/manalyze.c,v 2.9 2000/04/27 17:57:09 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/manalyze.c,v 2.10 2000/12/06 10:47:32 keith Exp $";
 #endif
 
 /*
  * $Log: manalyze.c,v $
+ * Revision 2.10  2000/12/06 10:47:32  keith
+ * Fixed call of make_sites() in utlsup.c to be compatible with new version.
+ * Tidied up declarations and added lint flags to reduce lint noise.
+ *
  * Revision 2.9  2000/04/27 17:57:09  keith
  * Converted to use full ANSI function prototypes
  *
@@ -76,11 +80,11 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/manalyze.c,v 2
  * 
  */
 
-#include	"time.h"
+#include	<time.h>
 #include	"defs.h"
-#include	"stddef.h"
+#include	<stddef.h>
 #include	"structs.h"
-#include	"stdlib.h"
+#include	<stdlib.h>
 #include	<stdio.h>
 
 

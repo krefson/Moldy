@@ -34,14 +34,16 @@ what you give them.   Help stamp out software-hoarding! */
  * read_ele()        Read element data from file                                    *
  *****************************************************************+******************
  */
+#define _XOPEN_SOURCE_EXTENDED
 #include "defs.h"
 #include <stdarg.h>
 #include <errno.h>
 #include <math.h>
-#include "stdlib.h"
-#include "stddef.h"
-#include "string.h"
+#include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 #include "structs.h"
 #include "messages.h"
 #include "utlsup.h"

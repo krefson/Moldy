@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.24  2001/08/03 14:29:52  keith
+ *       Made AUtomake branch main branch.
+ *
  *       Revision 2.23.2.1  2001/08/03 14:25:31  keith
  *       Further tidied up use of automake and configure scripts, with
  *       associated changes in some program files.
@@ -253,7 +256,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * Incorporate new ANSI CLOCKDS_PER_SEC instead of CLK_TCK.
  * 
  * Revision 1.7.1.11  90/05/02  18:15:12  keith
- * Tidied up include files, added "time.h".
+ * Tidied up include files, added <time.h>.
  * 
  * Revision 1.7.1.10  90/04/16  13:04:08  keith
  * Improved sysV version of rt_clock() by using result of times().
@@ -321,16 +324,16 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.23.2.1 2001/08/03 14:25:31 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/auxil.c,v 2.24 2001/08/03 14:29:52 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
 #include	<math.h>
-#include 	"string.h"
+#include 	<string.h>
 #include	<stdio.h>
 #include        <ctype.h>
-#include	"stdlib.h"
+#include	<stdlib.h>
 /*================= System Library include files - unix only ================*/
 #if defined(HAVE_TIMES) && defined(HAVE_SYS_TIMES_H)
 #   include <sys/times.h>
@@ -352,7 +355,7 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.23
 #endif
 
 #ifndef EXCLUDE_TIME_H
-#   include "time.h"
+#   include <time.h>
 #endif
 
 #ifndef CLK_TCK

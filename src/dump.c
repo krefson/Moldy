@@ -43,6 +43,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.26  2002/03/04 16:08:12  kr
+ *       Fixed a number of bugs in dumpext and dumpconv related to reading the
+ *       sysinfo section of the dump files.
+ *
  *       Revision 2.25  2002/02/05 12:11:48  kr
  *       Fixed divide-by-zero bug which gave SIGFPE on Cray
  *
@@ -240,15 +244,15 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/dump.c,v 2.25 2002/02/05 12:11:48 kr Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/dump.c,v 2.26 2002/03/04 16:08:12 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
 #include	<ctype.h>
-#include 	"string.h"
-#include	"stddef.h"
-#include	"time.h"
+#include 	<string.h>
+#include	<stddef.h>
+#include	<time.h>
 #include	<stdio.h>
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -510,7 +514,7 @@ void	dump(system_mp system, spec_mt *species,
    boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.25 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.26 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    if( ! strchr(control.dump_file, '%') )

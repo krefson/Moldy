@@ -27,6 +27,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  * $Log: main.c,v $
+ * Revision 2.21  2001/07/31 14:14:12  keith
+ * Added check to make sure that the save file doesn't overwrite the
+ * run's own input file.
+ *
  * Revision 2.20  2001/06/27 11:49:49  keith
  * Propogated update H_0 flag to all processors in parallel run -
  * changes of temp, thermostat mas etc failed otherwise.
@@ -203,7 +207,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.20 2001/06/27 11:49:49 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/main.c,v 2.21 2001/07/31 14:14:12 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"

@@ -27,6 +27,11 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.15  2002/09/18 09:59:18  kr
+ *  Rolled in several changes by Craig Fisher:
+ *  Ransub can now read polyatomic species
+ *  Syswrite can handle polyatomics from CSSR PDB or SCHACKAL files
+ *
  *  Revision 1.14  2002/06/21 11:18:10  kr
  *  Got rid of K&R varargs-compatibility stuff.
  *
@@ -122,17 +127,17 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/ransub.c,v 1.14 2002/06/21 11:18:10 kr Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/ransub.c,v 1.15 2002/09/18 09:59:18 kr Exp $";
 #endif  
 
 #include "defs.h"
 #include <stdarg.h>
 #include <errno.h>
 #include <math.h>
-#include "stdlib.h"
-#include "stddef.h"
-#include "string.h"
-#include "time.h"
+#include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
+#include <time.h>
 #include <stdio.h>
 #include "structs.h"
 #include "messages.h"
@@ -155,6 +160,10 @@ gptr	*talloc(int n, size_mt size, int line, char *file);
 char    *atime(void);
 double  det(mat_mt a);
 char	*read_ftype(char *filename);
+int     read_ele(spec_data *element, char *filename);
+int     read_pdb(char *, mat_mp, char (*)[32], vec_mp, double *, char *, char *);
+int     read_cssr(char *, mat_mp, char (*)[32], vec_mp, double *, char *, char *);
+int     read_shak(char *, mat_mp, char (*)[32], vec_mp, double *, char *, double *);
 
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;

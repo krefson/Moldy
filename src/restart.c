@@ -31,6 +31,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.20  2001/05/24 16:26:43  keith
+ *       Updated program to store and use angular momenta, not velocities.
+ *        - added conversion routines for old restart files and dump files.
+ *       Got rid of legacy 2.0 and lower restart file reading code.
+ *
  *       Revision 2.19  2001/02/13 17:45:09  keith
  *       Added symplectic Parrinello-Rahman constant pressure mode.
  *
@@ -200,14 +205,14 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/restart.c,v 2.19 2001/02/13 17:45:09 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/restart.c,v 2.20 2001/05/24 16:26:43 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
-#include 	"string.h"
-#include	"stddef.h"
-#include	"time.h"
+#include 	<string.h>
+#include	<stddef.h>
+#include	<time.h>
 #include	<stdio.h>
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -600,7 +605,7 @@ void	write_restart(char *save_name,  /* Name of save file to be written    */
    XDR		xdrsw;
    xfp_mt	xfp;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.19 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.20 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    save = fopen(control.temp_file, "wb");

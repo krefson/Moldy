@@ -35,6 +35,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: leapfrog.c,v $
+ *       Revision 2.16  2001/07/31 09:40:57  keith
+ *       Merged H0halfstep branch.
+ *       Calculates H_0 at half-step, which corresponds to on-step in VTV
+ *       ordering.
+ *       Now uses Nose's splitting integrator by default.
+ *
  *       Revision 2.15  2001/07/26 17:30:17  keith
  *       Now prints both conserved hamiltonian and total system energy
  *       (T+V) in the same vertical column.
@@ -107,7 +113,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.15 2001/07/26 17:30:17 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/leapfrog.c,v 2.16 2001/07/31 09:40:57 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"

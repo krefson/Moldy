@@ -28,6 +28,10 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdbond.c,v $
+ *  Revision 1.11  2000/12/06 10:47:33  keith
+ *  Fixed call of make_sites() in utlsup.c to be compatible with new version.
+ *  Tidied up declarations and added lint flags to reduce lint noise.
+ *
  *  Revision 1.10  2000/11/09 16:54:12  keith
  *  Updated utility progs to be consistent with new dump format
  *
@@ -89,15 +93,15 @@ what you give them.   Help stamp out software-hoarding! */
  */
 
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdbond.c,v 1.10 2000/11/09 16:54:12 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/mdbond.c,v 1.11 2000/12/06 10:47:33 keith Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
 #include <errno.h>
 #include <math.h>
-#include "stdlib.h"
-#include "stddef.h"
-#include "string.h"
+#include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
 #include <stdio.h>
 #include "structs.h"
 #include "messages.h"
