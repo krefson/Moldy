@@ -249,7 +249,7 @@ case $basic_machine in
 		basic_machine=c38-convex
 		os=-bsd
 		;;
-	cray | ymp)
+	ymp)
 		basic_machine=ymp-cray
 		os=-unicos
 		;;
@@ -261,6 +261,14 @@ case $basic_machine in
 		basic_machine=c90-cray
 		os=-unicos
 		;;
+         t3d*|T3D*)
+               basic_machine=T3D-cray
+               os=-unicos
+               ;;
+         t3e*|T3E*)
+               basic_machine=T3E-cray
+               os=-unicos
+               ;;
 	crds | unos)
 		basic_machine=m68k-crds
 		;;
