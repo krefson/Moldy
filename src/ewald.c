@@ -23,6 +23,19 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.13  1996/11/05 16:45:49  keith
+ *       - Reorganized code by extracting generation of sin and cosine tables
+ *         into new function trig_recur()
+ *       - Optimized main loops and trig_recur to avoid cache conflicts.  Small
+ *         gain on the T3D, HUGE gain (x4) on the IBM RS6000.
+ *       - New function allocate_arrays() sets out arrays in memory.
+ *       _ Preprocessor macros NCACHE and NLINE are used to tune this. NCACHE
+ *         is a (possibly sub-multiple) of the cache size, and array dimensions
+ *         are rounded up to this. NLINE is larger than the cache-line size and
+ *         this space is inserted between arrays as padding.  Both are
+ *         specified in WORDS (sizeof(real)).  Also used in accel.c for
+ *         declaration of site force arrays.
+ *
  *       Revision 2.12  1996/03/19 12:27:48  keith
  *       Parallelized trig function generation loops.  This is conditional
  *       on macro MPPMANY and is only a gain on the T3D. Requires
@@ -193,7 +206,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.13 1996/11/05 09:45:30 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.13 1996/11/05 16:45:49 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -607,7 +620,7 @@ mat_mt		stress;			/* Stress virial		(out) */
 	 message(NULLI, NULLP, WARNING, SYSCHG, sq*CONV_Q, intra/vol*CONV_E);
       }
 
-      note("Ewald self-energy = %f Kj/mol",self_energy*CONV_E);
+      note("Ewald self-energy = %f kJ/mol",self_energy*CONV_E);
    }
 
    if( ithread == 0 )
