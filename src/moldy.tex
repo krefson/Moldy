@@ -157,7 +157,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.29 $ $}
+\newcommand{\RCSrevision}{$ $Revision$ $}
 \newcommand{\moldyversion}{2.16}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -423,6 +423,7 @@ q_0 & = & \cos \frac{\phi+\psi}{2} \cos \frac{\theta}{2} \nonumber \\
 q_1 & = & \sin \frac{\phi-\psi}{2} \sin \frac{\theta}{2} \nonumber \\
 q_2 & = & \cos \frac{\phi-\psi}{2} \sin \frac{\theta}{2} \nonumber \\
 q_3 & = & \sin \frac{\phi+\psi}{2} \cos \frac{\theta}{2}.
+\label{eqn:qeuler}
 \end{eqnarray}
 
 The relationship between the time derivative of a quaternion and the
@@ -599,7 +600,7 @@ forces (\ie\ they decay faster than $r^{-3}$) one can define a
 separation $r_{ij}$ is greater than $r_c$ are assumed to be negligible
 and need not be evaluated.  In the case of a polyatomic molecular
 system it is usual to apply the cutoff according to the
-\emph{intermolecular} separation $R_{ij}$.
+\emph{intermolecular} separation, $R_{ij}$.
 
 
 \subsection{Pressure and Stress}
@@ -624,8 +625,8 @@ co-ordinate of each site relative to the molecular centre-of-mass.
 The pressure is easily evaluated as one third of the trace of the
 stress tensor. 
 
-\subsection{Long Range Corrections}
-The truncation of the interactions at the cut-off radius does
+\subsection{Long-Range Corrections}
+The truncation of the interactions at the cutoff radius does
 introduce some errors into the calculated potential energy and stress.
 By neglecting density fluctuations on a scale longer than the cutoff
 radius we may approximate the errors and calculate correction 
@@ -650,7 +651,7 @@ and $\bm{\delta}$ is the unit matrix.
 \subsection{Potential Functions}
 \label{sec:potentials}
 % LJ, Buckingham (Born-Mayer) & MCY
-\moldy\ supports most common forms of potential function including,
+\moldy\ supports most common forms of potential function including:
 \begin{list}{}{%
 \setlength{\parsep}{0in} 
 \setlength{\labelwidth}{1in}
@@ -677,13 +678,13 @@ Law.  See the following section for details.
 \section{The Ewald Sum}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \label{sec:ewald}
-The long range Coulomb interactions are handled using the Ewald Sum
+The long-range Coulomb interactions are handled using the Ewald Sum
 technique in three dimensions\cite[p.\ 156]{berthaut:52,allen:87}.
 The electrostatic potential of a system of charges is expressed as a
 sum of short-range and long-range contributions.  Each term is written
 as a series, the first in real space and the second, obtained by
 Fourier transformation using the periodicity of the MD cell, in
-reciprocal space.  The expression for the Coulomb energy $U$ is
+reciprocal space.  The expression for the Coulomb energy, $U$, is
 \begin{eqnarray}
 \label{eqn:ewald}
 U & = &  \underbrace{\frac{1}{4 \pi \epsilon_0}
@@ -785,7 +786,7 @@ momentum).
 
 Both the real- and reciprocal-space series (the sums over $\bm{n}$ and
 $\bm{k}$) converge fairly rapidly so that only a few terms need be
-evaluated.  We define the \emph{cut-off} distances $r_c$ and $k_c$ so
+evaluated.  We define the \emph{cutoff} distances $r_c$ and $k_c$ so
 that only terms with $| \bm{r}_{ij} +\bm{n} | < r_c$ and $|\bm{k}| < k_c$
 are included.  The parameter $\alpha$ determines how rapidly the terms
 decrease and the values of $r_c$ and $k_c$ needed to achieve a given
@@ -820,7 +821,7 @@ established as 5.5.  Though this will vary on different processors
 and for different potentials its value is not critical since it
 enters the equations as a sixth root.  
 
-It must be emphasized that the $r_c$ is used as a cutoff for the
+It must be emphasized that $r_c$ is used as a cutoff for the
 short-ranged potentials as well as for the electrostatic part.  The
 value chosen above \emph{does not} take the nature of the
 non-electrostatic part of the potential into account.  It is therefore
@@ -860,7 +861,7 @@ box\cite[pp 156-159]{allen:87}.  Consider a near-spherical cluster
 of MD cells.  The ``infinite'' result for any property is the limit of
 its ``cluster'' value as the size of the cluster tends to infinity.
 However this value is non-unique and depends on the dielectric
-constant, $\epsilon_s$ of the physical medium surrounding the cluster.
+constant, $\epsilon_s$, of the physical medium surrounding the cluster.
 If this medium is conductive ($\epsilon_s=\infty$) the dipole
 moment of the cluster is neutralized by image charges, whereas in a
 vacuum ($\epsilon_s=1$) it remains.  It is trivial to show that
@@ -888,7 +889,7 @@ This situation is completely non-physical but is easily avoided.
 However the problem may also arise more subtly even when there are no
 mobile ions if a framework is being simulated
 (section~\ref{sec:frameworks}).  The framework is treated as a set of
-discrete, but fixed atoms rather than a molecular unit.  If the shape
+discrete, but fixed, atoms rather than a molecular unit.  If the shape
 of the unit cell is allowed to vary then ions constituting the
 framework may indeed cross MD cell boundaries causing the
 aforementioned problems.
@@ -1076,13 +1077,13 @@ order to evaluate the site-site vector $\bm{r}_{ij} +\bm{n}_{ij}$.
 
 Using equation~\ref{eqn:bekker-virial} to compute the virial has
 another advantage. It is not necessary to perform the sum of
-contributions within the inner loop of the force calculation (c.f.
+contributions within the inner loop of the force calculation (\cf\
 equation~\ref{eqn:stress-sr}) since it depends only on the site
 co-ordinates and the total force acting on each site.  This gives a
 considerable reduction in the number of computations in the costliest
 part of the whole calculation.
 
-\subsection{No minimum-image convention}
+\subsection{No Minimum-image Convention}
 One notable feature of the implementation of the link cell method in
 \moldy\ is that it does \emph{not} follow the \emph{minimum image}
 convention used in most MD codes.  Instead the list of neighbouring
@@ -1092,7 +1093,7 @@ is quite safe to use a cutoff of more than half of the MD cell side in
 any direction.  
 
 % quick 'n dirty vs strict.
-\subsection{Cell or Strict cutoff}
+\subsection{Cell or Strict Cutoff}
 \label{sec:strict-cutoff}
 There are two options for the way in which site-site interactions are
 selected for inclusion in the total energy and forces.  These are
@@ -1351,7 +1352,7 @@ In a constant-stress simulation the MD cell changes in size and shape
 in response to the imbalance between the internal and externally
 applied pressure.  For an exposition of the method the reader should
 refer to the papers of Andersen\cite{andersen:80}, Parrinello and
-Rahman \cite{parrinello:81}, Wentzcovitch\cite{wentzcovitch:91},
+Rahman\cite{parrinello:81}, Wentzcovitch\cite{wentzcovitch:91},
 Cleveland\cite{cleveland:88} and to Nos\'{e} and Klein's extension to
 rigid molecular systems\cite{nose:83}.  The equation of motion for the
 reduced centre-of-mass co-ordinates $\bm{S}_i = \bm{h}^{-1}\bm{R}_i$
@@ -1389,7 +1390,7 @@ showed that the Parrinello-Rahman equations suffer from at least one
 significant flaw, namely that they are not ``modularly invariant''.
 The dynamics depends on the choice of MD cell which can give rise
 to unphysical symmetry breaking effects.  They offer an improved, but
-more complicated expression for the unit cell dynamics
+more complicated, expression for the unit cell dynamics
 \begin{equation}
   \label{eqn:wentzcovitch}
   W\ddot{\bm{h}} = \frac{1}{V}\left ( \bm{\pi} - p \right ) \bm{h} + W
@@ -1404,8 +1405,8 @@ which rectifies these deficiencies.  The atomic dynamics are governed
 by equation~\ref{eqn:par} as before.
 
 The choice of fictitious mass, $W$ is governed by similar
-considerations to those concerning the heat bath mass, $Q$ discussed
-in section~\ref{sec:const-temp}.  \footnote{Because of the
+considerations to those concerning the heat bath mass, $Q$, discussed
+in section~\ref{sec:const-temp}.\footnote{Because of the
 different forms of the fictitious kinetic energy term in the
 Lagrangians, typical values of $W$ for equation~\ref{eqn:wentzcovitch}
 are smaller by a factor of the order of $L^4$, where $L$ is the MD
@@ -1441,7 +1442,7 @@ MD cell constraints are selected using the control parameter
 \Lit{strain-mask} (see section~\ref{sec:cp-constraints}).  A value of
 238 will freeze all of the off-diagonal components of $\bm{h}$.
 
-\subsection{Constant-Pressure}
+\subsection{Constant Pressure}
 
 The above $\bm{h}$ matrix constraints are not adequate for
 simulations of liquids at constant pressure.  Since a liquid can not
@@ -1565,17 +1566,17 @@ the principle in 2 dimensions.
 \setlength{\unitlength}{0.012500in}%
 \input{fig_skewstart.ftx}
 \caption[The Skew Start method]{The Skew Start method.  $N$ molecules
-  are placed at evenly-spaced intervals, $a$ on a line joining a
+  are placed at evenly-spaced intervals, $a$, on a line joining a
   corner of the MD cell to its image $k$ cells away (5 in this
   illustration).  When mapped back into the original cell this
   guarantees a minimum separation of $min(d,a)$.}
 \label{fig:skewstart}
 \end{figure}
 
-The $N$ molecules are placed at some suitable interval $a$ on a line
+The $N$ molecules are placed at some suitable interval, $a$, on a line
 drawn between one corner of the MD cell (of side $L$) and one of its
 periodic images.  Clearly the index $(h,k)$ of the image cell corner
-should be chosen so that the molecule spacing, $a$ is close to the
+should be chosen so that the molecule spacing, $a$, is close to the
 spacing of the line's images, $d$. For simplicity, choose $k=1$ which
 leads to the condition:
 \begin{eqnarray}
@@ -1677,7 +1678,7 @@ and
 \end{equation}
 
 Finally, we note that if a molecule has less than three degrees of
-freedom, that is $I_{ik}=0$ for some $i$ the corresponding angular
+freedom, that is $I_{ik}=0$ for some $i$, the corresponding angular
 velocities \etc\ are simply set to zero.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1698,7 +1699,7 @@ to an infinitely repeating crystalline surface or structure as a
 \emph{framework}.
 
 There are two possible formulations of a system of this kind for use
-in a MD simulation.  Firstly the framework may be modelled as a set of
+in an MD simulation.  Firstly the framework may be modelled as a set of
 independent atoms interacting via pair potentials.  This merely
 requires specifying the correct initial structure and MD cell plus a
 suitable set of pair potentials. The latter model both the internal
@@ -1767,7 +1768,7 @@ in contact with a 3D rigid framework. 2-dimensional systems such as a
 fluid at a surface or between two surfaces may be represented as a 3D
 system by adding an artificial periodicity in the third dimension. To
 reduce the errors so introduced, the framework can be made ``large
-with space inside'' to fill a MD cell with a large $c$-axis.  
+with space inside'' to fill an MD cell with a large $c$-axis.  
 
 In the case of a 3D framework it is clearly not sensible to allow the
 MD cell to change shape or size, since this would destroy the internal
@@ -1818,7 +1819,7 @@ fluid.  Though not currently implemented, this may be rectified in a
 future version of \moldy.
 
 Finally we note that in the case of a 2D layer structure, which is
-\emph{not} rigid in the third dimension the perpendicular component if
+\emph{not} rigid in the third dimension, the perpendicular component of
 the stress tensor \emph{does} have a physical meaning and is correctly
 calculated. 
  
@@ -1932,7 +1933,7 @@ or lower case. For example
    end                       # The control file ends here
 \end{verbatim}
 sets the title of the simulation to ``Moldy example'', the number of
-steps to execute to 1000, the timestep to 0.0005ps and supplies the
+steps to execute to 1000, the timestep to 0.0005 ps and supplies the
 name of a restart file to read from.
 
 It is not necessary to specify all of the parameters on each run.
@@ -2137,13 +2138,13 @@ Seed for random number generator. \\ \hline
 Number of columns on output paper. \\
 \Lit{page-length} &    integer &               44 &
 Number of lines on a page of output. \\ \hline
-\Lit{mass-unit} &              real &                  1.6605402e-27 &
+\Lit{mass-unit} &              real &                  1.6605655e-27 &
 Unit of mass for system specification file. \\
 \Lit{length-unit} &            real &                  1e-10 &
 Unit of length for system specification file. \\
 \Lit{time-unit} &              real &                  1e-13 &
 Unit of time for system specification file. \\
-\Lit{charge-unit} &            real &                  1.60217733e-19 &
+\Lit{charge-unit} &            real &                  1.6021892e-19 &
 Unit of charge for system specification file. \\ \hline
 \end{longtable}%
 }
@@ -2248,7 +2249,7 @@ and the four parameters appear on the line in the order $A, B, C, D$.
   D_{ij}/r_{ij}^4 -E_{ij}/r_{ij}^6 -F_{ij}/r_{ij}^8\]
 with the six parameters $A_{ij}$ -- $F_{ij}$.
 \item[morse] This is the Busing-Ida-Gilbert plus Morse-potential as
-  used in the Japanese MD program Mdxorto.  It has the form
+  used in the Japanese MD program Mxdorto.  It has the form
 \[\phi(r_{ij}) = B_{ij}  exp ((C_{ij}-r_{ij})D_{ij})   - E_{ij}/r_{ij}^6 + F_{ij} \exp (-2G_{ij}(r_{ij}-H_{ij})) - 2F_{ij}\exp (-G_{ij}(r_{ij}-H_{ij}))\]
 with seven parameters $B_{ij}$ -- $H_{ij}$.
 \item[HIW]  This is a Lennard-Jones potential with an extra
@@ -2264,7 +2265,7 @@ It is possible to specify the units in which these quantities are
 given by means of the control file parameters \Lit{mass-unit},
 \Lit{length-unit}, \Lit{time-unit} and \Lit{charge-unit} (which are
 themselves specified in SI units). All potential parameters, site
-masses and charges, but not co-ordinates are taken to be in those
+masses and charges, but not co-ordinates, are taken to be in those
 units. Their default values are amu, {\AA}, 0.1ps and $q_{e}$, which means
 that the unit of energy is kJ\,mol$^{-1}$.  So to read in {\AA}, amu and
 kcal mol$^{-1}$, specify \Lit{time-unit=4.8888213e-14}, for  {\AA}, amu
@@ -2273,8 +2274,8 @@ potentials specified in  {\AA}, amu and $\epsilon$ in K (ie  $E/k_B$) use
 \Lit{time-unit=0.548343e-12}, which includes the extra factor of 4.
 
 Once the system specification has been read in, all quantities are
-converted to `internal' units: a.m.u., {\AA}, ps, and $\insqrt (
-\textnormal{a.m.u. {\AA}}^{3} \textnormal{ps}^{-2}/(4 \pi \epsilon_{0}) )$.
+converted to `internal' units: amu, {\AA}, ps, and $\insqrt (
+\textnormal{amu {\AA}}^{3} \textnormal{ps}^{-2}/(4 \pi \epsilon_{0}) )$.
 The prototype molecule for each species is then shifted so that its
 zero of coordinates lies on its centre of mass, and rotated into the
 principal frame (polyatomics only).
@@ -2320,14 +2321,14 @@ each direction which comprise the MD cell.  The next $n$ lines
 describe the $n$ molecules of the basis which will be replicated to
 form the full configuration.  Molecules may appear in any order, but
 of course the total number of each, multiplied by the number of unit
-cells $n_{x} n_{y} n_{z}$ must agree with that given in the system
+cells $n_{x} n_{y} n_{z}$, must agree with that given in the system
 specification file.
 
 Each molecule is identified by its name, as given in the system
 specification file.  $X, Y$ and $Z$ are \emph{fractional}
 co-ordinates, between 0 and 1 giving the location of the molecular
 centres of mass in the crystal unit cell. The orientation is given by
-the four quaternions $q_{0}, q_{1}, q_{2}, q_{3}$ which specify a
+the four quaternions $q_{0}, q_{1}, q_{2}, q_{3}$, which specify a
 rotation about the centre-of-mass \emph{relative to the orientation of
   the prototype molecule in the system specification file}.  (Notice
 the slight inconsistency with the positions, which are of the centres
@@ -2556,7 +2557,7 @@ various thermodynamic variables, their rolling averages and associated
 standard deviations. The \emph{rolling average} is just the mean over
 the preceding $n$ timesteps where $n$ is set by the control parameter
 \Lit{roll-interval}.  An annotated example is given in
-figure~\ref{fig:output}.  The frequency of periodic output may be
+Figure~\ref{fig:output}.  The frequency of periodic output may be
 altered by setting the control parameter \Lit{print-interval} to
 the interval required.  (This may be necessary to constrain the size
 of the output file which can grow to be very large indeed with the
@@ -2614,7 +2615,7 @@ parameter \Lit{begin-average} and every \Lit{average-interval}
 timesteps thereafter, the means and standard deviations are calculated
 and printed.  This output is interspersed with the periodic output and
 is formatted with one variable to a line in the form \emph{mean +/-
-  s.d}.. Where a variable has more than one component (such as
+  standard deviation}. Where a variable has more than one component (such as
 multiple species for the translational temperature or Cartesian
 components for the mean square forces) the components are printed
 across the page.\footnote{Remember that the standard deviation is a
@@ -2677,7 +2678,7 @@ calculated from the binned distances and printed out, and the counters
 are reset to zero to begin accumulation again.  Distances are binned
 and RDFs $g_{\alpha \beta}(r)$ calculated separately for each distinct
 type of atom-atom (or site-site) pair.  An explanation of the output
-format is given in figure~\ref{fig:rdf-output}.  Note that each number
+format is given in Figure~\ref{fig:rdf-output}.  Note that each number
 should be considered as the value at the \emph{centre} of its bin, so
 that entry $i$ in each list is the value of
 $g_{\alpha\beta}((i+1/2)b)$ where $b$ is the bin width.
@@ -2748,7 +2749,7 @@ large and unwieldy one. \moldy\  takes considerable pains to ensure that
 a contiguous sequence of dump files is maintained and also ensures
 that dumps from different runs are not accidentally intermixed.  There
 is no requirement that a dump file be produced by a single run of
-\moldy\ , which extends an existing file or starts a new one as appropriate.
+\moldy\, which extends an existing file or starts a new one as appropriate.
 A simulation may stop and be restarted many times without
 disturbing the dump file sequence.  The  sequence
 should (in most cases) even survive a system crash and a restart from
@@ -2782,7 +2783,7 @@ binary numbers.  These are written either in native (\ie\ the
 machine's own) format or XDR format (see section~\ref{sec:xdr})
 depending on the value of the control parameter \Lit{xdr}.  The
 record's exact contents are determined by the control parameter
-\Lit{dump-level} which is a bit flag \ie\ a value of $2^{n}$
+\Lit{dump-level}, which is a bit flag, \ie\ a value of $2^{n}$
 means that bit $n$ is set.  Four bits are used and any combination may
 be specified but the cumulative values 1, 3, 7 and 15 are most
 useful.  A value of 0 disables dumping. The data dumped for each bit
@@ -2963,11 +2964,11 @@ cutoff is applied and whether to include the De Leuuw surface dipole
 term.
 
 By default $\alpha$, $r_c$ and $k_c$ are chosen automatically, using
-equations~\ref{eqn:ewald-cut} to give a default accuracy of $\epsilon
+equations~\ref{eqn:ewald-alpha}-~\ref{eqn:ewald-cut} to give a default accuracy of $\epsilon
 = \exp(-p) = 10^{-5}$ (\ie\ $p = 11.5$) in the Coulombic potential energy
 evaluation.  An empirically determined value of $t_R/t_F = 5.5$ is
 used.  If a different accuracy is desired the cutoffs may be adjusted
-using equations~\ref{eqn:ewald-cut}.  The $\alpha$ parameter is
+using equations~\ref{eqn:ewald-alpha}-~\ref{eqn:ewald-cut}.  The $\alpha$ parameter is
 specified by \Lit{alpha} in units of {\AA}$^{-1}$ and the direct and
 reciprocal space cutoff distances $r_{c}$ and $k_{c}$ by
 \Lit{cutoff} and \Lit{k-cutoff} in units of {\AA}\ and {\AA}$^{-1}$
@@ -2992,7 +2993,7 @@ As an example of manual determination of the parameters, for a
 simulation of 512 MCY water molecules the values $\alpha =
 0.3${\AA}$^{-1}$, $r_{c} = 9${\AA}\ and $k_{c} = 1.9${\AA}$^{-1}$ give
 potential energies correct to approximately 1 part in $10^{5}$.  For a
-simulation including ions - 1.1 Molal Magnesium Chloride solution -
+simulation including ions - 1.1 Molal magnesium chloride solution -
 the same accuracy is attained with $\alpha = 0.45${\AA}$^{-1}$, $r_{c} =
 9${\AA}\ and $k_{c} = 3${\AA}$^{-1}$.
 
@@ -3084,7 +3085,7 @@ are applied to \emph{all} of its atoms depending on its centre-of-mass
 co-ordinates relative to some interacting molecule.  In contrast, the
 atoms of a framework are independently relocated.  This ensures that
 each molecule ``sees'' all framework atoms from any unit cell which
-are within the cut-off distance.
+are within the cutoff distance.
 \end{enumerate}
 
 In the present version of the program, only one framework molecule is
@@ -3229,7 +3230,7 @@ the operating system of the target computer.
 \begin{description}
 \item[unix]  
 This version of \moldy\ uses the GNU autoconf system to configure for
-compilation.   In most cases it should be possible to do:
+compilation.  In most cases it should be possible to do
 
 \Lit{\% ./configure}\\
 \Lit{\% make}
@@ -3250,7 +3251,7 @@ by setting the OPT and OPT2 environment variables.
 You can set or change the default compiler or options by calling
 configure with the environment variables CC, CPPFLAGS, CFLAGS, OPT,
 OPT2, LDFLAGS or LIBS defined.  Any values you supply for these will
-override the built-in ones.  \emph{e.g.}
+override the built-in ones, \eg\
 
 
 \begin{tabbing}
@@ -3281,7 +3282,7 @@ for the parallel system are in a directory searched by the C compiler
 and the libraries can be found using \Lit{-l}\textit{parsys}.  The
 Cray T3D/T3E and SGI Power Challenge and Origin 2000 systems fall into
 this category.  Otherwise it may be necessary to specify these by
-setting the environment variables CPPFLAGS and LIBS, eg:
+setting the environment variables CPPFLAGS and LIBS, \eg\:
 
 \Lit{env CPPFLAGS=-I/usr/local/mpi/include 
     LIBS="-L/usr/local/mpi/bin -lmpi" ./configure}
@@ -4448,7 +4449,7 @@ molecular dynamics to begin.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Main timestep loop}
+\subsection{Main Timestep Loop}
 
 The initial entry point into \moldy\ is into function \Lit{main()},
 which calls \Lit{start\_up()} (section~\ref{sec:startup}) and then
@@ -4521,7 +4522,7 @@ function \Lit{do\_step()}.  The conceptually simple calculation of
 forces and stepping of co-ordinates is made lengthy and less
 transparent by the need to handle the rigid-molecule equations of
 motion and the constant-pressure and -temperature extended system
-equations.  The procedure is set out in figures~\ref{fig:dostep-a}
+equations.  The procedure is set out in Figures~\ref{fig:dostep-a}
 and~\ref{fig:dostep-b}.  The main stages of the calculation are
 \begin{enumerate}
 \renewcommand{\theenumi}{\emph{\alph{enumi}}}
@@ -4634,7 +4635,7 @@ Otherwise a (very slow) cache load would be necessary on every loop
 iteration. 
 
 The link cell functions are all in \Fname{force.c}
-(figure~\ref{fig:link-cell}).  The outer-level function is
+(Figure~\ref{fig:link-cell}).  The outer-level function is
 \Lit{force\_calc()}.  Function \Lit{neighbour\_list()}
 constructs a list of subcells within the cutoff radius of a reference
 cell.  By adding an offset and applying periodic boundary conditions
@@ -4682,7 +4683,7 @@ separate function allows the use of a larger cutoff than for the force
 and potential evaluation.
 
 The reciprocal-space part of the Ewald sum is evaluated in function
-\Lit{ewald()}, shown in figure~\ref{fig:ewald}.  This is a fairly
+\Lit{ewald()}, shown in Figure~\ref{fig:ewald}.  This is a fairly
 straightforward implementation of the \emph{k}-space terms of
 equations~\ref{eqn:ewald}, \ref{eqn:ewald-force}
 and~\ref{eqn:ewald-stress}, and differs from common implementations
@@ -4838,7 +4839,7 @@ these is selected by conditional compilation of \Fname{parallel.c} with
 one of the preprocessor symbols \Lit{MPI}, \Lit{TCGMSG},
 \Lit{BSP} or \Lit{SHMEM} defined.
 
-\subsection{Input/Output and startup}
+\subsection{Input/Output and Startup}
 \label{sec:pario}
 
 Since each processor runs an identical copy of the program executable,
@@ -4899,13 +4900,13 @@ processors simultaneously. If the condition signalled was
 \Lit{FATAL} then \Lit{message()} finally calls \Lit{par\_abort()}
 which terminates the run on all processors.
 
-\subsection{Distributed forces calculation}
+\subsection{Distributed Forces Calculation}
 
 The two parts of the forces calculation which must be parallelized are
 the short-ranged forces calculation and the reciprocal-space part of
 the Ewald sum.  The outermost loop of the link cell forces calculation
 in function \Lit{force\_inner()} runs over all subcells within the
-simulation cell (see figure~\ref{fig:link-cell}).  In the serial case, 
+simulation cell (see Figure~\ref{fig:link-cell}).  In the serial case, 
 it has the form\\
 \parbox{\textwidth}{%
 \begin{quote}
@@ -4948,7 +4949,7 @@ strategy the ``reduced k-vector list'' (RKL) method and the latter the
 ``reduced ion list'' (RIL) method.  \moldy\ contains implementations
 of both methods.  In the RKL method, it is necessary to pre-compute a
 list of \emph{k}-vectors within the cutoff sphere (see
-figure~\ref{fig:ewald}) which is stored in the array \Lit{hkl[]}.
+Figure~\ref{fig:ewald}) which is stored in the array \Lit{hkl[]}.
 (Each element of \Lit{hkl[]} is a struct containing the values of $h$,
 $k$, $l$ and the vector components of $\bm{k}$.) The loop over
 \emph{k}-vectors then takes the form of a single loop over this list,
@@ -5269,7 +5270,7 @@ where the arguments have the following meanings
 \item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
 \item[-d] read configurational data from a dump file given as a prototype name
 containing a \Lit{printf()} format string - see section~\ref{sec:dumping}.
-\item[-t] range of records in the dump file, specified in ``selector'' format, to
+\item[-t] range of records in the dump file, specified as a selector format list, to
 average positions over.
 \item[-f] give the output in the specified format (see table~\ref{tab:output}).
 \item[-a] calculate the average positions using the Cartesian (absolute)
@@ -5293,29 +5294,30 @@ MD cell.
 \Fname{dcd}   &   DCD format suitable for animation by \emph{VMD}.\\
 \Fname{vmd}   &   same as \Fname{dcd}.\\
 \Fname{cssr}  &   Cambridge Structure Search and Retrieval (CSSR) format.\\
-\Fname{arc}   &   MSI's Insight II ARC (also CAR, MDF, COR) archive file format.\\
-\Fname{xtl}   &   Biosym XTL format.\\
+\Fname{arc}   &   Accelrys' Insight II ARC (also CAR, MDF, COR) archive file format.\\
+\Fname{xtl}   &   Accelry's Insight II XTL format.\\
 \Fname{bin}   &   raw binary format.\\ \hline
 \end{tabular}
 \end{table}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Mdbond and bdist}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Mdbond and Bdist}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\emph{Mdbond} is a utility for calculating the distances between the centres
-of mass of pairs of molecules, as well as angles between triplets of
-molecules within minimum and maximum values specified using options
-\Lit{-b} and \Lit{-a} (for bonds and angles, respectively). The
-utility calculates values for ALL pairs / triplets within the cutoffs,
-including those involving mirror atoms, so that maximum cutoffs
-greater than the simulation box lengths are possible.
+\emph{Mdbond} is a utility for calculating the distances between particles,
+ as well as angles between triplets of particles,
+ within minimum and maximum values specified using options
+\Lit{-b} and \Lit{-a} (for bonds and angles, respectively). If the \Lit{-p}
+option is used, 3D periodic boundary conditions are applied so that
+distances and angles are calculated for ALL pairs/triplets within the cutoffs,
+including those involving mirror atoms. It is therefore possible to use cutoffs
+greater than the simulation box lengths.
         
 Bond lengths are output in columnar format in increasing order with
-the number and species type of each pair of molecules given in the
+the molecule numbers and particle names for each pair of particles given in the
 first two columns. The angle data are output after the bond data, also
-in columnar format. Each row contains the molecule numbers and species
-types for triplets \emph{i-j-k} , followed by the angle formed about
+in columnar format. Each row contains the molecule numbers and particle names
+for triplets \emph{i-j-k} , followed by the angle formed about
 molecule \emph{i} and the distances \emph{i-j} and \emph{i-k}.
 
 The command line options are:
@@ -5329,6 +5331,9 @@ The command line options are:
 \Lit{[-b} \textit{bond-limits}\Lit{]} 
 \Lit{[-a} \textit{angle-limits}\Lit{]} 
 \Lit{[-g} \textit{species-range}\Lit{]} 
+\Lit{[-p]} 
+\Lit{[-x]}
+\Lit{[-j]}
 \Lit{[-c]}
 \Lit{[-o} \textit{output-file}\Lit{]}
 \end{center}
@@ -5339,21 +5344,32 @@ where the arguments have the following meanings:
 \item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
 \item[-d] read configurational data from a dump file given as a prototype name
   containing a \Lit{printf()} format string - see section~\ref{sec:dumping}. 
-\item[-t] range of records in the dump file, specified in ``selector''
+\item[-t] range of records in the dump file, specified in selector
   format, to average positions over.
-\item[-b] bond limits in tenths of Angstroms entered in form
+\item[-b] bond limits in tenths of angstroms entered in form
   ``minimum-maximum''. Limits may be entered as integers only, so
   smallest difference is 0.1{\AA}. Defaults to 0.2 to 2{\AA}.
 \item[-a] angle limits in degrees entered in form ``minimum-maximum''.
   Limits may be entered as integers only, so smallest difference is
   1{\textdegree}. Defaults to 0 to 180{\textdegree}.
-\item[-g] range of species to be included, given in selector format
-  where 0 represents the first species. Defaults to all species.
+\item[-g] range of species to be included, given in selector format,
+  where \Lit{1} represents the \emph{first} species. Defaults to all species.
+\item[-p] switch on 3D periodic boundary conditions.
+\item[-x] ignore right and straight angles.
+\item[-j] calculate bonds and angles between molecular sites rather than centres of mass.
 \item[-c] if reading system specification file, skip any preceding
   control parameter info.
 \item[-o] name of optional output file. Defaults to standard output.
 \end{Argdescription}
 
+
+By default, \emph{mdbond} calculates the distances and angles between molecules' centres of mass.
+ For polyatomic species, the particle name in the output is the first two letters
+ of the species name, while for monatomic species it is the corresponding atomic symbol. 
+Intermolecular distances and angles for all molecular sites
+ can be calculated by specifying option \Lit{-j}.
+ In this case, the particle name is the atomic symbol
+of the corresponding species site. Option \Lit{-j} has no effect for monatomic species.
 
 Species positions can be input using system specification, restart or dump
 files. If the latter case is chosen, the bond and angle data for each time
@@ -5364,8 +5380,8 @@ slice.
 \emph{Bdist} converts the data output from \emph{mdbond} into a format
 suitable for
 plotting bond and angle distribution curves. The utility scans through the
-output file counting the number of bond lengths / angles within the
-specified intervals for different pairs / triplets of species types. The
+output file counting the number of bond lengths/angles within the
+specified intervals for different pairs/triplets of species types. The
 data is output in two columns, first for bonds and then for angles, with
 the mid-point of the bond/angle interval given in the first column and the
 number of bonds/angles within that interval in the second column. The
@@ -5376,13 +5392,14 @@ utility is invoked on the command line by:
 \Lit{[-i} \textit{input-file}\Lit{]}
 \Lit{[-b} \textit{bond-range}\Lit{]}
 \Lit{[-a} \textit{angle-range}\Lit{]}
+\Lit{[-p]}
 \Lit{[-o} \textit{output-file}\Lit{]}
 \end{center}
 
 where the options are:
 \begin{Argdescription}
 \item[-i] name of the input file.
-\item[-b] bond interval limits in tenths of Angstroms entered in form
+\item[-b] bond interval limits in tenths of angstroms entered in form
   ``minimum-maximum:increment''. Limits may be entered as integers
   only, so smallest increment is 0.1{\AA}. Defaults to 0.2 to 2{\AA} with
   a 0.5{\AA} increment.
@@ -5390,12 +5407,18 @@ where the options are:
   ``minimum-maximum:increment''. Limits may be entered as integers only,
   so smallest increment is 1{\textdegree}. Defaults to 0 to
   180{\textdegree}\ with a 1{\textdegree}\ increment.
+\item[-p] give output as list of type and number
+of neighbouring (bonded) species for each molecule.
+\item[-o] name of optional output file. Defaults to standard output.
 \end{Argdescription}
 
+Option \Lit{-p} provides an alternative output format where each molecule and its neighbours
+are listed in the order \textit{mol-no molecule-name neighbour-species-type1: no-of-neighbours
+ neighbour-species-type2: no-of-neighbours...}, with one line per molecule. Angle data is ignored.
 \textbf{N.B.} If the file to be analyzed contains
 multiple data sets (\eg\ from reading dump files), the data for each time slice
-must be copied manually into separate files and the ``- Time Slice \# -''
-headings removed before \emph{bdist} can be used.
+will be separated by lines of the form ``- Time Slice \# -'', where \# corresponds to the
+number of that particular time slice.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Mdshak}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -5458,14 +5481,13 @@ be given.
 \item[-d] read the configurational information from a dump file.  The
 argument is a dump prototype name containing a \Lit{printf()} format
 string -- see section~\ref{sec:dumping}.
-\item[-t] range of records in dump file, specified in ``selector''
+\item[-t] range of records in dump file, specified in selector
 format.
 \item[-c] if reading a system specification file, skip any preceding
 control parameter info.
 \item[-f] Write the output file in the format specified (see table~\ref{tab:output}).
-\item[-y] Join up trajectory fragments to eliminate jumps when a
-  molecule exits from one side of the MD cell and re-enters the
-  opposite side.
+\item[-y] Join up trajectory fragments to eliminate molecules ``leaping''
+  from one side of the MD cell to the other.
 \item[-i]   this inserts its argument into the output file and is used
 to add extra SCHAKAL commands, such as BOX.
 \item[-o] name of output file. Defaults to standard output.
@@ -5515,8 +5537,6 @@ The command line options are:
 
 \begin{center}
 \Lit{mdvaf}
-\Lit{[-s} \textit{system-specification} \Lit{|}
-\Lit{-r} \textit{restart-file} \Lit{]}
 \Lit{[-d} \textit{dump-file-format}\Lit{]}
 \Lit{[-t} \textit{dump-range}\Lit{]} \\
 \Lit{[-v} \textit{vaf-range}\Lit{]}
@@ -5528,19 +5548,16 @@ The command line options are:
 
 where the arguments have the following meanings:
 \begin{Argdescription}
-\item[-s] read the species data from a system specification file.
-\item[-r] read the species data from a restart file. Only one of \Lit{-s} 
-or \Lit{-r} may be given.
-\item[-d] read the centre of mass velocities from a dump file (of \Lit{dump-level} 
+\item[-d] read the system info and centre of mass velocities from a dump file (of \Lit{dump-level} 
 $>= 2$) given as a prototype name containing a \Lit{printf()} format 
 string -- see section~\ref{sec:dumping} .
-\item[-t] range of records in dump file, specified in ``selector'' format.
+\item[-t] range of records in dump file, specified in selector format.
 \item[-v] time intervals to calculate the VACF or VTF values for, specified 
-in ``selector'' format. Default is 0 to half the number of dump 
+in selector format. Default is 0 to half the number of dump 
 records selected, with an increment of 1.
-\item[-g] range of species to be included, given in ``selector'' format 
-where 0 represents the \emph{first} species. Defaults to all species.
-\item[-c] if reading system specification file, skip any preceding control 
+\item[-g] range of species to be included, given in selector format 
+where \Lit{1} represents the \emph{first} species. Defaults to all species.
+\item[-c] if reading a system specification file, skip any preceding control 
 parameter info.
 \item[-q] calculate the VTF instead of the VACF.
 \item[-o] name of optional output file. Defaults to standard output.
@@ -5550,9 +5567,7 @@ If the executable file is named \Fname{mdvaf} then the default calculation
 is the VACF. If it is renamed to \Fname{mdvtf}, then the default is the 
 VTF. In both cases, the output is in the form of a single column 
 of data headed by the name of the species in question. The lines 
-down each column correspond to increasing time intervals. Similar 
-to \emph{msd}, the time intervals selected using \Lit{-m} are taken relative 
-to the dump slices selected using \Lit{-t}. 
+down each column correspond to increasing time intervals.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Moldyext}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -5568,7 +5583,7 @@ tabular form for input into plotting programs.  The command is
 \end{center}
 where \emph{fields} is a list in the selector format above.  The
 numbering runs from left to right, ignoring newlines and blank columns
-so that the translational KE's in figure~\ref{fig:output} are fields 1
+so that the translational KE's in Figure~\ref{fig:output} are fields 1
 and 14 and the $\sigma_{zz}$ component of the stress tensor is 30.
 
 \emph{Moldyext} can currently only extract information from the
@@ -5608,45 +5623,43 @@ specified in command line mode:
 
 \begin{center}
 \Lit{msd}
-\Lit{[-s} \textit{system-specification} \Lit{|}
-\Lit{-r} \textit{restart-file}\Lit{]}
 \Lit{[-d} \textit{dump-file-format}\Lit{]}
 \Lit{[-t} \textit{dump-range}\Lit{]} \\
+\Lit{[-c]}
 \Lit{[-m} \textit{msd-time-range}\Lit{]}
 \Lit{[-i} \textit{initial-time-increment}\Lit{]}
 \Lit{[-g} \textit{species-range}\Lit{]}
-\Lit{[-u]}
-\Lit{[-w]} \\
+\Lit{[-w} \textit{trajectory-output-format}\Lit{]} \\
 \Lit{[-x|-X]} \Lit{[-y|-Y]} \Lit{[-z|-Z]}
 \Lit{[-o} \textit{output-file} \Lit{]}
 \end{center}
 
 where the meanings of the options are
 \begin{Argdescription}
-\item[-s] read the species data from a system specification file.
-\item[-r] read the species data from a restart file. Only one of
-  \Lit{-s} or \Lit{-r} may be given.
-\item[-d] read the centre of mass coordinates from a dump file given as a
+\item[-d] read the system info and centre of mass coordinates from a dump file given as a
 prototype name containing a \Lit{printf()} format string -- see
 section~\ref{sec:dumping}. 
-\item[-t] range of records in dump file, specified in ``selector'' format.
+\item[-c] if reading a system specification file, skip any preceding control 
+parameter info.
+\item[-t] range of records in dump file, specified in selector format.
 \item[-m] time intervals to calculate the msd values for, specified in
-  ``selector'' format. Default is zero to half the number of time slices specified with \Lit{-t}.
+  selector format. Default is zero to half the number of time slices specified with \Lit{-t}.
 \item[-i] the increment the initial time, $t_0$, is increased by during
 calculation of msd for a given time interval. Defaults to 1.
-\item[-g] range of species to be included, given in ``selector''
-  format where \Lit{0} represents the \emph{first} species. Defaults
+\item[-g] range of species to be included, given in selector
+  format where \Lit{1} represents the \emph{first} species. Defaults
   to all species. 
 \item[-u] option to by-pass msd calculation and output the connected particle
 trajectories in the format selected by \Lit{-w}. 
-\item[-w] selects the generic (simple matrix) format for outputting trajectory data. 
-The default format is that used by GNUPlot (see below). 
+\item[-w] by-passes msd calculation and outputs the connected particle trajectories.
+Type \Lit{gnu} for format readable by GNUPlot (default) or \Lit{gen} for the generic (simple matrix) format 
+(see below). 
 \item[-x, -y, -z, -X, -Y, -Z] indicate that limits (in {\AA}) are to be
   specified in the given cartesian direction. If the direction is in
   lowercase, only particles whose initial positions lie \emph{within}
   these limits are included in the msd calculation or trajectory
   output. If the direction is in uppercase, the program will only
-  include particles lying \emph{outside} these limits. limits can be
+  include particles lying \emph{outside} these limits. Limits can be
   imposed in one, two or all three directions in any possible
   combination. However, if both options for a single direction (\eg\ 
   \Lit{-x} and \Lit{-X}) are used, priority will be given to the
@@ -5656,7 +5669,7 @@ The default format is that used by GNUPlot (see below).
 \end{Argdescription}
 
 
-The output format for msd calculations consists of four columns
+The output format for msd calculations consists of four columns for each species
 corresponding to the $x, y, z$ components and total msd, with
 increasing time intervals down the columns.
 
@@ -5673,12 +5686,12 @@ half that of the total number of dump slices in order to optimise the
 msd time interval and number of calculations over which each msd is
 averaged.
 
-Selecting option \Lit{-u} circumvents calculation of the msds and
+Selecting option \Lit{-w} \Lit{gnu} circumvents calculation of the msds and
 instead sends the connected trajectory coordinates to the output. The
 default format for trajectory data is ``\# \textit{species-name}'' followed by a
 row of $x y z$ for a single particle for each increasing time interval.
 Trajectory data for each particle are separated by two blank lines.
-This is the format favoured by GNUPlot. Option \Lit{-w}  selects
+This is the format favoured by GNUPlot. Option \Lit{-w} \Lit{gen} selects
 the generic matrix format in which a single row contains consecutive $x
 y z$ coordinates for all particles, with time increasing down the
 columns.
@@ -5754,8 +5767,6 @@ The command line options are:
 \Lit{ransub}
 \Lit{[-s} \textit{system-specification} \Lit{|}
 \Lit{-r} \textit{restart-file}\Lit{]}
-\Lit{[-d} \textit{dump-file-format}\Lit{]}
-\Lit{[-t} \textit{dump-range}\Lit{]} \\
 \Lit{[-m} \textit{solvent-species}\Lit{]} 
 \Lit{[-n} \textit{no. of substitutions}\Lit{]} 
 \Lit{[-u} \textit{solute-species}\Lit{]}
@@ -5765,9 +5776,11 @@ The command line options are:
 \Lit{[-a} \textit{dopant-structure-file}\Lit{]}
 \Lit{[-e} \textit{species-data-file}\Lit{]} 
 \Lit{[-y} \textit{potential-parameter-file}\Lit{]} 
+\Lit{[-f} \textit{Euler-angle-phi}\Lit{]}
+\Lit{[-t} \textit{Euler-angle-theta}\Lit{]} 
+\Lit{[-p} \textit{Euler-angle-psi}\Lit{]} 
 \Lit{[-x]}
 \Lit{[-h]}
-\Lit{[-k]}
 \Lit{[-j]}
 \Lit{[-c]}
 \Lit{[-o} \textit{output-file}\Lit{]}
@@ -5777,10 +5790,6 @@ where the arguments have the following meanings:
 \begin{Argdescription}
 \item[-s] read a system specification file.
 \item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
-\item[-d] read configurational data from a dump file given as a prototype name
-  containing a \Lit{printf()} format string - see section~\ref{sec:dumping}. 
-\item[-t] range of records in the dump file, specified in ``selector''
-  format, to average positions over.
 \item[-m] the name of the species to be replaced, \ie\ the ``solvent''
   species.
 \item[-n] the number of molecules to be substituted.
@@ -5791,7 +5800,7 @@ where the arguments have the following meanings:
   first atom of the solvent species.
 \item[-z] name/symbol of the (monatomic) solute species. Defaults to same name as the
   first atom of the solvent species.
-\item[-a] file containing structural information for polyatomic solute species. Can be in CSSR, PDB
+\item[-a] file containing structural information for polyatomic solute species. Can be in CSSR, PDB, XYZ, XTL 
   or SCHAKAL format.
 \item[-e] read the species data (mass, charge, symbol) corresponding to the
 solute species name from the file specified.
@@ -5813,42 +5822,50 @@ from the file specified. This is a text file of format:
 \end{displaymath}
 where the number of parameters, their values, order and units are the
 same as in a system specification file (see section~\ref{sec:sys-spec}).
-\item[-x] activate strict matching of species components, \i.e.\, match both site name and charge.
+\item[-f] Euler angle \phi for polyatomic ''solute'' molecules (in degrees).
+\item[-t] Euler angle \theta for polyatomic ''solute'' molecules (in degrees).
+\item[-p] Euler angle \psi for polyatomic ''solute'' molecules (in degrees).
+\item[-x] activate strict matching of species components, \ie, match both site name and charge.
   Default is to match to site name only.
 \item[-h] position first site of solute molecule on first site of solvent molecule it is replacing.
   Default is to position molecules using centres of mass.
 \item[-c] if reading system specification file, skip any preceding
   control parameter info.
-\item[-k] generate new quaternions (orientations) for all solute molecules (if polyatomic). Default is to use same quaternions (if available)
-as molecule being replaced.
-\item[-j] generate new quaternions (orientations) for all solvent and solute molecules (if polyatomic).
+\item[-j] generate new quaternions (orientations) for all solute molecules (if polyatomic). Default is to use same quaternions (if available) as molecules being replaced or no rotation if solvent is monatomic.
 \item[-o] name of optional output file.
 \end{Argdescription}
 
 Polyatomic species can be added using the \Lit{-a} option, which requires a structural data file
-of Cambridge CSSR, Brookhaven PDB or Schakal format to be specified. If the new polyatomic
-species is replacing another polyatomic species, by default the same quaternions (orientation) will be used;
- otherwise quaternions are generated randomly for the new species. The \Lit{-k} option generates
-new quaternions for the substituting molecules regardless of whether the species it replaces is
-monatomic or polyatomic.
+of Cambridge CSSR, Brookhaven PDB, Insight XTL, Schakal or generic XYZ format to be specified. If the new polyatomic
+species is replacing an existing polyatomic species, by default the same quaternions (orientation) will be used.
+ If the species being replaced is monatomic, the dopant molecules will be oriented the same as given in the input structure file unless one or more of
+ options \Lit{-f}, \Lit{-t}, \Lit{-p} or \Lit{-j} are specified. Options \Lit{-f}, \Lit{-t} and \Lit{-p} are used to input Euler angles \phi, \theta and \psi, respectively, for aligning all polyatomic solute molecules in the same direction (see equations~\ref{eqn:qeuler}).
+ Angles should be between -360 and 360{\textdegree}.
+If one or more of \Lit{-f}, \Lit{-t} and \Lit{-p} are specified on the command
+line, the remaining unspecified angles are set to 0.
+
+The \Lit{-j} option randomly generates
+new quaternions for the solute molecules regardless of whether the species it replaces is
+monatomic or polyatomic. This option overrides options \Lit{-f}, \Lit{-t} and \Lit{-p}.
+
 By default, the centre of mass of a dopant molecule is positioned on the centre of mass of the solvent molecule it
 is replacing. Specifying the \Lit{-h} option instead matches the position of the first site of the dopant molecule with
-the first site of the solvent molecule. In both cases, the principal frame coordinates of both species in the
-header file are written relative to the first site (\i.e.\ the first site is taken as the principal frame origin). \textbf{N.B.} It
-is possible to add a systematic shift (using \Lit{-h}) or positional disorder (using \Lit{-h} and \Lit{-k}) to dopant positions 
+the first site of the solvent molecule.
+\textbf{N.B.} It
+is possible to add a systematic shift (using \Lit{-h}) or positional disorder (using \Lit{-h} and \Lit{-j}) to dopant positions 
 by specifying a structure file that contains only a single atom. This atom's
-principal frame coordinates (in {\AA}) should correspond to the desired shift vector (relative to the first site 
+coordinates (in {\AA}) should correspond to the desired shift vector (relative to the first site 
 of the species being
 replaced).
 
 The properties of monatomic solute species can be entered explicitly on the command
 line using options \Lit{-w}, \Lit{-q}, \Lit{-z}, or by reading them
 from a species data file. In the case of polyatomic solutes, these options are ignored and the species components
-matched with pre-existing components in the original structure or from the species data file when available. The \Lit{-x} option
+matched with pre-existing components in the original structure or from the species data file (if found). The \Lit{-x} option
 forces components to be matched by both name and charge (but not weight), otherwise 
-the sites will be matched by name only, \i.e.\ the dopant atoms will be given the same properties as the first
+the sites will be matched by name only, \ie the dopant atoms will be given the same properties as the first
 identically named site in the original system specification/restart file or species data file, irrespective 
-of the charges read in from the dopant structure file.
+of the charges read in from the dopant structure file. Polyatomic solute species will be given the name of the structure file (without extension) unless specified with \Lit{-u}.
 
  The default species data file,
 \Fname{elements.dat}, is read automatically, and contains data for the
@@ -5904,14 +5921,24 @@ to the potential parameter file format.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \emph{Syswrite} is a utility for creating \moldy\ system specification
 and initial configuration files from either Cambridge CSSR, Brookhaven
-PDB or Schakal structural data files. This utility is useful for
-automating the creation of \moldy\ input files from the output of standard
-molecular graphics packages. At present \emph{syswrite} treats all species
-as monatomic; polyatomic species can be added using the ransub utility after
-creating a system specification file containing the species' centres of mass
-using syswrite.
+PDB, Schakal, Insight XTL or XYZ structural data files. This utility
+is useful for automating the creation of \moldy\ input files from the output
+of standard molecular graphics packages.
+ If the structural data file contains a periodic system (\ie\, includes lattice parameter and space group information), 
+\emph{syswrite} assumes the \emph{lattice start} method is to be used, and appends
+the initial configuration info to the system specification file.
+If no lattice information is supplied 
+(for example when reading from an XYZ file or CSSR files written in non-periodic mode),
+all atoms are assumed to belong to the same species, and a system specification file
+suitable for using with the \emph{skew start} method is created. In this case the number
+of molecules of the species can be specified using option \Lit{-n}. The default is 1.
 
-The physical properties of each species not already contained in the
+In the case of periodic systems, \emph{syswrite} treats all species
+as monatomic; polyatomic species can be introduced subsequent to
+creating a system specification file (containing each molecule's centre of mass)
+using the \emph{ransub} utility.
+
+The physical properties of each atom/species not already contained in the
 structure files are read in automatically from the text file
 \Fname{elements.dat}. An alternative
 file name can be specified using option \Lit{-e}. If a potential
@@ -5922,20 +5949,18 @@ included in the system specification file (output).
 The command line options are:
 \begin{center}
 \Lit{syswrite}
-\Lit{[-g} \textit{CSSR-input-file} \Lit{|}
-\Lit{-p} \textit{PDB-input-file} \Lit{|}
-\Lit{-h} \textit{Schakal-input-file}\Lit{]}
+\Lit{[-i} \textit{input-file} \Lit{]}
 \Lit{[-e} \textit{species-data-file}\Lit{]} 
 \Lit{[-y} \textit{potential-parameter-file}\Lit{]} 
+\Lit{[-n} \textit{number-of-molecules}\Lit{]}
+\Lit{[-l} \textit{species-label}\Lit{]}
 \Lit{[-o} \textit{output-file}\Lit{]}
 \end{center}
 
 where the arguments have the following meanings:
 \begin{Argdescription}
-\item[-g] read the structural data from a CSSR file.
-\item[-p] read the structural data from a PDB file.
-\item[-h] read the structural data from a Schakal file. Only one of \Lit{-g},
-\Lit{-p} or \Lit{-h} may be given.
+\item[-i] read the structural data from given file. The file can be in
+ Brookhaven PDB, Cambridge CSSR, Insight XTL or Schakal format.
 \item[-e] read the species data (name, mass, charge, symbol) from the file
 specified. (Defaults to \Fname{elements.dat}).
 \item[-y] read interaction parameters for pairs of species
@@ -5955,12 +5980,14 @@ from the file specified. This is a text file of format:
 \end{displaymath}
 where the number of parameters, their values, order and units are the same
 as in a system specification file (see section~\ref{sec:sys-spec}).
+\item[-n] number of molecules of species. Only used for non-periodic systems, otherwise ignored.
+\item[-l] name or label of species for non-periodic system. Default is to use name of input file (without extension).
 \item[-o] name of output file. Defaults to standard output.
 \end{Argdescription}
 
 In interactive mode, the user is prompted for the name of the structure
-file to read from. This must end in either ``\Fname{.pdb}'', ``\Fname{.cssr}''
-or ``\Fname{.shak}'' (upper- or lowercase), so that \emph{syswrite} can
+file to read from. This must end in either ``\Fname{.pdb}'', ``\Fname{.cssr}'',
+``\Fname{.shak}'', ``\Fname{.xtl}'' or ``\Fname{.xyz}'' (upper- or lowercase), so that \emph{syswrite} can
 recognise the file format and successfully read in the data.
 
 The default directory in which \emph{syswrite} searches for both the
@@ -5972,10 +5999,10 @@ recompiling \emph{syswrite}). Further details about the species data
 and potential parameters file can be found in appendix~\ref{sec:ransub}.
 
 Since both symbol and charge are specified in the potential parameter file,
-\emph{syswrite} is able to handle species of the same name but different charge.
-In this case, \emph{syswrite} modifies the species names by appending consecutive
-numbers to distinguish between them, \eg\ Ce$^{+3}$ and Ce$^{+4}$ would be labelled
-\Lit{cerium} and \Lit{cerium1}, respectively, if appearing in the same
+\emph{syswrite} is able to handle (monatomic) species of the same element but different charge.
+In this case, \emph{syswrite} modifies the species' names by appending consecutive
+numbers to distinguish them, \eg\ Ce$^{+3}$ and Ce$^{+4}$ would be labelled
+\Lit{cerium} and \Lit{cerium1}, respectively, if appearing in this order in the same
 structure file. If no potential parameter file is specified, all
 parameters are given default values of 0 and the potential type is given
 as \textit{Potential parameters}.
@@ -6003,6 +6030,6 @@ to the potential parameter file format.
 % LocalWords:  aalloc alloc arralloc talloc tfree nspecies nsites nmols NPOTP
 % LocalWords:  algorith ansi pre Pappalardo mdavpos bdist Murashov mdbond
 % LocalWords:  ransub mdshak Fernandez Wentzcovitch wentzcovitch characterizing
-% LocalWords:  syswrite eledata ELEPATH POTPATH Mdxorto Busing Ida Gilbert
+% LocalWords:  syswrite eledata ELEPATH POTPATH Mxdorto Busing Ida Gilbert
 % LocalWords:  Sanchez Marcos HIW
 % LocalWords:  visualization Cerius CHARMM Plotrdf gnuplot Bekker

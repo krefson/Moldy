@@ -24,59 +24,14 @@ what you give them.   Help stamp out software-hoarding!  */
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
+#include "structs.h"
+#include "utlsup.h"
 
 int	getopt(int, char *const *, const char *);
 
 #define NSIGNAL 8
 #define buf_inc 128
 
-/*VARARGS*/
-void error(char *format, ...)
-
-{
-   va_list p;
-   va_start(p, format);
-   vfprintf(stderr,format,p);
-   fputc('\n',stderr);
-   va_end(p);
-   exit(3);
-}
-static char * mystrdup(char *s)
-{
-   char * t=malloc(strlen(s)+1);
-   return t?strcpy(t,s):0;
-}
-/******************************************************************************
- *  Tokenise().  Parse the string of fields to be returned and return a mask  *
- *  in a char array.  Format is 1,3,6-9,3 . . . ie comma-separated with cont- *
- *  iguous range specified with hyphen.  Numbering starts at 1.		      *
- ******************************************************************************/
-int	tokenise(char *fields, char *mask, int len)
-{
-   char	*s;
-   int	lo, hi, i, n;
-
-   for(i = 0; i < len; i++)
-      mask[i] = 0;
-
-   while( ( s = strtok(fields,",") ) != NULL )
-   {
-      n = sscanf(s, "%d-%d", &lo, &hi);
-      if( n == 0 )
-	 return 0;
-
-      if( n == 1 )
-	 hi = lo;
-
-      if( lo < 1 || hi < lo || hi > len)
-	 return 0;
-
-      for( i = lo-1; i < hi; i++)
-	 mask[i] = 1;
-      fields = NULL;
-   }
-   return 1;
-}
 /******************************************************************************
  * read_record().    Read one 'record' of Moldy output into buffer.  A record *
  * starts on the line following 8 '=' characters and enbtd either at the first*

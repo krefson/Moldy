@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/mdshak.c,v 2.26 2001/05/18 17:10:56 keith Exp $";
+static char *RCSid = "$Header$";
 #endif
 
 #include "defs.h"
@@ -35,14 +35,6 @@ int	getopt(int, char *const *, const char *);
 int ithread=0, nthreads=1;
 contr_mt		control;
 
-#define SHAK   0
-#define XYZ 1
-#define OUTBIN 2
-#define DCD 3
-#define PDB 4
-#define CSSR 5
-#define ARC 6
-#define XTL 7
 /******************************************************************************
  * main().   Driver program for generating SCHAKAL input files from MOLDY     *
  * files.    Acceptable inputs are sys-spec files, or restart files. Actual   *
@@ -173,7 +165,7 @@ main(int argc, char **argv)
 
    if(intyp == 0)
    {
-      fputs("How do you want to  specify the simulated system?\n", stderr);
+      fputs("How do you want to specify the simulated system?\n", stderr);
       fputs("Do you want to use a system specification file (1)", stderr);
       fputs(" or a restart file (2)\n", stderr);
       if( (ans_i = get_int("? ", 1, 2)) == EOF )
@@ -292,8 +284,8 @@ main(int argc, char **argv)
 	      (void)free(dumplims);
 	      dumplims = NULL;
 	   }
-	} while(rflag);   
-		
+	} while(rflag);
+
 	/*
 	 * Allocate buffer for data
          */
@@ -321,7 +313,6 @@ main(int argc, char **argv)
 #endif
 	for(irec = start; irec <= finish; irec+=inc)
 	{
-	   
 	   if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
               error("Error reading record %d in dump file - \n%s\n",
 		    irec, strerror(errno));

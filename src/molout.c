@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/molout.c,v 1.11 2002/06/17 09:06:03 kr Exp $";
+static char *RCSid = "$Header$";
 #endif
 
 #include "defs.h"
@@ -11,6 +11,7 @@ static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/molout.c,v 1.11 2002/
 #include <stdio.h>
 #include "structs.h"
 #include "ReadDCD.h"
+#include "utlsup.h"
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 
 void	invert(real (*a)[3], real (*b)[3]);
@@ -22,14 +23,6 @@ void    afree(gptr *p);
 char    *atime(void);
 /*======================== Global vars =======================================*/
 extern contr_mt		control;
-#define OUTBIN 2
-#define SHAK   0
-#define XYZ 1
-#define DCD 3
-#define PDB 4
-#define CSSR 5
-#define ARC 6
-#define XTL 7
 /******************************************************************************
  ******************************************************************************/
 void 
@@ -90,9 +83,9 @@ void	shift(vec_mt (*r), int nmols, real *s)
    int imol;
    for(imol = 0; imol < nmols; imol++)
    {
-      r[imol][0] -= s[0];
-      r[imol][1] -= s[1];
-      r[imol][2] -= s[2];
+      r[imol][0] += 0.5;
+      r[imol][1] += 0.5;
+      r[imol][2] += 0.5;
    }
 }
 /******************************************************************************
@@ -165,6 +158,7 @@ static void xtl_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site
    double	a, b, c, alpha, beta, gamma;
    mat_mt	hinv;
    int		imol, isite, is;
+   int		charge;
 
    if( intyp == 'r' )
       qconv = CONV_Q;
@@ -181,10 +175,11 @@ static void xtl_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site
    gamma = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/a/b);
 
    printf("TITLE %s\n",control.title);
+   puts("DIMENSION 3");
    printf("CELL \n%f %f %f %f %f %f\n", a, b, c, alpha, beta, gamma);
    printf("SYMMETRY  NUMBER 1  LABEL P1\n");
    printf("SYM MAT  1.0  0.0  0.0  0.0  1.0  0.0  0.0  0.0  1.0 0.0000 0.0000 0.0000\n");
-   printf("ATOMS\nNAME            X            Y           Z         CHARGE\n");
+   printf("ATOMS\nNAME       X          Y          Z     CHARGE   TEMP    OCCUP   SCAT\n");
    for(spec = species; spec < species+system->nspecies; spec++)
    {
       make_sites(system->h, spec->c_of_m, spec->quat, spec->p_f_sites,
@@ -197,11 +192,13 @@ static void xtl_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site
       {
 	 for(is = 0; is < spec->nsites; is++)
 	 {
+            charge = (int)abs(site_info[spec->site_id[is]].charge*qconv);
 	    if(fabs(site_info[spec->site_id[is]].mass) != 0)
-	       (void)printf("%-8s %12.8f %12.8f %12.8f %12.8f\n",
+	       (void)printf("%-4s %10.5f %10.5f %10.5f %7.4f   0.0000  1.0000   %-2s%d%c\n",
 			    site_info[spec->site_id[is]].name,
 			    site[0][isite], site[1][isite], site[2][isite],
-			    site_info[spec->site_id[is]].charge*qconv);
+			    site_info[spec->site_id[is]].charge*qconv,
+                            site_info[spec->site_id[is]].name, charge, (charge >=0 ? '+':'-'));
 	    isite++;
 	 }
       }
@@ -252,11 +249,11 @@ pdb_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info,
 /* Write the pdb header */
    (void)printf("HEADER     %-40s%10s%4d\n", "Moldy output", atime(), 1);
    (void)printf("TITLE      %-60s\n", control.title);
-   (void)printf("CRYST1 %8.3f %8.3f %8.3f %6.2f %6.2f %6.2f P 1\n",
+   (void)printf("CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1        \n",
           a,b,c,alpha,beta,gamma);
 
    for(i = 0; i < 3; i++)
-       (void)printf("SCALE%d     %9.6f %9.6f %9.6f        0.00000\n",
+       (void)printf("SCALE%d    %10.6f%10.6f%10.6f        0.00000\n",
            i+1, hinv[i][0], hinv[i][1], hinv[i][2]);
 
    for(spec = species; spec < species+system->nspecies; ispec++, spec++)
@@ -479,6 +476,10 @@ cssr_out(system_mt *system, mat_mp h, spec_mt *species,
             if(fabs(site_info[spec->site_id[is]].mass) != 0)
                 isite++;
 
+/* Exit if no of atoms exceeds max allowed by CSSR format */
+   if( isite > 9999 )
+      error("Too many atoms (%d) for CSSR format. Process aborted.", isite);
+
 /* Write the cssr header */
    (void)printf("%38c %7.3f %7.3f %7.3f\n",' ',a,b,c);
    (void)printf("%21c %7.3f %7.3f %7.3f    SPGR =  1 P 1\n",' ',alpha,beta,gamma);
@@ -507,7 +508,7 @@ cssr_out(system_mt *system, mat_mp h, spec_mt *species,
          if( divd > 1 )
             sprintf(atomname,"%s%d",site_info[spec->site_id[is]].name,itot%divd);
 
-         (void)printf("%4d %-4s  %9.5f %9.5f %9.5f",
+         (void)printf("%4d %-4s  %9.5f %9.5f %9.5f ",
               itot, atomname, site[0][isite], site[1][isite], site[2][isite]);
          (void)printf("   0   0   0   0   0   0   0   0 %7.3f\n",
               site_info[spec->site_id[is]].charge*qconv);

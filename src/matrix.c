@@ -30,7 +30,15 @@ what you give them.   Help stamp out software-hoarding!  */
  * invert()		Invert a 3x3 matrix				      *
  ******************************************************************************
  *      Revision Log
- *       $Log: matrix.c,v $
+ *       $Log$
+ *       Revision 2.13.4.1  2004/03/01 04:53:43  moldydv
+ *       Syswrite now treats non-periodic data (from XYZ and some CSSR files) as single species with initial configuration to be set using skew start.
+ *       Options -n and -l added for no of particles and species label, respectively, for such systems.
+ *
+ *       Revision 2.13  2002/09/19 09:26:28  kr
+ *       Tidied up header declarations.
+ *       Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *       Revision 2.12  2001/02/17 11:48:23  keith
  *       Added trace_sqr().
  *
@@ -124,7 +132,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/matrix.c,v 2.12 2001/02/17 11:48:23 keith Exp $";
+static char *RCSid = "$Header$";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -139,10 +147,10 @@ void		message(int *, ...);	/* Write a warning or error message   */
  * 3 x 3  Matrix - vector multiply  (of multiple vectors)                     *
  * The input and output vectors need not necessarily be distinct              *
  ******************************************************************************/
-void mat_vec_mul(real (*m)[3],  /* Number of vectors to be multiplied         */
-		 vec_mp in_vec, /* Matrix                                     */
-		 vec_mp out_vec,/* Input vector, [number][3]          (in/out)*/ 
-		 int number)	/* Output vector.  CAN BE SAME AS INPUT  (out)*/
+void mat_vec_mul(real (*m)[3],  /* Matrix                                     */
+		 vec_mp in_vec, /* Input vector, [number][3]          (in/out)*/
+		 vec_mp out_vec,/* Output vector.  CAN BE SAME AS INPUT  (out)*/
+		 int number)    /* Number of vectors to be multiplied         */
 {
    int i;
    register real	a0, a1, a2;

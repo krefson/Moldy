@@ -36,7 +36,14 @@ what you give them.   Help stamp out software-hoarding!  */
  * gauss_rand()		Return random sample from univariant gaussian         *
  ******************************************************************************
  *      Revision Log
- *      $Log: startup.c,v $
+ *      $Log$
+ *      Revision 2.32.2.2  2004/05/07 08:06:08  moldydv
+ *      Eigenvalues and vectors sorted to determine "standard" pfc's.
+ *
+ *      Revision 2.32  2002/09/19 09:26:30  kr
+ *      Tidied up header declarations.
+ *      Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *      Revision 2.31  2002/02/27 17:48:34  kr
  *      Reworked auto-setting of Ewald parameters.
  *        Added new control parameter "ewald-accuracy" to refine auto-setting.
@@ -324,7 +331,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/startup.c,v 2.31 2002/02/27 17:48:34 kr Exp $";
+static char *RCSid = "$Header$";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -365,7 +372,7 @@ void		eigens(real *A, real *RR, real *E, int N);
 void		transpose(mat_mt, mat_mt);
 void		mat_mul(mat_mt a, mat_mt b, mat_mt c); 
 void		mat_sca_mul(real s, mat_mt a, mat_mt b); 
-void		mat_vec_mul(mat_mt, vec_mp in_vec, vec_mp out_vec, 
+void		mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, 
 			    int number);
 double          det(mat_mt);
 double		trace_sqr(mat_mt);
@@ -378,6 +385,7 @@ void		smdrand(long unsigned int seed);
 void		inhibit_vectorization(void);	/* Self-explanatory dummy     */
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
+void		check_sym(mat_mt rot, spec_mp spec, double *m);
 /*========================== External data references ========================*/
 extern	contr_mt	control;       /* Main simulation control parms. */
 extern int 		ithread, nthreads;
@@ -532,7 +540,6 @@ double	gauss_rand(void)
  * vector, generated from spherical co-ordinates theta and phi with           *
  * distribution p(theta) = sin(theta) 					      *
  ******************************************************************************/
-static
 void	random_quat(quat_mp q, int n)
        	  				/* First quaternion		(out) */
    	  				/* Number to be generated.       (in) */
@@ -619,7 +626,7 @@ void	skew_start(system_mp system, spec_mt *species)
 /******************************************************************************
  * random_start.  This function generates a completely random starting        *
  * configuration.  Molecules are placed at random locations and orientations  *
- * in md box, whose size is chosed to give the required density.	      *
+ * in md box, whose size is chosen to give the required density.	      *
  ******************************************************************************/
 #ifdef NOT_FOR_NOW
 void	random_start(system, species)
@@ -729,6 +736,7 @@ void	initialise_sysdef(system_mp system, spec_mt *species,
    boolean	flag;			/* Used to test for charges	     */
    double	imax;			/* Largest moment of inertia	     */
    double	eps = 10.0*precision(); /* Criterion for "zero" moment.	     */
+   vec_mt	mult;
 
    system->nsites  = 0;  system->nmols  = 0;
    system->nmols_r = 0;  system->d_of_f = 0;
@@ -787,13 +795,9 @@ void	initialise_sysdef(system_mp system, spec_mt *species,
                 spec-species, spec->mass, c_of_m[0], c_of_m[1], c_of_m[2]);
          print_mat(inertia, " *D* Inertia Tensor");
 #endif
-	 eigens(inertia,v[0],spec->inertia,3);
-	 /*	 eigensort(v[0], spec->inertia, 3);*/
-	 rot_to_q(v, qpf[spec-species]);	/* make equivalent quaternion*/
-#ifdef	DEBUG
-         print_mat(v," *D* Rotation Mat.");
-#endif
-	 imax = MAX3(spec->inertia[0],spec->inertia[1],spec->inertia[2]);
+	 eigens(inertia, v[0], spec->inertia, 3);
+	 eigensort(v[0], spec->inertia, 3, mult);
+	 imax = spec->inertia[0];
 	 nz = 0;
 	 for( i=0; i<3; i++)			 /* Count zero  moments.     */ 
 	    if( spec->inertia[i] < eps*imax )
@@ -801,7 +805,18 @@ void	initialise_sysdef(system_mp system, spec_mt *species,
 	       nz++;
 	       spec->inertia[i] = 0.0;
 	    }
-	    
+
+         if( nz > 0 )  /* Molecule is linear */
+         {
+	   mat_vec_mul(v, spec->p_f_sites, spec->p_f_sites, spec->nsites);
+           zero_real(v[0],9);
+           v[0][0] = 1.0; v[1][1] = 1.0; v[2][2] = 1.0;
+         }
+	 rot_to_q(v, qpf[spec-species]);	/* make equivalent quaternion*/
+#ifdef	DEBUG
+         print_mat(v," *D* Rotation Mat.");
+#endif
+
          spec->rdof = 3-nz;			/* Rotational deg. of freedom*/
 	 if( spec->framework )			/* Frameworks can't rotate   */
 	 {
@@ -812,6 +827,9 @@ void	initialise_sysdef(system_mp system, spec_mt *species,
 	 {
             system->nmols_r += spec->nmols;     /* rotational freedom.       */
 	    mat_vec_mul(v,spec->p_f_sites, spec->p_f_sites, spec->nsites);
+            for(isite=0; isite < spec->nsites; isite++)
+               for(i=0; i < 3; i++)
+                 spec->p_f_sites[isite][i] *= mult[i];
 	 }
          system->d_of_f += spec->rdof * spec->nmols;/* Count total d of f    */
 

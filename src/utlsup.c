@@ -1,7 +1,6 @@
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/utlsup.c,v 1.15 2002/09/19 09:26:31 kr Exp $";
+static char *RCSid = "$Header$";
 #endif
-
 #include "defs.h"
 #include <stdarg.h>
 #include <errno.h>
@@ -14,7 +13,7 @@ static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/utlsup.c,v 1.15 2002/
 #include "messages.h"
 #include "specdata.h"
 #ifdef USE_XDR
-#   include	"xdr.h"
+#   include     "xdr.h"
 #endif
 
 #define DATAREC "%d record%ssuccessfully read from %s"
@@ -109,6 +108,55 @@ char * mystrdup(char *s)
    char * t = NULL;
    if(s) t=malloc(strlen(s)+1);
    return t?strcpy(t,s):0;
+}
+/******************************************************************************
+ *  Tokenise().  Parse the string of fields to be returned and return a mask  *
+ *  in a char array.  Format is 1,3,6-9,3 . . . ie comma-separated with cont- *
+ *  iguous range specified with hyphen.  Numbering starts at 1.               *
+ ******************************************************************************/
+int     tokenise(char *fields, char *mask, int len)
+{
+   char *s;
+   int  lo, hi, i, n;
+
+   for(i = 0; i < len; i++)
+      mask[i] = 0;
+
+   while( ( s = strtok(fields,",") ) != NULL )
+   {
+      n = sscanf(s, "%d-%d", &lo, &hi);
+      if( n == 0 )
+         return 0;
+
+      if( n == 1 )
+         hi = lo;
+
+      if( lo < 1 || hi < lo || hi > len)
+         return 0;
+
+      for( i = lo-1; i < hi; i++)
+         mask[i] = 1;
+      fields = NULL;
+   }
+   return 1;
+}
+/******************************************************************************
+ * get_tokens(). Routine for breaking down string into substrings.            *
+ *               Returns no of substrings.                                    *
+ ******************************************************************************/
+int   get_tokens(char *buf, char **linev, char *sep)
+{
+   char *p;
+   int linec = 0;
+
+   while( (p = strtok(buf,sep) ) != NULL)
+   {
+      *(linev++) = p;
+      linec++;
+      buf = NULL;
+   }
+
+   return linec;
 }
 /******************************************************************************
  * get_int().  Read an integer from stdin, issuing a prompt and checking      *
@@ -315,12 +363,12 @@ traj_con(system_mt *system, vec_mt (*prev_cofm), int n)
  * traj_con2().  Connect molecular c_of_m`s into continuous trajectories      * 
  ******************************************************************************/
 void
-traj_con2(spec_mt *species, vec_mt (*prev_cofm), vec_mt (*traj_cofm), int *sp_range)
+traj_con2(spec_mt *species, vec_mt (*prev_cofm), vec_mt (*traj_cofm), int nspecies)
 {
    spec_mt	*spec;
    int		i, imol, totmol=0;
  
-   for( spec = species+sp_range[0]; spec <= species+sp_range[1]; spec+=sp_range[2])
+   for( spec = species; spec < species+nspecies; spec++)
      for( imol = 0; imol < spec->nmols; totmol++, imol++)
 	if( prev_cofm == 0 ) 
 	   for( i = 0; i < 3; i++)
@@ -432,14 +480,14 @@ FILE  *open_dump(char *fname, char *mode)
    FILE *dumpf;
 
    dumpf = fopen(fname, mode);
-   
+
 #ifdef USE_XDR
    if( dumpf )
    {
       if( mode[0] == 'w' || (mode[0] && mode[1] == '+') ||  (mode[1] && mode[2] == '+'))
-	 xdrstdio_create(&xdrs, dumpf, XDR_ENCODE);
+         xdrstdio_create(&xdrs, dumpf, XDR_ENCODE);
       else
-	 xdrstdio_create(&xdrs, dumpf, XDR_DECODE);
+         xdrstdio_create(&xdrs, dumpf, XDR_DECODE);
    }
 #endif
     return dumpf;
@@ -464,11 +512,11 @@ int rewind_dump(FILE *dumpf, int xdr)
  *  read_dump_header. Read the header of a moldy dump file.                   *
  ******************************************************************************/
 int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_write,
-		     size_mt sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
+		size_mt sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
 {
-   int      errflg = true;	/* Provisionally !!   */
+   int      errflg = true;      /* Provisionally !!   */
    char     vbuf[sizeof hdr_p->vsn + 1];
-   int	    vmajor,vminor;
+   int      vmajor,vminor;
 
    *xdr_write = false;
 #ifdef USE_XDR
@@ -481,8 +529,8 @@ int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_writ
       vbuf[sizeof hdr_p->vsn] = '\0';
       if( strstr(vbuf,"(XDR)") )
       {
-	 errflg = false;
-	 *xdr_write = true;
+         errflg = false;
+         *xdr_write = true;
       }
    }
 #endif
@@ -491,12 +539,12 @@ int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_writ
     */
    if( ! *xdr_write )
    {
-      if( fseek(dumpf, 0L, 0) ) 
-	 message(NULLI, NULLP, WARNING, SEFAIL, fname, strerror(errno));
+      if( fseek(dumpf, 0L, 0) )
+         message(NULLI, NULLP, WARNING, SEFAIL, fname, strerror(errno));
       else if( fread((gptr*)&*hdr_p, sizeof(dump_mt), 1, dumpf) == 0 )
-	 message(NULLI, NULLP, WARNING, DRERR, fname, strerror(errno));
+         message(NULLI, NULLP, WARNING, DRERR, fname, strerror(errno));
       else
-	 errflg = false;
+         errflg = false;
    }
    if( ! errflg )
    {
@@ -505,15 +553,14 @@ int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_writ
        */
       errflg = true;
       if( sscanf(hdr_p->vsn, "%d.%d", &vmajor, &vminor) < 2 )
-	 message(NULLI, NULLP, WARNING, INDVSN, hdr_p->vsn);
+         message(NULLI, NULLP, WARNING, INDVSN, hdr_p->vsn);
       if( vmajor < 2 || vminor <= 17)
-	 message(NULLI, NULLP, WARNING, OLDVSN, hdr_p->vsn);
+         message(NULLI, NULLP, WARNING, OLDVSN, hdr_p->vsn);
       else
-	 errflg = false;
+         errflg = false;
    }
    if( errflg ) return errflg;
 
-   
    if( dump_sysinfo == 0)
       return errflg;
    else if ( sysinfo_size == sizeof(dump_sysinfo_mt) )
@@ -524,44 +571,44 @@ int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_writ
        */
 #ifdef USE_XDR
       if( *xdr_write ) {
-	 if( ! xdr_dump_sysinfo_hdr(&xdrs, dump_sysinfo) )
-	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
-	 errflg = false;
+         if( ! xdr_dump_sysinfo_hdr(&xdrs, dump_sysinfo) )
+            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+         errflg = false;
       } else
 #endif
       {
-	 if( fread((gptr*)dump_sysinfo,sizeof(dump_sysinfo_mt), 1, dumpf) == 0)
-	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
-	 errflg = false;
+         if( fread((gptr*)dump_sysinfo,sizeof(dump_sysinfo_mt), 1, dumpf) == 0)
+            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+         errflg = false;
       }
    }
    else
    {
       /*
-       * Now check for sysinfo and read it all.  N.B.  Buffer must be 
+       * Now check for sysinfo and read it all.  N.B.  Buffer must be
        * allocated to full expected size by prior call to read_dump_header.
        */
 #ifdef USE_XDR
       if( *xdr_write ) {
-	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo, vmajor, vminor) )
-	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
-      if (sizeof(dump_sysinfo_mt) 
-	  + sizeof(mol_mt) * (dump_sysinfo->nspecies-1) > sysinfo_size)
+         if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo, vmajor, vminor) )
+            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+      if (sizeof(dump_sysinfo_mt)
+          + sizeof(mol_mt) * (dump_sysinfo->nspecies-1) > sysinfo_size)
       {
-	 /*
-	  * We have already overrun the end of the "dump_sysinfo" buffer.
-	  * Perhaps we can exit gracefully before crashing?
+         /*
+          * We have already overrun the end of the "dump_sysinfo" buffer.
+          * Perhaps we can exit gracefully before crashing?
           */
-	 message(NULLI, NULLP, FATAL, RDHERR,  sizeof(dump_sysinfo_mt) 
-		 + sizeof(mol_mt) * (dump_sysinfo->nspecies-1), sysinfo_size);
+         message(NULLI, NULLP, FATAL, RDHERR,  sizeof(dump_sysinfo_mt)
+                 + sizeof(mol_mt) * (dump_sysinfo->nspecies-1), sysinfo_size);
       }
-	 errflg = false;
+         errflg = false;
       } else
 #endif
       {
-	 if( fread((gptr*)dump_sysinfo, sysinfo_size, 1, dumpf) == 0)
-	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
-	 errflg = false;
+         if( fread((gptr*)dump_sysinfo, sysinfo_size, 1, dumpf) == 0)
+            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+         errflg = false;
       }
    }
    return errflg;

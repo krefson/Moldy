@@ -24,7 +24,25 @@ what you give them.   Help stamp out software-hoarding! */
  *              -y selects .pot file from which potentials are read                   *
  **************************************************************************************
  *  Revision Log
- *  $Log: syswrite.c,v $
+ *  $Log$
+ *  Revision 2.6.10.3  2004/04/09 06:02:55  moldydv
+ *  Moved xtoupper definition to utlsup.h
+ *
+ *  Revision 2.6.10.2  2004/03/01 04:54:03  moldydv
+ *  Syswrite now treats non-periodic data (from XYZ and some CSSR files) as single species with initial configuration to be set using skew start.
+ *  Options -n and -l added for no of particles and species label, respectively, for such systems.
+ *
+ *  Revision 2.6.10.1  2003/07/29 09:37:15  moldydv
+ *  Moved defs of file format numbers to utlsup.h
+ *  Replaced explicit lengths of name variables with NLEN.
+ *  Removed space_minus function
+ *  Now uses MAX_SPECIES from utlsup.h
+ *  Separate file format options replaced by single option '-i'.
+ *
+ *  Revision 2.6  2002/09/19 09:26:30  kr
+ *  Tidied up header declarations.
+ *  Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *  Revision 2.5  2002/09/18 09:59:19  kr
  *  Rolled in several changes by Craig Fisher:
  *  Ransub can now read polyatomic species
@@ -50,7 +68,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/syswrite.c,v 2.5 2002/09/18 09:59:19 kr Exp $";
+static char *RCSid = "$Header$";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -71,17 +89,17 @@ static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/syswrite.c,v 2.5 2002
 int ithread=0, nthreads=1;
 contr_mt                control;
 
-#define xtoupper(c) (islower(c) ? toupper(c) : c)
-
 /*========================== External data references ========================*/
 extern  const pots_mt   potspec[];           /* Potential type specification  */
 
 double  det(mat_mt a);
 char	*read_ftype(char *filename);
 int     read_ele(spec_data *element, char *filename);
-int     read_pdb(char *, mat_mp, char (*)[32], vec_mp, double *, char *, char *);
-int     read_cssr(char *, mat_mp, char (*)[32], vec_mp, double *, char *, char *);
-int     read_shak(char *, mat_mp, char (*)[32], vec_mp, double *, char *, double *);
+int     read_pdb(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
+int     read_cssr(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
+int     read_shak(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, double *);
+int     read_xtl(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
+int     read_xyz(char *, mat_mp, char (*)[NLEN], vec_mp, char *);
 int     sgexpand(int , int , vec_mt *, char (*)[NLEN], double *, char *);
 /******************************************************************************
  * add_suffix().  Add numerical suffix to string.                             *
@@ -93,16 +111,10 @@ int     add_suffix(char *string, int number)
    int     length = strlen(string);
 
    n_digit = floor(log10(number))+1;
-   if( length + n_digit > NLEN-1)       /* Longer than allowable name length */
+   if( length + n_digit > NLEN-1)       /* Longer than allowable name length? */
       string[NLEN-n_digit-1] = '\0';
 
-   for ( i = n_digit; i > 0; i--)
-   {
-      digit = floor(number/pow(10,i-1));
-      suffix = digit + '0';             /* Calculate digit's ascii code      */
-      strcat(string, &suffix);
-      number = number - digit * pow(10,i-1);
-   }
+   sprintf(string, "%s%d", string, number);
 
    return 0;
 }
@@ -200,26 +212,27 @@ int copy_atom_data(site_mp site, double *charge, char (*label)[NLEN], int natoms
 int
 main(int argc, char **argv)
 {
-   int		u;
+   int		u, i, j, k;
    extern char	*optarg;
    int		errflg = 0;
-   char		*filename = NULL;
-   char         *filetype = NULL;
+   char		*filename = NULL, *specname = NULL;
+   char         *filetype = "";
    char		*elename = "elements.dat";
    char		*potname = NULL;
    char		elefile[PATHLN] = "";
    char		potfile[PATHLN] = "";
    char		title[TITLE_SIZE] = "";
+   char		*buffer[NLEN];
    double	cell[6];                      /* Cell parameters */
    mat_mt	h;                            /* Hessian */
    int		insw=-1;                      /* Switch for input format */
-   int		spectot=0, atomtot=0;         /* No of species, atoms */
-   int		i,j,k,idij,ip;
+   int		typetot=0, atomtot=0;         /* No of species, atoms */
+   int		idij, ip, cflag = 0;
    int		nflag;                        /* Flag for site type matching */
    int          n_elem;                       /* No of records read from element data file */
    spec_data    element[NELEM];               /* Element info */
-   spec_mt 	spec[NSPEC];                  /* Species info */
-   site_mt      *site, *st, specsite[NSPEC];  /* Site info */ 
+   spec_mt 	spec[MAX_SPECIES];            /* Species info */
+   site_mt      *site, *st, specsite[MAX_SPECIES];  /* Site info */ 
    pot_mt       *pot_par;                     /* Potential parameters */
    int		ptype = -1, n_potpar=NPOTP;
    char         spgr[16];                     /* Space Group in Herman Maugain form */
@@ -227,29 +240,15 @@ main(int argc, char **argv)
    vec_mt	x[MAX_ATOMS]; 	              /* C of M coordinates */
    double       charge[MAX_ATOMS];            /* Site charge array */
    char         label[MAX_ATOMS][NLEN];       /* Site name array */
+   int		num_mols = 1;		      /* No of molecules for non-lattice start species */
 
    comm = argv[0];
-
-   while( (u = getopt(argc, argv, "o:y:p:g:h:e:") ) != EOF )
+   while( (u = getopt(argc, argv, "i:o:y:e:n:l:") ) != EOF )
       switch(u)
       {
-       case 'g':
-         if( insw > -1)
-            errflg++;
+       case 'i':
 	 filename = optarg;
-	 insw = CSSR;
-	 break;
-       case 'p':
-         if( insw > -1 )
-            errflg++;
-	 filename = optarg;
-	 insw = PDB;
-	 break;
-       case 'h':
-         if( insw > -1 )
-            errflg++;
-	 filename = optarg;
-	 insw = SHAK;
+         filetype = strlower(read_ftype(filename));
 	 break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
@@ -258,10 +257,18 @@ main(int argc, char **argv)
        case 'y':
          potname = optarg;
          /* Create full path name, but don't exceed max length of string */
-         strncat(strncat(potfile,POTPATH, PATHLN-strlen(potfile)), potname, PATHLN-strlen(potfile));
+         strncat(strncat(potfile,POTPATH,PATHLN-strlen(potfile)), potname, PATHLN-strlen(potfile));
 	 break;
        case 'e':
 	 elename = optarg;
+         break;
+       case 'n':
+	 num_mols = atoi(optarg);
+         if( num_mols < 1 )
+           num_mols = 1;
+         break;
+       case 'l':
+	 specname = optarg;
          break;
        default:
        case '?': 
@@ -270,26 +277,32 @@ main(int argc, char **argv)
 
    if( errflg )
    {
-      fputs("Usage: syswrite [-p pdb-input-file | -g cssr-input-file | -h schakal-input-file ] ",stderr);
-      fputs("[-o output-file] [-y potential-parameter-file]\n",stderr);
+      fputs("Usage: syswrite [-i input-file] [-o output-file] ",stderr);
+      fputs("[-n no-of-molecules] [-l species-label] [-y potential-parameter-file]\n",stderr);
 
       exit(2);
    }
 
    /* If no filename given on command line, request from user */
-   if( insw < 0)
+   while( insw < 0)
    {
-      if( (filename = get_str("Structure file name? (PDB, CSSR or SCHAKAL)")) == NULL )
-         exit(2);
-
-      filetype = strlower(read_ftype(filename));
-
-      if( !strcmp(filetype, "cssr") )
+      if( !strncmp(filetype, "cssr",4) )
            insw = CSSR;
-      if( !strcmp(filetype, "pdb") )
+      else if( !strncmp(filetype, "pdb",3) )
            insw = PDB;
-      if( !strcmp(filetype, "shak") )
+      else if( !strncmp(filetype, "shak",4) )
            insw = SHAK;
+      else if( !strncmp(filetype, "xtl",3) )
+           insw = XTL;
+      else if( !strncmp(filetype, "xyz",3) )
+           insw = XYZ;
+
+      if( insw < 0)
+      {
+         if( (filename = get_str("Structure file name? (PDB, CSSR, SCHAKAL, XTL, XYZ) ")) == NULL )
+            exit(2);
+         filetype = strlower(read_ftype(filename));
+      }
    }
 
    zero_real(h[0],9);
@@ -307,14 +320,39 @@ main(int argc, char **argv)
       case SHAK:
          atomtot = read_shak(filename, h, label, x, charge, title, simbox);
 	 break;
+      case XTL:
+         atomtot = read_xtl(filename, h, label, x, charge, title, spgr);
+	 break;
+      case XYZ:
+         atomtot = read_xyz(filename, h, label, x, title);
+	 break;
       default:
          error("Structure file \"%s\" of unknown format", filename);
    }
 
-   if( det(h) == 0 )
-      error("Invalid lattice parameters in %s", filename);
+   if( atomtot <= 0  )
+      error("No known atoms found");
 
-   if( strcmp(spgr,"P 1")  && atomtot > 0 )
+   if( det(h) != 0)
+   {
+      cflag++;  /* Periodic system */
+   }
+   else
+   {            /* Non-periodic system */
+      spec[0].nmols = num_mols;
+      if( specname != NULL )
+        j = get_tokens(specname, buffer, "\\/");
+      else
+        j = get_tokens(filename, buffer, "\\/. ");
+
+      if( j > 1 )
+        specname = mystrdup(*(buffer+j-2));
+      else
+        specname = mystrdup(*buffer);
+      strncpy(spec[0].name, specname, (strlen(specname) > NLEN ? NLEN : strlen(specname)));
+   }
+
+   if( strcmp(spgr,"P 1") && atomtot > 0 && cflag )
       atomtot = sgexpand(MAX_ATOMS, atomtot, x, label, charge, spgr);
 
    /* Create full path name for element data, but don't exceed max length of string */
@@ -330,66 +368,100 @@ main(int argc, char **argv)
    /* Loop to determine no of different species */
    for(st = site; st < site+atomtot; st++)
    {
-      toupper(st->name[0]);   /* First character of symbol uppercase */
+      st->name[0] = xtoupper(st->name[0]);   /* First character of symbol uppercase */
       strlower(st->name+1);   /* Remainder of symbol lowercase */
 
       nflag = 0;    /*  Flag for whether site (1) assigned or (0) not assigned to species */
-      for( i = 0; i < spectot; i++)
-         if( !strcmp(st->name,specsite[i].name)          /* Does site match any species identified so far? */
-                 && (st->charge == specsite[i].charge ))
-         {
-              st->pad = i;                 /* Assign this site to species i */
-              spec[i].nmols++;
-              nflag++;
-         }
-      if (!nflag)                          /* If no matches, create new species type */
+      if( cflag )  /* Lattice start: Treat each atom as single species */
       {
-         if( spectot > NSPEC )
-            error("Too many species found - current limit is %d (NSPEC in specdata.h)", NSPEC);
-         for( j=0; j < n_elem; j++)        /* Search element/species data for match with site */
-           if( !strcmp(st->name,element[j].symbol) )
-           {
-              strncpy(spec[spectot].name,element[j].name,NLEN);
-              st->mass = element[j].mass;
-              nflag++;
-              break;
-           }
+        if( typetot > 0 )
+           for( i = 0; i < typetot; i++)
+              /* Does site match any species identified so far? */
+              if( !strcmp(st->name, specsite[i].name) &&
+                 ( insw == SHAK || insw == XYZ || st->charge == specsite[i].charge ) )
+              {
+                   st->pad = i;                 /* Assign this site to species i */
+                   spec[i].nmols++;
+                   nflag++;
+              }
+        if (!nflag)                          /* If no matches, create new species type */
+        {
+           if( typetot > MAX_SPECIES )
+             error("Too many species found - current limit is %d (MAX_SPECIES in utlsup.h)", MAX_SPECIES);
+           for( j=0; j < n_elem; j++)        /* Search element/species data for match with site */
+             if( !strcmp(st->name, element[j].symbol) )
+             {
+                strncpy(spec[typetot].name,element[j].name,NLEN);
+                st->mass = element[j].mass;
+                if( insw == SHAK || insw == XYZ)
+                   st->charge = element[j].charge;
+                nflag++;
+                break;
+             }
 
-         if( !nflag)
-             strcpy(spec[spectot].name,st->name);
+           if( !nflag)
+             strcpy(spec[typetot].name, st->name);
 
-         strcpy(specsite[spectot].name,st->name);
-         specsite[spectot].mass = st->mass;
-         specsite[spectot].charge = st->charge;
-         spec[spectot].nmols=1;
-         st->pad = spectot;
-         spectot++;
+           strcpy(specsite[typetot].name, st->name);
+           specsite[typetot].mass = st->mass;
+           specsite[typetot].charge = st->charge;
+           spec[typetot].nmols=1;
+           st->pad = typetot;
+           typetot++;
+        }
+      }
+      else /* Treat as single species */
+      {
+         for( i = 0; i < typetot; i++)  /* typetot now refers to number of different site types */
+           if( !strcmp(st->name, specsite[i].name) &&        /* Does site match any species identified so far? */
+              ( insw == XYZ || st->charge == specsite[i].charge ) )
+             {
+               st->pad = i;
+               nflag++;
+               break;
+             }
+         if (!nflag)                          /* If no matches, create new site type */
+         {
+            for( j=0; j < n_elem; j++)        /* Search element/species data for match with site */
+              if( !strcmp(st->name, element[j].symbol) )
+              {
+                st->mass = element[j].mass;
+                nflag++;
+                break;
+              }
+            /* Create new site entry */
+            strcpy(specsite[typetot].name, st->name);
+            specsite[typetot].mass = st->mass;
+            specsite[typetot].charge = st->charge;
+            st->pad = typetot;
+            typetot++;
+         }
       }
    }
 
    /* Modify species name if same name but different charge to another species */
-   for( i = 0; i < spectot-1; i++)
-   {
-      k = 0;
-      for(j = i+1; j < spectot; j++)
-         if( !strcmp(spec[i].name,spec[j].name) )
+   if( cflag )  /* Lattice start: Treat each atom as single species */
+     for( i = 0; i < typetot-1; i++)
+     {
+       k = 0;
+       for(j = i+1; j < typetot; j++)
+         if( !strcmp(spec[i].name, spec[j].name) )
          {
             k++;
             add_suffix(spec[j].name, k);
          }
-   }
-
+     }
    /* Initialize potential parameter arrays */
-   pot_par = aalloc(SQR(spectot), pot_mt);
+   pot_par = aalloc(SQR(typetot), pot_mt);
 
-   for( i = 0; i < SQR(spectot); i++)
+   for( i = 0; i < SQR(typetot); i++)
    {
       pot_par[i].flag = 0;
       zero_real(pot_par[i].p, NPOTP);
    }
 
    /* Read potential parameter file if available */
-   if( (potname != NULL) && ((ptype = read_pot(potfile, &pot_par, specsite, spectot)) < 0) )
+   if( (potname != NULL) && ((ptype = read_pot(potfile, &pot_par, specsite, typetot)) < 0) )
        message(NULLI,NULLP,WARNING,NOPOTL,potfile);
 
    /* Write data to file in Moldy input form */
@@ -401,13 +473,27 @@ main(int argc, char **argv)
 
    printf("# System specification file written by SYSWRITE on %s\n",atime());
 
-   for( i=0; i < spectot; i++)
+   if( cflag )
    {
-       printf("%-14s %d\n",spec[i].name,spec[i].nmols);
+     for( i=0; i < typetot; i++)
+     {
+       printf("%-14s %d\n",spec[i].name, spec[i].nmols);
        printf("%-3d    0    0    0  %12.12g %12.12g  %s\n",i+1,
                      specsite[i].mass,specsite[i].charge,specsite[i].name);
+     }
    }
-
+   else
+   {
+     printf("%-14s %d\n",spec[0].name, spec[0].nmols);
+     st = site;
+     for(i = 0; i < atomtot; i++)
+     {
+        printf("%-3d  %10g  %10g  %10g  %12.12g %12.12g  %s\n", st->pad+1,
+               x[i][0], x[i][1], x[i][2],
+               specsite[st->pad].mass, specsite[st->pad].charge, st->name);
+        st++;
+     }
+   }
    puts("end");
 
    if( ptype >= 0)
@@ -419,46 +505,47 @@ main(int argc, char **argv)
       (void)puts("Potential parameters");
 
    /* Write potential parameters for pairs of site_ids */
-   for( i = 0; i < spectot; i++)
-      for( j = i; j < spectot; j++)
+   for( i = 0; i < typetot; i++)
+      for( j = i; j < typetot; j++)
       {
-        idij = j+i*spectot;
+        idij = j+i*typetot;
         (void)printf(" %6d %6d", i+1, j+1);
         for(ip = 0; ip < n_potpar; ip++)
            (void)printf(" %10g",pot_par[idij].p[ip]);
         (void)putchar('\n');
       }
 
-   cell[0] = sqrt(SQR(h[0][0]) + SQR(h[1][0]) + SQR(h[2][0]));
-   cell[1] = sqrt(SQR(h[0][1]) + SQR(h[1][1]) + SQR(h[2][1]));
-   cell[2] = sqrt(SQR(h[0][2]) + SQR(h[1][2]) + SQR(h[2][2]));
-   cell[3] = 180/PI*acos((h[0][1]*h[0][2]+h[1][1]*h[1][2]+h[2][1]*h[2][2])/cell[1]/cell[2]);
-   cell[4] = 180/PI*acos((h[0][0]*h[0][2]+h[1][0]*h[1][2]+h[2][0]*h[2][2])/cell[0]/cell[2]);
-   cell[5] = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/cell[0]/cell[1]);
-
-   (void)printf("end\n");
-
-   for( i = 0; i<6; i++)
-       printf("%g ",cell[i]);
-   for( i = 0; i<3; i++)
-       printf("%g ",simbox[i]);
-   puts("");
-
-   for( i=0; i < atomtot; i++)
+   if( cflag )  /* Only write if crystalline lattice */
    {
-     /* Ensure that coords are between [0,1) */
-      for( j = 0; j < 3; j++)
-      {
-         if ( fabs(fmod(x[i][j],1)) < 5e-7 )
-            x[i][j] = 0.0;
-         else
-            x[i][j] -= floor(x[i][j]);
-      }
+     cell[0] = sqrt(SQR(h[0][0]) + SQR(h[1][0]) + SQR(h[2][0]));
+     cell[1] = sqrt(SQR(h[0][1]) + SQR(h[1][1]) + SQR(h[2][1]));
+     cell[2] = sqrt(SQR(h[0][2]) + SQR(h[1][2]) + SQR(h[2][2]));
+     cell[3] = 180/PI*acos((h[0][1]*h[0][2]+h[1][1]*h[1][2]+h[2][1]*h[2][2])/cell[1]/cell[2]);
+     cell[4] = 180/PI*acos((h[0][0]*h[0][2]+h[1][0]*h[1][2]+h[2][0]*h[2][2])/cell[0]/cell[2]);
+     cell[5] = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/cell[0]/cell[1]);
+  
+     (void)printf("end\n");
 
-      printf("%-14s %10g %10g %10g\n",spec[site[i].pad].name,x[i][0],x[i][1],x[i][2]); 
+     for( i = 0; i<6; i++)
+         printf("%g ",cell[i]);
+     for( i = 0; i<3; i++)
+         printf("%g ",simbox[i]);
+     puts("");
+
+     for( i=0; i < atomtot; i++)
+     {
+       /* Ensure that coords are between [0,1) */
+        for( j = 0; j < 3; j++)
+        {
+           if ( fabs(fmod(x[i][j],1)) < 5e-7 )
+              x[i][j] = 0.0;
+           else
+              x[i][j] -= floor(x[i][j]);
+        }
+  
+        printf("%-14s %10g %10g %10g\n",spec[site[i].pad].name,x[i][0],x[i][1],x[i][2]); 
+     }
+     puts("end");
    }
-
-   puts("end");
-
    return 0;
 }

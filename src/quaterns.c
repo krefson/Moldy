@@ -22,7 +22,15 @@ what you give them.   Help stamp out software-hoarding!  */
  * quaterns	Functions for manipulating quaternions			      *
  ******************************************************************************
  *      Revision Log
- *       $Log: quaterns.c,v $
+ *       $Log$
+ *       Revision 2.12.4.1  2004/03/01 04:53:56  moldydv
+ *       Syswrite now treats non-periodic data (from XYZ and some CSSR files) as single species with initial configuration to be set using skew start.
+ *       Options -n and -l added for no of particles and species label, respectively, for such systems.
+ *
+ *       Revision 2.12  2002/09/19 09:26:30  kr
+ *       Tidied up header declarations.
+ *       Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *       Revision 2.11  2000/12/06 17:45:32  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -64,7 +72,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/quaterns.c,v 2.11 2000/12/06 17:45:32 keith Exp $";
+static char *RCSid = "$Header$";
 #endif
 /*========================== Library include files ===========================*/
 #include <math.h>
@@ -142,7 +150,7 @@ void q_conj_mul(quat_mp p,      /* First Quaternion array [n][4]        (in)  */
    }
 }
 /******************************************************************************
- * Quaternion multiplier.  Multiplies arrays of quaternions p(-1) by q to     *
+ * Quaternion multiplier.  Multiplies arrays of quaternions p by q(-1) to     *
  * give r. Can be called with  r the same as p or q.                          *
  ******************************************************************************/
 void q_mul_conj(quat_mp p,      /* First Quaternion array [n][4]        (in)  */ 

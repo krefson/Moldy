@@ -173,27 +173,29 @@ done:	;
 L=0;
 for( J=1; J<=N; J++ )
 	{
-	L=L+J;
+	L += J;
 	E[J-1]=A[L-1];
 	}
 }
 
 /* Sort eigenvalues and vectors into ascending order */
-#define N 3
-void eigensort(real *ev, real *e, int n)
+void eigensort(real *ev, real *e, int n, vec_mt p)
 {
    int i, j, min;
    real swap;
   
+   for(i=0; i<n; i++)
+     p[i] = 1.0;
+
    for(i=0; i<n-1; i++)
    {
       min = i;
       for(j = i+1; j < n; j++)
-	 if(e[j] < e[min])
-	    min = j;
+	 if(e[j] > swap )
+	   min = j;
       if( min != i)
       {
-	 swap = e[min];
+         swap = e[min];
 	 e[min] = e[i];
 	 e[i] = swap;
 	 for(j=0; j<n; j++)
@@ -201,6 +203,8 @@ void eigensort(real *ev, real *e, int n)
 	    swap = ev[n*min+j];
 	    ev[n*min+j] = ev[n*i+j];
 	    ev[n*i+j] = swap;
+            if( j != min && j != i)
+               p[j] *= -1.0;
 	 }
       }
    }

@@ -20,21 +20,40 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/msd.c,v 2.4 2002/09/19 09:26:29 kr Exp $";
+static char *RCSid = "$Header$";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
  *              of molecules from MolDy dump files.			              *
  *		Output in columnar form "x y z total" for successive time intervals.  *
- *		Selection of species using -g: 0 = species 1, 1 = species 2, etc.     *
+ *		Selection of species using -g: 1 = species 1, 2 = species 2, etc.     *
  *		Default msd time intervals:			     	              *
  *                             0 to (total no. of dump slices-1)/2, step size 1       *
- *		Option -u outputs trajectory coordinates in columnar format           *
+ *		Option -w outputs trajectory coordinates in specified format          *
  *		"x y z" against time for each particle of selected species.           *
  *		nb. msd time intervals taken relative to extracted dump slices.       *
  ************************************************************************************** 
  *  Revision Log
- *  $Log: msd.c,v $
+ *  $Log$
+ *  Revision 2.4.10.4  2003/10/21 10:27:55  kr
+ *  Fixed a couple of bugs in the trajectory output
+ *
+ *  Revision 2.4.10.3  2003/07/31 02:55:58  moldydv
+ *  Removed obsolete variables.
+ *  Updated function descriptions to reflect changes in input syntax.
+ *  Improved error message handling when problem with dump files.
+ *  More commenting.
+ *
+ *  Revision 2.4.10.2  2003/07/30 09:30:53  moldydv
+ *  Incorporated Keith's changes to read sysinfo from dump header.
+ *  Removed ispec increment causing error in msd_out.
+ *  Corrected absolute time step for msd output.
+ *  Added more comments for clarity.
+ *
+ *  Revision 2.4.10.1  2003/07/29 09:38:20  moldydv
+ *  Trajectory output options combined into one option, '-w'.
+ *  Species now selected with -g in 'true' selector format.
+ *
  *  Revision 2.4  2002/09/19 09:26:29  kr
  *  Tidied up header declarations.
  *  Changed old includes of string,stdlib,stddef and time to <> form
@@ -182,8 +201,8 @@ extern  int optind;
 int ithread=0, nthreads=1;
 #define MSD  0
 #define TRAJ 1
-#define GNUP 0
-#define IDL  1
+#define GNU  0
+#define GEN  1
 #define INNER 1
 #define OUTER 2
 /******************************************************************************
@@ -191,25 +210,31 @@ int ithread=0, nthreads=1;
  *		- coords vs time for each species/atom for GNUplot            * 
  ******************************************************************************/
 void
-traj_gnu(spec_mt *species, vec_mt (**traj_cofm), int nslices, real (*range)[3], int *sp_range)
+traj_gnu(spec_mt *species, vec_mt (**traj_cofm), int nslices, real (*range)[3],
+	       	char *spec_mask, int nspecies)
 {
    int          totmol=0, imol, i, itime;
+   int		ispec=0;
    spec_mp      spec;
 
-   for( spec = species+sp_range[0]; spec <= species+sp_range[1]; spec+=sp_range[2])
+   for( spec = species, ispec=0; spec < species+nspecies; spec++, ispec++)
    {
-     (void)printf("# %s\n",spec->name);
-     for( imol = 0; imol < spec->nmols; totmol++, imol++)
-       if( in_region( traj_cofm[0][totmol], range) )
-       {
-          for( itime = 0; itime < nslices; itime++)
-          {
-             for( i = 0; i < 3; i++)
-                 (void)printf("%f ",traj_cofm[itime][totmol][i]);
-             (void)printf("\n");
-          }
-          (void)printf("\n\n");
-       }
+      if( spec_mask[ispec] )
+         for( imol = 0; imol < spec->nmols; imol++)
+         {
+            (void)printf("# %s\n",spec->name);
+            if( in_region( traj_cofm[0][totmol], range) )
+            {
+               for( itime = 0; itime < nslices; itime++)
+               {
+                  for( i = 0; i < 3; i++)
+                     (void)printf("%f ",traj_cofm[itime][totmol+imol][i]);
+                  (void)printf("\n");
+               }
+               (void)printf("\n\n");
+	    }
+         }
+      totmol += spec->nmols;
    }
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
@@ -219,22 +244,26 @@ traj_gnu(spec_mt *species, vec_mt (**traj_cofm), int nslices, real (*range)[3], 
  *		- simple columnar format e.g. for IDL		              * 
  ******************************************************************************/
 void
-traj_idl(spec_mt *species, vec_mt (**traj_cofm), int nslices, real (*range)[3], int *sp_range)
+traj_idl(spec_mt *species, vec_mt (**traj_cofm), int nslices, real (*range)[3],
+	       	char *spec_mask, int nspecies)
 {
    int		totmol, imol, i, itime;
+   int		ispec=0;
    spec_mp	spec;
 
    for( itime = 0; itime < nslices; itime++)
    {
-     totmol = 0;
-     for( spec = species+sp_range[0]; spec <= species+sp_range[1]; spec+=sp_range[2])
-     {
-       for( imol = 0; imol < spec->nmols; totmol++, imol++)
-         if( in_region( traj_cofm[0][totmol], range) )
-           for( i = 0; i < 3; i++)
-               (void)printf("%f ",traj_cofm[itime][totmol][i]);
-     }
-     (void)printf("\n");
+      totmol = 0;
+      for( spec = species, ispec=0; spec < species+nspecies; spec++, ispec++)
+      {
+	 if( spec_mask[ispec] )
+            for( imol = 0; imol < spec->nmols; imol++)
+               if( in_region( traj_cofm[0][totmol], range) )
+                  for( i = 0; i < 3; i++)
+                     (void)printf("%f ",traj_cofm[itime][totmol+imol][i]);
+	 totmol += spec->nmols;
+      }
+      (void)printf("\n");
    }
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
@@ -243,9 +272,20 @@ traj_idl(spec_mt *species, vec_mt (**traj_cofm), int nslices, real (*range)[3], 
  * msd_calc. Calculate msds from trajectory array		       *
  ***********************************************************************/    
 void
-msd_calc(spec_mt *species, int *sp_range, int mstart, int mfinish, int minc, int max_av, int it_inc, real (*range)[3], vec_mt (**traj_cofm), real ***msd)
+msd_calc(spec_mt *species,	/* Species data */
+         char *spec_mask,	/* Species selection mask */
+         int nspecies,		/* No of species in system */
+         int mstart,		/* Initial msd time slice */
+  	 int mfinish,		/* Last msd time slice */
+         int minc,		/* Msd time increment */
+         int max_av,		/* Maximum no slices in average */
+         int it_inc,		/* Initial time slice increment */
+         real (*range)[3],	/* Spatial range included in msd's */
+         vec_mt (**traj_cofm),	/* Continuous trajectory data */
+         real ***msd)		/* Msd data for each time slice */
 {
    int it, irec, totmol, imsd, ispec, imol, nmols, cmols, i;
+   int nspec, tmol;
    spec_mp      spec;
    double       msdtmp, stmp;
    vec_mt	*tct0, *tct1;
@@ -262,153 +302,132 @@ msd_calc(spec_mt *species, int *sp_range, int mstart, int mfinish, int minc, int
 
 	 for(i=0; i<3; i++)
 	 {
-	    totmol=0;
-            for(spec = species+sp_range[0], ispec=0; spec <= species+sp_range[1];
-                            ispec++, spec += sp_range[2])
+	    totmol=0; ispec=0;
+            for(spec = species; spec < species+nspecies; spec++, ispec++)
 	    {
 	       nmols = spec->nmols;
-	       msdtmp = 0.0;
-               cmols= 0;
-	       for( imol = 0; imol < nmols; totmol++, imol++)
+	       if( spec_mask[ispec] )
 	       {
-                  if( in_region( traj_cofm[0][totmol], range) )
-                  {
-		     stmp = tct1[totmol][i] - tct0[totmol][i] ;
-		     msdtmp += SQR(stmp);
-                     cmols++;
-                  }
+	          msdtmp = 0.0;
+                  cmols= 0;
+	          for( imol = 0; imol < nmols; imol++)
+	          {
+		     tmol = totmol+imol;
+                     if( in_region( traj_cofm[0][tmol], range) )
+                     {
+		        stmp = tct1[tmol][i] - tct0[tmol][i] ;
+		        msdtmp += SQR(stmp);
+                        cmols++;
+                     }
+	          }
+	          msd[imsd][ispec][i] += (cmols == 0 ? 0 : msdtmp / cmols);
 	       }
-	       msd[imsd][ispec][i] += (cmols == 0 ? 0 : msdtmp / cmols);
+	       totmol += nmols;
 	    }
-	 }
+         }
       }
 }
 /******************************************************************************
  * msd_out().  Output routine for displaying msd results                      *
  ******************************************************************************/
 void
-msd_out(spec_mt *species, real ***msd, int max_av, int nmsd, int *sp_range)
+msd_out(spec_mt *species,	/* Species data */
+        real ***msd,            /* Msd data for each time slice */
+        int max_av,             /* No of time slices averaged over */
+        int nmsd,               /* No of msd time intervals */
+        char *spec_mask,        /* Species selection mask */
+        int nspecies,           /* No of species in system */
+        double tstep)           /* Absolute time step in ps */
 {
    int          ispec=0, imsd, i;
    real         totmsd;
    spec_mp      spec;
 
-   for(spec = species+sp_range[0]; spec <= species+sp_range[1]; spec += sp_range[2])
-   {
-       (void)printf("# %s\n",spec->name);
-       for( imsd = 0; imsd < nmsd; imsd++)
-       {
-         totmsd = 0;
-         for( i=0; i<3; i++)
-         {
-           msd[imsd][ispec][i] /= max_av;
-           totmsd += msd[imsd][ispec][i];
-           (void)printf("%10.6f ", msd[imsd][ispec][i]);
-         }
-         (void)printf("%10.6f\n",totmsd);
-       }
-       ispec++;
-   }
-   if( ferror(stdout) )
-      error("Error writing output - \n%s\n", strerror(errno));
-}
-/******************************************************************************
- * msd_out2().  Output routine for displaying msd results                      *
- ******************************************************************************/
-void
-msd_out2(spec_mt *species, real ***msd, int max_av, int nmsd, int *sp_range, double dt)
-{
-   int          ispec=0, imsd, i;
-   real         totmsd;
-   spec_mp      spec;
-
+   /* Write species labels */
    (void)printf("#          ");
-   for(spec = species+sp_range[0]; spec <= species+sp_range[1]; spec += sp_range[2])
-   {
-       (void)printf("   %40s",spec->name);
-   }
+   for(spec = species; spec < species+nspecies; spec++, ispec++)
+      if( spec_mask[ispec] )
+         (void)printf("   %40s",spec->name);
+
+   /* Write column labels */
    (void)printf("\n#         t ");
-   for(spec = species+sp_range[0]; spec <= species+sp_range[1]; spec += sp_range[2])
-   {
-      (void)printf("  dX(t)**2   dY(t)**2   dZ(t)**2   dR(t)**2    ");
-   }
+   for(spec = species, ispec=0; spec < species+nspecies; spec++, ispec++)
+      if( spec_mask[ispec] )
+         (void)printf("  dX(t)**2   dY(t)**2   dZ(t)**2   dR(t)**2    ");
    (void)printf("\n");
 
+   /* Write msd data for each time slice */
    for( imsd = 0; imsd < nmsd; imsd++)
    {
-      printf("%10.3f  ", imsd*dt);
-      for(spec = species+sp_range[0], ispec=0; spec <= species+sp_range[1]; spec += sp_range[2], ispec++)
-      {
-	 totmsd = 0;
-	 for( i=0; i<3; i++)
-	 {
-	    msd[imsd][ispec][i] /= max_av;
-	    totmsd += msd[imsd][ispec][i];
-	    (void)printf(" %10.6f", msd[imsd][ispec][i]);
-	 }
-	 (void)printf(" %10.6f   ",totmsd);
-      }
+      printf("%10.3f  ", imsd*tstep);
+      for(spec = species, ispec=0; spec < species+nspecies; spec++, ispec++)
+         if( spec_mask[ispec] )
+         {
+            totmsd = 0;
+            for( i=0; i<3; i++)
+            {
+               msd[imsd][ispec][i] /= max_av;
+               totmsd += msd[imsd][ispec][i];
+               (void)printf(" %10.6f", msd[imsd][ispec][i]);
+            }
+            (void)printf(" %10.6f   ",totmsd);
+         }
       (void)printf("\n");
    }
 
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
 }
-
 /******************************************************************************
  * main().  Driver program for calculating trajectories/msds from MOLDY dumps *
- * Acceptable inputs are sys-spec files or restart files. Actual 	      *
- * configurational info must be read from dump files.			      *
- * Call: msd [-s sys-spec-file] [-r restart-file] [-d dump-file] 	      *
+ * System and configurational info must be read from dump files. 	      *
+ * Call: msd [-d dump-file] [-t dump-time-slices] [-m msd-time-slices         *
  * If not specified on command line, user is interrogated.		      *
  * Options [-x][-y][-z] prompt for limits in given direction to be applied    *
  *        when outputting trajectories. Molecules selected based on initial   *
  *	  positions.							      *
  ******************************************************************************/
-contr_mt		control;
+contr_mt                control;
 
 int
 main(int argc, char **argv)
 {
-   int	c, cflg = 0, ans_i, sym = 0;
-   char 	line[80];
+   int	c, cflg = 0;
    extern char	*optarg;
    int		errflg = 0;
-   int		intyp = 0;
-   int		outsw = MSD, trajsw = GNUP;
-   int		start, finish, inc;
-   int		mstart, mfinish, minc;
-   int		nslices;
-   int		sp_range[3];
+   int		outsw = MSD, trajsw = GNU;
+   int		start, finish, inc;			/* Range specifiers for dump files */
+   int		mstart, mfinish, minc;			/* Range specifiers for msds */ 
+   int		it_inc = 1;				/* Default increment for initial time slice */
    int		dflag, iflag, sflag, mflag;
-   int		irec, it_inc = 1;
+   int		i, irec, ispec;				/* Counters */
    char		*filename = NULL, *dump_base = NULL;
    char		*dump_name = NULL, *dump_names = NULL;
-   char		*dumplims = NULL, *speclims = NULL;
+   char		*dumplims = NULL;
    char		*msdlims = NULL;
    char		*tempname = NULL;
    char		dumpcommand[256];
    int		dump_size;
    float	*dump_buf;
-   FILE		*Fp, *Dp, *dump_file;
-   restrt_mt	restart_header;
+   FILE         *Fp, *Dp, *dump_file;
    dump_mt	dump_header;
    dump_sysinfo_mt *dump_sysinfo;
    size_mt	sysinfo_size;
    system_mt	sys;
    spec_mt	*species, *spec;
-   vec_mt 	**traj_cofm;
-   mat_mt	*hmat;
-   real		range[3][3];
+   vec_mt 	**traj_cofm;		/* Cofm data for continuous trajectories */
+   mat_mt	*hmat;			/* h matrix for each slice */
+   real		range[3][3];		/* Spatial range to include in msd calcs */
    site_mt	*site_info;
    pot_mt	*potpar;
    quat_mt	*qpf;
-   contr_mt	control_junk;
-   int          nmsd, max_av, nspecies;
-   real         ***msd;
-   int		it, ispec;
+   int          nmsd, max_av, nspecies, nslices;
+   real         ***msd;			/* Calculated MSD data for each time slice and species */
+   char         *spec_list = "1-50";    /* List of species to calculate for (with default) */
+   char         spec_mask[MAX_SPECIES]; /* Mask for selecting species */
    int          arglen, ind, genflg;
-   int		xdr = 0;
+   int          xdr = 0;
+   real		msd_step; 		/* Absolute msd time interval (in ps) */
 
    zero_real(range[0],9);
 
@@ -421,24 +440,12 @@ main(int argc, char **argv)
    else if( strstr(comm, "mdtraj") )
       outsw = TRAJ;
 
-   while( (c = getopt(argc, argv, "cd:t:m:i:g:o:w:uxXyYzZ") ) != EOF )
+   while( (c = getopt(argc, argv, "cd:t:m:i:g:o:w:xXyYzZ") ) != EOF )
       switch(c)
       {
        case 'c':
          cflg++;
          break;
-       case 'r':
-	 if( intyp )
-	    errflg++;
-	 intyp = c;
-	 filename = optarg;
-	 break;
-       case 's':
-	 if( intyp )
-	    errflg++;
-	 intyp = c;
-	 filename = optarg;
-	 break;
        case 'd':
 	 dump_base = optarg;
 	 break;
@@ -449,7 +456,7 @@ main(int argc, char **argv)
 	 msdlims = mystrdup(optarg);
          break;
        case 'g':
-	 speclims = mystrdup(optarg);
+	 spec_list = optarg;
 	 break;
        case 'i':
 	 it_inc = atoi(optarg);
@@ -458,9 +465,6 @@ main(int argc, char **argv)
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error("failed to open file \"%s\" for output", optarg);
 	 break;
-       case 'u':
-	 outsw = TRAJ;
-         break;
        case 'x':
          range[0][2] = INNER;
          break;
@@ -480,7 +484,11 @@ main(int argc, char **argv)
          range[2][2] = OUTER;
          break;
        case 'w':
-         trajsw = atoi(optarg);
+	 if( !strcasecmp(optarg, "gnu") )
+	    trajsw = GNU;
+	 else if (!strcasecmp(optarg, "gen") )
+	    trajsw = GEN;
+	 outsw = TRAJ;
          break;
        default:
        case '?':
@@ -490,13 +498,17 @@ main(int argc, char **argv)
    if( errflg )
    {
       fprintf(stderr,
-         "Usage: %s [-c] ",comm);
-      fputs("[-d dump-files] [-t s[-f[:n]]] [-m s[-f[:n]]] [-g s[-f[:n]]] ",stderr);
-      fputs("[-i initial-time-increment] [-u] [-w trajectory-format] ",stderr);
+         "Usage: %s [-c] [-d dump-files] [-t s[-f[:n]]] ",comm);
+      fputs("[-m s[-f[:n]]] [-g s[-f[:n]]] ",stderr);
+      fputs("[-i initial-time-increment] [-w trajectory-format] ",stderr);
       fputs("[-x|-X] [-y|-Y] [-z|-Z] [-o output-file]\n",stderr);
       exit(2);
    }
 
+   if( tokenise(mystrdup(spec_list), spec_mask, MAX_SPECIES) == 0 )
+      error("Invalid species specification \"%s\": usage eg 1,3,5-9,4",spec_list);
+
+   /* Prepare dump file name for reading */
    genflg = 0;
    if( dump_base != 0 ) genflg++;
 
@@ -513,13 +525,13 @@ main(int argc, char **argv)
       }
    }
 
-  /* Dump dataset			      */
+   /* Dump dataset			      */
    if( dump_base == 0 && dump_names == 0)
    {
 	fputs("Enter canonical name of dump files (as in control)\n",stderr);
 	if( (dump_base = get_str("Dump file name? ")) == NULL) exit(2);
 	genflg++;
-    }
+   }
 
    if( dump_names == 0 ) dump_names = dump_base;
 
@@ -672,45 +684,7 @@ main(int argc, char **argv)
       minc = 1;
    }
 
-  /*
-   * Ensure that the species selection limits sp_range are set up,
-   * either on command line or by user interaction.
-   */
-   if( speclims != NULL)
-   {
-      do
-      {
-         sflag = 0;
-         if( forstr(speclims, &(sp_range[0]), &(sp_range[1]), &(sp_range[2])))
-         {  
-	   sflag++;
-           fputs("Invalid range for molecule selection \"", stderr);
-	   fputs(speclims, stderr);
-	   fputs("\"\n", stderr);
-         }
-         if( sp_range[1] > sys.nspecies-1)
-         {
-            sflag++;
-            fputs("Molecule selection exceeds no. of species\n",stderr);
-         }
-         if( sflag )
-         {
-            (void)free(speclims);
-            speclims = NULL;
-            fputs("Please specify molecule selection in form", stderr);
-            fputs(" start-finish:increment\n", stderr);
-            speclims = get_str("s-f:n? ");
-         }
-       } while(sflag);         
-   }
-   else
-   {
-      /* Use default values for molecule selection limits */
-       sp_range[0] = 0;
-       sp_range[1] = sys.nspecies-1;
-       sp_range[2] = 1;
-   } 
-   nspecies = floor((sp_range[1]-sp_range[0])/sp_range[2]+1.0); /* No of species selected */
+   nspecies = sys.nspecies;
 
   /*
    * Allocate buffer for data
@@ -737,7 +711,7 @@ main(int argc, char **argv)
 #else
    tempname = tmpnam((char*)0);
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d -o %s %s",
-         sys.nmols,sys.nmols_r, start, finish, inc, tempname, dump_names);
+         sys.nmols, sys.nmols_r, start, finish, inc, tempname, dump_names);
    system(dumpcommand);
    if( (Dp = fopen(tempname,"rb")) == 0)
         error("Failed to open \"%s\"",tempname);
@@ -747,8 +721,11 @@ main(int argc, char **argv)
    for(irec = 0; irec <= finish-start; irec+=inc)
    {
         if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
-           error("Error reading record %d in dump file - \n%s\n",
-              irec, strerror(errno));
+           if( !strcmp(strerror(errno),"Success") )
+              error("Error reading record %d in dump file \"%s\"\n",irec, dump_name);
+           else
+              error("Error reading record %d in dump file \"%s\" - \n%s\n",
+                 irec, dump_name, strerror(errno));
         dump_to_moldy(dump_buf, &sys);  /* read dump data */
 
 	memcpy(hmat[irec/inc], sys.h, sizeof(mat_mt));
@@ -756,10 +733,10 @@ main(int argc, char **argv)
         if( irec == 0)
 	{
           range_in(&sys, range);
-          traj_con2(species, (vec_mt*)0, traj_cofm[irec/inc], sp_range);
+          traj_con2(species, (vec_mt*)0, traj_cofm[irec/inc], nspecies);
 	}
 	else
-          traj_con2(species, traj_cofm[irec/inc-1], traj_cofm[irec/inc], sp_range);
+          traj_con2(species, traj_cofm[irec/inc-1], traj_cofm[irec/inc], nspecies);
 
 #ifdef DEBUG
         fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
@@ -776,8 +753,8 @@ main(int argc, char **argv)
 #endif
 
 /* Convert trajectories from frac coords to Cartesian coords */
-   for( it = 0; it < nslices; it++)
-      mat_vec_mul(hmat[it], traj_cofm[it], traj_cofm[it], sys.nmols);
+   for( i = 0; i < nslices; i++)
+      mat_vec_mul(hmat[i], traj_cofm[i], traj_cofm[i], sys.nmols);
 
 /*
  * Output either msd values or trajectory coords
@@ -787,6 +764,7 @@ main(int argc, char **argv)
   /* Calculate msd parameters */
      nmsd = (mfinish-mstart)/minc+1; /* No of msd time intervals */
      max_av = (nslices - mfinish)/it_inc; /* Max no of msd calcs to average over */
+     msd_step = dump_sysinfo->deltat*inc*minc;
 
      if (max_av < 1)
           max_av = 1;
@@ -796,18 +774,19 @@ main(int argc, char **argv)
      zero_real(msd[0][0],nmsd*nspecies*3);
 
   /* Calculate and print msd values */
-     msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, range, traj_cofm, msd);
-     msd_out2(species, msd, max_av, nmsd, sp_range, dump_sysinfo->deltat);
+     msd_calc(species, spec_mask, nspecies,  mstart, mfinish, minc, max_av, it_inc,
+		     range, traj_cofm, msd);
+     msd_out(species, msd, max_av, nmsd, spec_mask, nspecies, msd_step);
    }
    else /* Otherwise output trajectories in selected format */
      switch(trajsw)
      {
-       case IDL:
-          traj_idl(species, traj_cofm, nslices, range, sp_range);
+       case GEN:
+          traj_idl(species, traj_cofm, nslices, range, spec_mask, nspecies);
           break;
-       case GNUP:
+       case GNU:
        default:
-	  traj_gnu(species, traj_cofm, nslices, range, sp_range);
+	  traj_gnu(species, traj_cofm, nslices, range, spec_mask, nspecies);
      }
    return 0;    
 }
