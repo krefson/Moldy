@@ -56,7 +56,7 @@ dnl
                           ${LIBS=-fi\ -lveclib}  ;;
      *mp-cray-unicos*|*90-cray-unicos*) 
                         : ${OPT=-h\ nostdc,vector3,scalar3,ivdep} ${OPT2=$OPT}
-                          ${LDFLAGS=-Wl,-D,'HEAP=50000+50000;STACK=10000+10000'}\
+                        : ${LDFLAGS=-Wl,-D,HEAP=50000+50000\ -Wl,-D,STACK=10000+10000} \
                           ${LIBS=-lsci}  ;;
      T3*-cray-unicos*)  : ${OPT=-O2} ${OPT2=${OPT}\ -hrestrict=a} \
                           ${LIBS=-lsci} ;;
@@ -162,7 +162,9 @@ dnl to run the preprocessor in the test for headers.
    if test $ac_cv_func_MPI_Init = yes && test $ac_cv_header_mpi_h = yes; then 
       AC_DEFINE(SPMD) 
       AC_DEFINE(MPI)
-   fi
+   else
+      AC_MSG_WARN(Unable to compile and link with MPI libraries)
+    fi
 fi
 if test $parlib = "bsp" ; then
 dnl Don't check for headers  if compiling with mpicc
@@ -180,6 +182,8 @@ dnl to run the preprocessor in the test for headers.
    if  test $ac_cv_func_bsp_begin = "yes" && test $ac_cv_header_bsp_h = "yes" && test $ac_cv_header_bsp_level1_h = "yes"; then
       AC_DEFINE(SPMD) 
       AC_DEFINE(BSP)
+   else
+      AC_MSG_WARN(Unable to compile and link with BSP libraries)
    fi
 fi
 if test $parlib = "oldbsp" ; then
@@ -187,6 +191,8 @@ if test $parlib = "oldbsp" ; then
    if test $ac_cv_lib_bsp_bspstart = "yes"; then
       AC_DEFINE(SPMD) 
       AC_DEFINE(BSP0)
+   else
+      AC_MSG_WARN(Unable to compile and link with BSP libraries)
    fi
 fi
 if test $parlib = "tcgmsg" ; then
@@ -196,6 +202,8 @@ if test $parlib = "tcgmsg" ; then
    if test $ac_cv_lib_tcgmsg_PBEGIN_ = yes && test $ac_cv_header_sndrcv_h = yes; then 
       AC_DEFINE(SPMD) 
       AC_DEFINE(TCGMSG)
+   else
+      AC_MSG_WARN(Unable to compile and link with TCGMSG libraries)
    fi
 fi
 if test $parlib = "shmem" ; then
@@ -204,6 +212,8 @@ if test $parlib = "shmem" ; then
    if test $ac_cv_func_barrier = yes && test $ac_cv_header_mpp_shmem_h = yes; then 
       AC_DEFINE(SPMD) 
       AC_DEFINE(SHMEM)
+   else
+      AC_MSG_WARN(Unable to compile and link with SHMEM libraries)
    fi
 fi
 
