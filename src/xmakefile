@@ -24,7 +24,7 @@ XDR=-DUSE_XDR
 #PARLIBC=-DSPMD -DMPI
 #PARLIBL=-lmpi
 # SHMEM library on Edinburgh T3D
-#PARLIBC=-DSPMD -DSHMEM -DMPPMANY
+#PARLIBC=-DSPMD -DSHMEM #-DMPPMANY
 #PARLIBL=
 #  **** MSDOS with Turbo C ****
 #CC=tcc
@@ -57,14 +57,14 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #INLINE=
 #  **** Sun C 3.0.1
 #CC=acc
-#CFLAGS= -libmil -dalign  -O4 $(XDR) $(PARLIBC) $(CFLAGS0)
+#CFLAGS= -fast -xO4 $(PARLIBC) $(XDR) $(CFLAGS0)
 #CFLAGS2= -fsimple
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0)
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -fast 
 #INLINE=
 #  **** Sun Solaris 2
-#CFLAGS= -libmil -dalign  -xO4 $(XDR) $(PARLIBC) $(CFLAGS0)
-#CFLAGS2= -fsimple
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lnsl
+#CFLAGS= -fast -xO4 $(PARLIBC) $(XDR) $(CFLAGS0)
+#CFLAGS2= -fsimple -xrestrict=%all
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -fast -lnsl
 #INLINE=
 #  **** Solaris 2 using gcc  ****
 #CC=	gcc
@@ -96,8 +96,8 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #INLINE= -inline -Npaths=auxil.in
 #  **** convex ****
 #CFLAGS= -O2 -na -nv -fi $(XDR) $(PARLIBC) $(CFLAGS0)
-#CFLAGS2= -va -alias standard -alias ptr_args
-#CFLAGSP= -O3 -re
+#CFLAGS2= -alias standard -alias ptr_args -alias array_args
+##CFLAGSP= -O3 -re  # force,ewald_parallel versions only
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0) -fi -lveclib 
 #INLINE=
 #  **** Cray **** (SCC 3.0)
@@ -105,7 +105,7 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" -lsci
 #INLINE=
 #  **** Cray T3D ****
-#CC=cc -Tcray-t3d
+#CC=TARGET=cray-t3d cc
 #CFLAGS= -O2 $(XDR) $(PARLIBC) $(CFLAGS0)
 #CFLAGS2=-hrestrict=a
 #LDFLAGS=$(PARLIBL) $(LDFLAGS0) -L/usr/local/lib/bnchlib -lbnch -lsci
@@ -309,6 +309,9 @@ moldy.tar:	$(CFILES) $(HFILES)  Makefile \
 
 moldy.tar.Z:	moldy.tar
 		compress moldy.tar
+
+moldy.tar.gz:	moldy.tar
+		gzip moldy.tar
 
 moldy.shar:	$(CFILES) $(HFILES)  Makefile \
 		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
