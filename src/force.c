@@ -29,6 +29,20 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.14  1996/11/04 17:34:30  keith
+ *       Moderate rewriting and code re-organization.
+ *       1. Simplified PBC relocation calculation, got rid of large
+ *          arrays reloc[] etc, saving 32 MB for 8192 waters on T3D.
+ *          There is now NO LIMIT to cutoff or RDF limit and macro
+ *          parameter NSH is removed.
+ *       2. Rewrote site_neighbour_list to be more transparent and got
+ *          rid of silly vector sort calls. There are now separate versions for
+ *          scalar and vector machines.  Code is now optimized for usual non-
+ *          framework case, but it's faster than 2.10 even for frameworks.
+ *       3. Corrected misleading comments, reorganized code in force_calc()
+ *          to be more transparent.  Commented local variables MUCH better.
+ *       4. It's also a bit faster.
+ *
  *       Revision 2.13  1996/08/14 16:46:04  keith
  *       Workaround for T3D Cray compiler bug real*int/int ==> int division.
  *       Got rid of unnccessary par_abort() calls - rplaced with exit().
@@ -106,7 +120,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.14 1996/11/01 12:40:58 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.14 1996/11/04 17:34:30 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -122,6 +136,28 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.
 /*========================== Program include files ===========================*/
 #include        "structs.h"
 #include        "messages.h"
+/*========================== Structs local to module =========================*/
+typedef struct cell_s                   /* Prototype element of linked list of*/
+{                                       /* molecules within interaction range */
+   int          isite, num, frame_type;
+   struct cell_s *next;
+}               cell_mt;
+
+typedef struct                          /* Prototype of neighbour cell list   */
+{                                       /* element.                           */
+   int          i, j, k;
+}               ivec_mt;
+
+typedef struct                          /* Prototype of neighbour cell list   */
+{                                       /* element.                           */
+   real         i, j, k;
+}               rvec_mt;
+
+typedef struct                          /* Prototype of neighbour cell list   */
+{                                       /* element.                           */
+   real         x, y, z;
+   int          i, j, k;
+}               irvec_mt;
 /*========================== External function declarations ==================*/
 gptr            *talloc();             /* Interface to memory allocator       */
 void            tfree();               /* Free allocated memory               */
@@ -152,29 +188,6 @@ void            message();              /* Write a warning or error message   */
 /*========================== External data references ========================*/
 extern  contr_mt control;                   /* Main simulation control parms. */
 extern int              ithread, nthreads;
-/*========================== Structs local to module =========================*/
-typedef struct cell_s                   /* Prototype element of linked list of*/
-{                                       /* molecules within interaction range */
-   int          isite, num, frame_type;
-   struct cell_s *next;
-}               cell_mt;
-
-typedef struct                          /* Prototype of neighbour cell list   */
-{                                       /* element.                           */
-   int          i, j, k;
-}               ivec_mt;
-
-typedef struct                          /* Prototype of neighbour cell list   */
-{                                       /* element.                           */
-   real         i, j, k;
-}               rvec_mt;
-
-typedef struct                          /* Prototype of neighbour cell list   */
-{                                       /* element.                           */
-   real         x, y, z;
-   int          i, j, k;
-}               irvec_mt;
-
 /*========================== Global variables ================================*/
 static irvec_mt *ifloor; /*Lookup tables for int "floor()"    */
 /*========================== Macros ==========================================*/
