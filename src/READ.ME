@@ -172,10 +172,6 @@ machine and uncomment them. Moldy has been test compiled on most
 modern workstations as well as vector super and minisuper-computers,
 so you only have to select the preset options.
 
-N.B. IBM RS6000 This compiler does not supply any "identification"
-macro so you MUST have -DRS6000 in the c89 command line.  Otherwise
-the XDR stuff won't work.
-
 Stage 3.  
 This section describes how to "hand-tune" compiler options.
 If you get this far you have probably got a different machine or
@@ -230,15 +226,27 @@ _HPUX_SOURCE	(HPUX)
 		These are needed to enable stuff needed for the XDR
 		routines and headers on IBM and HP machines.  
 		N.B. These are actually set automatically in the Moldy
-		header "defs.h" (but see note about need for -DRS6000
-		on IBM).  However other systems may require something
+		header "defs.h" However other systems may require something
 		similar .
 
 SPMD		Compile for SPMD (Single Program Multiple Data) parallel
 		execution.  You must also specify one of the macros
-		BSP, MPI or TCG to select a message-passing library
+		BSP, MPI or TCGMSG to select a message-passing library
 		and have the appropriate include paths and libraries
 		defined in the Makefile.
+
+BSP/MPI/TCGMSG/SHMEM   (parallel.c only)
+		These select the parallel interface library.  Portable
+		implementations of the first three are available for
+		most parallel architectures, and MPI should be available
+		on most true parallel machines.  
+
+MPPMANY		(Ewald.c only) Selects parallelization of some of the
+		trig initialization code for the reciprocal-space sum.
+		This is a loser on all but the highest-bandwidth
+		parallel machines.  It increases run time on the IBM SP2.
+		However it DOES give a speedup on the T3D when used in
+		conjunction with the SHMEM or BSP library interface.
 
 B. VMS (VAX/VMS and OpenVMS/AXP)
 
@@ -297,6 +305,10 @@ A.  Distributed Memory
     header files, and the preprocessor symbols SPMD and one of MPI,
     BSP and TCGMSG.  The macro PARLIBL should be defined to link with
     the appropriate libraries.
+
+    For the Cray T3D, there is also an interface to the SHMEM libraries
+    which provides the very fastest interprocessor communication.  This
+    may be used in conjunction with the MPPMANY option in Ewald.c.
 
     To find out how to set up a parallel run, consult the documentation
     for your parallel system, as this varies.  
