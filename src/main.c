@@ -7,6 +7,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.13  90/05/16  14:20:04  keith
+ * *** empty log message ***
+ * 
  * Revision 1.12  90/04/14  17:53:41  keith
  * Added signal handler to catch CPU exceeded and TERM signal.
  * 
@@ -51,7 +54,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.12 90/04/14 17:53:41 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.13 90/05/16 14:20:04 keith Exp $";
 #endif
 /*========================== System include files ============================*/
 #include	<signal.h>
@@ -107,6 +110,16 @@ char	*argv[];
    double	rt = rt_clock();
    vec_t	(*meansq_f_t)[2];
    vec_t	dip_mom;
+
+#ifdef PARALLEL
+# ifdef ardent
+   int nthreads = nprocessors();
+   int stacksize = 16384;
+
+   MT_SET_THREAD_NUMBER(&nthreads);
+   MT_INIT(&stacksize);
+# endif
+#endif
 
    start_up((argc>1)?argv[1]:"", (argc>2)?argv[2]:"",
 	    &system, &species, &site_info, &potpar);
