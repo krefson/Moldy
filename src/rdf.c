@@ -8,6 +8,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.16  92/10/28  14:09:52  keith
+ * Changed "site_[tp]" typedefs to avoid name clash on HP.
+ * 
  * Revision 1.15  92/09/22  14:48:13  keith
  * Tidied up calls to improve "lint" rating.
  * 
@@ -70,7 +73,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.15 92/09/22 14:48:13 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.16 92/10/28 14:09:52 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -210,6 +213,7 @@ asite_t		site_info[];
    double	norm;
    char		buf[32];
    
+   (void)memset((gptr*)nfrac,0,system->max_id*sizeof(*nfrac));
    for(spec = species; spec < species+system->nspecies; spec++)
       for(is = 0; is < spec->nsites; is++)
 	 nfrac[spec->site_id[is]] += spec->nmols;
