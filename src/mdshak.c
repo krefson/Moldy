@@ -342,15 +342,17 @@ vec_t		c_of_m;
    double	mass;
    spec_t	*spec;
    int		imol;
+   vec_t	*s_c_of_m;
 
    mass = c_of_m[0] = c_of_m[1] = c_of_m[2] = 0.0;
    for(spec = species; spec < species + nspecies; spec++ )
    {
+      s_c_of_m = spec->c_of_m;
       for(imol = 0; imol < spec->nmols; imol++)
       {
-	 c_of_m[0] += spec->mass*spec->c_of_m[imol][0];
-	 c_of_m[1] += spec->mass*spec->c_of_m[imol][1];
-	 c_of_m[2] += spec->mass*spec->c_of_m[imol][2];
+	 c_of_m[0] += spec->mass*s_c_of_m[imol][0];
+	 c_of_m[1] += spec->mass*s_c_of_m[imol][1];
+	 c_of_m[2] += spec->mass*s_c_of_m[imol][2];
       }
       mass += spec->nmols*spec->mass;
    }
