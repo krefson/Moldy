@@ -78,7 +78,7 @@ UTILS2= mdshak msd mdavpos mdbond ransub mdvaf
 
 UTILC= $(UTILS:%=%.c) $(UTILS2:%=%.c)
 
-UTILO= $(UTILC:%.c=%.o) ReadDCD.o
+UTILO= $(UTILC:%.c=%.o) ReadDCD.o utlsup.o molout.o
 
 EXTRA0 = $(UTILC) getopt.c ReadDCD.c ReadDCD.h ewald_parallel.c \
          force_parallel.c configure.in config.h.in defconf.h aclocal.m4 \
@@ -96,6 +96,9 @@ FIGTEXPS=	fig_arralloc.ftx fig_dostep-a.ftx fig_dostep-b.ftx \
 		fig_arralloc.ps fig_dostep-a.ps fig_dostep-b.ps \
                 fig_ewald.ps fig_link-cell.ps fig_main.ps \
                 fig_skewstart.ps fig_startup-a.ps fig_startup-b.ps    \
+		fig_arralloc.pdf fig_dostep-a.pdf fig_dostep-b.pdf \
+                fig_ewald.pdf fig_link-cell.pdf fig_main.pdf \
+                fig_skewstart.pdf fig_startup-a.pdf fig_startup-b.pdf    \
 		fig_arralloc-eepic.ftx fig_dostep-a-eepic.ftx \
 		fig_dostep-b-eepic.ftx fig_ewald-eepic.ftx \
 		fig_link-cell-eepic.ftx fig_main-eepic.ftx \
@@ -195,7 +198,6 @@ Makefile.in:	xmakefile
 				'\n}\n/^FIGS *=/   c\\\nFIGS='  $(FIGS)\
 				'\n}\n/^%\.[a-z][a-z]*:	/,/^$$/ d\n'\
 				'/^moldy.bbl:	/,/^$$/ d\n' \
-				'/^moldy.aux:	/,/^$$/ d\n' \
 				'/^Makefile.in:	/,/^$$/ d\n' \
 				 > make.sed 
 		sed -f make.sed ./xmakefile > Makefile.in
@@ -364,16 +366,16 @@ moldy.com.Z:	moldy.com
 		compress moldy.com
 
 moldy.ps:	moldy.dvi
-		TEXINPUTS=figures:: dvips -Pamz -Pcmz -t a4 moldy -o moldy.ps
+		TEXINPUTS=figures: dvips -Pamz -Pcmz -t a4 moldy -o moldy.ps
 
-moldy.dvi:	moldy.tex moldy.bbl $(FIGS)
-		TEXINPUTS=figures:: latex moldy
-		TEXINPUTS=figures:: latex moldy
+moldy.dvi:	moldy.tex moldy.bbl moldy.aux $(FIGS)
+		TEXINPUTS=figures: latex moldy
+		TEXINPUTS=figures: latex moldy
 		@touch moldy.bbl
 
-moldy.pdf:	moldy.tex moldy.bbl $(FIGS)
-		TEXPSHEADERS=figures:: pdflatex moldy
-		TEXPSHEADERS=figures:: pdflatex moldy
+moldy.pdf:	moldy.tex moldy.bbl moldy.aux $(FIGS)
+		TEXINPUTS=figures: TEXPSHEADERS=figures: pdflatex moldy
+		TEXINPUTS=figures: TEXPSHEADERS=figures: pdflatex moldy
 		@touch moldy.bbl
 
 moldy.bbl:	moldy.aux
