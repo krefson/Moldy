@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/moldy/src/RCS/messages.h,v 2.16 1999/07/22 13:14:45 keith Exp $
+ * $Header: /home/eeyore_data/keith/moldy/src/RCS/messages.h,v 2.17 1999/10/08 10:51:08 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -134,7 +134,8 @@ rotational degrees of freedom (%d vs %d)"
 #define	CORUPT	"Dump file \"%s\" corrupt - expected %d bytes, found %d"
 #define DOERRR	"Failed to open dump file \"%s\"\n    -  %s"
 #define DRERR	"Read from dump file \"%s\" failed\n    -  %s"
-#define DMPALT	"Dump-level altered, new dump run started"
+#define DMPALT	"Dump-level altered on restart: new dump run started"
+#define DMPAL2	"Dump-interval or maxdumps altered on restart: new dump run started"
 #define DMPEXS	"File \"%s\" exists - Dumps will be written to \"%s\""
 #define DOERRW	"Failed to open dump file \"%s\" for writing\n    -  %s"
 #define DWERR	"Write to dump file \"%s\" failed\n    -  %s"
