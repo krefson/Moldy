@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.14 91/08/24 16:55:42 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.16 91/10/02 13:51:42 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -811,28 +811,28 @@ VECTORIZE
             for(jsite=jmin; jsite < jmax; jsite++)
             {
                force_cpt  = forceij[jsite]*rx[jsite];
-               site0           -= force_cpt;
-               forcejx[jsite]  += force_cpt;
                s00         += force_cpt * rx[jsite];
                s02         += force_cpt * rz[jsite];
                s01         += force_cpt * ry[jsite];
+               site0           -= force_cpt;
+               forcejx[jsite]  += force_cpt;
             }
 VECTORIZE
             for(jsite=jmin; jsite < jmax; jsite++)
             {
                force_cpt = forceij[jsite]*ry[jsite];
-               site1           -= force_cpt;
-               forcejy[jsite]  += force_cpt;
                s11         += force_cpt * ry[jsite];
                s12         += force_cpt * rz[jsite];
+               site1           -= force_cpt;
+               forcejy[jsite]  += force_cpt;
             }
 VECTORIZE
             for(jsite=jmin; jsite < jmax; jsite++)
             {
                force_cpt = forceij[jsite]*rz[jsite];
+               s22         += force_cpt * rz[jsite];
                site2           -= force_cpt;
                forcejz[jsite]  += force_cpt;
-               s22         += force_cpt * rz[jsite];
             }
             site_force[0][isite] += site0;
             site_force[1][isite] += site1;
