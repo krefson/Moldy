@@ -327,34 +327,42 @@ void	print_header(dump_mt *header, dump_sysinfo_mt *sysinfo)
 {
    int ispec;
    printf("Title\t\t\t\t= \"%s\"\n",header->title);
-   printf("RCS Revision\t\t\t= %.*s\n", (int)strlen(header->vsn), header->vsn);
+   printf("RCS revision\t\t\t= %.*s\n", (int)strlen(header->vsn), header->vsn);
    printf("Istep\t\t\t\t= %ld\n",header->istep);
-   printf("Dump_interval\t\t\t= %ld\n", header->dump_interval);
-   printf("Dump_level\t\t\t= %d\n", header->dump_level);
+   printf("Dump interval\t\t\t= %ld\n", header->dump_interval);
+   printf("Dump level\t\t\t= %d\n", header->dump_level);
    printf("Max dumps\t\t\t= %d\n", header->maxdumps);
-   printf("Dump Size\t\t\t= %d\n", header->dump_size);
+   printf("Dump size\t\t\t= %d\n", header->dump_size);
    printf("Number of dumps\t\t\t= %d\n", header->ndumps);
    printf("Timestamp\t\t\t= %s", ctime((time_t*)&header->timestamp));
-   printf("Restart Timestamp\t\t= %s", ctime((time_t*)&header->restart_timestamp));
-   printf("Dump Start\t\t\t= %s", ctime((time_t*)&header->dump_init));
+   printf("Restart timestamp\t\t= %s", ctime((time_t*)&header->restart_timestamp));
+   printf("Dump start\t\t\t= %s", ctime((time_t*)&header->dump_init));
    printf("Time between dumps\t\t= %f %s\n", sysinfo->deltat, TUNIT_N);
-   printf("Number of molecules\t\t= %d\n", sysinfo->nmols);
+   printf("Number of particles\t\t= %d\n", sysinfo->nmols);
    printf("Number of polyatomics\t\t= %d\n", sysinfo->nmols_r);
    printf("Number of species\t\t= %d\n", sysinfo->nspecies);
    for(ispec = 0; ispec < sysinfo->nspecies; ispec++)
    {
       printf("Species %d name\t\t\t= %s\n", ispec+1, sysinfo->mol[ispec].name);
-      printf("  Number of molecules\t\t= %d\n",sysinfo->mol[ispec].nmols);
+      if( sysinfo->mol[ispec].charge != 0.0)
+        printf("  Number of ions\t\t= %d\n",sysinfo->mol[ispec].nmols);
+      else
+        printf("  Number of molecules\t\t= %d\n",sysinfo->mol[ispec].nmols);
       if( sysinfo->mol[ispec].framework )
-	 printf("  Molecule is a framework\n");
+      {
+         if( sysinfo->mol[ispec].charge != 0.0)
+	   printf("  Ion is a framework\n");
+         else
+	   printf("  Molecule is a framework\n");
+      }
       else
 	 printf("  Rotational deg. of freedom\t= %d\n", sysinfo->mol[ispec].rdof);
       printf("  Mass\t\t\t\t= %f amu\n", sysinfo->mol[ispec].mass);
       if (sysinfo->mol[ispec].rdof > 0 )
-	 printf("  Moments of Inertia\t\t= %f  %f  %f %s\n", sysinfo->mol[ispec].inertia[0],
+	 printf("  Moments of inertia\t\t= %f  %f  %f %s\n", sysinfo->mol[ispec].inertia[0],
 		sysinfo->mol[ispec].inertia[1],sysinfo->mol[ispec].inertia[2], IUNIT_N);
       printf("  Charge\t\t\t= %f %s\n", CONV_Q*sysinfo->mol[ispec].charge, CONV_Q_N); 
-      printf("  Dipole Moment\t\t\t= %f %s\n", CONV_D*sysinfo->mol[ispec].dipole, CONV_D_N);
+      printf("  Dipole moment\t\t\t= %f %s\n", CONV_D*sysinfo->mol[ispec].dipole, CONV_D_N);
    }
 }
 
@@ -561,28 +569,11 @@ main(int argc, char **argv)
       }
       sysinfo_size = sizeof(dump_sysinfo_mt) 
 	                   + sizeof(mol_mt) * (dump_sysinfo->nspecies-1);
-      (void)free(dump_sysinfo);
       
+     /* Check that dump headers match */
       if( nfiles++ == 0 )
       {
 	 proto_header = header;
-	 /*
-	  * Allocate space for and read dump sysinfo.
-	  */
-	 dump_sysinfo = (dump_sysinfo_mt*)malloc(sysinfo_size);
-	 /*
-	  * Rewind and reread header, this time including sysinfo.
-	  */
-	 (void)rewind_dump(dump_file, xdr);
-	 if( read_dump_header(dump_name, dump_file, &header, &xdr, 
-			      sysinfo_size, dump_sysinfo) 
-	     || ferror(dump_file) || feof(dump_file) )
-	 {
-	    fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
-	    exit(2);
-	 }
-	 nmols   = dump_sysinfo->nmols;
-	 nmols_r = dump_sysinfo->nmols_r;
       }
       else if( strncmp(header.title, proto_header.title, L_name) ||
 	      strncmp(header.vsn, proto_header.vsn, sizeof header.vsn) ||
@@ -597,6 +588,24 @@ main(int argc, char **argv)
         fprintf(stderr,"Dump file \"%s\" contains slices %ld to %ld\n",dump_name,
               header.istep/header.dump_interval,header.istep/header.dump_interval+header.ndumps-1);
       }
+     /*
+      * Allocate space for and read dump sysinfo.
+      */
+      (void)free(dump_sysinfo);
+      dump_sysinfo = (dump_sysinfo_mt*)malloc(sysinfo_size);
+     /*
+      * Rewind and reread header, this time including sysinfo.
+      */
+      (void)rewind_dump(dump_file, xdr);
+      if( read_dump_header(dump_name, dump_file, &header, &xdr, 
+        sysinfo_size, dump_sysinfo) 
+          || ferror(dump_file) || feof(dump_file) )
+      {
+	fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
+	exit(2);
+      }
+      nmols   = dump_sysinfo->nmols;
+      nmols_r = dump_sysinfo->nmols_r;
 
       (void)close_dump(dump_file);
 
@@ -610,7 +619,25 @@ main(int argc, char **argv)
       fprintf(stderr,"File \"%s\" \nslice %5d length %5d\n",
 	              dump_name, cur->i, cur->num);
 #endif
+     if( xcpt == -1 )
+     {
+       if( bflg )
+       {
+	 fwrite(&header, sizeof(header), 1, stdout);
+	 fwrite(dump_sysinfo, sizeof(*dump_sysinfo), 1, stdout);
+       }
+       else
+         {
+         if( nfiles > 1 )
+           printf("\n");
+         printf("File name\t\t\t= %s\n", dump_name);
+ 	 print_header(&header, dump_sysinfo);
+         }
+     }
    }
+
+   if( xcpt == -1 )
+     exit(0);
 
    /*
     * Check molecule selections are in range.
@@ -729,18 +756,6 @@ main(int argc, char **argv)
 	 fprintf(stderr,"Failed to open file \"%s\" for output - ",out_name);
 	 exit(4);
       }
-
-   if( xcpt == -1 )
-   {
-      if( bflg )
-      {
-	 fwrite(&proto_header, sizeof(proto_header), 1, stdout);
-	 fwrite(dump_sysinfo, sizeof(*dump_sysinfo), 1, stdout);
-      }
-      else
-	 print_header(&proto_header, dump_sysinfo);
-      exit(0);
-   }
 
    /*
     *  Do the extraction
