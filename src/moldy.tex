@@ -157,7 +157,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.29.4.2 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.29.4.3 $ $}
 \newcommand{\moldyversion}{2.16}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -600,7 +600,7 @@ forces (\ie\ they decay faster than $r^{-3}$) one can define a
 separation $r_{ij}$ is greater than $r_c$ are assumed to be negligible
 and need not be evaluated.  In the case of a polyatomic molecular
 system it is usual to apply the cutoff according to the
-\emph{intermolecular} separation $R_{ij}$.
+\emph{intermolecular} separation, $R_{ij}$.
 
 
 \subsection{Pressure and Stress}
@@ -625,8 +625,8 @@ co-ordinate of each site relative to the molecular centre-of-mass.
 The pressure is easily evaluated as one third of the trace of the
 stress tensor. 
 
-\subsection{Long Range Corrections}
-The truncation of the interactions at the cut-off radius does
+\subsection{Long-Range Corrections}
+The truncation of the interactions at the cutoff radius does
 introduce some errors into the calculated potential energy and stress.
 By neglecting density fluctuations on a scale longer than the cutoff
 radius we may approximate the errors and calculate correction 
@@ -651,7 +651,7 @@ and $\bm{\delta}$ is the unit matrix.
 \subsection{Potential Functions}
 \label{sec:potentials}
 % LJ, Buckingham (Born-Mayer) & MCY
-\moldy\ supports most common forms of potential function including,
+\moldy\ supports most common forms of potential function including:
 \begin{list}{}{%
 \setlength{\parsep}{0in} 
 \setlength{\labelwidth}{1in}
@@ -678,13 +678,13 @@ Law.  See the following section for details.
 \section{The Ewald Sum}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \label{sec:ewald}
-The long range Coulomb interactions are handled using the Ewald Sum
+The long-range Coulomb interactions are handled using the Ewald Sum
 technique in three dimensions\cite[p.\ 156]{berthaut:52,allen:87}.
 The electrostatic potential of a system of charges is expressed as a
 sum of short-range and long-range contributions.  Each term is written
 as a series, the first in real space and the second, obtained by
 Fourier transformation using the periodicity of the MD cell, in
-reciprocal space.  The expression for the Coulomb energy $U$ is
+reciprocal space.  The expression for the Coulomb energy, $U$, is
 \begin{eqnarray}
 \label{eqn:ewald}
 U & = &  \underbrace{\frac{1}{4 \pi \epsilon_0}
@@ -786,7 +786,7 @@ momentum).
 
 Both the real- and reciprocal-space series (the sums over $\bm{n}$ and
 $\bm{k}$) converge fairly rapidly so that only a few terms need be
-evaluated.  We define the \emph{cut-off} distances $r_c$ and $k_c$ so
+evaluated.  We define the \emph{cutoff} distances $r_c$ and $k_c$ so
 that only terms with $| \bm{r}_{ij} +\bm{n} | < r_c$ and $|\bm{k}| < k_c$
 are included.  The parameter $\alpha$ determines how rapidly the terms
 decrease and the values of $r_c$ and $k_c$ needed to achieve a given
@@ -821,7 +821,7 @@ established as 5.5.  Though this will vary on different processors
 and for different potentials its value is not critical since it
 enters the equations as a sixth root.  
 
-It must be emphasized that the $r_c$ is used as a cutoff for the
+It must be emphasized that $r_c$ is used as a cutoff for the
 short-ranged potentials as well as for the electrostatic part.  The
 value chosen above \emph{does not} take the nature of the
 non-electrostatic part of the potential into account.  It is therefore
@@ -861,7 +861,7 @@ box\cite[pp 156-159]{allen:87}.  Consider a near-spherical cluster
 of MD cells.  The ``infinite'' result for any property is the limit of
 its ``cluster'' value as the size of the cluster tends to infinity.
 However this value is non-unique and depends on the dielectric
-constant, $\epsilon_s$ of the physical medium surrounding the cluster.
+constant, $\epsilon_s$, of the physical medium surrounding the cluster.
 If this medium is conductive ($\epsilon_s=\infty$) the dipole
 moment of the cluster is neutralized by image charges, whereas in a
 vacuum ($\epsilon_s=1$) it remains.  It is trivial to show that
@@ -889,7 +889,7 @@ This situation is completely non-physical but is easily avoided.
 However the problem may also arise more subtly even when there are no
 mobile ions if a framework is being simulated
 (section~\ref{sec:frameworks}).  The framework is treated as a set of
-discrete, but fixed atoms rather than a molecular unit.  If the shape
+discrete but fixed atoms rather than a molecular unit.  If the shape
 of the unit cell is allowed to vary then ions constituting the
 framework may indeed cross MD cell boundaries causing the
 aforementioned problems.
@@ -1077,13 +1077,13 @@ order to evaluate the site-site vector $\bm{r}_{ij} +\bm{n}_{ij}$.
 
 Using equation~\ref{eqn:bekker-virial} to compute the virial has
 another advantage. It is not necessary to perform the sum of
-contributions within the inner loop of the force calculation (c.f.
+contributions within the inner loop of the force calculation (\cf\
 equation~\ref{eqn:stress-sr}) since it depends only on the site
 co-ordinates and the total force acting on each site.  This gives a
 considerable reduction in the number of computations in the costliest
 part of the whole calculation.
 
-\subsection{No minimum-image convention}
+\subsection{No Minimum-image Convention}
 One notable feature of the implementation of the link cell method in
 \moldy\ is that it does \emph{not} follow the \emph{minimum image}
 convention used in most MD codes.  Instead the list of neighbouring
@@ -1093,7 +1093,7 @@ is quite safe to use a cutoff of more than half of the MD cell side in
 any direction.  
 
 % quick 'n dirty vs strict.
-\subsection{Cell or Strict cutoff}
+\subsection{Cell or Strict Cutoff}
 \label{sec:strict-cutoff}
 There are two options for the way in which site-site interactions are
 selected for inclusion in the total energy and forces.  These are
@@ -1352,7 +1352,7 @@ In a constant-stress simulation the MD cell changes in size and shape
 in response to the imbalance between the internal and externally
 applied pressure.  For an exposition of the method the reader should
 refer to the papers of Andersen\cite{andersen:80}, Parrinello and
-Rahman \cite{parrinello:81}, Wentzcovitch\cite{wentzcovitch:91},
+Rahman\cite{parrinello:81}, Wentzcovitch\cite{wentzcovitch:91},
 Cleveland\cite{cleveland:88} and to Nos\'{e} and Klein's extension to
 rigid molecular systems\cite{nose:83}.  The equation of motion for the
 reduced centre-of-mass co-ordinates $\bm{S}_i = \bm{h}^{-1}\bm{R}_i$
@@ -1390,7 +1390,7 @@ showed that the Parrinello-Rahman equations suffer from at least one
 significant flaw, namely that they are not ``modularly invariant''.
 The dynamics depends on the choice of MD cell which can give rise
 to unphysical symmetry breaking effects.  They offer an improved, but
-more complicated expression for the unit cell dynamics
+more complicated, expression for the unit cell dynamics
 \begin{equation}
   \label{eqn:wentzcovitch}
   W\ddot{\bm{h}} = \frac{1}{V}\left ( \bm{\pi} - p \right ) \bm{h} + W
@@ -1405,8 +1405,8 @@ which rectifies these deficiencies.  The atomic dynamics are governed
 by equation~\ref{eqn:par} as before.
 
 The choice of fictitious mass, $W$ is governed by similar
-considerations to those concerning the heat bath mass, $Q$ discussed
-in section~\ref{sec:const-temp}.  \footnote{Because of the
+considerations to those concerning the heat bath mass, $Q$, discussed
+in section~\ref{sec:const-temp}.\footnote{Because of the
 different forms of the fictitious kinetic energy term in the
 Lagrangians, typical values of $W$ for equation~\ref{eqn:wentzcovitch}
 are smaller by a factor of the order of $L^4$, where $L$ is the MD
@@ -1442,7 +1442,7 @@ MD cell constraints are selected using the control parameter
 \Lit{strain-mask} (see section~\ref{sec:cp-constraints}).  A value of
 238 will freeze all of the off-diagonal components of $\bm{h}$.
 
-\subsection{Constant-Pressure}
+\subsection{Constant Pressure}
 
 The above $\bm{h}$ matrix constraints are not adequate for
 simulations of liquids at constant pressure.  Since a liquid can not
@@ -1678,7 +1678,7 @@ and
 \end{equation}
 
 Finally, we note that if a molecule has less than three degrees of
-freedom, that is $I_{ik}=0$ for some $i$ the corresponding angular
+freedom, that is $I_{ik}=0$ for some $i$, the corresponding angular
 velocities \etc\ are simply set to zero.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1699,7 +1699,7 @@ to an infinitely repeating crystalline surface or structure as a
 \emph{framework}.
 
 There are two possible formulations of a system of this kind for use
-in a MD simulation.  Firstly the framework may be modelled as a set of
+in an MD simulation.  Firstly the framework may be modelled as a set of
 independent atoms interacting via pair potentials.  This merely
 requires specifying the correct initial structure and MD cell plus a
 suitable set of pair potentials. The latter model both the internal
@@ -1768,7 +1768,7 @@ in contact with a 3D rigid framework. 2-dimensional systems such as a
 fluid at a surface or between two surfaces may be represented as a 3D
 system by adding an artificial periodicity in the third dimension. To
 reduce the errors so introduced, the framework can be made ``large
-with space inside'' to fill a MD cell with a large $c$-axis.  
+with space inside'' to fill an MD cell with a large $c$-axis.  
 
 In the case of a 3D framework it is clearly not sensible to allow the
 MD cell to change shape or size, since this would destroy the internal
@@ -1819,7 +1819,7 @@ fluid.  Though not currently implemented, this may be rectified in a
 future version of \moldy.
 
 Finally we note that in the case of a 2D layer structure, which is
-\emph{not} rigid in the third dimension the perpendicular component if
+\emph{not} rigid in the third dimension, the perpendicular component of
 the stress tensor \emph{does} have a physical meaning and is correctly
 calculated. 
  
@@ -1933,7 +1933,7 @@ or lower case. For example
    end                       # The control file ends here
 \end{verbatim}
 sets the title of the simulation to ``Moldy example'', the number of
-steps to execute to 1000, the timestep to 0.0005ps and supplies the
+steps to execute to 1000, the timestep to 0.0005 ps and supplies the
 name of a restart file to read from.
 
 It is not necessary to specify all of the parameters on each run.
@@ -2321,14 +2321,14 @@ each direction which comprise the MD cell.  The next $n$ lines
 describe the $n$ molecules of the basis which will be replicated to
 form the full configuration.  Molecules may appear in any order, but
 of course the total number of each, multiplied by the number of unit
-cells $n_{x} n_{y} n_{z}$ must agree with that given in the system
+cells $n_{x} n_{y} n_{z}$, must agree with that given in the system
 specification file.
 
 Each molecule is identified by its name, as given in the system
 specification file.  $X, Y$ and $Z$ are \emph{fractional}
 co-ordinates, between 0 and 1 giving the location of the molecular
 centres of mass in the crystal unit cell. The orientation is given by
-the four quaternions $q_{0}, q_{1}, q_{2}, q_{3}$ which specify a
+the four quaternions $q_{0}, q_{1}, q_{2}, q_{3}$, which specify a
 rotation about the centre-of-mass \emph{relative to the orientation of
   the prototype molecule in the system specification file}.  (Notice
 the slight inconsistency with the positions, which are of the centres
@@ -2615,7 +2615,7 @@ parameter \Lit{begin-average} and every \Lit{average-interval}
 timesteps thereafter, the means and standard deviations are calculated
 and printed.  This output is interspersed with the periodic output and
 is formatted with one variable to a line in the form \emph{mean +/-
-  s.d}.. Where a variable has more than one component (such as
+  standard deviation}. Where a variable has more than one component (such as
 multiple species for the translational temperature or Cartesian
 components for the mean square forces) the components are printed
 across the page.\footnote{Remember that the standard deviation is a
@@ -2749,7 +2749,7 @@ large and unwieldy one. \moldy\  takes considerable pains to ensure that
 a contiguous sequence of dump files is maintained and also ensures
 that dumps from different runs are not accidentally intermixed.  There
 is no requirement that a dump file be produced by a single run of
-\moldy\ , which extends an existing file or starts a new one as appropriate.
+\moldy\, which extends an existing file or starts a new one as appropriate.
 A simulation may stop and be restarted many times without
 disturbing the dump file sequence.  The  sequence
 should (in most cases) even survive a system crash and a restart from
@@ -2783,7 +2783,7 @@ binary numbers.  These are written either in native (\ie\ the
 machine's own) format or XDR format (see section~\ref{sec:xdr})
 depending on the value of the control parameter \Lit{xdr}.  The
 record's exact contents are determined by the control parameter
-\Lit{dump-level} which is a bit flag \ie\ a value of $2^{n}$
+\Lit{dump-level}, which is a bit flag, \ie\ a value of $2^{n}$
 means that bit $n$ is set.  Four bits are used and any combination may
 be specified but the cumulative values 1, 3, 7 and 15 are most
 useful.  A value of 0 disables dumping. The data dumped for each bit
@@ -3085,7 +3085,7 @@ are applied to \emph{all} of its atoms depending on its centre-of-mass
 co-ordinates relative to some interacting molecule.  In contrast, the
 atoms of a framework are independently relocated.  This ensures that
 each molecule ``sees'' all framework atoms from any unit cell which
-are within the cut-off distance.
+are within the cutoff distance.
 \end{enumerate}
 
 In the present version of the program, only one framework molecule is
@@ -3230,7 +3230,7 @@ the operating system of the target computer.
 \begin{description}
 \item[unix]  
 This version of \moldy\ uses the GNU autoconf system to configure for
-compilation.   In most cases it should be possible to do:
+compilation.  In most cases it should be possible to do
 
 \Lit{\% ./configure}\\
 \Lit{\% make}
@@ -3251,7 +3251,7 @@ by setting the OPT and OPT2 environment variables.
 You can set or change the default compiler or options by calling
 configure with the environment variables CC, CPPFLAGS, CFLAGS, OPT,
 OPT2, LDFLAGS or LIBS defined.  Any values you supply for these will
-override the built-in ones.  \emph{e.g.}
+override the built-in ones, \eg\
 
 
 \begin{tabbing}
@@ -3282,7 +3282,7 @@ for the parallel system are in a directory searched by the C compiler
 and the libraries can be found using \Lit{-l}\textit{parsys}.  The
 Cray T3D/T3E and SGI Power Challenge and Origin 2000 systems fall into
 this category.  Otherwise it may be necessary to specify these by
-setting the environment variables CPPFLAGS and LIBS, eg:
+setting the environment variables CPPFLAGS and LIBS, \eg\:
 
 \Lit{env CPPFLAGS=-I/usr/local/mpi/include 
     LIBS="-L/usr/local/mpi/bin -lmpi" ./configure}
@@ -4449,7 +4449,7 @@ molecular dynamics to begin.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Main timestep loop}
+\subsection{Main Timestep Loop}
 
 The initial entry point into \moldy\ is into function \Lit{main()},
 which calls \Lit{start\_up()} (section~\ref{sec:startup}) and then
@@ -4839,7 +4839,7 @@ these is selected by conditional compilation of \Fname{parallel.c} with
 one of the preprocessor symbols \Lit{MPI}, \Lit{TCGMSG},
 \Lit{BSP} or \Lit{SHMEM} defined.
 
-\subsection{Input/Output and startup}
+\subsection{Input/Output and Startup}
 \label{sec:pario}
 
 Since each processor runs an identical copy of the program executable,
@@ -4900,7 +4900,7 @@ processors simultaneously. If the condition signalled was
 \Lit{FATAL} then \Lit{message()} finally calls \Lit{par\_abort()}
 which terminates the run on all processors.
 
-\subsection{Distributed forces calculation}
+\subsection{Distributed Forces Calculation}
 
 The two parts of the forces calculation which must be parallelized are
 the short-ranged forces calculation and the reciprocal-space part of
@@ -5301,7 +5301,7 @@ MD cell.
 \end{table}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Mdbond and bdist}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Mdbond and Bdist}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \emph{Mdbond} is a utility for calculating the distances between particles,
@@ -5661,7 +5661,7 @@ Type \Lit{gnu} for format readable by GNUPlot (default) or \Lit{gen} for the gen
   output. If the direction is in uppercase, the program will only
   include particles lying \emph{outside} these limits. Limits can be
   imposed in one, two or all three directions in any possible
-  combination. However, if both options for a single direction (\e.g.\
+  combination. However, if both options for a single direction (\eg\
   \Lit{-x} and \Lit{-X}) are used, priority will be given to the
   latter option entered on the command line. The user is prompted for
   the limits at run time. The default is to include all particles.
