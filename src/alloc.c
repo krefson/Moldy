@@ -37,7 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * 	machines for which this is false. 				      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	alloc.c,v $
+ *       $Log: alloc.c,v $
+ * Revision 2.5  1994/01/18  13:32:09  keith
+ * Null update for XDR portability release
+ *
  * Revision 2.3  93/10/28  10:27:37  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -82,12 +85,12 @@ what you give them.   Help stamp out software-hoarding!  */
  * --Moved defn of NULL to stddef.h and included that where necessary.
  * --Eliminated clashes with ANSI library names
  * --Modified defs.h to recognise CONVEX ANSI compiler
- * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ * --Modified declaration of size_mt and inclusion of sys/types.h in aux.c
  *   for GNU compiler with and without fixed includes.
  * 
  * 
  * Revision 1.14  91/03/12  15:42:10  keith
- * Tidied up typedefs size_t and include file <sys/types.h>
+ * Tidied up typedefs size_mt and include file <sys/types.h>
  * Added explicit function declarations.
  * 
  * Revision 1.13  91/03/07  17:52:32  keith
@@ -113,7 +116,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * *** empty log message ***
  * 
  * Revision 1.7  90/05/02  17:51:09  keith
- * Include of stddef.h added to get size_t (removed from defs.h)
+ * Include of stddef.h added to get size_mt (removed from defs.h)
  * 
  * Revision 1.6  90/04/25  14:20:16  keith
  * Modified to allow for machines with word ptr != char ptr.
@@ -136,7 +139,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 2.3 93/10/28 10:27:37 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
@@ -194,11 +197,22 @@ typedef int word_mt;
  ******************************************************************************/
 gptr	*talloc(n, size, line, file)
 int	n;
-size_t	size;
+size_mt	size;
 int	line;
 char	*file;
 {
    gptr *p;
+#ifdef ANSI_LIBS
+   /*
+    * Test for malloc arg which would overflow.  Since size_mt is long
+    * and size_t may be int this could happen on 16 bit machines.
+    * We can only rely on size_t as parameter to malloc if libs are
+    * ANSI conformant.
+    */
+   if( (size_mt)(size_t)(n*size) != n*size )
+      message(NULLI, NULLP, FATAL, NOMEM, line, file,
+	       (int)n, (unsigned long)size);
+#endif
    THREAD_SYS(p = malloc(n*size))
    if(p == NULL && (n*size != 0))
      THREAD_SYS(message(NULLI, NULLP, FATAL, NOMEM, line, file,
@@ -232,9 +246,9 @@ gptr	*p;
  ******************************************************************************/
 #define CSA(a) ((char*)(a))
 #define ALIGN(a,base,b)	((word_mt*)(CSA(base)+((CSA(a)-CSA(base))+(b)-1)/(b)*(b) ))
-
+static
 void 	subarray(size, ndim, prdim, pp, qq, base, ap)
-size_t  size;
+size_mt  size;
 int	ndim;
 long	prdim;
 word_mt	***pp, **qq, *base;
@@ -261,7 +275,7 @@ va_list	ap;
             
 #if defined(ANSI) || defined(__STDC__)
 #   undef va_alist
-#   define	va_alist size_t size, int ndim, ...
+#   define	va_alist size_mt size, int ndim, ...
 #   ifdef va_dcl
 #      undef va_dcl
 #   endif
@@ -278,11 +292,11 @@ va_dcl
 #if defined(ANSI) || defined(__STDC__)
    va_start(ap, ndim);
 #else
-   size_t	size;			/* size of array element	      */
+   size_mt	size;			/* size of array element	      */
    int		ndim;			/* Number of dimensions		      */
 
    va_start(ap);
-   size = va_arg(ap, size_t);
+   size = va_arg(ap, size_mt);
    ndim = va_arg(ap, int);
 #endif
 
@@ -305,8 +319,9 @@ va_dcl
    /*
     *  Allocate space  for pointers and data.
     */
-   start = (word_mt**)talloc(1, (size_t)((n_data+1)*size+n_ptr*sizeof(word_mt**)),
-			  __LINE__, __FILE__);
+   start = (word_mt**)talloc(1,
+			     (size_mt)((n_data+1)*size+n_ptr*sizeof(word_mt**)),
+			     __LINE__, __FILE__);
    /*
     * Set up pointers to form dope-vector array.
     */
