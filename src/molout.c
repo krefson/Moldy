@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/molout.c,v 1.15 2004/12/07 13:00:01 cf Exp $";
 #endif
 
 #include "defs.h"
@@ -244,7 +244,7 @@ pdb_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info,
 /* Write the pdb header */
    (void)printf("HEADER     %-40s%10s%4d\n", "Moldy output", atime(), 1);
    (void)printf("TITLE      %-60s\n", control.title);
-   (void)printf("CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1        \n",
+   (void)printf("CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f P 1           0\n",
           a,b,c,alpha,beta,gamma);
 
    for(i = 0; i < 3; i++)
