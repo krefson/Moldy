@@ -25,7 +25,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *		is missing something an ANSI interface routine is supplied.   *
  ******************************************************************************
  *      Revision Log
- *       $Log:	aux.c,v $
+ *       $Log: aux.c,v $
+ * Revision 2.5  94/01/29  11:09:53  keith
+ * Fixed bug in "strstr()" replacement for non-ANSI libraries
+ * 
  * Revision 2.4  94/01/18  13:23:04  keith
  * Incorporated all portability experience to multiple platforms since 2.2.
  * Including ports to VAX/VMS and Open VMS on Alpha AXP and Solaris.
@@ -194,10 +197,13 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/aux.c,v 2.5 94/01/18 13:32:11 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/aux.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
+#ifndef _POSIX_SOURCE
+#   define _POSIX_SOURCE
+#endif
 /*========================== Library include files ===========================*/
 #if defined(ANSI) || defined(__STDC__)
 #include 	<stdarg.h>
@@ -211,6 +217,27 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/aux.c,v 2.5 94/01
 #include	"stdlib.h"
 #include	"time.h"
 #include	<stdio.h>
+/*================= System Library include files - unix only ================*/
+#if defined(unix) || defined(__unix__)
+   /*
+    *  We must protect the inclusion of <sys/types.h>.  
+    */
+#ifndef SYS_TYPES_INCLUDED
+#define SYS_TYPES_INCLUDED
+#   include <sys/types.h>
+#endif
+#include <sys/time.h>
+#include <sys/times.h>
+
+#ifndef CLK_TCK
+#   include <sys/param.h>
+#   ifdef HZ
+#      define CLK_TCK HZ
+#   else
+#      define CLK_TCK 60	/* Really old unices defined 60. May be wrong.*/
+#   endif
+#endif
+#endif
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
@@ -400,8 +427,8 @@ int	ix[];
       dsctr_(&n, b, ix, a+1);
 }
 #endif
-                            /*ARGSUSED*/
-void    gatheri(n, a, b, ix, lim)
+
+void    gatheri(n, a, b, ix)
 int     n;
 int     a[], b[];
 int     ix[];
@@ -704,40 +731,25 @@ double	precision()
  *  rt_clock(). Return elapsed time in s.				      *
  ******************************************************************************/
 #if defined(unix) || defined(__unix__)
-#ifdef BSD
+double        cpu()
+{
+   struct tms buf;
+ 
+   (void)times(&buf);
+
+   return (buf.tms_utime + buf.tms_stime)/(double)CLK_TCK;
+}
 
 /*
- *  Protect against double inclusion of <time.h>.  Why can't vendors do this?
- *  OK, so OSF does and it breaks if you have it.  Sigh.
+ * The BSD version way to get the rt clock is via gettimeofday.  But
+ * some systems <sys/time.h>, noticably Ultrix, DON'T include the
+ * necessary struct definitions if _POSIX_SOURCE is defined!.  Aargh.
+ * However in that case we can rely on POSIX behaviour of times -
+ * (ie it's return value) - so the alternative rt_clock ought to
+ * work.   The test is for the macro associated with the "timezone"
+ * struct definition.
  */
-#ifndef __osf__
-#define KERNEL
-#define INKERNEL
-#define _KERNEL 
-#include <sys/time.h>
-#undef KERNEL
-#undef INKERNEL
-#undef _KERNEL
-#endif
-
-#ifdef __convexc__		/* For"-std" and "-str" ANSI modes. Sigh. */
-#   ifndef _POSIX_SOURCE
-#      define _POSIX_SOURCE
-#      define _CONVEX_SOURCE
-#   endif
-#endif
-#include <sys/resource.h>
-
-double	cpu()	/* The standard unix 'clock' wraps after 36 mins.	      */
-{
-   struct rusage ru;
-   int getrusage();
- 
-   (void)getrusage(RUSAGE_SELF, &ru);
-
-   return(ru.ru_utime.tv_sec  + ru.ru_stime.tv_sec
-	  + 1.0e-6 * (ru.ru_utime.tv_usec + ru.ru_stime.tv_usec));
-}
+#if defined(BSD) && defined(DST_NONE)
 
 double rt_clock()
 {
@@ -748,38 +760,6 @@ double rt_clock()
 }
 
 #else			/* System V or POSIX.			      */
-
-/*
- *  We must protect the inclusion of <sys/types.h>.  But size_t may already
- *  be defined in "stddef.h" , so we define it out of the way.  The twist
- *  comes for a GNU CC compilation.  That *may* have fixed includes, but
- *  we can't rely on that, so define size_t to the same symbol as the GNU
- *  header file does to stop it complaining.   Roll on ANSI.
- */
-#if ! defined(POSIX) && ! defined(_POSIX_SOURCE)  /* Already declared in times.h*/
-#ifndef SYS_TYPES_INCLUDED
-#define SYS_TYPES_INCLUDED
-#   define size_t ___size_t
-#   include <sys/types.h>
-#   undef  size_t
-#endif
-#include <sys/param.h>
-#endif
-
-#include <sys/times.h>
-
-#if defined(HZ) && ! defined(CLK_TCK)
-#define CLK_TCK HZ
-#endif
-
-double        cpu()
-{
-   struct tms buf;
- 
-   (void)times(&buf);
-
-   return (buf.tms_utime + buf.tms_stime)/(double)CLK_TCK;
-}
 
 double rt_clock()
 {
@@ -896,22 +876,23 @@ int sig;
  ******************************************************************************/
 #ifndef ANSI_LIBS
 char *strstr(cs, ct)
-char *cs, *ct;
+CONST char *cs, *ct;
 {
-   char *end = cs+strlen(cs)-strlen(ct);
-   for(; cs <= end; cs++)
-      if( !strcmp(cs,ct) )
-	 return cs;
+   int  i, sl = strlen(cs)-strlen(ct);
+
+   for(i = 0; i <= sl; i++)
+      if( !strcmp(cs+i,ct) )
+	 return (char*)cs+i;
    return 0;      
 }
 #endif
 /******************************************************************************
- * memcpy  and strchr replacement for BSD machines which don't have them.     *
+ * mem{cpy,set} and strchr replacement for BSD machines which don't have them.*
  ******************************************************************************/
 #ifndef ANSI_LIBS
 #ifdef BSD
 char *strchr(s, c)
-char	*s;
+CONST char	*s;
 int	c;
 {
    extern char	*index();
@@ -924,6 +905,21 @@ int n;
    int bcopy();
    (void)bcopy((char *)s2, (char *)s1, n);
    return(s1);
+}
+gptr *memset(s, c, n)
+gptr *s;
+int c, n;
+{
+   void bzero();
+   char	*sp;
+   if( c == 0 )
+      (void)bzero(s, n);
+   else
+   {
+      for( sp=s; sp < (char*)s+n; sp++)
+	 *sp = c;
+   }
+   return(s);
 }
 #endif
 #endif
@@ -1026,10 +1022,7 @@ char	*file1, *file2;
 #ifndef ANSI_LIBS
 #if defined(unix) || defined(__unix__)
 int remove(file)
-#ifdef __STDC__
-const 
-#endif
-char	*file;
+CONST char	*file;
 {
    int unlink();
    return (unlink(file));
@@ -1156,10 +1149,7 @@ va_list	args;
 
 #include <ctype.h>
 int	vprintf (format, ap)
-#ifdef __STDC__
-const
-#endif
-char	*format;
+CONST char	*format;
 va_list	ap;
 {
     int     pos, charsout, fpos, error, modflag;
