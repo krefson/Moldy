@@ -1,7 +1,10 @@
 /*
- * $Header: messages.h,v 1.1 89/04/20 16:01:26 keith Exp $
+ * $Header: messages.h,v 1.2 89/05/19 11:38:48 keith Exp $
  *
  * $Log:	messages.h,v $
+ * Revision 1.2  89/05/19  11:38:48  keith
+ * Modified error message for close approaches - for force.c 1.3
+ * 
  * Revision 1.1  89/04/20  16:01:26  keith
  * Initial revision
  * 
@@ -46,6 +49,7 @@
 #define NOPOT	"no potential parameters given between sites %d and %d"
 #define ERRS	"system specification file contains %d errors"
 #define SUCCES	"system specification file successfully read in"
+#define LATTIC	"system successfully initialised from lattice start"
 #define	REFORM	"wrong length record in restart file at byte %ld\
  - found %lu, expected %lu"
 #define	REREAD	"read error %d on restart file at byte %ld"

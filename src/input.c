@@ -10,6 +10,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	input.c,v $
+ * Revision 1.3  89/06/01  21:24:24  keith
+ * Control.out eliminated, use printf and freopen instead to direct output.
+ * 
  * Revision 1.2  89/05/22  14:05:38  keith
  * Added rescale-separately option, changed 'contr_t' format.
  * 
@@ -18,7 +21,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: input.c,v 1.2 89/05/22 14:05:38 keith Exp $";
+static char *RCSid = "$Header: input.c,v 1.3 89/06/01 21:24:24 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<ctype.h>
@@ -502,12 +505,16 @@ quat_t	qpf;				/* Princ frame rotation quaternion    */
 	       species[ispec].c_of_m[imol][0] = (cur->r[0]+ix)/nx - 0.5;
 	       species[ispec].c_of_m[imol][1] = (cur->r[1]+iy)/ny - 0.5;
 	       species[ispec].c_of_m[imol][2] = (cur->r[2]+iz)/nz - 0.5;
-	       for( i = 0; i < 4; i++ )
-	          q[i] = cur->q[i];		/* Convert type to 'real'     */
-	       q_mul_1(q, qpf, species[ispec].quat[imol]);
+	       if(species[ispec].rdof > 0 )
+	       {
+		  for( i = 0; i < 4; i++ )
+		     q[i] = cur->q[i];		/* Convert type to 'real'     */
+		  q_mul_1(q, qpf, species[ispec].quat[imol]);
+	       }
 	       nmols[ispec]++;
 	    }
    }
+   message(NULLI, NULLP, INFO, LATTIC);
 }
 
 /******************************************************************************
