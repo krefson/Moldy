@@ -14,12 +14,15 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	values.c,v $
+ * Revision 1.2  89/05/19  10:35:28  keith
+ * Fixed bug which printed to stdout rather than control.out.
+ * 
  * Revision 1.1  89/04/20  16:00:58  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: values.c,v 1.1 89/04/20 16:00:58 keith Exp $";
+static char *RCSid = "$Header: values.c,v 1.2 89/05/19 10:35:28 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -341,29 +344,27 @@ double	(*f)();
    {
       new_page();
       for(icol = 0; icol < max_col; icol++)             /* Print column titles*/
-         (void)fprintf(control.out," %*s", av_info[icol].field_width, 
-                                           av_info[icol].name);
+         (void)printf(" %*s", av_info[icol].field_width, av_info[icol].name);
       new_line();
    }
    col = 0;					/* Print row of 'header_sym'  */
    while(col++ < 8)				/* with 'header_text' in the  */
-      (void)putc(header_sym,control.out);	/* middle.		      */
-   col += fprintf(control.out," %s ", header_text);
+      (void)putchar(header_sym);		/* middle.		      */
+   col += printf(" %s ", header_text);
    while(col++ < out_width)
-      (void)putc(header_sym,control.out);
+      (void)putchar(header_sym);
    new_line();
    
    for(row = 0; row < max_row; row++)		/* Print 'max_col' fields     */
    {						/* across page, up to max_row */
       for(icol = 0; icol < max_col; icol++)	/* down.  Print value returned*/
       {						/* by (*f) in field or fill   */
-         (void)putc(' ',control.out);		/* with spaces                */
+         (void)putchar(' ');			/* with spaces                */
          if(row < av_info[icol].mult)
-            (void)fprintf(control.out, av_info[icol].format,
-			               (*f)((av_n)icol, row));
+            (void)printf( av_info[icol].format, (*f)((av_n)icol, row));
          else
             for(col = 0; col < av_info[icol].field_width; col++)
-               (void)putc(' ',control.out);
+               (void)putchar(' ');
       }
       new_line();
    }
@@ -382,7 +383,7 @@ void	output()
    (void)sprintf(s,"Rolling averages over last %d timesteps", *roll_cnt);
    print_frame('-', s, roll_av);
    print_frame('-', "Standard deviations", roll_sd);
-   (void)fflush(control.out);
+   (void)fflush(stdout);
 }
 /******************************************************************************
  *  averages   calculate and print averages, reset counter.		      *
@@ -407,7 +408,7 @@ void	averages()
       new_page();
    else
       new_lins(2);
-   (void)fprintf(control.out, "   Averages over last %d timesteps",*av_cnt);
+   (void)printf( "   Averages over last %d timesteps",*av_cnt);
    new_line();
 
    for(iav = 0, av_p = av; iav < navs; iav++, av_p++)
@@ -425,24 +426,23 @@ void	averages()
    for(iav = 0; iav < (int)end; iav++)
    {
       col = 0;
-      col += fprintf(control.out, "   %-16s= ",av_info[iav].name);
+      col += printf( "   %-16s= ",av_info[iav].name);
       for(i = 0; i < av_info[iav].mult; i++)
       {
          if(col + 2 * av_info[iav].field_width + 6 > control.page_width)
          {
             new_line();
-            col = fprintf(control.out,"                     ");
+            col = printf("                     ");
          }
-         col += fprintf(control.out, av_info[iav].format, 
-                                     av_info[iav].p[i].mean);
-         col += fprintf(control.out," +/- ");
-         col += fprintf(control.out,av_info[iav].format, av_info[iav].p[i].sd);
+         col += printf( av_info[iav].format, av_info[iav].p[i].mean);
+         col += printf(" +/- ");
+         col += printf(av_info[iav].format, av_info[iav].p[i].sd);
          if(i < av_info[iav].mult - 1)
-            col += fprintf(control.out,",");
+            col += printf(",");
       }
       if(col + 10 > control.page_width) new_line();
-      col += fprintf(control.out,"  %s", av_info[iav].unit);
+      col += printf("  %s", av_info[iav].unit);
       new_line();
    }
-   (void)fflush(control.out);
+   (void)fflush(stdout);
 }

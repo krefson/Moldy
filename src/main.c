@@ -7,6 +7,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.4  89/05/24  11:08:19  keith
+ * Fixed bug which called 'averages()' before and at begin-average.
+ * Velocities are now rescaled up to and including scale_end.
+ * Put better defaults for 'control' parameters.
+ * 
  * Revision 1.3  89/05/22  14:05:34  keith
  * Added rescale-separately option, changed 'contr_t' format.
  * 
@@ -18,7 +23,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: main.c,v 1.3 89/05/22 14:05:34 keith Exp $";
+static char *RCSid = "$Header: main.c,v 1.4 89/05/24 11:08:19 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -65,7 +70,7 @@ contr_t	control = {
 #endif
 #endif
 	"",			/* Name of main output file		      */
-	NULL,			/* Pointer to main output file		      */
+	0,			/* To preserve alignment of structure	      */
 	100,			/* Number of bins for rdf calculation	      */
 	1234567,		/* Seed for random number generator	      */
 	132,			/* Line width for output file		      */

@@ -16,12 +16,16 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	output.c,v $
+ * Revision 1.2  89/05/24  13:55:03  keith
+ * Changed ifdef's to select on __STDC__ macro
+ * Message() now prints to user specified output file after initial set up
+ * 
  * Revision 1.1  89/04/27  16:52:19  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: output.c,v 1.1 89/04/27 16:52:19 keith Exp $";
+static char *RCSid = "$Header: output.c,v 1.2 89/05/24 13:55:03 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
@@ -48,7 +52,7 @@ int	out_line = 999999;	        /* Which line of output               */
 void	new_line()
 {
    void	new_page();
-   (void)putc('\n',control.out);
+   (void)putchar('\n');
    out_line++;
    if(out_line > control.page_length)   new_page();
 }
@@ -63,11 +67,9 @@ int	n;
  ******************************************************************************/
 void	new_page()
 {
-   (void)putc('\f',control.out);				/* Take new page
-      */
+   (void)putchar('\f');					/* Take new page      */
    out_line = 0;					/* Print page header  */
-   (void)fprintf(control.out,"\t%s\t%s\tPage %d",
-		 	     atime(), control.title, out_page++);
+   (void)printf("\t%s\t%s\tPage %d", atime(), control.title, out_page++);
    new_line();
 }
 /******************************************************************************
@@ -78,7 +80,7 @@ char	c;
 {
    int n = control.page_width;
    while(n-- > 0)
-      (void)putc(c,control.out);
+      (void)putchar(c);
    new_line();
 }
 /******************************************************************************
@@ -99,7 +101,6 @@ va_dcl
    int		sev;
    char		*format;
    static char	*sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
-   FILE		*out;
 #if ANSI || __STDC__
    va_start(ap, nerrs);
 #else
@@ -113,21 +114,16 @@ va_dcl
    sev   = va_arg(ap, int);
    format= va_arg(ap, char *);
 
-   if ( control.out )
-      out = control.out;
-   else
-      out = stderr;
-
-   (void)fprintf(out,sev_txt[sev]);
-   (void)vfprintf(out, format, ap);
+   (void)printf(sev_txt[sev]);
+   (void)vprintf(format, ap);
    va_end(ap);
-   if( control.out )
-      new_line();			/* To maintain pagination	      */
-   else
-      (void)fprintf(out,"\n");
+   new_line();			/* To maintain pagination	      */
 
    if(buff != NULL)                     /* null ptr means don't print buffer  */
-      (void)fprintf(out,"     buffer contents=\"%s\"\n",buff);
+   {
+      (void)printf("     buffer contents=\"%s\"",buff);
+      new_line();
+   }
    if(sev >= ERROR && nerrs != NULL)
       (*nerrs)++;
    if(sev == FATAL)
@@ -137,6 +133,7 @@ va_dcl
  *  note   write a message to the output file				      *
  ******************************************************************************/
 #if ANSI || __STDC__
+#undef  va_alist
 #define	va_alist char *text, ...
 #define va_dcl /* */
 #endif
@@ -154,8 +151,8 @@ va_dcl
    text = va_arg(ap, char *);
 #endif
 
-   (void)fprintf(control.out," *I* "); 
-   (void)vfprintf(control.out, text, ap);  new_line();
+   (void)printf(" *I* "); 
+   (void)vprintf( text, ap);  new_line();
    va_end(ap);
 }
 /******************************************************************************
@@ -168,7 +165,7 @@ int	n;
    int i;
    for(i=0; i<n; i++)
    {
-      (void)fprintf(control.out,"\t\t%s",text[i]);
+      (void)printf("\t\t%s",text[i]);
       new_line();
    }
    new_line();
@@ -180,7 +177,7 @@ static void	format_int(text,value)
 char	*text;
 int	value;
 {
-   (void)fprintf(control.out,"\t%-32s = %d",text,value);
+   (void)printf("\t%-32s = %d",text,value);
    new_line();
 }
 /******************************************************************************
@@ -191,7 +188,7 @@ char	*text;
 double	value;
 char	*units;
 {
-   (void)fprintf(control.out,"\t%-32s = %g %s",text,value,units);
+   (void)printf("\t%-32s = %g %s",text,value,units);
    new_line();
 }
 /******************************************************************************
@@ -202,7 +199,7 @@ char	*text;
 double	value1,value2,value3;
 char	*units;
 {
-   (void)fprintf(control.out,"\t%-32s = %g %g %g %s",
+   (void)printf("\t%-32s = %g %g %g %s",
 		 text,value1,value2,value3,units);
    new_line();
 }
@@ -254,28 +251,25 @@ spec_t	species[];
    print_array( copy_notice, sizeof copy_notice / sizeof(char*));
    if(control.restart_file[0] != '\0')
       if(control.new_sysdef)
-         (void)fprintf(control.out,
-		       " New system specification read in from file %s",
+         (void)printf( " New system specification read in from file %s",
 		       control.sysdef);
       else
-         (void)fprintf(control.out, 
-		       " System specification read in from restart file %s",
+         (void)printf( " System specification read in from restart file %s",
 		       control.restart_file);
    else
-      (void)fprintf(control.out,
-		    " System specification read in from file %s",
+      (void)printf( " System specification read in from file %s",
 		    control.sysdef);
    new_line();
 
    for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
    {
-      (void)fprintf(control.out," %s", spec->name); new_line();
+      (void)printf(" %s", spec->name); new_line();
       format_int("Number of molecules",spec->nmols);
       format_int("Number of sites",spec->nsites);
       format_dbl("Mass",spec->mass,MUNIT_N);
       if(spec->rdof == 0)
       {
-	 (void)fprintf(control.out,
+	 (void)printf(
 	     "\t%s molecule has no rotational degrees of freedom", spec->name);
 	 new_line();
       }
@@ -283,7 +277,7 @@ spec_t	species[];
       {
 	 if(spec->rdof == 2)
 	 {
-	    (void)fprintf(control.out,"\t%s molecule is linear",spec->name);
+	    (void)printf("\t%s molecule is linear",spec->name);
 	    new_line();
 	 }
 	 format_vec("Moments of inertia",
@@ -292,11 +286,11 @@ spec_t	species[];
       }
    }
    new_line();
-   (void)fprintf(control.out," MD cell vectors"); new_line();
+   (void)printf(" MD cell vectors"); new_line();
    format_vec("a",h[0][0],h[1][0],h[2][0],LUNIT_N);
    format_vec("b",h[0][1],h[1][1],h[2][1],LUNIT_N);
    format_vec("c",h[0][2],h[1][2],h[2][2],LUNIT_N);
-   (void)fprintf(control.out," Run parameters"); new_line();
+   (void)printf(" Run parameters"); new_line();
    format_int("Number of steps",control.nsteps);
    if(control.istep > 0)
       format_int("Initial step",control.istep); 
@@ -304,14 +298,14 @@ spec_t	species[];
    format_dbl("CPU limit",control.cpu_limit,"s");
    if(control.scale_interval > 0)
    {
-      (void)fprintf(control.out," Velocities will be scaled"); new_line();
+      (void)printf(" Velocities will be scaled"); new_line();
       format_dbl("Applied Temperature",control.temp,"K");
       format_int("No. steps between scalings",control.scale_interval);
       format_int("End scaling at step",control.scale_end);
    }
    if(control.const_pressure)
    {
-      (void)fprintf(control.out," Constant stress ensemble will be used");
+      (void)printf(" Constant stress ensemble will be used");
       new_line();
       format_dbl("Applied pressure", CONV_P*control.pressure,CONV_P_N);
       format_dbl("Mass parameter W",control.pmass,MUNIT_N);
@@ -325,20 +319,18 @@ spec_t	species[];
    
    if(control.restart_file[0] == '\0')
    {
-      (void)fprintf(control.out, " New run entitled \"%s\" started %s",
+      (void)printf( " New run entitled \"%s\" started %s",
 	      restart_header.title, restart_header.init_date);
       new_line();
    }
    else
    {
-      (void)fprintf(control.out,
-		    " Run initialised from restart file %s written %s",
+      (void)printf( " Run initialised from restart file %s written %s",
 		    control.restart_file, cctime(&restart_header.timestamp));
       new_line();
-      (void)fprintf(control.out,
-		    " This is restart No %d of run \"%s\" started %s",
+      (void)printf( " This is restart No %d of run \"%s\" started %s",
 	    restart_header.seq, restart_header.title, restart_header.init_date);
       new_line();
    }
-   (void)fflush(control.out);
+   (void)fflush(stdout);
 }

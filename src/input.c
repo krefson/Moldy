@@ -10,12 +10,15 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	input.c,v $
+ * Revision 1.2  89/05/22  14:05:38  keith
+ * Added rescale-separately option, changed 'contr_t' format.
+ * 
  * Revision 1.1  89/04/20  16:00:42  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: input.c,v 1.1 89/04/20 16:00:42 keith Exp $";
+static char *RCSid = "$Header: input.c,v 1.2 89/05/22 14:05:38 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<ctype.h>
@@ -66,7 +69,7 @@ static	match_t	match[] = {
                 {"dump-file",	    	SFORM,	 control.dump_file},
                 {"backup-file",	    	SFORM,	 control.backup_file},
 		{"temp-file",		SFORM,	 control.temp_file},
-                {"out-file",	    	SFORM,	 control.out_file},
+		{"out-file",		SFORM,	 control.out_file},
 		{"nbins",		"%d",	(char*)&control.nbins},
 		{"seed",		"%d",	(char*)&control.seed},
                 {"page-width",	    	"%d",	(char*)&control.page_width},
@@ -360,21 +363,20 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
  *  print sysdef   Print out the definition of the system, in the format that *
  *  read_sysdef can interpret.						      *
  ******************************************************************************/
-void	print_sysdef(system, species, site_info, potpar, file)
+void	print_sysdef(system, species, site_info, potpar)
 system_p	system;			/* Pointer to system array (in main)  */
 spec_t		species[];		/* Pointer to species array 	      */
 site_p		site_info;		/* pointer to site_info array	      */
 pot_t		potpar[];		/* Potential parameter array	      */
-FILE		*file;			/* File pointer to write info to      */
 {
    spec_p	spec;
    int	ispec, isite, idi, idj, idij, ip;
    int	n_potpar = npotp[system->ptype];
    for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
    {
-      (void)fprintf(file," %-16s  %d\n", spec->name, spec->nmols);
+      (void)printf(" %-16s  %d\n", spec->name, spec->nmols);
       for(isite=0; isite < spec->nsites; isite++)
-         (void)fprintf(file," %6d %9g %9g %9g %9g %9g %s\n",
+         (void)printf(" %6d %9g %9g %9g %9g %9g %s\n",
          		spec->site_id[isite],
 	         	spec->p_f_sites[isite][0],
 	         	spec->p_f_sites[isite][1],
@@ -383,21 +385,21 @@ FILE		*file;			/* File pointer to write info to      */
 	         	site_info[spec->site_id[isite]].charge,
 	         	site_info[spec->site_id[isite]].name);
    }
-   (void)fprintf(file," end\n");
-   (void)fprintf(file," %s potential parameters\n",types[system->ptype]);
+   (void)printf(" end\n");
+   (void)printf(" %s potential parameters\n",types[system->ptype]);
    for(idi = 1; idi < system->max_id; idi++)
       for(idj = idi; idj < system->max_id; idj++)
       {
          idij = idj + idi * system->max_id;
          if(potpar[idij].flag & S_USED)
          {
-            (void)fprintf(file," %6d %6d", idi, idj);
+            (void)printf(" %6d %6d", idi, idj);
             for(ip = 0; ip < n_potpar; ip++)
-               (void)fprintf(file,"%9g",potpar[idij].p[ip]);
-            (void)fprintf(file,"\n");
+               (void)printf("%9g",potpar[idij].p[ip]);
+            (void)printf("\n");
          }
       }
-   (void)fprintf(file," end\n");
+   (void)printf(" end\n");
 }
 /******************************************************************************
  * lattice_start   Initialse the simulation co-ordinates on a lattice. Read   *

@@ -7,10 +7,13 @@
  * rdf[idi][idj][ibin]	RDF database (also accessed by 'restart')	      *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log:	rdf.c,v $
+ * Revision 1.1  89/04/20  16:00:53  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: rdf.c,v 1.1 89/04/20 16:00:53 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<math.h>
@@ -125,17 +128,15 @@ site_t		site_info[];
    		bincb = bin*bin*bin,
    		rho = system->nsites/det(system->h);
    double	norm;
-   FILE		*f = control.out;
    
    put_line('_');
-   (void)fprintf(f,"\tRadial Distribution Functions\tBin width=%g", bin);
+   (void)printf("\tRadial Distribution Functions\tBin width=%g", bin);
    new_line();
 
    for(idi = 1; idi < system->max_id; idi++)
       for(idj = idi; idj < system->max_id; idj++)
       {
-         (void)fprintf(f,"\t%s-%s RDF",
-		       site_info[idi].name, site_info[idj].name);
+         (void)printf("\t%s-%s RDF", site_info[idi].name, site_info[idj].name);
          new_line();
          sum = 0; col = 0;
          for(ibin = 0; ibin < control.nbins; ibin++)
@@ -143,7 +144,7 @@ site_t		site_info[];
          norm = (system->nsites - 1) / (4.0 * PI * rho * bincb * sum);
          for(ibin = 0; ibin < control.nbins; ibin++)
          {
-            col += fprintf(f," %7f",rdf[idi][idj][ibin]*norm/SQR(0.5+ibin));
+            col += printf(" %7f",rdf[idi][idj][ibin]*norm/SQR(0.5+ibin));
             if(col > control.page_width - 8 || ibin == control.nbins - 1) 
             {
                col = 0;

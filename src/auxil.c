@@ -6,13 +6,17 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	aux.c,v $
+ * Revision 1.2  89/06/01  18:00:42  keith
+ * Moved `vadd()' from aux.c to force.c for ease of vectorisation.
+ * Now no need to compile aux.c with vectorisation.
+ * 
  * Revision 1.1  89/04/27  15:01:14  keith
  * Initial revision
  * 
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: aux.c,v 1.1 89/04/27 15:01:14 keith Exp $";
+static char *RCSid = "$Header: aux.c,v 1.2 89/06/01 18:00:42 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -416,7 +420,7 @@ int n;
 /******************************************************************************
  * remove.  delete (unlink) a file.   (ANSI replacement)		      *
  ******************************************************************************/
-#if defined(unix)
+#if defined(unix) || defined(CRAY)
 remove(file)
 char	*file;
 {
@@ -456,21 +460,6 @@ char	*name, *own, *id, *dn;
 }
 
 #define PDNLEN 16
-
-remove(file)
-char	*file;
-{
-   void ACCESS(), DELETE();
-   char tmp[PDNLEN], pdn[PDNLEN], id[PDNLEN], own[PDNLEN];
-   int flag;
-   
-   (void)tmpnam(tmp);
-   cos_parse(file, own, id, pdn);
-   ACCESS(&flag,"DN",tmp,"PDN",pdn,"ID", id, "UQ");
-   if( ! flag )
-      DELETE(&flag,"DN",tmp); 
-   return(flag);
-}
 
 int     replace(file1, file2)   /* Actually saves a DN as a PDN and purges    */
 char    *file1, *file2;
@@ -540,31 +529,28 @@ double	x;
 
 #ifdef CRAY
 
-int	vfprintf (file, fmt, args)
-FILE 	*file;
+int	vprintf (fmt, args)
 char   	*fmt;
 va_list args;
 {
-    return(XPRINTF(&fmt, &args, &file));
+    return(XPRINTF(&fmt, &args, &stdout));
 }
 
 #else
 #if defined(convex) || defined(sequent)
 
-int	vfprintf (file, fmt, args)
-FILE	*file;
+int	vfprintf (file, fmt)
 char	*fmt;
 va_list	args;
 {
-   return(_doprnt(fmt, args, file));
+   return(_doprnt(fmt, args, stdout));
 }
 
 
 #else		/* No _doprnt or equivalent */
 
 #include <ctype.h>
-int	vfprintf (file, format, ap)
-FILE	*file;
+int	vprintf (format, ap)
 char	*format;
 va_list	ap;
 {
@@ -573,15 +559,11 @@ va_list	ap;
     char    ch;
 
     pos = charsout = error = 0;
-#ifdef DEBUG
-    printf ("Output is to file number %d\n", fileno (file));
-    printf ("Full format is \"%s\"\n", format);
-#endif
     while (format[pos] != 0)
     {
         if (format[pos] != '%')
         {
-            putc (format[pos++], file);
+            putchar (format[pos++]);
         }
         else
         {
@@ -638,7 +620,7 @@ va_list	ap;
 #ifdef DEBUG
             printf ("temps is \"%s\"\n", temps);
 #endif
-            fputs (temps, file);
+            puts (temps);
             charsout += strlen (temps);
 #ifdef DEBUG
             printf ("still to interpret \"%s\"\n", (char *) &format[pos]);
