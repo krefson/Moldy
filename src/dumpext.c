@@ -19,17 +19,17 @@ char *malloc(), *calloc();
 /*============================================================================*/
 typedef struct list_t
 {
-   struct list_t	*next;
+   struct list_mt	*next;
    int			i;
    char *p;
    int num;
-} list_t;
+} list_mt;
 
 typedef struct cpt_t
 {
    int ncpt, offset, size, mols;
    char name[32];
-} cpt_t;
+} cpt_mt;
 
 /******************************************************************************
  * get_int().  Read an integer from stdin, issuing a prompt and checking      *
@@ -66,7 +66,7 @@ int     lo, hi;
  ******************************************************************************/
 void
 insert(entry, head)
-list_t	*entry, *head;
+list_mt	*entry, *head;
 {
    while( head->next != NULL && entry->i > head->next->i)
       head = head->next;
@@ -77,7 +77,7 @@ list_t	*entry, *head;
 
 void
 print_list(head)
-list_t	*head;
+list_mt	*head;
 {
    if(head == NULL)
       return;
@@ -177,17 +177,17 @@ void
 extract(dump_name, cpt_mask, molecules, cpt, ncpt, tslice, num, inc, bflg, nmols)
 char	*dump_name;
 int	cpt_mask;
-list_t	*molecules;
-cpt_t	cpt[];
+list_mt	*molecules;
+cpt_mt	cpt[];
 int	ncpt, tslice, num, inc;
 int	bflg, nmols;
 {
    FILE		*dump_file;
-   dump_t	header;
+   dump_mt	header;
    float	*buf = (float*)calloc(4*nmols,sizeof(float));/* nmols > nmols_r */
    long		dump_base;
    int		icpt;
-   list_t	*mol;
+   list_mt	*mol;
    
    if( (dump_file = fopen(dump_name, "rb")) == NULL)
    {
@@ -197,14 +197,14 @@ int	bflg, nmols;
 #ifdef DEBUG
    fprintf(stderr,"Working on file \"%s\" (%d-%d)\n", dump_name, tslice, num);
 #endif
-   fread((char*)&header, sizeof(dump_t), 1, dump_file);
+   fread((char*)&header, sizeof(dump_mt), 1, dump_file);
    if( ferror(dump_file) || feof(dump_file) )
    {
       fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
       exit(2);
    }
 
-   dump_base = sizeof(dump_t)+tslice*header.dump_size*sizeof(float);
+   dump_base = sizeof(dump_mt)+tslice*header.dump_size*sizeof(float);
    while(tslice < num && tslice < header.ndumps)
    {
 #ifdef DEBUG
@@ -251,7 +251,7 @@ char	*argv[];
    int		tslice, numslice, maxslice;
    int		find, offset, icpt;
    
-   static cpt_t cpt[] = {{3, 0, 3, 1, "C of M positions"},
+   static cpt_mt cpt[] = {{3, 0, 3, 1, "C of M positions"},
 			 {4, 0, 4, 1, "quaternions"},
 			 {9, 0, 1, 0, "unit cell matrix"},
 			 {1, 0, 1, 0, "potential energy"},
@@ -264,18 +264,18 @@ char	*argv[];
 			 {3, 0, 3, 1, "C of M forces"},
 			 {3, 0, 3, 1, "torques"},
 			 {9, 0, 1, 0, "stress tensor"} };
-#define NCPT (sizeof(cpt)/sizeof(cpt_t))
+#define NCPT (sizeof(cpt)/sizeof(cpt_mt))
 
    static int level_mask[16] = {  0x0000,0x000f,0x0070,0x007f,
 				  0x0380,0x038f,0x03f0,0x03ff,
 				  0x1c00,0x1c0f,0x1c70,0x1c7f,
 				  0x1f80,0x1f8f,0x1ff0,0x1fff};
 
-   dump_t	proto_header, header;
+   dump_mt	proto_header, header;
 
-   list_t	f_head;
-   list_t	mol_head;
-   list_t	*cur;
+   list_mt	f_head;
+   list_mt	mol_head;
+   list_mt	*cur;
 
    mol_head.next = NULL;
    f_head.next = NULL;
@@ -313,7 +313,7 @@ char	*argv[];
 	    errflg++;
 	 else
 	 {
-	    cur = (list_t *)calloc(1, sizeof(list_t));
+	    cur = (list_mt *)calloc(1, sizeof(list_mt));
 	    cur->i = start;  cur->num=finish-start+1;
 	    insert(cur, &mol_head);
 	 }	 
@@ -356,7 +356,7 @@ char	*argv[];
     */
    if(mol_head.next == 0)
    {
-      cur = (list_t*)calloc(1,sizeof(list_t));
+      cur = (list_mt*)calloc(1,sizeof(list_mt));
       cur->i = 0;
       cur->num = nmols;
       mol_head.next = cur;
@@ -387,7 +387,7 @@ char	*argv[];
 	 fprintf(stderr, "Failed to open dump file \"%s\"\n", dump_name);
 	 exit(2);
       }
-      fread((char*)&header, sizeof(dump_t), 1, dump_file);
+      fread((char*)&header, sizeof(dump_mt), 1, dump_file);
       if( ferror(dump_file) || feof(dump_file) )
       {
 	 fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
@@ -407,7 +407,7 @@ char	*argv[];
       };
 
       (void)fclose(dump_file);
-      cur = (list_t *)calloc(1, sizeof(list_t));
+      cur = (list_mt *)calloc(1, sizeof(list_mt));
       cur->p = dump_name;
       cur->i = header.istep/header.dump_interval;
       cur->num = header.ndumps;

@@ -1,9 +1,12 @@
 #ifndef lint
-static char *RCSid = "$Header: dumpanalyze.c,v 1.1 89/04/11 15:04:51 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpanalyze.c,v 1.2 89/05/15 16:51:27 keith Stab $";
 #endif
 
 /*
  * $Log:	dumpanalyze.c,v $
+ * Revision 1.2  89/05/15  16:51:27  keith
+ * Modified to work with structs.h 1.3 or later
+ * 
  * Revision 1.1  89/04/11  15:04:51  keith
  * Initial revision
  * 
@@ -27,12 +30,12 @@ void analyze(file)
 char *file;
 {
    FILE *f;
-   dump_t header;
+   dump_mt header;
 
    if( f = fopen(file,"rb") )
    {
       printf("\n***** %s *****\n",file);
-      if( fread((char*)&header, sizeof(dump_t), 1, f) )
+      if( fread((char*)&header, sizeof(dump_mt), 1, f) )
 	 print_header(&header);
       else
          printf("Failed to read anything from %s",file);
@@ -40,7 +43,7 @@ char *file;
    }
 }
 void	print_header(header)
-dump_t	*header;
+dump_mt	*header;
 {
    printf("Title\t\t\t= \"%s\"\n",header->title);
    printf("RCS Revision\t\t= %.*s\n", strlen(header->vsn)-1, header->vsn);

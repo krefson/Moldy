@@ -5,10 +5,10 @@
 #include <varargs.h>
 #endif
 #include <math.h>
-#include <stdio.h>
 #include "stddef.h"
 #include "string.h"
 #include "stdlib.h"
+#include <stdio.h>
 #define error(str, args) message(NULLI, NULLP, FATAL, str, args)
 #include "structs.h"
 #include "messages.h"
@@ -220,13 +220,13 @@ int	*start, *finish, *inc;
 void
 dump_to_moldy(buf, system)
 float	*buf;
-system_t *system;
+system_mt *system;
 {
    int i;
    float	*c_of_m = buf;
    float	*quat   = buf+3*system->nmols;
    float	*h      = buf+3*system->nmols + 4*system->nmols_r;
-   mat_t hinv;
+   mat_mt hinv;
 
 /* $dir no_recurrence */
    for(i = 0; i < system->nmols; i++)
@@ -280,17 +280,17 @@ real            **vec;          /* Output vector.  CAN BE SAME AS INPUT  (out)*/
 void
 schakal_out(n, system, species, site_info, insert)
 int	n;
-system_t	*system;
-spec_t		species[];
-asite_t		site_info[];
+system_mt	*system;
+spec_mt		species[];
+site_mt		site_info[];
 char		*insert;
 {
    double	**site = (double**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
-   spec_t	*spec;
+   spec_mt	*spec;
    double	a, b, c, alpha, beta, gamma;
-   mat_p	h = system->h;
-   mat_t	hinv;
+   mat_mp	h = system->h;
+   mat_mt	hinv;
    int		imol, isite, is;
 
    invert(h,hinv);
@@ -335,14 +335,14 @@ char		*insert;
  ******************************************************************************/
 void
 centre_mass(species, nspecies, c_of_m)
-spec_t		species[];
+spec_mt		species[];
 int		nspecies;
-vec_t		c_of_m;
+vec_mt		c_of_m;
 {
    double	mass;
-   spec_t	*spec;
+   spec_mt	*spec;
    int		imol;
-   vec_t	*s_c_of_m;
+   vec_mt	*s_c_of_m;
 
    mass = c_of_m[0] = c_of_m[1] = c_of_m[2] = 0.0;
    for(spec = species; spec < species + nspecies; spec++ )
@@ -368,9 +368,9 @@ vec_t		c_of_m;
  * Shift.  Translate all co-ordinates.					      *
  ******************************************************************************/
 void	shift(r, nmols, s)
-vec_t	r[];
+vec_mt	r[];
 int	nmols;
-vec_t	s;
+vec_mt	s;
 {
    int imol;
    for(imol = 0; imol < nmols; imol++)
@@ -387,13 +387,13 @@ vec_t	s;
 void
 moldy_out(n, system, species, site_info, insert)
 int	n;
-system_t	*system;
-spec_t		species[];
-asite_t		site_info[];
+system_mt	*system;
+spec_mt		species[];
+site_mt		site_info[];
 char		*insert;
 {
-   spec_p	spec, frame_spec  = NULL;
-   vec_t	c_of_m;
+   spec_mp	spec, frame_spec  = NULL;
+   vec_mt	c_of_m;
    
    for(spec = species; spec < species+system->nspecies; spec++)
       if( spec->framework )
@@ -415,8 +415,8 @@ char		*insert;
  * restart files.  Call: mdshak [-s sys-spec-file] [-r restart-file].   If    *
  * neither specified on command line, user is interrogated.		      *
  ******************************************************************************/
-contr_t		control;
-unit_t		input_unit;
+contr_mt		control;
+unit_mt		input_unit;
 char		backup_lockfile[L_name];
 char		dump_lockfile[L_name];
 main(argc, argv)
@@ -439,14 +439,14 @@ char	*argv[];
    int		dump_size;
    float	*dump_buf;
    FILE		*Fp, *Dp;
-   dump_t	header;
-   restrt_t	restart_header;
-   system_t	system;
-   spec_t	*species;
-   asite_t	*site_info;
-   pot_t	*potpar;
-   quat_t	*qpf;
-   contr_t	control_junk;
+   dump_mt	header;
+   restrt_mt	restart_header;
+   system_mt	system;
+   spec_mt	*species;
+   site_mt	*site_info;
+   pot_mt	*potpar;
+   quat_mt	*qpf;
+   contr_mt	control_junk;
    control.page_length=1000000;
 #define MAXTRY 100
 

@@ -1,3 +1,4 @@
+#ifndef _STDLIB_H_
 #ifndef _MOLDY_STDLIB_H_
 #define _MOLDY_STDLIB_H_
 
@@ -16,6 +17,7 @@
    extern int abs ();
 #endif
 
+#endif /* _MOLDY_STDLIB_H_ */
 #endif /* __STDLIB_H_ */
 
 

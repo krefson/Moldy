@@ -1,7 +1,11 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 1.8 91/08/15 18:12:24 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 1.9 91/08/16 15:26:17 keith Exp $
  *
  * $Log:	string.h,v $
+ * Revision 1.9  91/08/16  15:26:17  keith
+ * Checked error returns from fread, fwrite, fseek and fclose more
+ * rigourously.   Called strerror() to report errors.
+ * 
  * Revision 1.8  91/08/15  18:12:24  keith
  * Modifications for better ANSI/K&R compatibility and portability
  * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
@@ -41,7 +45,11 @@ extern char
 
 extern int
 	strcmp();
+#ifdef __GNUC__
+extern size_t
+#else
 extern int
+#endif
 	strlen();
 
 extern gptr

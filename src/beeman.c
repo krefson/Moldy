@@ -18,6 +18,16 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	beeman.c,v $
+ * Revision 1.3  91/08/15  18:11:47  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
  * Revision 1.2  89/10/24  17:18:37  keith
  * Modified pbc algorithm to use floor() library function.
  * Now works with non-orthorhombic cell.
@@ -27,12 +37,11 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/beeman.c,v 1.3 91/08/14 14:23:23 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/beeman.c,v 1.3 91/08/15 18:11:47 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
-#include <stdio.h>
 #include <math.h>
 /*========================== Program include files ===========================*/
 #include "structs.h"
@@ -40,7 +49,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/beeman.c,v 1.3 91
 /*========================== External function declarations ==================*/
 void	message();			/* Error  and exit handler	      */
 /*========================== External data references ========================*/
-extern	contr_t	control;
+extern	contr_mt	control;
 /*========================== Macros ==========================================*/
 #define	TOLERANCE	1.0e-4
 /*============================================================================*/
@@ -49,7 +58,7 @@ extern	contr_t	control;
  ******************************************************************************/
 static void normalise(quat,n)
 int		n;			/* Number of quaternions  (in)        */
-quat_p		quat;			/* Quaternions       (update)         */
+quat_mp		quat;			/* Quaternions       (update)         */
 {
    register int		i, j;
    register double	norm;
@@ -70,8 +79,8 @@ quat_p		quat;			/* Quaternions       (update)         */
  ******************************************************************************/
 static void constrain(quat, qdot ,n)
 int		n;			/* Number of quaternions  (in)        */
-quat_p		quat;			/* Quaternions            (in)        */
-quat_p		qdot;			/* Quaternion derivatives (update)    */
+quat_mp		quat;			/* Quaternions            (in)        */
+quat_mp		qdot;			/* Quaternion derivatives (update)    */
 {
    register int		i, j;
    register double	delta;
@@ -91,7 +100,7 @@ quat_p		qdot;			/* Quaternion derivatives (update)    */
  ******************************************************************************/
 void escape(c_of_m, nmols)
 int		nmols;		/* First dimension of c-of-m                  */
-vec_p		c_of_m;		/* Centre of mass co-ordinates (updat)        */
+vec_mp		c_of_m;		/* Centre of mass co-ordinates (updat)        */
 
 {
    int	imol;			/* Molecule counter			      */
@@ -168,7 +177,7 @@ real		v_in[],			/* Velocities              (in)       */
  *   velocities.                                                              *
  ******************************************************************************/
 void step_1(sys)
-system_p	sys;			/* pointer to whole-system record     */
+system_mp	sys;			/* pointer to whole-system record     */
 {
    beeman_1(sys->c_of_m[0],sys->vel[0],sys->acc[0],sys->acco[0], 3*sys->nmols);
    escape(sys->c_of_m, sys->nmols);
@@ -195,7 +204,7 @@ system_p	sys;			/* pointer to whole-system record     */
  *   simulation), and predict the corresponding velocities.                   *
  ******************************************************************************/
 void step_2(sys)
-system_p	sys;			/* pointer to whole-system record     */
+system_mp	sys;			/* pointer to whole-system record     */
 {
    beeman_2(sys->vel[0], sys->vel[0], sys->acc[0], sys->acco[0],sys->accvo[0],
 	    3*sys->nmols);

@@ -1,9 +1,12 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 1.4 91/08/13 15:31:35 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 1.4 91/08/15 18:13:10 keith Exp $";
 #endif
 
 /*
  * $Log:	dumpconvert.c,v $
+ * Revision 1.4  91/08/15  18:13:10  keith
+ * 
+ * 
  * Revision 1.3  90/09/28  10:51:27  keith
  * Amended #idfefs for unicos
  * 
@@ -21,11 +24,11 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 1
  * 
  */
 
-#include <stdio.h>
 #include "stddef.h"
 #include "structs.h"
 #include "string.h"
 #include <varargs.h>
+#include <stdio.h>
 char	*calloc();
 void	print_header();
 int	read_header();
@@ -90,11 +93,11 @@ char	*argv[];
 
 void binary_to_text()
 {
-   dump_t header;
+   dump_mt header;
    float  *buf;
    int    buflen, idump, i;
 
-   if( fread((char*)&header, sizeof(dump_t), 1, stdin) )
+   if( fread((char*)&header, sizeof(dump_mt), 1, stdin) )
       print_header(&header);
    else
       error("Failed to read header record (Error code %d).",ferror(stdin));
@@ -119,7 +122,7 @@ void binary_to_text()
 }
 
 void	print_header(header)
-dump_t	*header;
+dump_mt	*header;
 {
    printf("%s\n%s\n",header->title, header->vsn);
    printf("%d %d %d %d %d\n", header->istep, header->dump_interval,
@@ -131,7 +134,7 @@ dump_t	*header;
 
 void text_to_binary()
 {
-   dump_t header;
+   dump_mt header;
    float  *buf;
    int    buflen, idump, i;
 
@@ -142,7 +145,7 @@ void text_to_binary()
    if( ! (buf = (float *)calloc(buflen, sizeof(float))))
       error("Failed to allocate memory (%d words requested)\n",buflen);
 
-   if( ! fwrite((char*)&header, sizeof(dump_t), 1, stdout) )
+   if( ! fwrite((char*)&header, sizeof(dump_mt), 1, stdout) )
       error("Write error on output file (Error code %d).",ferror(stdout));
 
    for( idump = 0; idump < header.ndumps; idump++ )
@@ -160,7 +163,7 @@ void text_to_binary()
 }
 
 int	read_header(header)
-dump_t	*header;
+dump_mt	*header;
 {
    int num;
    char *c;

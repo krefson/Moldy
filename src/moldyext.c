@@ -1,8 +1,8 @@
 #include "defs.h"
-#include <stdio.h>
 #include "string.h"
 #include <varargs.h>
 #include "stddef.h"
+#include <stdio.h>
 char	*malloc(), *realloc();
 char	*strtok();
 

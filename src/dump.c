@@ -23,6 +23,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.18  92/06/02  10:37:52  keith
+ * Added check of ferror() as well as return from fwrite().  Talk
+ * about belt and braces.
+ * 
  * Revision 1.17  92/04/21  17:49:16  keith
  * Corrected error message
  * 
@@ -90,16 +94,16 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.17 92/04/21 17:49:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.18 92/06/02 10:37:52 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
-#include	<stdio.h>
 #include	<ctype.h>
-#include	"stddef.h"
 #include 	"string.h"
+#include	"stddef.h"
 #include	"time.h"
+#include	<stdio.h>
 /*========================== program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
@@ -114,8 +118,8 @@ static void	real_to_float();
 void		message();
 void		note();
 /*========================== External data references ========================*/
-extern contr_t	control;
-extern restrt_t restart_header;
+extern contr_mt	control;
+extern restrt_mt restart_header;
 /*========================== Macros ==========================================*/
 #define DUMP_SIZE(level)  (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
 			            (3*system->nmols + 4*system->nmols_r + 9)+ \
@@ -125,13 +129,13 @@ extern restrt_t restart_header;
 /*============================================================================*/
 
 void	dump(system, force, torque, stress, pe)
-system_p	system;
-vec_t		force[], torque[];
-mat_t		stress;
+system_mp	system;
+vec_mt		force[], torque[];
+mat_mt		stress;
 double		pe;
 {
    FILE		*dumpf=NULL;		/* File pointer to dump files	      */
-   dump_t	dump_header;		/* Header record proforma	      */
+   dump_mt	dump_header;		/* Header record proforma	      */
    char		cur_file[L_name],	/* Names of current and previous      */
    		prev_file[L_name],	/* dump files.			      */
    		*fname;			/* Pointer to one of above filenames  */
@@ -162,7 +166,7 @@ double		pe;
       errflg = true;					/* Provisionally !!   */
       if( (dumpf = fopen(fname, "r+b")) == NULL)	/* Open dump file     */
 	 message(NULLI, NULLP, WARNING, DOERRR, fname, strerror(errno));
-      else if( fread((gptr*)&dump_header, sizeof(dump_t), 1, dumpf) == 0 )
+      else if( fread((gptr*)&dump_header, sizeof(dump_mt), 1, dumpf) == 0 )
 	 message(NULLI, NULLP, WARNING, DRERR, fname, strerror(errno));
       else if( control.dump_level != dump_header.dump_level )
          message(NULLI, NULLP, INFO, DMPALT);
@@ -188,7 +192,7 @@ double		pe;
 	 if( fseek(dumpf, 0L, SEEK_END) )
 	    message(NULLI, NULLP, FATAL, SEFAIL, fname, strerror(errno));
 	 file_len = ftell(dumpf);		/* Get length of file	      */
-	 file_pos = sizeof(dump_t)
+	 file_pos = sizeof(dump_mt)
 	            + ndumps*dump_size*sizeof(float);	/* Expected length    */
 	 if( file_len < file_pos )
          	message(NULLI, NULLP, FATAL, CORUPT, fname, file_pos, file_len);
@@ -208,7 +212,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 1.17 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 1.18 $"+11,
 		                     sizeof dump_header.vsn-1);
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;
@@ -236,7 +240,7 @@ double		pe;
 
       if( (dumpf = fopen(cur_file, "w+b")) == 0)
 	 message(NULLI, NULLP, FATAL, DOERRW, cur_file, strerror(errno));
-      if( fwrite((gptr*)&dump_header, sizeof(dump_t), 1, dumpf) == 0)
+      if( fwrite((gptr*)&dump_header, sizeof(dump_mt), 1, dumpf) == 0)
 	 message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
       file_pos = ftell(dumpf);
    }
@@ -251,7 +255,7 @@ double		pe;
       message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
 
    (void)fseek(dumpf, 0L, SEEK_SET);			/* Write header      */
-   if( fwrite((gptr*)&dump_header, sizeof(dump_t), 1, dumpf) == 0)
+   if( fwrite((gptr*)&dump_header, sizeof(dump_mt), 1, dumpf) == 0)
       message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
 
    if( ferror(dumpf) || fclose(dumpf) )
@@ -297,14 +301,14 @@ char	*name;
  ******************************************************************************/
 static void	dump_convert(buf, system, force, torque, stress, pe)
 float		*buf;
-system_p	system;
-vec_t		force[], torque[];
-mat_t		stress;
+system_mp	system;
+vec_mt		force[], torque[];
+mat_mt		stress;
 double		pe;
 {
    int		nmols   = system->nmols,
    		nmols_r = system->nmols_r;
-   vec_t	*scale_buf = ralloc(nmols);
+   vec_mt	*scale_buf = ralloc(nmols);
    real		ppe = pe;
 
    if( control.dump_level & 1)

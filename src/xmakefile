@@ -9,15 +9,26 @@ SHELL=/bin/sh
 #LDFLAGS= $(LDFLAGS0)
 #INLINE=
 #  **** Sun (unbundled) CC -- fastest options & getter than gcc 2.0
-CFLAGS=	-O2 -dalign $(CFLAGS0)
-CFLAGS2= /usr/lib/libm.il 
-LDFLAGS= $(LDFLAGS0)
-#INLINE=
-#  **** Scalar machines using gcc - can compile with -g ****
-#CC=	gcc
-#CFLAGS= -O2 $(CFLAGS0)
+#CFLAGS= -cg89 -libmil -dalign  -O4 $(CFLAGS0)
+#CFLAGS2= 
 #LDFLAGS= $(LDFLAGS0)
 #INLINE=
+#  **** Scalar machines using gcc - can compile with -g ****
+CC=	gcc
+CFLAGS= -O2 -ffast-math $(CFLAGS0)
+CFLAGSAUX=-funroll-loops
+LDFLAGS= $(LDFLAGS0)
+#INLINE=
+#  **** gcc on Suns with unbundled ANSI CC ****
+#CC=	gcc
+#CFLAGS= -O2 -ffast-math -DANSI_LIBS $(CFLAGS0)
+#CFLAGSAUX=-funroll-loops
+#LDFLAGS= -L/usr/lang/SC1.0/ansi_lib -lansi $(LDFLAGS0)
+#INLINE=
+#  **** DEC Alpha ****
+#CFLAGS=	-O2 $(CFLAGS0) -DANSI_LIBS -std
+#CFLAGS2=
+#LDFLAGS= $(LDFLAGS0)
 #  **** Stellar ****
 #CFLAGS= -g -O2 -va -na -nv $(CFLAGS0)
 #CFLAGS2= +CaliasFreePointers
@@ -27,6 +38,7 @@ LDFLAGS= $(LDFLAGS0)
 #CFLAGS= -O2 -vector_c -vreport $(CFLAGS0)
 #CFLAGS2=  -safe=ptrs
 #LDFLAGS= $(LDFLAGS0) 
+#CFLAGSAUX=-catalog=aux.in 
 #INLINE= -inline -Npaths=aux.in
 #  **** convex ****
 #CFLAGS= -O2 -va -na -nv -fi $(CFLAGS0)
@@ -69,7 +81,7 @@ LFILES = $(FILES:%=%.ln)
 
 INFILES = control.water control.100 tips2.in\
 		control.tip4p tip4p.in\
-		methane.in mcy.in\
+		methane.in mcy.in water-big.in control.big\
 		control.mgclh2o mgclh2o.in control.clay
 
 SHAKS=	algorith alloc aux jacobi kernel input matrix\
@@ -211,12 +223,9 @@ $(LFILES):	$(HFILES)
 
 $(OFILES):	structs.h defs.h
 
-#   Inlining for titan
-#aux.o:	aux.c 
-#	$(CC) $(CFLAGS) $(CFLAGS2) -catalog=aux.in -c  $<
-
+#  Special options for aux.c
 aux.o:	aux.c 
-	$(CC) $(CFLAGS) $(CFLAGS2) -c $<
+	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSAUX) -c  $<
 
 ewald.o:	ewald.c 
 	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSP) -c $(INLINE) $<
@@ -236,7 +245,7 @@ force.o:	force.c
 %.h:		RCS/%.h,v
 		co $@
 
-.SUFFIXES:	.c .0
+.SUFFIXES:	.c .o
 
 .c.o:
 	$(CC) $(CFLAGS) -c $<

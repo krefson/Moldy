@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.20  93/03/05  15:01:53  keith
+ * Added CRAY parallelising directives
+ * 
  * Revision 1.19  92/08/13  17:56:58  keith
  * Modified nprocessors to limit execution to 1 proc
  * unless env var THREADS explicitly set.
@@ -103,7 +106,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.19 92/08/13 17:56:58 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.20 93/03/05 15:01:53 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -138,7 +141,7 @@ void	message();			/* Write a warning or error message   */
 void	ewald_inner();			/* Inner loop forward reference       */
 int	nprocessors();			/* Return no. of procs to execute on. */
 /*========================== External data references ========================*/
-extern	contr_t	control;		/* Main simulation control record     */
+extern	contr_mt	control;		/* Main simulation control record     */
 /*========================== Macros ==========================================*/
 #define astar hinvp[0]
 #define bstar hinvp[1]
@@ -161,19 +164,19 @@ void ewald_inner();
 void	ewald(site,site_force,system,species,chg,pe,stress)
 real		**site,			/* Site co-ordinate arrays	 (in) */
 		**site_force;		/* Site force arrays		(out) */
-system_p	system;			/* System record		 (in) */
-spec_t	species[];			/* Array of species records	 (in) */
+system_mp	system;			/* System record		 (in) */
+spec_mt	species[];			/* Array of species records	 (in) */
 real		chg[];			/* Array of site charges	 (in) */
 double		*pe;			/* Potential energy		(out) */
-mat_t		stress;			/* Stress virial		(out) */
+mat_mt		stress;			/* Stress virial		(out) */
 {
-   mat_t	hinvp;			/* Matrix of reciprocal lattice vects*/
+   mat_mt	hinvp;			/* Matrix of reciprocal lattice vects*/
    register	int	h, k, l;	/* Recip. lattice vector indices     */
 		int	i, j, is, ssite;/* Counters.			     */
-   		spec_p	spec;		/* species[ispec]		     */
+   		spec_mp	spec;		/* species[ispec]		     */
    register	int	nsites = system->nsites;
    		double	kx,ky,kz;
-   		vec_t	kv;		/* (Kx,Ky,Kz)  			     */
+   		vec_mt	kv;		/* (Kx,Ky,Kz)  			     */
    	 	struct _hkl *hkl;
    		int	nhkl = 0;
 /*
@@ -199,7 +202,7 @@ mat_t		stress;			/* Stress virial		(out) */
    int		nthreads = nprocessors(),
    		ithread;
    double	*pe_n = aalloc(nthreads, double);
-   mat_t	*stress_n = aalloc(nthreads, mat_t);
+   mat_mt	*stress_n = aalloc(nthreads, mat_mt);
    real		***s_f_n;
    double	r_4_alpha = -1.0/(4.0 * control.alpha * control.alpha);
    double	vol = det(system->h);	/* Volume of MD cell		      */
@@ -581,12 +584,12 @@ int nsites;
 int nsitesxf;			/* N sites excluding framework sites.	      */
 real **chx, **cky, **clz, **shx, **sky, **slz;
 double *volp, *r_4_alphap;
-mat_t	stress;
+mat_mt	stress;
 double *pe;
 real	chg[];
 real	**site_force;
 {
-   vec_t	kv;
+   vec_mt	kv;
    double ksq, coeff, coeff2, pe_k;
    double sqcoskr, sqsinkr, sqcoskrn, sqsinkrn, sqcoskrf, sqsinkrf;
    real *coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;

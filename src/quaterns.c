@@ -2,10 +2,13 @@
  * quaterns	Functions for manipulating quaternions			      *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log:	quaterns.c,v $
+ * Revision 1.1  89/04/20  16:00:52  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/quaterns.c,v 1.1 89/04/20 16:00:52 keith Stab $";
 #endif
 /*========================== Library include files ===========================*/
 #include <math.h>
@@ -19,7 +22,7 @@ double precision();
  * Can be called with  r the same as p or q.                                  *
  ******************************************************************************/
 void q_mul(p, q, r, n)
-quat_p	p,			/* First Quaternion array [n][4]        (in)  */
+quat_mp	p,			/* First Quaternion array [n][4]        (in)  */
 	q,			/* Second quaternion array [n][4]       (in)  */
 	r;			/* Resultant quaternions [n][4]        (out)  */
 int	n;			/* Number of quaternions in the arrays  (in)  */
@@ -44,7 +47,7 @@ int	n;			/* Number of quaternions in the arrays  (in)  */
  * Can be called with  r the same as p or q.                                  *
  ******************************************************************************/
 void q_mul_1(p, q, r)
-quat_t	p,			/* First Quaternion array [n][4]        (in)  */
+quat_mt	p,			/* First Quaternion array [n][4]        (in)  */
 	q,			/* Second quaternion array [n][4]       (in)  */
 	r;			/* Resultant quaternions [n][4]        (out)  */
 {
@@ -64,7 +67,7 @@ quat_t	p,			/* First Quaternion array [n][4]        (in)  */
  * give r. Can be called with  r the same as p or q.                          *
  ******************************************************************************/
 void q_conj_mul(p, q, r, n)
-quat_p	p,			/* First Quaternion array [n][4]        (in)  */
+quat_mp	p,			/* First Quaternion array [n][4]        (in)  */
 	q,			/* Second quaternion array [n][4]       (in)  */
 	r;			/* Resultant quaternions [n][4]        (out)  */
 int	n;			/* Number of quaternions in the arrays  (in)  */
@@ -88,8 +91,8 @@ int	n;			/* Number of quaternions in the arrays  (in)  */
  *  q_to_mat  Make the rotation matrix corresponding to quaternion q          *
  ******************************************************************************/
 void q_to_rot(quat, rot)
-quat_t	quat;				/* Input quaternion              (in) */
-mat_t	rot;				/* Rotation matrix		(out) */
+quat_mt	quat;				/* Input quaternion              (in) */
+mat_mt	rot;				/* Rotation matrix		(out) */
 {
    register	real	q0, q1, q2, q3;
    register	real	a01, a02, a03,
@@ -118,8 +121,8 @@ mat_t	rot;				/* Rotation matrix		(out) */
  * rot_to_q. Inverse of above.  Will fall over badly If rot is not orthogonal.*
  ******************************************************************************/
 void	rot_to_q(rot, quat)
-mat_t	rot;				/* Rotation matrix		 (in) */
-quat_t	quat;				/* Input quaternion             (out) */
+mat_mt	rot;				/* Rotation matrix		 (in) */
+quat_mt	quat;				/* Input quaternion             (out) */
 {
    int i, j, k;
    real sign;

@@ -3,6 +3,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.21  92/06/26  17:02:58  keith
+ * Got rid of assumption that memory returned by talloc() or
+ * arralloc() is zeroed.  This enhances ANSI compatibility.
+ * Removed memory zeroing from alloc.c() in consequence.
+ * 
  * Revision 1.20  91/11/26  10:26:34  keith
  * Corrected calculation of sheet energy term for charged framework.
  * Split force loop so as to omit frame-frame force (and stress) terms.
@@ -89,7 +94,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.20 91/11/26 10:26:34 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.21 92/06/26 17:02:58 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -120,7 +125,7 @@ gptr	*arralloc();			/* Allocates a dope vector array      */
 void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 /*========================== External data references ========================*/
-extern	contr_t	control;		/* Main simulation control record     */
+extern	contr_mt	control;		/* Main simulation control record     */
 /*========================== Macros ==========================================*/
 #define astar hinvp[0]
 #define bstar hinvp[1]
@@ -203,16 +208,16 @@ VECTORIZE
 void	ewald(site,site_force,system,species,chg,pe,stress)
 real		**site,			/* Site co-ordinate arrays	 (in) */
 		**site_force;		/* Site force arrays		(out) */
-system_p	system;			/* System record		 (in) */
-spec_t	species[];			/* Array of species records	 (in) */
+system_mp	system;			/* System record		 (in) */
+spec_mt	species[];			/* Array of species records	 (in) */
 real		chg[];			/* Array of site charges	 (in) */
 double		*pe;			/* Potential energy		(out) */
-mat_t		stress;			/* Stress virial		(out) */
+mat_mt		stress;			/* Stress virial		(out) */
 {
-   mat_t	hinvp;			/* Matrix of reciprocal lattice vects*/
+   mat_mt	hinvp;			/* Matrix of reciprocal lattice vects*/
    register	int	h, k, l;	/* Recip. lattice vector indices     */
 		int	i, j, is, ssite;/* Counters.			     */
-   		spec_p	spec;		/* species[ispec]		     */
+   		spec_mp	spec;		/* species[ispec]		     */
    register	int	nsites = system->nsites;
    register	real	pe_k,		/* Pot'l energy for current K vector */
 		        coeff, coeff2;	/* 2/(e0V) * A(K) & similar	     */
@@ -221,7 +226,7 @@ mat_t		stress;			/* Stress virial		(out) */
 			sqcoskrf, sqsinkrf;
 		double	ksq;		/* Squared magnitude of K vector     */
    		double	kx,ky,kz;
-   		vec_t	kv;		/* (Kx,Ky,Kz)  			     */
+   		vec_mt	kv;		/* (Kx,Ky,Kz)  			     */
    real		*site_fx = site_force[0],
    		*site_fy = site_force[1],
    		*site_fz = site_force[2];

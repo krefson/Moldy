@@ -8,6 +8,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.17  92/11/02  17:31:17  keith
+ * Fixed bug where counter array "nfrac" was not initialised.
+ * 
  * Revision 1.16  92/10/28  14:09:52  keith
  * Changed "site_[tp]" typedefs to avoid name clash on HP.
  * 
@@ -73,7 +76,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.16 92/10/28 14:09:52 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.17 92/11/02 17:31:17 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -83,8 +86,8 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.16 92/1
 #else
 #include <math.h>
 #endif
-#include	<stdio.h>
 #include 	"string.h"
+#include	<stdio.h>
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 /*========================== External function declarations ==================*/
@@ -97,7 +100,7 @@ void	put_line();
 double	precision();
 void	inhibit_vectorization();		/* Self-explanatory dummy     */
 /*========================== External data references ========================*/
-extern contr_t	control;
+extern contr_mt	control;
 /*========================== External data definitions  ======================*/
 int	***rdf;				/* The RDF 'array'	      */
 /*========================== Macros ==========================================*/
@@ -109,7 +112,7 @@ int	***rdf;				/* The RDF 'array'	      */
  *  rdf_init.  Prepare to bin rdf's.  Allocate memory and pointers	      *
  ******************************************************************************/
 void	init_rdf(system)
-system_p	system;				/* System info struct	      */
+system_mp	system;				/* System info struct	      */
 {
    int		*rdf_base;			/* base of data area          */
    int		max_id = system->max_id;
@@ -134,20 +137,20 @@ system_p	system;				/* System info struct	      */
  ******************************************************************************/
 void	rdf_calc(site, system, species)
 real		**site;				/* Site co-ordinate array     */
-system_p	system;				/* System info struct	      */
-spec_t	species[];			/* Species info struct array  */
+system_mp	system;				/* System info struct	      */
+spec_mt	species[];			/* Species info struct array  */
 {
-   spec_p	spec;
+   spec_mp	spec;
    register double	t;
    double	r;
    real		*site0 = site[0], *site1 = site[1], *site2 = site[2];
-   vec_t	rij;
+   vec_mt	rij;
    double	rbin;				/* 1.0/bin width	      */
    int		imol, isite, jsite, nsites = system->nsites;
    int		*id = ialloc(system->nsites),
                 *bind = ialloc(system->nsites);
    int		*id_ptr;
-   mat_t	hinv;
+   mat_mt	hinv;
    double	lx   = system->h[0][0], lxy  = system->h[0][1],
 		ly   = system->h[1][1], lxz  = system->h[0][2],
 		lz   = system->h[2][2], lyz  = system->h[1][2];
@@ -200,13 +203,13 @@ VECTORIZE
  * 	g(r) = B(ib)/(4 pi r**2 rho b) * (n-1)/sum,  where r(ib) =b*(ib+1/2)  *
  ******************************************************************************/
 void	print_rdf(system, species, site_info)
-system_t	*system;
-spec_t		species[];
-asite_t		site_info[];
+system_mt	*system;
+spec_mt		species[];
+site_mt		site_info[];
 {
    int		idi, idj, col, ibin, is;
    int		*nfrac = ialloc(system->max_id);  /* Per site count of system*/
-   spec_t	*spec;
+   spec_mt	*spec;
    double	bin = control.limit/control.nbins,
    		bincb = bin*bin*bin,
    		rho = system->nsites/det(system->h);

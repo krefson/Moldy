@@ -1,7 +1,10 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.21 92/06/12 12:55:56 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.22 92/06/15 16:52:00 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.22  92/06/15  16:52:00  keith
+ * Put parens round arg on xfree macro to make it safe with expr.
+ * 
  * Revision 1.21  92/06/12  12:55:56  keith
  * Mods to make it work on VMS again.  Ugh.
  * 
@@ -87,8 +90,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.21 $"
-#define		 REVISION_DATE    "$Date: 92/06/12 12:55:56 $"
+#define          REVISION         "$Revision: 1.22 $"
+#define		 REVISION_DATE    "$Date: 92/06/15 16:52:00 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -206,7 +209,7 @@
 /******************************************************************************
  *  End of machine/OS configuration.					      *
  ******************************************************************************/
-#define NPOTP 7                 /* Must be number of doubles in pot_t        */
+#define NPOTP 7                 /* Must be number of doubles in pot_mt       */
 
 #ifndef SEEK_END
 #define	SEEK_SET	0
@@ -273,18 +276,18 @@ typedef	double			real;
 typedef	int			boolean;
 #define	false			0
 #define	true			1
-typedef	unsigned long int mytime_t;	/* Larger than any possible time_t */
+typedef	unsigned long int time_mt;/* Larger than any possible time_t */
 typedef enum {inv, noinv} 	invrot;
 typedef enum {tke_n, rke_n, pe_n, e_n, tt_n, rt_n, t_n, 
               h0_n, h1_n, h2_n, stress0_n, stress1_n,  stress2_n, press_n, 
               vir_n, msqf_n, msqt_n, dip_n, end} av_n;
            
-typedef real    vec_t[3];
-typedef	vec_t	*vec_p;
-typedef	real	quat_t[4];
-typedef quat_t	*quat_p;
-typedef real    mat_t[3][3];
-typedef vec_t	*mat_p;
+typedef real    vec_mt[3];
+typedef	vec_mt	*vec_mp;
+typedef	real	quat_mt[4];
+typedef quat_mt	*quat_mp;
+typedef real    mat_mt[3][3];
+typedef vec_mt	*mat_mp;
 
 #if (defined(ANSI) || defined(__STDC__)) && !defined(VMS)
 typedef void	gptr;
@@ -295,9 +298,9 @@ typedef char	gptr;
 #define aalloc(n, type) (type *)talloc((int)(n),sizeof(type),__LINE__, __FILE__)
 #define ialloc(n) aalloc(n, int)
 #define dalloc(n) aalloc(n, real)
-#define ralloc(n) aalloc(n, vec_t)
-#define palloc(n) aalloc(n, vec_t *)
-#define qalloc(n) aalloc(n, quat_t)
+#define ralloc(n) aalloc(n, vec_mt)
+#define palloc(n) aalloc(n, vec_mt *)
+#define qalloc(n) aalloc(n, quat_mt)
 
 #define	xfree( ptr )	tfree( (gptr *) (ptr) )
 

@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.30 92/10/28 14:09:58 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.31 93/03/05 15:02:14 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -113,23 +113,23 @@ double  	precision();            /* Floating pt precision.             */
 void    	kernel();               /* Force kernel routine               */
 double 		mol_radius();           /* Radius of largest molecule.        */
 /*========================== External data references ========================*/
-extern  contr_t control;
+extern  contr_mt control;
 /*========================== Structs local to module =========================*/
 typedef struct cell_s			/* Prototype element of linked list of*/
 {					/* molecules within interaction range */
    int 		isite, num, frame_type;
    struct cell_s *next;
-}		cell_t;
+}		cell_mt;
 
 typedef struct				/* Prototype of neighbour cell list   */
 {					/* element.			      */
    int	 	i, j, k;
-}		ivec_t;
+}		ivec_mt;
 
 typedef struct				/* Prototype for a 3Nx x 3Ny x 3Nz    */
 {					/* pbc relocation array.	      */
    int 		ncell, rel;
-}		reloc_t;
+}		reloc_mt;
 /*========================== Global variables ================================*/
 static          int nx = 0, ny = 0, nz = 0, onx = 0, ony = 0, onz = 0;
 /*========================== Macros ==========================================*/
@@ -212,17 +212,17 @@ void histout()
 /******************************************************************************
  *  Neighbour_list.  Build the list of cells within cutoff radius of cell 0   *
  ******************************************************************************/
-static ivec_t    *neighbour_list(nnabor, h, cutoff)
+static ivec_mt   *neighbour_list(nnabor, h, cutoff)
 int  	*nnabor;
-mat_t   h;
+mat_mt  h;
 double  cutoff;
 {
    double               dist;
    int                  i, j, ix, iy, iz, mx, my, mz, inabor = 0, nnab;
    static int		onabor=0;
-   ivec_t		*nabor;
-   vec_t                s;
-   mat_t                G, htr, htrinv;
+   ivec_mt		*nabor;
+   vec_mt               s;
+   mat_mt               G, htr, htrinv;
 
    transpose(h, htr);
    mat_mul(htr, h, G);
@@ -233,7 +233,7 @@ double  cutoff;
    mz = ceil(cutoff*nz*modc(htrinv));
 
    nnab = 4*mx*my*mz;
-   nabor = aalloc(nnab, ivec_t);
+   nabor = aalloc(nnab, ivec_mt);
 #ifdef DEBUG1
    printf("  Distance    ix    iy    iz      sx        sy          sz\n");
 #endif
@@ -315,18 +315,18 @@ double  cutoff;
  *         coincide with the corner points, the edges or none of the faces.   *
  *  4) The final list is built by scanning the map.			      *
  ******************************************************************************/
-static ivec_t    *strict_neighbour_list(nnabor, h, cutoff)
+static ivec_mt   *strict_neighbour_list(nnabor, h, cutoff)
 int  	*nnabor;
-mat_t   h;
+mat_mt  h;
 double  cutoff;
 {
    double               dist;
    int                  i, j, k, ix, iy, iz, mx, my, mz, inabor = 0, nnab;
    static int		onabor=0;
    int			***cellmap;
-   ivec_t		*nabor;
-   vec_t                s;
-   mat_t                G, htr, htrinv;
+   ivec_mt		*nabor;
+   vec_mt               s;
+   mat_mt               G, htr, htrinv;
    int			face_cells[4][3],mxyz[3], nxyz[3], ixyz, jxyz, kxyz;
    double	        proj[3], modabc;
 
@@ -431,7 +431,7 @@ double  cutoff;
     * Scan map and build list.  N.B.  Loop indices are 1 greater than when
     * list built since we added cells outside original loop limits.
     */   
-   nabor = aalloc(nnab, ivec_t);
+   nabor = aalloc(nnab, ivec_mt);
    for(ix = 0; ix <= mx; ix++)
       for(iy = (ix == 0 ? 0 : -my-1); iy <= my; iy++)
          for(iz = (ix == 0 && iy == 0 ? 0 : -mz-1); iz <= mz; iz++)
@@ -464,21 +464,21 @@ double  cutoff;
  *  mass co-ordinate by binning.                                              *
  ******************************************************************************/
 static void    fill_cells(c_of_m, nmols, site, species, h, lst, cell, frame_type)
-vec_t   c_of_m[];                       /* Centre of mass co-ords        (in) */
+vec_mt  c_of_m[];                       /* Centre of mass co-ords        (in) */
 int     nmols;                          /* Number of molecules           (in) */
 real	**site;				/* Atomic site co-ordinates      (in) */
-spec_p  species;                        /* Pointer to species array      (in) */
-mat_t	h;				/* Unit cell matrix              (in) */
-cell_t  *lst;				/* Pile of cell structs          (in) */
-cell_t  *cell[];                        /* Array of cells (assume zeroed)(out)*/
+spec_mp species;                        /* Pointer to species array      (in) */
+mat_mt	h;				/* Unit cell matrix              (in) */
+cell_mt *lst;				/* Pile of cell structs          (in) */
+cell_mt *cell[];                        /* Array of cells (assume zeroed)(out)*/
 int	*frame_type;			/* Framework type counter	 (out)*/
 {
    int icell, imol, im=0, is, isite = 0;
    double eps = 8.0*precision();
-   spec_p spec = species;
-   cell_t *list = lst;
-   vec_t ssite;
-   mat_t hinv;
+   spec_mp spec = species;
+   cell_mt *list = lst;
+   vec_mt ssite;
+   mat_mt hinv;
 
    *frame_type=1;
    invert(h, hinv);
@@ -498,7 +498,7 @@ int	*frame_type;			/* Framework type counter	 (out)*/
 	    ssite[0] = site[0][isite];
 	    ssite[1] = site[1][isite];
 	    ssite[2] = site[2][isite];
-	    mat_vec_mul(hinv, (vec_t*)ssite, (vec_t*)ssite, 1);
+	    mat_vec_mul(hinv, (vec_mt*)ssite, (vec_mt*)ssite, 1);
 	    icell = LOCATE(ssite, eps);
 	    list->isite = isite++;
 	    list->num   = 1;
@@ -535,16 +535,16 @@ int	nfnab[];			/* N frame sites index by type (out) */
 int	n_frame_types;			/* Number of distinct frameworks(in) */
 int	n_nabors;			/* Number of neighbour cells    (in) */
 int	ix, iy, iz;			/* Labels of current cell	(in) */
-ivec_t	*nabor;				/* List of neighbour cells	(in) */
-cell_t	**cell;				/* Head of cell list		(in) */
-reloc_t	***reloc;			/* Relocation index array	(in) */
+ivec_mt	*nabor;				/* List of neighbour cells	(in) */
+cell_mt	**cell;				/* Head of cell list		(in) */
+reloc_mt	***reloc;			/* Relocation index array	(in) */
 int   	*work;                          /* Workspace                         */
 {
    int	jx, jy, jz;			/* Labels of cell in neighbour list  */
    int	jcell, jnab, jsite, rl;		/* Counters for cells etc	     */
    int	nnab = 0;			/* Counter for size of nab	     */
    int	ftype, c, nnabf = 0;
-   cell_t	*cmol;			/* Pointer to current cell element   */
+   cell_mt	*cmol;			/* Pointer to current cell element   */
    int	*reloc_if = work,
         *frame_key = reloc_if + n_nab_sites,
    	*nabf = frame_key + n_nab_sites,
@@ -594,7 +594,7 @@ int   	*work;                          /* Workspace                         */
  *  reloc_alloc.  Allocate and fill relocation array                          *
  ******************************************************************************/
 static void    reloc_alloc(h, reloc)
-mat_t   h;
+mat_mt  h;
 real    reloc[][CUBE(NSHELL)];
 {
    int  tx, ty, tz;
@@ -620,12 +620,12 @@ real    reloc[][CUBE(NSHELL)];
 void force_calc(site, site_force, system, species, chg, potpar, pe, stress)
 real            **site,                 /* Site co-ordinate arrays       (in) */
                 **site_force;           /* Site force arrays            (out) */
-system_p        system;                 /* System struct                 (in) */
-spec_t          species[];              /* Array of species records      (in) */
+system_mp       system;                 /* System struct                 (in) */
+spec_mt         species[];              /* Array of species records      (in) */
 real            chg[];                  /* Array of site charges         (in) */
-pot_t           potpar[];               /* Array of potential parameters (in) */
+pot_mt          potpar[];               /* Array of potential parameters (in) */
 double          *pe;                    /* Potential energy             (out) */
-mat_t           stress;                 /* Stress virial                (out) */
+mat_mt          stress;                 /* Stress virial                (out) */
 {
    int		isite, imol,            /* Site counter i,j                   */
    		i_id, ipot, i, j;	/* Miscellaneous		      */
@@ -656,26 +656,26 @@ mat_t           stress;                 /* Stress virial                (out) */
                             NMULT*4.19*CUBE(control.cutoff)/det(system->h);
 #endif
    static	int n_cell_list = 1;
-   cell_t       *c_ptr = aalloc(n_cell_list, cell_t );
-   spec_p       spec;
-   cell_t       **cell;
+   cell_mt      *c_ptr = aalloc(n_cell_list, cell_mt );
+   spec_mp      spec;
+   cell_mt      **cell;
    real		*sf0, *sf1, *sf2, *ssf0, *ssf1, *ssf2;
-   ivec_t       *nabor;
+   ivec_mt      *nabor;
    
    static boolean       init = true;
    static int           n_nabors;
-   static reloc_t       ***reloc = 0;
+   static reloc_mt      ***reloc = 0;
    int		nthreads = nprocessors(),
    		ithread;
    double	*pe_n = (double *)aalloc(nthreads, double);
-   mat_t	*stress_n = (mat_t *)aalloc(nthreads, mat_t);
+   mat_mt	*stress_n = (mat_mt *)aalloc(nthreads, mat_mt);
    real		***s_f_n;
 
 #ifdef DEBUG2
    double ppe, rr[3], ss[3];
    int im, is, i;
-   mat_p h = system->h;
-   mat_t hinv;
+   mat_mp h = system->h;
+   mat_mt hinv;
 #endif
   
    s_f_n = aalloc(nthreads, real**);
@@ -701,7 +701,7 @@ mat_t           stress;                 /* Stress virial                (out) */
 	 message(NULLI, NULLP, FATAL, CUTOFF, NSH);
       if( reloc )
 	 xfree((reloc-NSH*onx));
-      reloc = (reloc_t***)arralloc(sizeof(reloc_t),3,
+      reloc = (reloc_mt***)arralloc(sizeof(reloc_mt),3,
             -NSH*nx, (NSH+1)*nx-1, -NSH*ny, (NSH+1)*ny-1, -NSH*nz, (NSH+1)*nz-1);
  
       for(ix = 0; ix < nx; ix++)
@@ -724,7 +724,7 @@ mat_t           stress;                 /* Stress virial                (out) */
 	 else 
 	    n_cell_list += spec->nmols;
       xfree(c_ptr);
-      c_ptr = aalloc(n_cell_list, cell_t);
+      c_ptr = aalloc(n_cell_list, cell_mt);
       init = false;
    }
    if( control.strict_cutoff )
@@ -733,7 +733,7 @@ mat_t           stress;                 /* Stress virial                (out) */
    else
       nabor = neighbour_list(&n_nabors, system->h, control.cutoff);
    
-   cell = aalloc(ncells, cell_t *);
+   cell = aalloc(ncells, cell_mt *);
    for( icell=0; icell < ncells; icell++)
       cell[icell] = NULL;
 
@@ -897,12 +897,12 @@ int	id[];
 int	n_nab_sites;
 int	n_nabors;
 int	n_frame_types;
-system_t *system;
-cell_t	**cell;
-reloc_t	***reloc;
-ivec_t	*nabor;
+system_mt *system;
+cell_mt	**cell;
+reloc_mt	***reloc;
+ivec_mt	*nabor;
 real	*pe;
-mat_t	stress;
+mat_mt	stress;
 {
    int          *nab  = ialloc(n_nab_sites),	/* Neigbour site gather vector*/
                 *reloc_i = ialloc(n_nab_sites),	/* Vector of pbc relocations  */
@@ -932,7 +932,7 @@ mat_t	stress;
    		isite, jsite, ipot, lim;
    int		nsites = system -> nsites;
    int		nfnab[2];
-   cell_t       *cmol;
+   cell_mt      *cmol;
    double       norm = 2.0*control.alpha/sqrt(PI);	/* Coulombic prefactor*/
    double	cutoffsq = SQR(control.cutoff),
                 cutoff100sq = 10000.0*cutoffsq;

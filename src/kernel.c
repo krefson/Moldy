@@ -14,6 +14,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 1.15  92/09/22  14:45:20  keith
+ * A few efficiency improvements for the Titan
+ * 
  * Revision 1.14  92/06/10  15:53:16  keith
  * Added new potential type "generic" for Neal.
  * 
@@ -71,7 +74,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.14 92/06/10 15:53:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.15 92/09/22 14:45:20 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -91,15 +94,15 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.14 9
 /*========================== External function declarations ==================*/
 void message();
 /*========================== Potential type specification ====================*/
-pots_t	potspec[]  = {{"lennard-jones",2},
+pots_mt	potspec[]  = {{"lennard-jones",2},
 		      {"buckingham",3},
                       {"mcy",4},
 		      {"generic",6}};
-int	npott=(sizeof potspec / sizeof(pots_t));
+int	npott=(sizeof potspec / sizeof(pots_mt));
 /*
  *  Array of dimensions of pot'l parameters.  Powers of {m,l,t} per parameter.
  */
-dim_t    pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
+dim_mt   pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
                            {{1,8,-2},{1,2,-2},{0,-1,0}},
 		           {{1,2,-2},{0,-1,0},{1,2,-2},{0,-1,0}},
 			   {{1,2,-2},{0,-1,0},{1,14,-2},

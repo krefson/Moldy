@@ -7,6 +7,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.19  92/10/28  14:09:30  keith
+ * Changed "site_[tp]" typedefs to avoid name clash on HP.
+ * 
  * Revision 1.18  92/06/12  12:55:58  keith
  * Mods to make it work on VMS again.  Ugh.
  * 
@@ -77,16 +80,16 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.18 92/06/12 12:55:58 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.19 92/10/28 14:09:30 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
 /*========================== System include files ============================*/
-#include	<stdio.h>
 #include	<signal.h>
 #ifdef  SIGCPULIM			/* Alternative name to SIGXCPU.	      */
 #define SIGXCPU SIGCPULIM
 #endif		/* Unicos uses SIGCPULIM not SIGXCPU. */
+#include	<stdio.h>
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
@@ -109,8 +112,8 @@ double  rt_clock();
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
 /*========================== External data definition ========================*/
-contr_t		control;
-unit_t		input_unit;
+contr_mt		control;
+unit_mt		input_unit;
 char		backup_lockfile[L_name];
 char		dump_lockfile[L_name];
 /*============================================================================*/
@@ -140,16 +143,16 @@ int main(argc, argv)
 int	argc;
 char	*argv[];
 {
-   system_t	system;
-   spec_t	*species;
-   asite_t	*site_info;
-   pot_t	*potpar;
-   mat_t	stress_vir;
+   system_mt	system;
+   spec_mt	*species;
+   site_mt	*site_info;
+   pot_mt	*potpar;
+   mat_mt	stress_vir;
    double	pe[NPE];
    double	delta_cpu = 0.0, cpu_base = cpu();
    double	rt = rt_clock();
-   vec_t	(*meansq_f_t)[2];
-   vec_t	dip_mom;
+   vec_mt	(*meansq_f_t)[2];
+   vec_mt	dip_mom;
 
 #ifdef PARALLEL
 # ifdef ardent
@@ -160,7 +163,7 @@ char	*argv[];
 
    start_up((argc>1)?argv[1]:"", (argc>2)?argv[2]:"",
 	    &system, &species, &site_info, &potpar);
-   meansq_f_t = (vec_t (*)[2])ralloc(2*system.nspecies);
+   meansq_f_t = (vec_mt (*)[2])ralloc(2*system.nspecies);
    
    /*
     *  Set signal handlers -- attempt clean shutdown
