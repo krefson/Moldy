@@ -65,7 +65,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/rahman/keith/moldy/src/RCS/parallel.c,v 2.18 1996/09/03 15:04:51 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/parallel.c,v 2.18 1996/09/03 15:04:51 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -88,9 +88,6 @@ static char *RCSid = "$Header: /home/rahman/keith/moldy/src/RCS/parallel.c,v 2.1
 #include	<mpp/shmem.h>
 #include        <unistd.h>
 #endif
-static long	lval;
-#define		ADDR(expr) (lval=(expr),&lval)
-#define M_REAL (sizeof(real)==sizeof(double)?MPI_DOUBLE:MPI_FLOAT)
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 gptr		*av_ptr();
@@ -99,6 +96,10 @@ void		init_averages();
 void		allocate_dynamics();
 extern int 	ithread, nthreads;
 /*====================== Utilities for interface functions ===================*/
+#ifdef TCGMSG
+static long	lval;
+#define		ADDR(expr) (lval=(expr),&lval)
+#endif
 #ifdef BSP
 /*
  * BSP currently doesn't handle auto & heap vars.  This interface
@@ -106,22 +107,31 @@ extern int 	ithread, nthreads;
  * handle up to 44000 atomic sites in one go, and data for larger 
  * systems is parcelled up appropriately and sent in chunks.
  */
-#define NBUFMAX 4194304
-static char tmpbuf[NBUFMAX];
+#define NBUFMXW 131072
+#define NBUFMAX (NBUFMXW*sizeof(double))
+static double tmpbuf[NBUFMXW];
 #endif
 #ifdef SHMEM
 /*
- * SHMEM  doesn't handle auto & heap vars either. Handle as
- * for BSP.  But overallocate by 8 bytes for broadcast fn.
+ * SHMEM  doesn't handle auto & heap vars either. Handle as for BSP.
+ * Make sure buffer is a good power-of 2 words and cache aligned.
  */
-#define NBUFMAX 1048576
-static char tmpbuf[NBUFMAX+8];
-/*
- * SHMEM synchronization and work arrays.
+#pragma _CRI cache_align tmpbuf, pWrk, pSync, pSyncb
+#define NBUFMXW 131072
+#define NBUFMAX (NBUFMXW*sizeof(double))
+static double tmpbuf[NBUFMXW];
+/* 
+ * SHMEM synchronization and work arrays. pWrk must be bigger than
+ * _SHMEM_REDUCE_MIN_WRKDATA_SIZE.  Since we have no compile-time MAX
+ * function we declare pSync inelegantly as the sum of the sizes.
  */
-static char pWrk[NBUFMAX/2+sizeof(double)+_SHMEM_REDUCE_MIN_WRKDATA_SIZE];
-static long pSync[2][_SHMEM_BCAST_SYNC_SIZE];
+static double pWrk[2][NBUFMXW/2+1];
+static long pSync[2][_SHMEM_REDUCE_SYNC_SIZE];
+static long pSyncb[_SHMEM_BCAST_SYNC_SIZE];
 static int  psi = 0;
+#endif
+#ifdef MPI
+#define M_REAL (sizeof(real)==sizeof(double)?MPI_DOUBLE:MPI_FLOAT)
 #endif
 /*====================== Parallel lib interface functions ====================*
  *  The following set of functions define the interface between moldy and     *
@@ -214,9 +224,11 @@ void
 par_imax(idat)
 int *idat;
 {
-   static int ipWrk[_SHMEM_REDUCE_MIN_WRKDATA_SIZE];
-   shmem_int_max_to_all(idat, idat, 1, 0, 0, nthreads, ipWrk, pSync[psi]);
+   shmem_int_max_to_all(idat, idat, 1, 0, 0, nthreads, (int*)pWrk[psi], pSync[psi]);
    psi = ! psi;
+#ifdef SHMEM_BARRIER
+   barrier();
+#endif
 }
 #endif
 #ifdef MPI
@@ -289,15 +301,17 @@ int  n;
     */
    while( n > 0 )
    {
-      barrier();
       m = MIN(n, NBUFMAX/sizeof(int));
       memcp(tmpbuf, buf, m*sizeof(int));
       shmem_int_sum_to_all((int*)tmpbuf, (int*)tmpbuf, m, 0, 0, nthreads, 
-			   (int*)pWrk, pSync[psi]);
+			   (int*)pWrk[psi], pSync[psi]);
       memcp(buf, tmpbuf, m*sizeof(int));
       psi = ! psi;
       buf += m;
       n -= m;
+#ifdef SHMEM_BARRIER
+      barrier();
+#endif
    }
 }
 #endif
@@ -420,36 +434,39 @@ int  n;
    if( sizeof(real) == sizeof(float))
    {
       /*
-       * BSP only allows operations on statically allocated buffers. *sigh*
        * Use loop to perform general operation copying in and out of a
        * fixed-size, static buffer.
        */
       while( n > 0 )
       {
-	 barrier();
          m = MIN(n, NBUFMAX/sizeof(real));
          memcp(tmpbuf, buf, m*sizeof(real));
          shmem_float_sum_to_all((float*)tmpbuf, (float*)tmpbuf, m,0,0, 
-				nthreads, (float*)pWrk, pSync[psi]);
+				nthreads, (float*)pWrk[psi], pSync[psi]);
          memcp(buf, tmpbuf, m*sizeof(real));
 	 psi = ! psi;
          buf += m;
          n -= m;
+#ifdef SHMEM_BARRIER
+	 barrier();
+#endif
       }
     }
     else if ( sizeof(real) == sizeof(double))
     {
       while( n > 0 )
       {
-	 barrier();
          m = MIN(n, NBUFMAX/sizeof(real));
          memcp(tmpbuf, buf, m*sizeof(real));
          shmem_double_sum_to_all((double*)tmpbuf, (double*)tmpbuf, m,0,0, 
-				 nthreads, (double*)pWrk, pSync[psi]);
+				 nthreads, (double*)pWrk[psi], pSync[psi]);
          memcp(buf, tmpbuf, m*sizeof(real));
 	 psi = ! psi;
          buf += m;
          n -= m;
+#ifdef SHMEM_BARRIER
+	 barrier();
+#endif
       }
     }      
 }
@@ -461,21 +478,22 @@ int  n;
    int m;
    
    /*
-    * BSP only allows operations on statically allocated buffers. *sigh*
     * Use loop to perform general operation copying in and out of a
     * fixed-size, static buffer.
     */
    while( n > 0 )
    {
-      barrier();
       m = MIN(n, NBUFMAX/sizeof(double));
       memcp(tmpbuf, buf, m*sizeof(double));
       shmem_double_sum_to_all((double*)tmpbuf, (double*)tmpbuf, m, 0, 0, 
-			      nthreads, (double*)pWrk, pSync[psi]);
+			      nthreads, (double*)pWrk[psi], pSync[psi]);
       memcp(buf, tmpbuf, m*sizeof(double));
       psi = ! psi;
       buf += m;
       n -= m;
+#ifdef SHMEM_BARRIER
+      barrier();
+#endif
    }
 }
 #endif
@@ -593,23 +611,21 @@ int	ifrom;
    /*
     * Usual comments about fixed-size buffers apply.  The shmem
     * broadcast routine works in 8 byte word units, but that's OK
-    * since we copy the exact lengh in and out of the real arrays.
-    * But we must overallocate tmpbuf by at least 7 bytes.
+    * since we copy the exact length in and out of the real arrays.
     */
    while( nbyt > 0 )
    {
-      barrier();
       m = MIN(nbyt, NBUFMAX);
       if( ithread == ifrom )
 	 memcp(tmpbuf, buf, m);
       shmem_broadcast((long*)tmpbuf, (long*)tmpbuf, 
 		      (m+sizeof(long)-1)/sizeof(long), 
-		      ifrom, 0, 0, nthreads,pSync[psi]);
+		      ifrom, 0, 0, nthreads, pSyncb);
       if( ithread != ifrom )
 	 memcp(buf, tmpbuf, m);
-      psi = ! psi;
       buf = (char*)buf + m;
       nbyt -= m;
+      barrier();
    }
 }
 #endif
@@ -836,6 +852,8 @@ int	*nthreads;
    *ithread  = _my_pe();
    
    for(i=0; i < _SHMEM_BCAST_SYNC_SIZE; i++)
+     pSyncb[i] = _SHMEM_SYNC_VALUE;
+   for(i=0; i < _SHMEM_REDUCE_SYNC_SIZE; i++)
      pSync[0][i] = pSync[1][i] =  _SHMEM_SYNC_VALUE;
    barrier();
 }
