@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.9  1994/10/17 10:54:06  keith
+ *       Got rid of dummy xdr_array which really screwed things up!
+ *
  * Revision 2.8  1994/07/07  17:03:39  keith
  * Fixed up missing xdr_vector to be compiled in only if NEED_XDR_VECTOR defined.
  *
@@ -74,7 +77,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/xdr.c,v 2.8 1994/07/07 17:03:39 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/xdr.c,v 2.9 1994/10/17 10:54:06 keith stab $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -106,19 +109,19 @@ contr_mt *cp;
       xdr_long(xdrs, &cp->istep) &&
       xdr_long(xdrs, &cp->nsteps) &&
       xdr_double(xdrs, &cp->step) &&
-      xdr_vector(xdrs, (gptr*)&cp->print_sysdef, 7, sizeof(boolean), xdr_bool) &&
+      xdr_vector(xdrs, (gptr*)&cp->print_sysdef, 7, sizeof(boolean), (xdrproc_t)xdr_bool) &&
       xdr_opaque(xdrs, cp->sysdef, 6*L_name) &&
-      xdr_vector(xdrs, (gptr*)cp->spare, 29, sizeof(int), xdr_int) &&
+      xdr_vector(xdrs, (gptr*)cp->spare, 29, sizeof(int), (xdrproc_t)xdr_int) &&
       xdr_bool(xdrs, &cp->xdr_write) &&
       xdr_bool(xdrs, &cp->strict_cutoff) &&
       xdr_int(xdrs, &cp->strain_mask) &&
       xdr_int(xdrs, &cp->nbins) &&
       xdr_u_long(xdrs, &cp->seed) &&
-      xdr_vector(xdrs, (gptr*)&cp->page_width, 2, sizeof(int), xdr_int) &&
-      xdr_vector(xdrs, (gptr*)&cp->scale_interval, 7, sizeof(long), xdr_long) &&
-      xdr_vector(xdrs, (gptr*)&cp->dump_level, 2, sizeof(int), xdr_int) &&
-      xdr_vector(xdrs, (gptr*)&cp->backup_interval, 6, sizeof(long), xdr_long) &&
-      xdr_vector(xdrs, (gptr*)&cp->temp, 10, sizeof(double), xdr_double);
+      xdr_vector(xdrs, (gptr*)&cp->page_width, 2, sizeof(int), (xdrproc_t)xdr_int) &&
+      xdr_vector(xdrs, (gptr*)&cp->scale_interval, 7, sizeof(long), (xdrproc_t)xdr_long) &&
+      xdr_vector(xdrs, (gptr*)&cp->dump_level, 2, sizeof(int), (xdrproc_t)xdr_int) &&
+      xdr_vector(xdrs, (gptr*)&cp->backup_interval, 6, sizeof(long), (xdrproc_t)xdr_long) &&
+      xdr_vector(xdrs, (gptr*)&cp->temp, 10, sizeof(double), (xdrproc_t)xdr_double);
 }
 
 bool_t xdr_system(xdrs, sp)
@@ -126,7 +129,7 @@ XDR      *xdrs;
 system_mt *sp;
 {
    return
-      xdr_vector(xdrs, (gptr*)&sp->nsites, 8, sizeof(int), xdr_int) &&
+      xdr_vector(xdrs, (gptr*)&sp->nsites, 8, sizeof(int), (xdrproc_t)xdr_int) &&
       /*
        * This is an awful hack.  There are 18 real[3]* pointers
        * next.  Their stored values are NEVER re-used so we just
@@ -143,8 +146,8 @@ XDR      *xdrs;
 spec_mt *sp;
 {
    return
-      xdr_vector(xdrs, (gptr*)sp->inertia, 6, sizeof(real), xdr_real) &&
-      xdr_vector(xdrs, (gptr*)&sp->nsites, 4, sizeof(int), xdr_int) &&
+      xdr_vector(xdrs, (gptr*)sp->inertia, 6, sizeof(real), (xdrproc_t)xdr_real) &&
+      xdr_vector(xdrs, (gptr*)&sp->nsites, 4, sizeof(int), (xdrproc_t)xdr_int) &&
       xdr_opaque(xdrs, sp->name, 32) &&
       /*
        * This is an awful hack.  There are 14 real[3]* pointers
@@ -186,7 +189,7 @@ pot_mt   *sp;
    return
       xdr_int(xdrs, &sp->flag) &&
       xdr_int(xdrs, &sp->pad) &&
-      xdr_vector(xdrs, (gptr*)sp->p, xdr_npotpar, sizeof(real), xdr_real);
+      xdr_vector(xdrs, (gptr*)sp->p, xdr_npotpar, sizeof(real), (xdrproc_t)xdr_real);
 }
 
 
@@ -207,9 +210,9 @@ dump_mt   *sp;
 {
    return
       xdr_opaque(xdrs, sp->title, L_name+16) &&
-      xdr_vector(xdrs, (gptr*)&sp->istep, 2, sizeof(long), xdr_long) &&
-      xdr_vector(xdrs, (gptr*)&sp->dump_level, 4, sizeof(int), xdr_int) &&
-      xdr_vector(xdrs, (gptr*)&sp->timestamp, 3, sizeof(unsigned long), xdr_u_long);
+      xdr_vector(xdrs, (gptr*)&sp->istep, 2, sizeof(long), (xdrproc_t)xdr_long) &&
+      xdr_vector(xdrs, (gptr*)&sp->dump_level, 4, sizeof(int), (xdrproc_t)xdr_int) &&
+      xdr_vector(xdrs, (gptr*)&sp->timestamp, 3, sizeof(unsigned long), (xdrproc_t)xdr_u_long);
 }
 
 static
@@ -218,7 +221,7 @@ XDR	  *xdrs;
 av_head_mt *ap;
 {
    return
-      xdr_vector(xdrs, (gptr*)&ap->nav, 4, sizeof(int), xdr_int) &&
+      xdr_vector(xdrs, (gptr*)&ap->nav, 4, sizeof(int), (xdrproc_t)xdr_int) &&
       xdr_double(xdrs, &ap->align);
 }
 
@@ -228,7 +231,7 @@ XDR	  *xdrs;
 old_av_u_mt *ap;
 {
    return
-      xdr_vector(xdrs, (gptr*)&ap->cnt.av, 2, sizeof(int), xdr_int) &&
+      xdr_vector(xdrs, (gptr*)&ap->cnt.av, 2, sizeof(int), (xdrproc_t)xdr_int) &&
       xdr_opaque(xdrs, (gptr*)(&ap->cnt.av+2*sizeof(int)), 
 		 (7+MAX_ROLL_INTERVAL)*XDR_DOUBLE_SIZE-2*XDR_INT_SIZE);
 }
@@ -264,14 +267,14 @@ gptr	   *ap;
       navst = (xdr_av_size-sizeof(old_av_u_mt)) / sizeof(double);
       return
 	 xdr_old_av_u_t(xdrs,apo) &&
-	 xdr_vector(xdrs, (gptr*)(apo+1), navst, sizeof(double), xdr_double);
+	 xdr_vector(xdrs, (gptr*)(apo+1), navst, sizeof(double), (xdrproc_t)xdr_double);
       }
    else
    {
       navst = (xdr_av_size-sizeof(av_head_mt)) / sizeof(double);
       return
 	 xdr_av_head_t(xdrs,aph) &&
-	 xdr_vector(xdrs, (gptr*)(aph+1), navst, sizeof(double), xdr_double);
+	 xdr_vector(xdrs, (gptr*)(aph+1), navst, sizeof(double), (xdrproc_t)xdr_double);
    }
 }
 

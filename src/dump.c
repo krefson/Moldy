@@ -43,6 +43,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.8  1994/10/17 10:57:11  keith
+ *       Fixed bug in sequence code to check timesteps.
+ *
  * Revision 2.7  1994/06/08  13:11:43  keith
  * Protected against possible bus error for systems with no
  * rotational freedom by making all references to "quat" etc conditional
@@ -161,7 +164,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 2.7 1994/06/08 13:11:43 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/dump.c,v 2.8 1994/10/17 10:57:11 keith stab $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -367,7 +370,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 2.7 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 2.8 $"+11,
 		                     sizeof dump_header.vsn-1);
 #ifdef USE_XDR
       if( control.xdr_write )
@@ -465,7 +468,7 @@ double		pe;
       if( ! xdr_setpos(&xdrs, file_pos) )		/* Write data at end */
 	 message(NULLI, NULLP, FATAL, SEFAIL, cur_file, strerror(errno));
       if( ! xdr_vector(&xdrs, (gptr*)dump_buf, dump_size, sizeof(float), 
-		     xdr_float) )
+		     (xdrproc_t)xdr_float) )
 	 message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
    }
    else
