@@ -18,6 +18,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.12  90/10/23  20:13:14  keith
+ * Added dummy function call to inhibit vectorization.
+ * This allows use of 'ivdep' compiler options and also
+ * works round certain bugs in cray's scc compiler.
+ * 
  * Revision 1.11  90/08/29  18:21:09  keith
  * Replaced calloc() call with malloc() and memset().
  * On the CRAY XMP calloc() is very inefficient.
@@ -56,7 +61,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.11 90/08/29 18:21:09 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.13 91/02/21 15:27:38 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
@@ -66,6 +71,15 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.11 90
 #endif
 #include "stddef.h"
 #include "stdlib.h"
+#ifdef PARALLEL
+# ifdef ardent
+#  include <thread.h>
+#  define THREADED
+# endif
+#endif
+#ifndef THREADED
+# define THREAD_SYS(S) S;
+#endif
 /*========================== program include files ===========================*/
 #include "defs.h"
 #include "messages.h"
@@ -86,10 +100,11 @@ size_t	size;
 int	line;
 char	*file;
 {
-   char *p = malloc((unsigned) n*size);
+   char *p;
+   THREAD_SYS(p = malloc((unsigned)n*size))
    if(p == NULL && (n*size != 0))
-      message(NULLI, NULLP, FATAL, NOMEM, line, file,
-	      (int)n, (unsigned long)size);
+     THREAD_SYS(message(NULLI, NULLP, FATAL, NOMEM, line, file,
+	       (int)n, (unsigned long)size))
    (void)memset(p, 0, n*size);
    return(p);
 }
@@ -103,7 +118,7 @@ char	*p;
    if( ! malloc_verify() )
       message(NULLI, NULLP, FATAL, "Internal Error: Heap corrupt");
 #endif
-   free(p);
+   THREAD_SYS(free(p))
 }
 /******************************************************************************
  *  arralloc.   Allocate a psuedo array of any dimensionality and type with   *
