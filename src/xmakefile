@@ -13,14 +13,19 @@ XDR=-DUSE_XDR
 #PARLIBC=-DSPMD -DTCGMSG -I/usr/local/include/tcgmsg
 #PARLIBL=-L/usr/local/lib -ltcgmsg
 # BSP library
+#CC=mpicc
 #PARLIBC=-DSPMD -DBSP
 #PARLIBL=-L/usr/local/lib -lbsp
 # MPI library
+#CC=mpicc
 #PARLIBC=-DSPMD -DMPI -I/usr/local/include/mpi
 #PARLIBL=-L/usr/local/lib -lmpi
 # MPI library on Edinburgh T3D
-#PARLIBC=-DSPMD -DMPI -I/usr/include/mpp
+#PARLIBC=-DSPMD -DMPI
 #PARLIBL=-lmpi
+# SHMEM library on Edinburgh T3D
+#PARLIBC=-DSPMD -DSHMEM -DMPPMANY
+#PARLIBL=-lsma
 #  **** MSDOS with Turbo C ****
 #CC=tcc
 #CFLAGS= -A -DANSI_LIBS -f287 -mh -O -Z -G $(CFLAGS0)
@@ -37,8 +42,8 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #INLINE=
 #  **** IBM RS6000 ****
-#CC=c89
-#CFLAGS=	-O3 -DRS6000 $(XDR) $(PARLIBC) $(CFLAGS0)
+#CC=cc
+#CFLAGS=   -qansialias -O3 $(XDR) $(PARLIBC) $(CFLAGS0)
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #INLINE=
 #  **** MIPS for SGI, IRIX 5 ****
@@ -49,17 +54,15 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #CFLAGS= -DANSI_LIBS -O2 -mips4 -woff 1174 $(XDR) $(PARLIBC) $(CFLAGS0)
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #INLINE=
-#  **** Sun (unbundled) CC -- fastest options & better than gcc 2.0
-#  About the same as gcc-2.3.3.
-#CFLAGS= -cg89 -libmil -dalign  -O4 $(XDR) $(PARLIBC) $(CFLAGS0)
-#CFLAGS2= 
+#  **** Sun C 3.0.1
+#CFLAGS= -libmil -dalign  -O4 $(XDR) $(PARLIBC) $(CFLAGS0)
+#CFLAGS2= -fsimple
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #INLINE=
-#  **** gcc on Suns with unbundled ANSI CC ****
-#CC=	gcc
-#CFLAGS= -O2 -ffast-math -DANSI_LIBS $(PARLIBC) $(XDR) $(CFLAGS0)
-#CFLAGSAUX=-funroll-loops
-#LDFLAGS= -L/usr/lang/SC1.0/ansi_lib -lansi $(PARLIBL) $(LDFLAGS0)
+#  **** Sun Solaris 2
+#CFLAGS= -libmil -dalign  -xO4 $(XDR) $(PARLIBC) $(CFLAGS0)
+#CFLAGS2= -fsimple
+#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lnsl
 #INLINE=
 #  **** Solaris 2 using gcc  ****
 #CC=	gcc
@@ -68,9 +71,8 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lnsl
 #INLINE=
 #  **** DEC Alpha ****
-#CFLAGS=	-O2 $(XDR) $(PARLIBC) $(CFLAGS0) -D_FASTMATH -DANSI_LIBS -std
 #CC=cc -migrate
-#CFLAGS= -O5 $(XDR) $(PARLIBC) $(CFLAGS0) -D_FASTMATH -DANSI_LIBS -std
+#CFLAGS= -O5 $(XDR) $(PARLIBC) $(CFLAGS0) -D_FASTMATH
 #CFLAGS2=
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #  **** HP 700 ****
@@ -95,12 +97,12 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0) -fi -lveclib 
 #INLINE=
 #  **** Cray **** (SCC 3.0)
-#CFLAGS= -h nostdc,vector3,scalar3,report=itvf,ivdep,fastaddr $(XDR) $(PARLIBC) $(CFLAGS0)
+#CFLAGS= -h nostdc,vector3,scalar3,ivdep,fastaddr $(XDR) $(PARLIBC) $(CFLAGS0)
 #LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" -lsci
 #INLINE=
 #  **** Cray T3D ****
 #CC=cc -Tcray-t3d
-#CFLAGS= -O2 $(PARLIBC) $(CFLAGS0)
+#CFLAGS= -O2 $(XDR) $(PARLIBC) $(CFLAGS0)
 #LDFLAGS=$(PARLIBL) $(LDFLAGS0)
 #  ***** End *****
 LINT=		lint
@@ -120,14 +122,13 @@ OFILES = $(FILES:%=%.o)
 
 LFILES = $(FILES:%=%.ln)
 
-INFILES = 	control.water control.100 tips2.in\
-		control.tip4p tip4p.in\
-		methane.in mcy.in water-big.in control.big\
-		control.mgclh2o mgclh2o.in control.clay\
-		control.argon argon.in control.tips2\
-		quartz-vbst.in control.quartz\
-		water-canon.out argon-example.out\
-		tips2-example.out mgclh2o-example.out\
+INFILES = 	control.water control.tip4p control.mgclh2o control.clay \
+                control.argon control.tips2 control.quartz \
+		tips2.in tip4p.in mgclh2o.in \
+		argon.in quartz-vbst.in methane.in mcy.in \
+		water-example.out tip4p-example.out \
+		mgclh2o-example.out clay-example.out \
+		argon-example.out tips2-example.out \
 		quartz-example.out
 
 SHAKS=	algorith alloc auxil eigens kernel input matrix\
