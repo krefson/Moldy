@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/msd.c,v 2.5 2003/07/23 10:34:01 kr Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/msd.c,v 2.4.10.2 2003/07/30 09:30:53 moldydv Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -29,15 +29,21 @@ static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/msd.c,v 2.5 2003/0
  *		Selection of species using -g: 1 = species 1, 2 = species 2, etc.     *
  *		Default msd time intervals:			     	              *
  *                             0 to (total no. of dump slices-1)/2, step size 1       *
- *		Option -u outputs trajectory coordinates in columnar format           *
+ *		Option -w outputs trajectory coordinates in specified format          *
  *		"x y z" against time for each particle of selected species.           *
  *		nb. msd time intervals taken relative to extracted dump slices.       *
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
- *  Revision 2.5  2003/07/23 10:34:01  kr
- *  First go at making use of the new dump header information in msd.
- *  "-r" and "-s" flags deleted as no longer necessary.
+ *  Revision 2.4.10.2  2003/07/30 09:30:53  moldydv
+ *  Incorporated Keith's changes to read sysinfo from dump header.
+ *  Removed ispec increment causing error in msd_out.
+ *  Corrected absolute time step for msd output.
+ *  Added more comments for clarity.
+ *
+ *  Revision 2.4.10.1  2003/07/29 09:38:20  moldydv
+ *  Trajectory output options combined into one option, '-w'.
+ *  Species now selected with -g in 'true' selector format.
  *
  *  Revision 2.4  2002/09/19 09:26:29  kr
  *  Tidied up header declarations.
@@ -257,9 +263,17 @@ traj_idl(spec_mt *species, vec_mt (**traj_cofm), int nslices, real (*range)[3],
  * msd_calc. Calculate msds from trajectory array		       *
  ***********************************************************************/    
 void
-msd_calc(spec_mt *species, char *spec_mask, int nspecies, int mstart,
-  	int mfinish, int minc, int max_av, int it_inc, real (*range)[3],
-        	vec_mt (**traj_cofm), real ***msd)
+msd_calc(spec_mt *species,	/* Species data */
+         char *spec_mask,	/* Species selection mask */
+         int nspecies,		/* No of species in system */
+         int mstart,		/* Initial msd time slice */
+  	 int mfinish,		/* Last msd time slice */
+         int minc,		/* Msd time increment */
+         int max_av,		/* Maximum no slices in average */
+         int it_inc,		/* Initial time slice increment */
+         real (*range)[3],	/* Spatial range included in msd's */
+         vec_mt (**traj_cofm),	/* Continuous trajectory data */
+         real ***msd)		/* Msd data for each time slice */
 {
    int it, irec, totmol, imsd, ispec, imol, nmols, cmols, i;
    int nspec, tmol;
@@ -320,17 +334,20 @@ msd_out(spec_mt *species,	/* Species data */
    real         totmsd;
    spec_mp      spec;
 
+   /* Write species labels */
    (void)printf("#          ");
    for(spec = species; spec < species+nspecies; spec++, ispec++)
       if( spec_mask[ispec] )
          (void)printf("   %40s",spec->name);
 
+   /* Write column labels */
    (void)printf("\n#         t ");
    for(spec = species, ispec=0; spec < species+nspecies; spec++, ispec++)
       if( spec_mask[ispec] )
          (void)printf("  dX(t)**2   dY(t)**2   dZ(t)**2   dR(t)**2    ");
    (void)printf("\n");
-                                                                                                       
+
+   /* Write msd data for each time slice */
    for( imsd = 0; imsd < nmsd; imsd++)
    {
       printf("%10.3f  ", imsd*tstep);
@@ -354,21 +371,19 @@ msd_out(spec_mt *species,	/* Species data */
 }
 /******************************************************************************
  * main().  Driver program for calculating trajectories/msds from MOLDY dumps *
- * Acceptable inputs are sys-spec files or restart files. Actual 	      *
- * configurational info must be read from dump files.			      *
- * Call: msd [-s sys-spec-file] [-r restart-file] [-d dump-file] 	      *
+ * System and configurational info must be read from dump files. 	      *
+ * Call: msd [-d dump-file] [-t dump-time-slices] [-m msd-time-slices         *
  * If not specified on command line, user is interrogated.		      *
  * Options [-x][-y][-z] prompt for limits in given direction to be applied    *
  *        when outputting trajectories. Molecules selected based on initial   *
  *	  positions.							      *
  ******************************************************************************/
-contr_mt		control;
+contr_mt                control;
 
 int
 main(int argc, char **argv)
 {
-   int	c, cflg = 0, ans_i, sym = 0;
-   char 	line[80];
+   int	c, cflg = 0;
    extern char	*optarg;
    int		errflg = 0;
    int		outsw = MSD, trajsw = GNU;
@@ -389,7 +404,6 @@ main(int argc, char **argv)
    dump_mt	dump_header;
    dump_sysinfo_mt *dump_sysinfo;
    size_mt	sysinfo_size;
-   restrt_mt	restart_header;
    system_mt	sys;
    spec_mt	*species, *spec;
    vec_mt 	**traj_cofm;		/* Cofm data for continuous trajectories */
@@ -398,7 +412,6 @@ main(int argc, char **argv)
    site_mt	*site_info;
    pot_mt	*potpar;
    quat_mt	*qpf;
-   contr_mt	control_junk;
    int          nmsd, max_av, nspecies, nslices;
    real         ***msd;			/* Calculated MSD data for each time slice and species */
    char         *spec_list = "1-50";    /* List of species to calculate for (with default) */
@@ -509,7 +522,7 @@ main(int argc, char **argv)
 	fputs("Enter canonical name of dump files (as in control)\n",stderr);
 	if( (dump_base = get_str("Dump file name? ")) == NULL) exit(2);
 	genflg++;
-    }
+   }
 
    if( dump_names == 0 ) dump_names = dump_base;
 
@@ -699,8 +712,11 @@ main(int argc, char **argv)
    for(irec = 0; irec <= finish-start; irec+=inc)
    {
         if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
-           error("Error reading record %d in dump file - \n%s\n",
-              irec, strerror(errno));
+           if( !strcmp(strerror(errno),"Success") )
+              error("Error reading record %d in dump file \"%s\"\n",irec, dump_name);
+           else
+              error("Error reading record %d in dump file \"%s\" - \n%s\n",
+                 irec, dump_name, strerror(errno));
         dump_to_moldy(dump_buf, &sys);  /* read dump data */
 
 	memcpy(hmat[irec/inc], sys.h, sizeof(mat_mt));
