@@ -28,10 +28,23 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdbond.c,v $
+ *  Revision 1.2  1999/09/22 11:06:31  craig
+ *  Removed unnecessary references to bond and angle increments.
+ *  Minor changes to usage message.
+ *  Fixed bug in if statement checking validity of angle limits.
+ *  Fixed bug when defining system from restart file.
+ *
+ *  Revision 1.1  1999/07/22 14:02:26  keith
+ *  Initial revision
+ *
  *  Revision 1.0  1999/06/24 11:05:12  craig 
  *  Initial revision
  *
  */
+
+#ifndef lint
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 1.2  1999/09/22 11:06:31 Exp $";
+#endif
 #include "defs.h"
 #ifdef HAVE_STDARG_H
 #include <stdarg.h>
@@ -58,11 +71,9 @@ gptr	*arralloc();	        	/* Array allocator		      */
  */
 #define BOND_MIN  2
 #define BOND_MAX  20          /* Interparticle distances in tenths of Angstroms */
-#define BOND_INC  5           /* BOND_INC dummy variable */
 
 #define ANGLE_MIN  0
 #define ANGLE_MAX  180        /* Angle intervals in degrees */
-#define ANGLE_INC  1          /* ANGLE_INC dummy variable */
 
 #define DOTPROD(x,y)   ((x[0]*y[0])+(x[1]*y[1])+(x[2]*y[2])) 
 /*
@@ -325,15 +336,9 @@ int	*start, *finish, *inc;
    }
    else
    {
-      *finish = strtol(str, &pp, 0);
+      *start = *finish = strtol(str, &pp, 0);
       if( pp == str )
 	 goto limerr;
-   }
-   if( *start > *finish || *start < 0 || *inc <= 0 )
-   {
-      fputs("Limits must satisfy", stderr);
-      fputs(" finish >= start, start >= 0 and increment > 0\n", stderr);
-      goto limerr;
    }
    return 0;
  limerr:
@@ -788,7 +793,7 @@ char	*argv[];
    {
       fputs("Usage: mdbond [-s sys-spec-file|-r restart-file] ",stderr);
       fputs("[-d dump-file/s] [-t timeslice]] [-g species] ",stderr);
-      fputs("[-b bond limits] [-a angle limits] [-o output-file]\n",stderr);
+      fputs("[-b bond-limits] [-a angle-limits] [-o output-file]\n",stderr);
       exit(2);
    }
 
@@ -837,7 +842,7 @@ char	*argv[];
 	 error("Couldn't open restart file \"%s\" for reading -\n%s\n", 
 	       filename, strerror(errno));
       re_re_header(Fp, &restart_header, &control_junk);
-      re_re_sysdef(Fp, &sys, &species, &site_info, &potpar);
+      re_re_sysdef(Fp, restart_header.vsn, &sys, &species, &site_info, &potpar);
       break;
     default:
       error("Internal error - invalid input type", "");
@@ -888,7 +893,6 @@ char	*argv[];
    /* Set default values for bond limits (x10) */
    blim[0] = BOND_MIN;
    blim[1] = BOND_MAX;
-   blim[2] = BOND_INC;
 
    if( bondlims == NULL )
       bflag++;
@@ -914,19 +918,17 @@ char	*argv[];
       {
          blim[0] = BOND_MIN;
          blim[1] = BOND_MAX;
-         blim[2] = BOND_INC;
          (void)free(bondlims);
          bondlims = NULL;
          fputs("Please specify range of bond limits in form", stderr);
          fputs(" start-finish\n", stderr);
-         bondlims = get_str("s-f:n? ");
+         bondlims = get_str("s-f? ");
       }
    }
 
    /* Set default values for angle limits */
    alim[0] = ANGLE_MIN;
    alim[1] = ANGLE_MAX;
-   alim[2] = ANGLE_INC;
 
    if( anglims == NULL )
        aflag++;
@@ -942,7 +944,7 @@ char	*argv[];
       }
       else
          aflag++;
-      if( alim[0] > alim[1] || alim[0] < 0 <= 0 )
+      if( alim[0] > alim[1] || alim[0] < 0 )
       {
          fputs("Angle limits must satisfy", stderr);
          fputs(" finish >= start and start >= 0\n", stderr);
@@ -952,12 +954,11 @@ char	*argv[];
       {
          alim[0] = ANGLE_MIN;
          alim[1] = ANGLE_MAX;
-         alim[2] = ANGLE_INC;
          (void)free(anglims);
          anglims = NULL;
          fputs("Please specify range of angle limits in form", stderr);
          fputs(" start-finish\n", stderr);
-         anglims = get_str("s-f:n? ");
+         anglims = get_str("s-f? ");
       }
    }
 
