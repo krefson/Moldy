@@ -27,6 +27,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  * $Log: main.c,v $
+ * Revision 2.17  2000/12/06 17:45:31  keith
+ * Tidied up all ANSI function prototypes.
+ * Added LINT comments and minor changes to reduce noise from lint.
+ * Removed some unneccessary inclusion of header files.
+ * Removed some old and unused functions.
+ * Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  * Revision 2.16  2000/11/15 17:51:59  keith
  * Changed format of dump files.
  * Added second struct with sufficient information
@@ -184,7 +191,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.16 2000/11/15 17:51:59 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.17 2000/12/06 17:45:31 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -442,8 +449,13 @@ int main(int argc, char **argv)
 	 (void)remove(control.backup_file);		/* Get rid of backup */
 
       rmlockfiles();
+#ifdef SPMD
+      printf(" *I* Run used %.2fs of CPU time and %.2fs elapsed on %d processors\n", 
+	     cpu()-cpu_base, rt_clock()-rt, nthreads);
+#else
       printf(" *I* Run used %.2fs of CPU time and %.2fs elapsed\n", 
 	     cpu()-cpu_base, rt_clock()-rt);
+#endif
    }
 #ifdef SPMD
    par_finish();
