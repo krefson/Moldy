@@ -26,6 +26,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	xdr.h,v $
+ * Revision 2.5  94/01/18  13:33:08  keith
+ * Null update for XDR portability release
+ * 
+ * Revision 2.4  94/01/18  13:23:19  keith
+ * Incorporated all portability experience to multiple platforms since 2.2.
+ * Including ports to VAX/VMS and Open VMS on Alpha AXP and Solaris.
+ * 
  * Revision 2.3  93/10/14  18:18:16  keith
  * Fixed prortability problems to IBM RS6000
  * 
@@ -44,10 +51,13 @@ what you give them.   Help stamp out software-hoarding!  */
  * of "malloc" in an unprotected fashion.  Try to define it out of the
  * way -- include "stdlib.h" if necessary to put it back.
  * In case an implementation (eg SGI) does it right by including <stdlib.h>
- * ensure that and Moldy module includes "stdlib.h" *before* "xdr.h".
+ * ensure that any Moldy module includes "stdlib.h" *before* "xdr.h".
 */
 #define free xxfree
+#define exit xxexit
 #define malloc xxmalloc
+#define calloc xxcalloc
+#define realloc xxrealloc
 
 #ifdef vms
 #include	"rpc_types.h"
@@ -59,7 +69,10 @@ what you give them.   Help stamp out software-hoarding!  */
 #endif
 
 #undef free
+#undef exit
 #undef malloc
+#undef calloc
+#undef realloc
 
 #else
 typedef	char XDR;

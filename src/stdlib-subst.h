@@ -43,6 +43,7 @@ what you give them.   Help stamp out software-hoarding!  */
 
 #define __stdlib_h
 #define __STDLIB_H__
+#define __STDLIB_H
 #define _STDLIB_H_
 #define _STDLIB_H
 #define _STDLIB_INCLUDED
