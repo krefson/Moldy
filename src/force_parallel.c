@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.23 92/04/21 17:49:44 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.24 92/06/05 13:28:05 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -497,7 +497,7 @@ mat_t           stress;                 /* Stress virial                (out) */
       if(control.cutoff > NSH*MIN3(system->h[0][0],system->h[1][1],system->h[2][2]))
 	 message(NULLI, NULLP, FATAL, CUTOFF, NSH);
       if( reloc )
-	 (void)xfree(reloc);
+	 (void)xfree((reloc-NSH*onx));
       reloc = (reloc_t***)arralloc(sizeof(reloc_t),3,
             -NSH*nx, (NSH+1)*nx-1, -NSH*ny, (NSH+1)*ny-1, -NSH*nz, (NSH+1)*nz-1);
  
