@@ -56,12 +56,12 @@ void eigens( A, RR, E, N )
 real A[], RR[], E[];
 int N;
 {
-int IND, L, LL, LM, M, MM, MQ, I, J, K, IA, LQ;
+int IND, L, LL, LM, M, MM, MQ, I, J, IA, LQ;
 int IQ, IM, IL, NLI, NMI;
-real ANORM, ANORMX, AIA, THR, ALM, QI, ALL, AMM, X, Y;
+real ANORM, ANORMX, AIA, THR, ALM, ALL, AMM, X, Y;
 real SINX, SINX2, COSX, COSX2, SINCS, AIL, AIM;
-real RLI, RMI, Q, V;
-static real RANGE;/*1.0e-10; /*3.0517578e-5;*/
+real RLI, RMI;
+static real RANGE;
 double precision();
 
 RANGE=precision();

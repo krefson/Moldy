@@ -9,8 +9,8 @@
 /***************************************************************************
  * RCS INFORMATION:
  *
- *      $RCSfile: ReadDCD.C,v $
- *      $Author: dalke $        $Locker:  $                $State: Exp $
+ *      $RCSfile: ReadDCD.c,v $
+ *      $Author: dalke $        $Locker: keith $                $State: Exp $
  *      $Revision: 1.6 $      $Date: 1997/03/13 17:38:56 $
  *
  ***************************************************************************
@@ -20,6 +20,7 @@
  * FORTRAN UNFORMATTED format).  These routines are courtesy of
  * Mark Nelson (autographs available upon request and $1 tip).
  *
+ * Converted to ANSI C for use with Moldy - Keith Refson, Nov 1997         
  ***************************************************************************/
 
 #include <string.h>
@@ -37,7 +38,7 @@
 /*									*/
 /************************************************************************/
 
-#define CHECK_FREAD(X, msg)  if (X==-1) \
+#define CHECK_FREAD(X, msg)  if (X<=0 && ferror(fp)) \
 			     { \
 				return(DCD_BADREAD); \
 			     }
@@ -54,7 +55,7 @@
 /*									*/
 /************************************************************************/
 
-#define CHECK_FEOF(X, msg)  if (X==0) \
+#define CHECK_FEOF(X, msg)  if (X<=0 && feof(fp)) \
 			     { \
 				return(DCD_BADEOF); \
 			     }
@@ -63,7 +64,9 @@
 /*			GLOBAL VARIABLES				*/
 extern int errno;
 
-void pad(char *s, int len)
+void pad(s, len)
+     char *s;
+     int len;
 {
 	int curlen;
 	int i;
@@ -84,50 +87,6 @@ void pad(char *s, int len)
 	s[i]=0;
 }
 
-/************************************************************************/
-/*									*/
-/*			FUNCTION open_dcd_read				*/
-/*									*/
-/*   INPUTS:								*/
-/*	filename - filename to read in					*/
-/*									*/
-/*   OUTPUTS:								*/
-/*	an open filedesriptor (integer) is returned if the call is      */
-/*   successful, otherwise a negative number is returned		*/
-/*									*/
-/*	open_dcd_read opens a dcd file for input.  It first does a check*/
-/*   to see if the file really exists.  If the file does not exist,     */
-/*   a DCD_DNE is returned, if the file exists but can' be opened for   */
-/*   some reason, a DCD_OPENFAILED is returned.  If the open is         */
-/*   successful, the file descriptor is returned.			*/
-/*									*/
-/************************************************************************/
-
-int open_dcd_read(const char *filename)
-
-{
-	struct stat stbuf;	/*  Stat structure to check file	*/
-	int dcdfd;		/*  file descriptor for dcd file	*/
-
-	/*  Do a stat just to see if the file really exists	*/
-	if (stat(filename, &stbuf) != 0)
-	{
-		if (errno == ENOENT)
-		{
-			return(DCD_DNE);
-		}
-	}
-
-	/*  Try and open the file				*/
-	dcdfd=open(filename, O_RDONLY);
-
-	if (dcdfd == -1)
-	{
-		return(DCD_OPENFAILED);
-	}
-
-	return(dcdfd);
-}
 
 /****************************************************************/
 /*								*/
@@ -153,9 +112,15 @@ int open_dcd_read(const char *filename)
 /*								*/
 /****************************************************************/
 
-int read_dcdheader(int fd, int *N, int *NSET, int *ISTART, 
-		   int *NSAVC, double *DELTA, int *NAMNF, 
-		   int **FREEINDEXES)
+int read_dcdheader(fp, N, NSET, ISTART, NSAVC, DELTA, NAMNF, FREEINDEXES)
+     FILE *fp;
+     int *N;
+     int *NSET;
+     int *ISTART;
+     int *NSAVC;
+     double *DELTA;
+     int *NAMNF;
+     int **FREEINDEXES;
 
 {
 	int input_integer;	/*  Integer buffer space	*/
@@ -167,7 +132,7 @@ int read_dcdheader(int fd, int *N, int *NSET, int *ISTART,
 	int NTITLE;
 
 	/*  First thing in the file should be an 84		*/
-	ret_val = read(fd, &input_integer, sizeof(int));
+	ret_val = fread( &input_integer, sizeof(int), 1, fp);
 
 	CHECK_FREAD(ret_val, "reading first int from dcd file");
 	CHECK_FEOF(ret_val, "reading first int from dcd file");
@@ -178,7 +143,7 @@ int read_dcdheader(int fd, int *N, int *NSET, int *ISTART,
 	}
 
 	/*  Read in the string "CORD"			*/
-	ret_val = read(fd, HDR, 4);
+	ret_val = fread(HDR, 1, 4, fp);
 
 	CHECK_FREAD(ret_val, "reading CORD from dcd file");
 	CHECK_FEOF(ret_val, "reading CORD from dcd file");
@@ -193,20 +158,20 @@ int read_dcdheader(int fd, int *N, int *NSET, int *ISTART,
 //	}*/
 
 	/*  Read in the number of Sets of coordinates, NSET  */
-	ret_val = read(fd, NSET, sizeof(int));
+	ret_val = fread(NSET, sizeof(int), 1, fp);
 
 	CHECK_FREAD(ret_val, "reading NSET");
 	CHECK_FEOF(ret_val, "reading NSET");
 
 	/*  Read in ISTART, the starting timestep	     */
-	ret_val = read(fd, ISTART, sizeof(int));
+	ret_val = fread(ISTART, sizeof(int), 1, fp);
 
 	CHECK_FREAD(ret_val, "reading ISTART");
 	CHECK_FEOF(ret_val, "reading ISTART");
 
 	/*  Read in NSAVC, the number of timesteps between   */
 	/*  dcd saves					     */
-	ret_val = read(fd, NSAVC, sizeof(int));
+	ret_val = fread(NSAVC, sizeof(int), 1, fp);
 
 	CHECK_FREAD(ret_val, "reading NSAVC");
 	CHECK_FEOF(ret_val, "reading NSAVC");
@@ -215,20 +180,20 @@ int read_dcdheader(int fd, int *N, int *NSET, int *ISTART,
 	/*  Skip blank integers				     */
 	for (i=0; i<5; i++)
 	{
-		ret_val = read(fd, &input_integer, sizeof(int));
+		ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 		CHECK_FREAD(ret_val, "reading I");
 		CHECK_FEOF(ret_val, "reading I");
 	}
 
 	/*  Read NAMNF, the number of free atoms	     */
-	ret_val = read(fd, NAMNF, sizeof(int));
+	ret_val = fread(NAMNF, sizeof(int), 1, fp);
 
 	CHECK_FREAD(ret_val, "reading NAMNF");
 	CHECK_FEOF(ret_val, "reading NAMNF");
 
 	/*  Read in the timestep, DELTA				*/
-	ret_val = read(fd, DELTA, sizeof(double));
+	ret_val = fread(DELTA, sizeof(double), 1, fp);
 
 	CHECK_FREAD(ret_val, "reading DELTA");
 	CHECK_FEOF(ret_val, "reading DELTA");
@@ -236,14 +201,14 @@ int read_dcdheader(int fd, int *N, int *NSET, int *ISTART,
 	/*  Skip blank integers					*/
 	for (i=0; i<9; i++)
 	{
-		ret_val = read(fd, &I, sizeof(int));
+		ret_val = fread(&I, sizeof(int), 1, fp);
 
 		CHECK_FREAD(ret_val, "reading I");
 		CHECK_FEOF(ret_val, "reading I");
 	}
 
 	/*  Get the end size of the first block			*/
-	ret_val = read(fd, &input_integer, sizeof(int));
+	ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 	CHECK_FREAD(ret_val, "reading second 84 from dcd file");
 	CHECK_FEOF(ret_val, "reading second 84 from dcd file");
@@ -254,7 +219,7 @@ int read_dcdheader(int fd, int *N, int *NSET, int *ISTART,
 	}
 
 	/*  Read in the size of the next block			*/
-	ret_val = read(fd, &input_integer, sizeof(int));
+	ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 	CHECK_FREAD(ret_val, "reading size of title block");
 	CHECK_FEOF(ret_val, "reading size of title block");
@@ -263,21 +228,21 @@ int read_dcdheader(int fd, int *N, int *NSET, int *ISTART,
 	{
 		/*  Read NTITLE, the number of 80 characeter    */
 		/*  title strings there are			*/
-		ret_val = read(fd, &NTITLE, sizeof(int));
+		ret_val = fread(&NTITLE, sizeof(int), 1, fp);
 
 		CHECK_FREAD(ret_val, "reading NTITLE");
 		CHECK_FEOF(ret_val, "reading NTITLE");
 
 		for (i=0; i<NTITLE; i++)
 		{
-			ret_val = read(fd, bigbuf, 80);
+			ret_val = fread(bigbuf, 80, 1, fp);
 
 			CHECK_FREAD(ret_val, "reading TITLE");
 			CHECK_FEOF(ret_val, "reading TITLE");
 		}
 
 		/*  Get the ending size for this block		*/
-		ret_val = read(fd, &input_integer, sizeof(int));
+		ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 		CHECK_FREAD(ret_val, "reading size of title block");
 		CHECK_FEOF(ret_val, "reading size of title block");
@@ -288,7 +253,7 @@ int read_dcdheader(int fd, int *N, int *NSET, int *ISTART,
 	}
 
 	/*  Read in an 4				*/
-	ret_val = read(fd, &input_integer, sizeof(int));
+	ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 	CHECK_FREAD(ret_val, "reading an 4");
 	CHECK_FEOF(ret_val, "reading an 4");
@@ -299,13 +264,13 @@ int read_dcdheader(int fd, int *N, int *NSET, int *ISTART,
 	}
 
 	/*  Read in the number of atoms			*/
-	ret_val = read(fd, N, sizeof(int));
+	ret_val = fread(N, sizeof(int), 1, fp);
 
 	CHECK_FREAD(ret_val, "reading number of atoms");
 	CHECK_FEOF(ret_val, "reading number of atoms");
 
 	/*  Read in an 4				*/
-	ret_val = read(fd, &input_integer, sizeof(int));
+	ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 	CHECK_FREAD(ret_val, "reading an 4");
 	CHECK_FEOF(ret_val, "reading an 4");
@@ -323,27 +288,27 @@ int read_dcdheader(int fd, int *N, int *NSET, int *ISTART,
 			return(DCD_BADMALLOC);
 	
 		/*  Read in an size				*/
-		ret_val = read(fd, &input_integer, sizeof(int));
+		ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 		CHECK_FREAD(ret_val, "reading size of index array");
 		CHECK_FEOF(ret_val, "reading size of index array");
 
-		if (input_integer != ((*N)-(*NAMNF))*4)
+		if (input_integer != ((*N)-(*NAMNF))*sizeof(int))
 		{
 			return(DCD_BADFORMAT);
 		}
 		
-		ret_val = read(fd, (*FREEINDEXES), ((*N)-(*NAMNF))*sizeof(int));
+		ret_val = fread((*FREEINDEXES), sizeof(int), (*N)-(*NAMNF), fp);
 
 		CHECK_FREAD(ret_val, "reading size of index array");
 		CHECK_FEOF(ret_val, "reading size of index array");
 
-		ret_val = read(fd, &input_integer, sizeof(int));
+		ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 		CHECK_FREAD(ret_val, "reading size of index array");
 		CHECK_FEOF(ret_val, "reading size of index array");
 
-		if (input_integer != ((*N)-(*NAMNF))*4)
+		if (input_integer != ((*N)-(*NAMNF))*sizeof(int))
 		{
 			return(DCD_BADFORMAT);
 		}
@@ -376,8 +341,15 @@ int read_dcdheader(int fd, int *N, int *NSET, int *ISTART,
 /*									*/
 /************************************************************************/
 
-int read_dcdstep(int fd, int N, float *X, float *Y, float *Z, int num_fixed,
-		 int first, int *indexes)
+int read_dcdstep(fp, N, X, Y, Z, num_fixed, first, indexes)
+     FILE *fp;
+     int N;
+     float *X;
+     float *Y;
+     float *Z;
+     int num_fixed;
+     int first;
+     int *indexes;
 
 {
 	int ret_val;		/*  Return value from read		*/
@@ -396,7 +368,7 @@ int read_dcdstep(int fd, int N, float *X, float *Y, float *Z, int num_fixed,
 	}
 
 	/*  Get the first size from the file				*/
-	ret_val = read(fd, &input_integer, sizeof(int));
+	ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 	CHECK_FREAD(ret_val, "reading number of atoms at begining of step");
 
@@ -415,12 +387,12 @@ int read_dcdstep(int fd, int N, float *X, float *Y, float *Z, int num_fixed,
 			return(DCD_BADFORMAT);
 		}
 
-		ret_val = read(fd, X, 4*N);
+		ret_val = fread(X, N, 4, fp);
 	
 		CHECK_FREAD(ret_val, "reading X array");
 		CHECK_FEOF(ret_val, "reading X array");
 
-		ret_val = read(fd, &input_integer, sizeof(int));
+		ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 		CHECK_FREAD(ret_val, "reading number of atoms after X array");
 		CHECK_FEOF(ret_val, "reading number of atoms after X array");
@@ -430,7 +402,7 @@ int read_dcdstep(int fd, int N, float *X, float *Y, float *Z, int num_fixed,
 			return(DCD_BADFORMAT);
 		}
 
-		ret_val = read(fd, &input_integer, sizeof(int));
+		ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 		CHECK_FREAD(ret_val, "reading number of atoms after X array");
 		CHECK_FEOF(ret_val, "reading number of atoms after X array");
@@ -440,12 +412,12 @@ int read_dcdstep(int fd, int N, float *X, float *Y, float *Z, int num_fixed,
 			return(DCD_BADFORMAT);
 		}
 
-		ret_val = read(fd, Y, 4*N);
+		ret_val = fread(Y, N, 4, fp);
 
 		CHECK_FREAD(ret_val, "reading Y array");
 		CHECK_FEOF(ret_val, "reading Y array");
 
-		ret_val = read(fd, &input_integer, sizeof(int));
+		ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 		CHECK_FREAD(ret_val, "reading number of atoms after Y array");
 		CHECK_FEOF(ret_val, "reading number of atoms after Y array");
@@ -455,7 +427,7 @@ int read_dcdstep(int fd, int N, float *X, float *Y, float *Z, int num_fixed,
 			return(DCD_BADFORMAT);
 		}
 
-		ret_val = read(fd, &input_integer, sizeof(int));
+		ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 		CHECK_FREAD(ret_val, "reading number of atoms after Y array");
 		CHECK_FEOF(ret_val, "reading number of atoms after Y array");
@@ -465,12 +437,12 @@ int read_dcdstep(int fd, int N, float *X, float *Y, float *Z, int num_fixed,
 			return(DCD_BADFORMAT);
 		}
 
-		ret_val = read(fd, Z, 4*N);
+		ret_val = fread(Z, N, 4, fp);
 
 		CHECK_FREAD(ret_val, "reading Z array");
 		CHECK_FEOF(ret_val, "reading Z array");
 
-		ret_val = read(fd, &input_integer, sizeof(int));
+		ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 		CHECK_FREAD(ret_val, "reading number of atoms after Z array");
 		CHECK_FEOF(ret_val, "reading number of atoms after Z array");
@@ -487,7 +459,7 @@ int read_dcdstep(int fd, int N, float *X, float *Y, float *Z, int num_fixed,
 			return(DCD_BADFORMAT);
 		}
 
-		ret_val = read(fd, tmpX, 4*(N-num_fixed));
+		ret_val = fread(tmpX, N-num_fixed, 4, fp);
 	
 		CHECK_FREAD(ret_val, "reading Xtmp array");
 		CHECK_FEOF(ret_val, "reading Xtmp array");
@@ -497,7 +469,7 @@ int read_dcdstep(int fd, int N, float *X, float *Y, float *Z, int num_fixed,
 			X[indexes[i]-1]=tmpX[i];
 		}
 
-		ret_val = read(fd, &input_integer, sizeof(int));
+		ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 		CHECK_FREAD(ret_val, "reading number of atoms after X array");
 		CHECK_FEOF(ret_val, "reading number of atoms after X array");
@@ -507,14 +479,14 @@ int read_dcdstep(int fd, int N, float *X, float *Y, float *Z, int num_fixed,
 			return(DCD_BADFORMAT);
 		}
 
-		ret_val = read(fd, &input_integer, sizeof(int));
+		ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 		if (input_integer != 4*(N-num_fixed))
 		{
 			return(DCD_BADFORMAT);
 		}
 
-		ret_val = read(fd, tmpX, 4*(N-num_fixed));
+		ret_val = fread(tmpX, N-num_fixed, 4, fp);
 	
 		CHECK_FREAD(ret_val, "reading Xtmp array");
 		CHECK_FEOF(ret_val, "reading Xtmp array");
@@ -524,7 +496,7 @@ int read_dcdstep(int fd, int N, float *X, float *Y, float *Z, int num_fixed,
 			Y[indexes[i]-1]=tmpX[i];
 		}
 
-		ret_val = read(fd, &input_integer, sizeof(int));
+		ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 		CHECK_FREAD(ret_val, "reading number of atoms after Y array");
 		CHECK_FEOF(ret_val, "reading number of atoms after Y array");
@@ -534,14 +506,14 @@ int read_dcdstep(int fd, int N, float *X, float *Y, float *Z, int num_fixed,
 			return(DCD_BADFORMAT);
 		}
 
-		ret_val = read(fd, &input_integer, sizeof(int));
+		ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 		if (input_integer != 4*(N-num_fixed))
 		{
 			return(DCD_BADFORMAT);
 		}
 
-		ret_val = read(fd, tmpX, 4*(N-num_fixed));
+		ret_val = fread(tmpX, N-num_fixed, 4, fp);
 	
 		CHECK_FREAD(ret_val, "reading Xtmp array");
 		CHECK_FEOF(ret_val, "reading Xtmp array");
@@ -551,7 +523,7 @@ int read_dcdstep(int fd, int N, float *X, float *Y, float *Z, int num_fixed,
 			Z[indexes[i]-1]=tmpX[i];
 		}
 
-		ret_val = read(fd, &input_integer, sizeof(int));
+		ret_val = fread(&input_integer, sizeof(int), 1, fp);
 
 		CHECK_FREAD(ret_val, "reading number of atoms after Z array");
 		CHECK_FEOF(ret_val, "reading number of atoms after Z array");
@@ -566,45 +538,6 @@ int read_dcdstep(int fd, int N, float *X, float *Y, float *Z, int num_fixed,
 }
 
 
-/*********************************************************************/
-/*								     */
-/*			FUNCTION open_dcd_write			     */
-/*								     */
-/*   INPUTS:							     */
-/*	dcdfile - Name of the dcd file				     */
-/*								     */
-/*   OUTPUTS:							     */
-/*	returns an open file descriptor for writing		     */
-/*								     */
-/*	This function will open a dcd file for writing.  It takes    */
-/*   the filename to open as its only argument.	 It will return a    */
-/*   valid file descriptor if successful or DCD_OPENFAILED if the    */
-/*   open fails for some reason.  If the file specifed already       */
-/*   exists, DCD_FILEEXISTS is returned.			     */
-/*								     */
-/*********************************************************************/
-
-int open_dcd_write(char *dcdname)
-
-{
-	struct stat sbuf;
-	int dcdfd;
-
-	if (stat(dcdname, &sbuf) == 0) 
-	{
-		return(DCD_FILEEXISTS);
-	} 
-	else
-	{
-		if ( (dcdfd = open(dcdname, O_WRONLY|O_CREAT|O_EXCL,
-					S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) < 0)
-		{
-			return(DCD_OPENFAILED);
-		}
-	}
-
-	return(dcdfd);
-}
 
 /************************************************************************/
 /*									*/
@@ -625,21 +558,26 @@ int open_dcd_write(char *dcdname)
 /*									*/
 /************************************************************************/
 
-int write_dcdstep(int fd, int N, float *X, float *Y, float *Z)
+int write_dcdstep(fp, N, X, Y, Z)
+     FILE *fp;
+     int N;
+     float *X;
+     float *Y;
+     float *Z;
 
 {
 	int out_integer;
 
 	out_integer = N*4;
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) X, out_integer);
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) Y, out_integer);
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) Z, out_integer);
-	write(fd, (char *) &out_integer, sizeof(int));
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) X, out_integer, 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) Y, out_integer, 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) Z, out_integer, 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
 	
 	return 1;
 }
@@ -665,71 +603,73 @@ int write_dcdstep(int fd, int N, float *X, float *Y, float *Z)
 /*									     */
 /*****************************************************************************/
 
-int write_dcdheader(int fd, char *filename, int N, int NSET, int ISTART, 
-		   int NSAVC, double DELTA)
+int write_dcdheader(fp, filename, N, NSET, ISTART, NSAVC, DELTA)
+     FILE *fp;
+     char *filename;
+     int N;
+     int NSET;
+     int ISTART;
+     int NSAVC;
+     double DELTA;
 {
 	int	out_integer;
 	char	title_string[200];
-	int	user_id;
-	struct  passwd *pwbuf;
 	time_t 	cur_time;
 	struct  tm *tmbuf;
 	char    time_str[11];
 
 	out_integer = 84;
-	write(fd, (char *) & out_integer, sizeof(int));
+	fwrite((char *) & out_integer, sizeof(int), 1, fp);
 	strcpy(title_string, "CORD");
-	write(fd, title_string, 4);
-	write(fd, (char *) &NSET, sizeof(int));
-	write(fd, (char *) &ISTART, sizeof(int));
-	write(fd, (char *) &NSAVC, sizeof(int));
+	fwrite(title_string, 4, 1, fp);
+	fwrite((char *) &NSET, sizeof(int), 1, fp);
+	fwrite((char *) &ISTART, sizeof(int), 1, fp);
+	fwrite((char *) &NSAVC, sizeof(int), 1, fp);
 	out_integer=0;
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &DELTA, sizeof(double));
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &out_integer, sizeof(int));
-	write(fd, (char *) &out_integer, sizeof(int));
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &DELTA, sizeof(double), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
+	fwrite((char *) &out_integer, sizeof(int), 1, fp);
 	out_integer = 84;
-	write(fd, (char *) & out_integer, sizeof(int));
+	fwrite((char *) & out_integer, sizeof(int), 1, fp);
 
 	out_integer = 164;
-	write(fd, (char *) & out_integer, sizeof(int));
+	fwrite((char *) & out_integer, sizeof(int), 1, fp);
 	out_integer = 2;
-	write(fd, (char *) & out_integer, sizeof(int));
+	fwrite((char *) & out_integer, sizeof(int), 1, fp);
 
 	sprintf(title_string, "REMARKS FILENAME=%s CREATED BY VMD", filename);
 	pad(title_string, 80);
-	write(fd, title_string, 80);
+	fwrite(title_string, 80, 1, fp);
 
-	user_id=(int)getuid();
-	pwbuf=getpwuid(user_id);
 	cur_time=time(NULL);
 	tmbuf=localtime(&cur_time);
 	strftime(time_str, 10, "%m/%d/%y", tmbuf);
 
 	sprintf(title_string, "REMARKS DATE: %s CREATED BY USER: %s",
-	   time_str, pwbuf->pw_name);
+	   time_str, "mdshak");
 	pad(title_string, 80);
-	write(fd, title_string, 80);
+	fwrite(title_string, 80, 1, fp);
 	out_integer = 164;
-	write(fd, (char *) & out_integer, sizeof(int));
+	fwrite((char *) & out_integer, sizeof(int), 1, fp);
 	out_integer = 4;
-	write(fd, (char *) & out_integer, sizeof(int));
+	fwrite((char *) & out_integer, sizeof(int), 1, fp);
 	out_integer = N;
-	write(fd, (char *) & out_integer, sizeof(int));
+	fwrite((char *) & out_integer, sizeof(int), 1, fp);
 	out_integer = 4;
-	write(fd, (char *) & out_integer, sizeof(int));
+	fwrite((char *) & out_integer, sizeof(int), 1, fp);
 	
 	return 1;
 }
@@ -753,10 +693,13 @@ int write_dcdheader(int fd, char *filename, int N, int NSET, int ISTART,
 /*								*/
 /****************************************************************/
 
-void close_dcd_read(int fd, int num_fixed, int *indexes)
+void close_dcd_read(fp, num_fixed, indexes)
+     FILE *fp;
+     int num_fixed;
+     int *indexes;
 
 {
-	close(fd);
+	fclose(fp);
 
 	if (num_fixed)
 	{
@@ -779,9 +722,10 @@ void close_dcd_read(int fd, int num_fixed, int *indexes)
 /*								*/
 /****************************************************************/
 
-void close_dcd_write(int fd)
+void close_dcd_write(fp)
+     FILE *fp;
 
 {
-	close(fd);
+	fclose(fp);
 }
 
