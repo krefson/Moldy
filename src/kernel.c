@@ -34,6 +34,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.14.2.4.2.1  2002/03/13 10:27:52  kr
+ *       Trial version incorporating reciprocal-space summation for r^-2 and r^-6
+ *       interactions.  This version implements a new potential "genpot46" to activate.
+ *
  *       Revision 2.14.2.4  2002/02/18 16:05:12  kr
  *       Fixed dist-pot term to include all terms for Generic and Buckingham potentials.
  *       This makes a difference for pathalogical cases like Floris ion-water potentials.
@@ -196,7 +200,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/kernel.c,v 2.14.2.4 2002/02/18 16:05:12 kr Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/kernel.c,v 2.14.2.4.2.1 2002/03/13 10:27:52 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -385,7 +389,7 @@ void	kernel(int jmin,
    register real r;			/* Site-site distance.		      */
    register real r_r, r_6_r, r_sqr_r, r_12_r,	/* Reciprocal powers of r.    */
                  r_4_r, r_7_r, r_8_r, rsq;
-   register real erfc_term, arfac;      /* Intermediates in erfc calculation. */
+   register real erfc_term, arfac, arfacsq;/* Intermediates in erfc calculation. */
    	    real ppe = 0.0;		/* Local accumulator of pot. energy.  */
    	    real exp_f1, exp_f2, exp_f3; /* Temporary for b*exp(-cr) etc      */
    register real rmr0, fwin;            /* Temporaries for window potential   */
@@ -541,11 +545,12 @@ VECTORIZE
 	     * Ewald-like summation of r^-4 and r^-6
 	     */
 	    arfac = alpha46sq*rsq;
+	    arfacsq = SQR(arfac);
 	    exp_f2 = exp(-arfac);
 
-	    ppe += t + exp_f1 + r_12_r - ((1.0+arfac)*r_4_r + (1.0+arfac+0.5*SQR(arfac))*r_6_r)*exp_f2 - r_8_r;
+	    ppe += t + exp_f1 + r_12_r - ((1.0+arfac)*r_4_r + (1.0+arfac+0.5*arfacsq)*r_6_r)*exp_f2 - r_8_r;
 	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r 
-			   - ((4.0+2.0*arfac+2.0*SQR(arfac))*r_4_r+(6.0*(1.0+arfac)+3.0*SQR(arfac)+CUBE(arfac))*r_6_r)*exp_f2
+			   - ((4.0+2.0*arfac+2.0*arfacsq)*r_4_r+(6.0+6.0*arfac+3.0*arfacsq+arfacsq*arfac)*r_6_r)*exp_f2
 				      - 8.0*r_8_r + erfc_term)
 	                   + p1[jsite]*exp_f1 * r_r;
 	 }
@@ -800,11 +805,12 @@ VECTORIZE
 	     * Ewald-like summation of r^-4 and r^-6
 	     */
 	    arfac = alpha46sq*rsq;
+	    arfacsq = SQR(arfac);
 	    exp_f2 = exp(-arfac);
 
-	    ppe += exp_f1 + r_12_r - ((1.0+arfac)*r_4_r + (1.0+arfac+0.5*SQR(arfac))*r_6_r)*exp_f2 - r_8_r;
+	    ppe += exp_f1 + r_12_r - ((1.0+arfac)*r_4_r + (1.0+arfac+0.5*arfacsq)*r_6_r)*exp_f2 - r_8_r;
 	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r 
-			   - ((4.0+4.0*arfac+2.0*SQR(arfac))*r_4_r+(6.0*(1.0+arfac)+3.0*SQR(arfac)+CUBE(arfac))*r_6_r)*exp_f2
+			   - ((4.0+4.0*arfac+2.0*arfacsq)*r_4_r+(6.0+6.0*arfac+3.0*arfacsq+arfacsq*arfac)*r_6_r)*exp_f2
 				      - 8.0*r_8_r)
 	                   + p1[jsite]*exp_f1 * r_r;
 	 }

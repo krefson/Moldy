@@ -23,6 +23,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.23.4.1  2002/03/13 10:27:52  kr
+ *       Trial version incorporating reciprocal-space summation for r^-2 and r^-6
+ *       interactions.  This version implements a new potential "genpot46" to activate.
+ *
  *       Revision 2.23  2001/03/02 11:43:30  keith
  *       Corrected fix for cache re-use bug.  The fix meant cache was never re-used!
  *
@@ -251,7 +255,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/ewald.c,v 2.23 2001/03/02 11:43:30 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/ewald.c,v 2.23.4.1 2002/03/13 10:27:52 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -1141,7 +1145,7 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
 	       /*
 		* Evaluation of site forces. 
 		*/
-	       coeff = 2.0*ak4/vol;
+	       coeff = 2.0*pot4[idi][idj]*ak4/vol;
 	       for(js = site_idx[idj-1]; js < site_idx[idj]; js++)
 	       {
 		  force_comp = coeff*(sinkr[js]*scoskr[idi]-coskr[js]*ssinkr[idi]);
@@ -1159,7 +1163,7 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
 	       /*
 		* Evaluation of site forces. 
 		*/
-	       coeff = 2.0*ak6/vol;
+	       coeff = 2.0*pot6[idi][idj]*ak6/vol;
 	       for(js = site_idx[idj-1]; js < site_idx[idj]; js++)
 	       {
 		  force_comp = coeff*(sinkr[js]*scoskr[idi]-coskr[js]*ssinkr[idi]);
