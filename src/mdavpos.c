@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdavpos.c,v 2.8 1999/07/22 13:33:45 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdavpos.c,v 2.9 1999/09/24 11:05:15 keith Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *
@@ -28,6 +28,12 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdavpos.c,v
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.9b  1999/10/4 16:53:21  craig
+ *  Minor corrections to PDB format
+ *
+ *  Revision 2.9  1999/09/24 11:05:15  keith
+ *  From CF.  Updated PDB output to level 2.
+ *
  *  Revision 2.9  1999/09/13 16:03:35  craig
  *  PDB output format updated to version 2
  *
@@ -545,8 +551,8 @@ mat_mp		avh;
           a,b,c,alpha,beta,gamma);
 
    for(i = 0; i < 3; i++)
-       (void)printf("SCALE%d %9.6f %9.6f %9.6f        0.00000\n",
-           i, hinv[i][0], hinv[i][1], hinv[i][2]);
+       (void)printf("SCALE%d     %9.6f %9.6f %9.6f        0.00000\n",
+           i+1, hinv[i][0], hinv[i][1], hinv[i][2]);
 
    for(spec = avpos; spec < avpos+system->nspecies; ispec++, spec++)
    {
