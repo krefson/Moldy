@@ -11,6 +11,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 1.16  92/06/02  10:38:27  keith
+ * Added check of ferror() as well as return from fwrite().  Talk
+ * about belt and braces.
+ * 
  * Revision 1.15  92/03/24  12:41:07  keith
  * Moved reset-averages code to values.c and did it properly.
  * 
@@ -67,7 +71,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.15 92/03/24 12:41:07 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.16 92/06/02 10:38:27 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -94,6 +98,23 @@ extern	int	***rdf;				/* Accumulated RDF bins       */
 /*========================== External data definitions =======================*/
 restrt_t		restart_header = {0L, 0L, "", "", "0.0$", 0};
 /*============================================================================*/
+static size_t stored_size = 0;
+static int    size_flg = 0;
+/******************************************************************************
+ *   cnext.  Read the size of the next 'record' stored in the file.           *
+ *   Leave file pointer unchanged.  ie do lookahead.			      *
+ ******************************************************************************/
+size_t cnext(file)
+FILE	*file;
+{
+   (void)fread((gptr*)&stored_size, sizeof stored_size, 1, file); 
+   if(ferror(file))
+      message(NULLI,NULLP,FATAL,REREAD,ftell(file),strerror(errno));
+   else if(feof(file))
+      message(NULLI,NULLP,FATAL,REEOF);
+   size_flg++;
+   return stored_size;
+}
 /******************************************************************************
  *   cread.   read a word from the binary restart file.  This should be the   *
  *   size of the next 'record' stored in the file.  Check it against the      *
@@ -106,13 +127,16 @@ gptr	*ptr;
 size_t	size;
 int	nitems;
 {
-   size_t	stored_size = 0;
-
-   (void)fread((gptr*)&stored_size, sizeof stored_size, 1, file); 
-   if(ferror(file))
-      message(NULLI,NULLP,FATAL,REREAD,ftell(file),strerror(errno));
-   else if(feof(file))
-      message(NULLI,NULLP,FATAL,REEOF);
+   if( size_flg )
+      size_flg = 0;
+   else
+   {
+      (void)fread((gptr*)&stored_size, sizeof stored_size, 1, file); 
+      if(ferror(file))
+	 message(NULLI,NULLP,FATAL,REREAD,ftell(file),strerror(errno));
+      else if(feof(file))
+	 message(NULLI,NULLP,FATAL,REEOF);
+   }
    if(stored_size != size * nitems)
       message(NULLI,NULLP,FATAL,REFORM, ftell(file),
               stored_size, size * nitems);
@@ -128,14 +152,17 @@ int	nitems;
 void	cskip(file)
 FILE	*file;
 {
-   size_t	stored_size = 0;
-
-   (void)fread((gptr*)&stored_size, sizeof stored_size, 1, file); 
-   if(ferror(file))
-      message(NULLI,NULLP,FATAL,REREAD,ftell(file),strerror(errno));
-   else if(feof(file))
-      message(NULLI,NULLP,FATAL,REEOF);
-   (void)fseek(file, (long)stored_size, 1);
+   if( size_flg )
+      size_flg = 0;
+   else
+   {
+      (void)fread((gptr*)&stored_size, sizeof stored_size, 1, file); 
+      if(ferror(file))
+	 message(NULLI,NULLP,FATAL,REREAD,ftell(file),strerror(errno));
+      else if(feof(file))
+	 message(NULLI,NULLP,FATAL,REEOF);
+   }
+   (void)fseek(file, (long)stored_size, SEEK_CUR);
    if(ferror(file))
       message(NULLI,NULLP,FATAL,REREAD,ftell(file),strerror(errno));
    else if(feof(file))
@@ -169,6 +196,36 @@ contr_t	*contr;
    cread(restart,  (gptr*)contr, sizeof(contr_t), 1); 
 }
 /******************************************************************************
+ *  conv_potsize    Convert potential parameters array if NPOTP has changed   *
+ ******************************************************************************/
+void conv_potsize(pot, restart_size, system)
+pot_t	*pot;
+size_t	restart_size;
+system_p system;
+{
+   size_t	old_pot_size;
+   int		old_npotp, i;
+   char		*tmp_pot;
+
+   old_npotp = ((long)restart_size / SQR(system->max_id) 
+		- (long)sizeof(pot_t)) / (long)sizeof(real) + NPOTP;
+   old_pot_size = sizeof(pot_t) + (old_npotp - NPOTP) * sizeof(real);
+   if( old_npotp == NPOTP )
+      return;
+   else if ( system->n_potpar <= NPOTP )
+   {
+      note("Old potential parameter array size = %d, new = %d",old_npotp,NPOTP);
+      tmp_pot = aalloc( restart_size, char);
+      memcpy(tmp_pot, (gptr*)pot, restart_size);
+      for( i=0; i < SQR(system->max_id); i++)
+	 memcpy((gptr*)(pot+i), tmp_pot+old_pot_size*i, 
+		MIN(old_pot_size,sizeof(pot_t)));
+      xfree(tmp_pot);
+   }
+   else
+      message(NULLI, NULLP, FATAL, CPOTFL, NPOTP, system->n_potpar);
+}
+/******************************************************************************
  *  re_re_sysdef    Read the system specification from the restart file       *
  *  which must be open and pointed to by parameter 'file'.  Set up the        *
  *  structures system and species and arrays site_info and potpar (allocating *
@@ -182,6 +239,7 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
 FILE		*file;			/* File pointer to read info from     */
 {
    spec_p	spec;
+   size_t	potsize;
 
    cread(file,  (gptr*)system, sizeof(system_t), 1);/* Read in system structure*/
 
@@ -200,7 +258,10 @@ FILE		*file;			/* File pointer to read info from     */
       cread(file,  (gptr*)spec->site_id, sizeof(int), spec->nsites);
    }
    cread(file,  (gptr*)*site_info, sizeof(site_t), system->max_id);
-   cread(file,  (gptr*)*pot_ptr, sizeof(pot_t), SQR(system->max_id));
+   potsize = cnext(file);
+   *pot_ptr = aalloc(MAX(potsize/sizeof(pot_t)+1,SQR(system->max_id) ), pot_t);
+   cread(file,  (gptr*)*pot_ptr, potsize, 1);
+   conv_potsize(*pot_ptr, potsize, system);
 }
 /******************************************************************************
  *  read_restart.   read the dynamic simulation variables from restart file.  *
@@ -265,7 +326,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
    int		zero = 0, one = 1;
    restrt_t	save_header;
    FILE		*save;
-   char		*vsn = "$Revision: 1.15 $"+11;
+   char		*vsn = "$Revision: 1.16 $"+11;
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)
