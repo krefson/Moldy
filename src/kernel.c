@@ -34,6 +34,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.14.2.4.2.6  2002/09/19 10:47:53  kr
+ *       Corrected minor error in E6 potential correction term.
+ *
+ *       Revision 2.14.2.4.2.5  2002/06/20 17:51:00  kr
+ *       Patrick's mods to do 1/r**7 terms with an Ewald sum
+ *       (very slightly tidied up).
+ *
  *       Revision 2.14.2.4.2.1  2002/03/13 10:27:52  kr
  *       Trial version incorporating reciprocal-space summation for r^-2 and r^-6
  *       interactions.  This version implements a new potential "genpot46" to activate.
@@ -200,7 +207,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/kernel.c,v 2.14.2.4.2.1 2002/03/13 10:27:52 kr Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/kernel.c,v 2.14.2.4.2.6 2002/09/19 10:47:53 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -334,9 +341,7 @@ double	dist_pot(real *potpar,          /* Array of potential parameters      */
 		  - potpar[1] * exp(-potpar[2]*cutoff)
 		  * (SQR(cutoff)/potpar[2] + 2*cutoff/SQR(potpar[2]) + 2.0 / CUBE(potpar[2])));
        else
-	  return( potpar[0] / ( 3.0*CUBE(cutoff))
-		  - potpar[1] * exp(-potpar[2]*cutoff)
-		  * (SQR(cutoff)/potpar[2] + 2*cutoff/SQR(potpar[2]) + 2.0 / CUBE(potpar[2])));
+	  return( potpar[0] / ( 3.0*CUBE(cutoff)));
     case MCYPOT:
       if( potpar[3]  > BPAR_TOL )
          return( potpar[2] * (SQR(cutoff)/potpar[3] + 2*cutoff/SQR(potpar[3])
