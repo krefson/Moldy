@@ -4,10 +4,13 @@
  *           and species structs, "rescale" and "distant_const". 	      *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log:	accel.c,v $
+ * Revision 1.1  89/04/20  15:58:41  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: accel.c,v 1.1 89/04/20 15:58:41 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "structs.h"
@@ -256,6 +259,17 @@ mat_t           stress;		       /* Virial part of stress	(out) */
  */
    if (control.alpha > ALPHAMIN)
       ewald(site_base, s_f_base, sys, species, chg, pe + 1, stress);
+/*
+ * Dipole moment contribution to forces and potential (De Leeuw, Perram
+ * and Smith Proc Roy Soc A373, 27-56 (1980)
+ */
+   for (i = 0; i < 3; i++)
+   {
+      dip_mom[i] = vdot(sys->nsites, site_base[0] + i, 3, chg, 1);
+      for ( isite = 0; isite < sys->nsites; isite++ )
+         s_f_base[isite][i] -= 4.0*PI/(3.0*vol) * dip_mom[i] * chg[isite];
+   }
+   pe[1] += 2.0*PI/(3.0*vol) * SUMSQ(dip_mom);
 
 /*
  * Calculate the centre of mass forces and torques from the site forces
@@ -377,7 +391,7 @@ mat_t           stress;		       /* Virial part of stress	(out) */
    step_2(sys);
 
 /*
- * Calculate mean-square forces and torques and overall dipole moment
+ * Calculate mean-square forces and torques
  */
    for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
    {
@@ -385,8 +399,6 @@ mat_t           stress;		       /* Virial part of stress	(out) */
       if (spec->rdof > 0)
 	 mean_square(torque[ispec], meansq_f_t[ispec][1], spec->nmols);
    }
-   for (i = 0; i < 3; i++)
-      dip_mom[i] = vdot(sys->nsites, site_base[0] + i, 3, chg, 1);
 
 /*
  * Accumulate radial distribution functions
