@@ -23,6 +23,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.15  91/08/16  15:23:57  keith
+ * Checked error returns from fread, fwrite, fseek and fclose more
+ * rigourously.   Called strerror() to report errors.
+ * 
  * Revision 1.14  91/08/15  18:11:51  keith
  * Modifications for better ANSI/K&R compatibility and portability
  * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
@@ -78,7 +82,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.14 91/08/15 18:11:51 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.16 92/03/02 13:37:13 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -135,6 +139,7 @@ double		pe;
    		boolean errflg = false;
 #define		NMUTATES 10   		/* Max number of mutation attempts.   */
    int		nmutates = 0;   	/* Number of mutation attempts.	      */
+   static int	firsttime = 1;
  
    if( ! strchr(control.dump_file, '%') )
       	(void)strcat(control.dump_file, "%d");
@@ -158,9 +163,10 @@ double		pe;
 
       if( !errflg )
       {
-	 if( dump_header.timestamp < restart_header.timestamp &&
-	    dump_header.restart_timestamp != restart_header.prev_timestamp )
-	     message(NULLI, NULLP, FATAL, CONTIG, fname);
+	 if( firsttime && dump_header.timestamp < restart_header.timestamp &&
+	    dump_header.restart_timestamp != restart_header.prev_timestamp &&
+	    dump_header.restart_timestamp != restart_header.timestamp )
+	    message(NULLI, NULLP, FATAL, CONTIG, fname);
 
 	 if( dump_header.ndumps < (ndumps ? ndumps : control.maxdumps ) )
             message(NULLI,NULLP,FATAL, SHTDMP,
@@ -194,7 +200,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 1.14 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 1.16 $"+11,
 		                     sizeof dump_header.vsn-1);
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;
@@ -243,6 +249,7 @@ double		pe;
    if( fclose(dumpf) )
       	message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
 
+   firsttime = 0;
    xfree(dump_buf);
 }
 /******************************************************************************
