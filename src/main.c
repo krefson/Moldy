@@ -26,7 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *		values of the simulation control parameters.		      *
  ******************************************************************************
  *      Revision Log
- *       $Log: main.c,v $
+ * $Log: main.c,v $
+ * Revision 2.9  1995/10/25 11:59:45  keith
+ * Added test to avoid attemted open of backup file with null name.
+ *
  * Revision 2.8  1994/07/07  16:57:01  keith
  * Updated for parallel execution on SPMD machines.
  * Interface to MP library routines hidden by par_*() calls.
@@ -144,7 +147,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 2.8 1994/07/07 16:57:01 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/main.c,v 2.10 1996/01/15 15:15:50 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -173,6 +176,14 @@ void	purge();
 double  rt_clock();
 gptr    *talloc();		       /* Interface to memory allocator       */
 void    tfree();		       /* Free allocated memory	      	      */
+#ifdef SPMD
+void    par_begin();
+void    par_sigintreset();
+void    par_finish();
+void    par_isum();
+void    par_imax();
+void    replicate();
+#endif
 #if defined(ANSI) || defined(__STDC__)
 void	note(char *, ...);		/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
@@ -181,11 +192,10 @@ void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 #endif
 void	rmlockfiles();			/* Delete all lock files.	      */
+gptr    *rdf_ptr();                     /* Return ptr to start of rdf data    */
 /*========================== External data definition ========================*/
 contr_mt control;                           /* Main simulation control parms. */
 int ithread=0, nthreads=1;
-static int ival;
-#define ADDR(expr)  (ival=(expr),&ival)
 /*============================================================================*/
 /******************************************************************************
  *  Signal handler.  Just set flag and return.				      *
@@ -229,7 +239,8 @@ char	*argv[];
    double	rt = rt_clock();
    vec_mt	(*meansq_f_t)[2];
    vec_mt	dip_mom;
-   int 		i;
+   int          *rdf_base;
+   int          rdf_size;
 
 #ifdef SPMD
    par_begin(&argc, &argv, &ithread, &nthreads);
@@ -251,6 +262,7 @@ char	*argv[];
    replicate(&control, &system, &species, &site_info, &potpar, 
 	     &restart_header);
 #endif
+   rdf_base = (int*)rdf_ptr(&rdf_size);
 
    meansq_f_t = (vec_mt (*)[2])ralloc(2*system.nspecies);
    
@@ -305,27 +317,43 @@ char	*argv[];
 	    note("Temperature scaling turned off after step %ld", control.istep);
       }
 
-      if(control.average_interval > 0 && control.istep >= control.begin_average)
+      if(control.average_interval > 0 && 
+	 control.istep >= control.begin_average &&
+	 ithread == 0)
       {
          if( control.istep == control.begin_average )
 	 {
-	    if( ithread == 0 )
-	       note("started accumulating thermodynamic averages on timestep %ld", 
-		    control.istep);
+	    note("started accumulating thermodynamic averages on timestep %ld", 
+		 control.istep);
 	 }
          else if ( (control.istep-control.begin_average + 1) %
 		    control.average_interval == 0)
             averages();
       }
 
-      if( ithread == 0 )
+      if(control.rdf_interval > 0 && control.istep >= control.begin_rdf && 
+	 (control.istep-control.begin_rdf+1) % control.rdf_out == 0)
       {
-	 if(control.rdf_interval > 0 && control.istep >= control.begin_rdf && 
-	    (control.istep-control.begin_rdf+1) % control.rdf_out == 0)
+#if defined(SPMD) && ! defined OLDRDF
+	 par_isum(rdf_base, rdf_size);
+	 if( ithread == 0 )
 	    print_rdf(&system, species, site_info);
+	 memst((gptr*)rdf_base, 0, rdf_size*sizeof(int));
+#else
+	 if( ithread == 0 )
+	    print_rdf(&system, species, site_info);
+#endif
+      }
 
-	 if(control.backup_interval > 0 && control.backup_file[0] &&
-	    control.istep % control.backup_interval == 0)
+      if(control.backup_interval > 0 && control.backup_file[0] &&
+	 control.istep % control.backup_interval == 0)
+      {
+#if defined(SPMD) && ! defined OLDRDF
+	 par_isum(rdf_base, rdf_size);
+	 if( ithread != 0 )
+	    memst((gptr*)rdf_base, 0, rdf_size*sizeof(int));
+#endif
+	 if( ithread == 0 )
 	 {
 	    write_restart(control.backup_file, &restart_header,
 			  &system, species, site_info, potpar);
@@ -343,6 +371,9 @@ char	*argv[];
 #endif
    }					/* End of main MD timestep loop	      */
    
+#if defined(SPMD) && ! defined OLDRDF
+   par_isum(rdf_base, rdf_size);
+#endif
    if( ithread == 0 )
    {
       if(control.istep < control.nsteps) /* Run ended prematurely	      */
