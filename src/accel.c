@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.23  2000/10/20 15:15:45  keith
+ *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
+ *
  *       Revision 2.22  2000/05/23 15:23:07  keith
  *       First attempt at a thermostatted version of the Leapfrog code
  *       using either a Nose or a Nose-Poincare thermostat
@@ -244,7 +247,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.22 2000/05/23 15:23:07 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.23 2000/10/20 15:15:45 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -875,9 +878,9 @@ do_step(system_mp sys,                   /* Pointer to system info        (in) *
       force[ispec] = force_base+imol;
       imol += spec->nmols;
       {
-      if (spec->quat)
-	 torque[ispec] = torque_base+imol_r;
-	 imol_r += spec->nmols;
+	 torque[ispec] = torque_base+imol_r; /* Assign entries even if we don't use */
+	 if (spec->quat)
+	    imol_r += spec->nmols;
       }
    }
    invert(sys->h, hinv);
