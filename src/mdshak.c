@@ -415,8 +415,10 @@ char		*insert;
  * restart files.  Call: mdshak [-s sys-spec-file] [-r restart-file].   If    *
  * neither specified on command line, user is interrogated.		      *
  ******************************************************************************/
-contr_t	control;
-unit_t	input_unit;
+contr_t		control;
+unit_t		input_unit;
+char		backup_lockfile[L_name];
+char		dump_lockfile[L_name];
 main(argc, argv)
 int	argc;
 char	*argv[];
