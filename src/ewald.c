@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.8.1.6  1996/11/12 15:33:52  keith
+ *       Updated to match Ewald.c 2.13 with cache tuning etc.
+ *
  *       Revision 2.8.1.5  1996/03/25 17:36:15  keith
  *       Fixed memory leak introduced in previous revision.
  *       Now prints # k-vectors just like RKL version
@@ -194,7 +197,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.8.1.5 1996/03/25 17:36:15 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.15 1997/10/06 09:04:04 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -611,7 +614,7 @@ mat_mt		stress;			/* Stress virial		(out) */
 	 message(NULLI, NULLP, WARNING, SYSCHG, sq*CONV_Q, intra/vol*CONV_E);
       }
 
-      note("Ewald self-energy = %f Kj/mol",self_energy*CONV_E);
+      note("Ewald self-energy = %f kJ/mol",self_energy*CONV_E);
    }
 
    *pe -= self_energy;			/* Subtract self energy term	      */
