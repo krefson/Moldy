@@ -17,12 +17,15 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	algorith.c,v $
+ * Revision 1.1.1.1  89/10/06  16:23:57  keith
+ * Make_sites() modified to wrap sites of framework back into MD box.
+ * 
  * Revision 1.1  89/04/20  16:00:19  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/algorith.c,v 1.1 89/04/20 16:00:19 keith Stab $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/algorith.c,v 1.1.1.1 89/10/06 16:23:57 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include 	<math.h>
@@ -49,6 +52,7 @@ void	vscale();
 void	message();			/* Error message and exit handler     */
 /*========================== Macros ==========================================*/
 #define	veccpy(v1,v2,n) (void)memcpy((char*)(v1),(char*)(v2),(n)*sizeof(vec_t))
+#define MATMUL(i, m, r) (m[i][0]*r[0] + m[i][1]*r[1] + m[i][2]*r[2])
 /*============================================================================*/
 /******************************************************************************
  *  rotate        Perform the rotation described by the quaternions in the    *
@@ -169,11 +173,11 @@ int		nmols,		/* Number of molecules                        */
    int		imol, isite, i;	/* Counters				      */
    vec_t	c_of_m;		/* Unscaled centre of mass co-ordinates       */
    register double	t;
-   double	lx   = h[0][0], lx_r = 1.0/lx,	/* Temporaries for unit       */
-		ly   = h[1][1], ly_r = 1.0/ly,	/* cell vectors and their     */
-		lz   = h[2][2], lz_r = 1.0/lz,	/* reciprocals; for use in    */
-		lxy  = h[0][1], lxz  = h[0][2],	/* applying the periodic      */
-		lyz  = h[1][2];			/* boundary conditions.       */
+   mat_t	hinv;
+   double	lx   = h[0][0], lxy  = h[0][1],
+		ly   = h[1][1], lxz  = h[0][2],
+		lz   = h[2][2], lyz  = h[1][2];
+   invert(h,hinv);
 
    for(imol = 0; imol < nmols; imol++)
    {
@@ -190,10 +194,10 @@ int		nmols,		/* Number of molecules                        */
    if( framework )			/* Apply pbc's to put sites into cell */
       for( isite = 0; isite < nmols*nsites; isite++ )
       {
-          site[isite][0] -= lx  *      floor(site[isite][0] * lx_r + 0.5);
-          site[isite][0] -= lxy * (t = floor(site[isite][1] * ly_r + 0.5));
+          site[isite][0] -= lx  *      floor(MATMUL(0,hinv,site[isite]) + 0.5);
+          site[isite][0] -= lxy * (t = floor(MATMUL(1,hinv,site[isite]) + 0.5));
           site[isite][1] -= ly  * t;
-          site[isite][0] -= lxz * (t = floor(site[isite][2] * lz_r + 0.5));
+          site[isite][0] -= lxz * (t = floor(MATMUL(2,hinv,site[isite]) + 0.5));
           site[isite][1] -= lyz * t;
           site[isite][2] -= lz  * t;
       }
