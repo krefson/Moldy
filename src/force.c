@@ -10,6 +10,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	force.c,v $
+ * Revision 1.3  89/06/01  18:01:46  keith
+ * Moved `vadd()' from aux.c to force.c for ease of vectorisation.
+ * Now no need to compile aux.c with vectorisation.
+ * 
  * Revision 1.2  89/05/17  13:53:49  keith
  * Reorganised neighbour list construction in preparation for framework.
  * (Also goes slighty faster)
@@ -19,7 +23,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: force.c,v 1.2 89/05/17 13:53:49 keith Exp $";
+static char *RCSid = "$Header: force.c,v 1.4 89/06/13 12:55:38 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -76,7 +80,7 @@ static          int nx = 0, ny = 0, nz = 0;
  * use it, compile this module with -DFKERNEL to define the symbol FKERNEL.   *
  ******************************************************************************/
 #ifdef FKERNEL
-#ifndef CRAY
+#ifdef unix
 #define KERNEL kernel_
 #endif
 void    KERNEL();                       /* Force kernel routine               */
@@ -313,10 +317,9 @@ mat_t           stress;                 /* Stress virial                (out) */
                 *nab_chg = dalloc(nsites),	/* Gathered neig. site charges*/
                 *forceij = dalloc(nsites);	/* -V'(r) / r		      */
 #ifdef VCALLS
-   real         *force_comp = dalloc(nsites),
-#else
-   real         force_cpt, site0, site1, site2, s00, s01, s02, s11, s12, s22;
+   real         *force_comp = dalloc(nsites);
 #endif
+   real         force_cpt, site0, site1, site2, s00, s01, s02, s11, s12, s22;
    real         reloc_v[3][27];			/* PBC relocation vectors     */
    real         ***potp				/* Expanded pot'l parameters  */
    		= (real***)arralloc(sizeof(real), 3,
