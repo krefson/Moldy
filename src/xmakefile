@@ -202,18 +202,18 @@ annihilate:
 #  Export options
 #
 moldy.tar:	$(CFILES) $(HFILES)  Makefile \
-		$(EXTRAS) $(INFILES) $(DOC)
+		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD)
 		$(TAR) cf moldy.tar\
 		$(CFILES)  $(HFILES) Makefile \
-		$(EXTRAS) $(INFILES) $(DOC)
+		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD)
 
 moldy.tar.Z:	moldy.tar
 		compress moldy.tar
 
 moldy.shar:	$(CFILES) $(HFILES)  Makefile \
-		$(EXTRAS) $(INFILES)  $(DOC)
+		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD)
 		shar $(CFILES)  $(HFILES) Makefile \
-		$(EXTRAS) $(INFILES)  $(DOC) > moldy.shar
+		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) > moldy.shar
 
 moldy.shar.Z:	moldy.shar
 		compress moldy.shar
