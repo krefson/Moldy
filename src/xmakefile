@@ -1,130 +1,40 @@
 SHELL=/bin/sh
+#### Start of system configuration section. ####
+srcdir = .
+CC = @CC@
+CPPFLAGS = @CPPFLAGS@
+CFLAGS = $(CPPFLAGS) @CFLAGS@
+OPT = @OPT@
+OPT2 = @OPT2@
+OPTAUX = @OPTAUX@
+LDFLAGS = @LDFLAGS@
+LIBS = @LIBS@
+INSTALL = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@
+INSTALL_DATA = @INSTALL_DATA@
+MAKEINFO = makeinfo
+GETOPT = getopt.o
+
+# Things you might add to DEFS:
+# -DSTDC_HEADERS        If you have ANSI C headers and libraries.
+# -DHAVE_STRING_H       If you don't have ANSI C headers but have string.h.
+# -DHAVE_MEMORY_H       If you don't have ANSI C headers and have memory.h.
+# -DHAVE_STRERROR       If you have strerror function.#
 #
-#  Compilation Options  - choose a suitable set for your machine
-#     
-#
-#  USE_XDR.  Uncomment this line to enable XDR support.
-XDR=-DUSE_XDR
-#
-#  Parallel library support.  Uncomment as needed, and set paths to
-#  include directories and library paths.
-#
-# TCGMSG library
-#PARLIBC=-DSPMD -DTCGMSG -I/usr/local/include/tcgmsg
-#PARLIBL=-L/usr/local/lib -ltcgmsg
-# Oxford BSP library
-#CC=bspcc -overridecc cc
-#PARLIBC=-DSPMD -DBSP
-#PARLIBL=-flibrary-level 2 
-# MPI library
-#CC=mpicc
-#PARLIBC=-DSPMD -DMPI -I/usr/local/include/mpi
-#PARLIBL=-L/usr/local/lib -lmpi
-# MPI library on Edinburgh T3D
-#PARLIBC=-DSPMD -DMPI
-#PARLIBL=-lmpi
-# SHMEM library on Edinburgh T3D
-#PARLIBC=-DSPMD -DSHMEM #-DMPPMANY
-#PARLIBL=
-#  **** MSDOS with Turbo C ****
-#CC=tcc
-#CFLAGS= -A -DANSI_LIBS -f287 -mh -O -Z -G $(CFLAGS0)
-#GETOPT=getopt.o
-#LDFLAGS1= -mh $(LDFLAGS0)
-#  **** Scalar machines using default C compiler ****
-CFLAGS=	-O  $(XDR) $(PARLIBC) $(CFLAGS0)
-LDFLAGS= $(LDFLAGS0) $(PARLIBL) -lm
-#INLINE=
-#  **** Scalar machines using gcc - can compile with -g ****
-#CC=	gcc
-#CFLAGS= -O2 -ffast-math $(XDR) $(PARLIBC) $(CFLAGS0)
-#CFLAGSAUX=-funroll-loops
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lm
-#INLINE=
-#  **** gcc under Windows 95/NT using mingw32 port.   ****
-# Options for exe which will run under 486, optimum under pentium pro.
-# This doesn't have a "getopt" so include getopt.o.  Nor a separate
-# maths library, so no "-lm".
-#CC=	gcc
-#XDR=
-#GETOPT=getopt.o
-#CFLAGS= -O2 -ffast-math -mcpu=pentiumpro -march=i486 -malign-double $(XDR) $(PARLIBC) $(CFLAGS0)
-#CFLAGSAUX=-funroll-loops
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0)
-#INLINE=
-#  **** IBM RS6000 ****
-#CC=cc
-#CFLAGS=   -DRS6000 -qansialias -O3 $(XDR) $(PARLIBC) $(CFLAGS0)
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lm
-#INLINE=
-#  **** MIPS for SGI, IRIX 5 ****
-#CFLAGS=	-O2 -mips2  $(XDR) $(PARLIBC) $(CFLAGS0)
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lsun -lmalloc -lfastm -lm
-#INLINE=
-#  **** MIPS for SGI, IRIX 6/R8000 ****
-#CFLAGS= -DANSI_LIBS -O3 -mips4 -woff 1174 $(XDR) $(PARLIBC) $(CFLAGS0)
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lm
-#CFLAGS2=-OPT:alias=restrict:fast_sqrt=on
-#INLINE=
-#  **** Sun C 3.0.1
-#CC=acc
-#CFLAGS= -fast -xO4 $(PARLIBC) $(XDR) $(CFLAGS0)
-#CFLAGS2= -fsimple
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -fast  -lm
-#INLINE=
-#  **** Sun Solaris 2
-#CFLAGS= -fast -xO4 $(PARLIBC) $(XDR) $(CFLAGS0)
-#CFLAGS2= -fsimple -xrestrict=%all
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -fast -lnsl -lm
-#INLINE=
-#  **** Solaris 2 using gcc  ****
-#CC=	gcc
-#CFLAGS= -O2 -ffast-math $(PARLIBC) $(XDR) $(CFLAGS0)
-#CFLAGSAUX=-funroll-loops
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lnsl -lm
-#INLINE=
-#  **** DEC Alpha ****
-#CC=cc -migrate
-#CFLAGS= -tune host -O4 $(XDR) $(PARLIBC) $(CFLAGS0) -D_FASTMATH
-#CFLAGS2=-ansi_alias -O5
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lm
-#  **** HP 700 and Convex SPP ****
-#CC=c89
-##CC=mpicc
-#CFLAGS=	+O3  +Olibcalls $(XDR) $(PARLIBC) $(CFLAGS0)
-#CFLAGS2=       +Onoparmsoverlap 
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lm
-#  **** Stellar ****
-#CFLAGS= -g -O2 -va -na -nv $(XDR) $(CFLAGS0)
-#CFLAGS2= +CaliasFreePointers
-#LDFLAGS= $(LDFLAGS0) -g -z  -lm
-#INLINE=
-#  **** Titan ****
-#CFLAGS= -O2 -vector_c -vreport $(XDR) $(PARLIBC) $(CFLAGS0)
-#CFLAGS2=  -safe=ptrs
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0)  -lm
-#CFLAGSAUX=-catalog=auxil.in 
-#INLINE= -inline -Npaths=auxil.in
-#  **** convex ****
-#CFLAGS= -O2 -na -nv -fi $(XDR) $(PARLIBC) $(CFLAGS0)
-#CFLAGS2= -alias standard -alias ptr_args -alias array_args
-##CFLAGSP= -O3 -re  # force,ewald_parallel versions only
-#LDFLAGS= $(PARLIBL) $(LDFLAGS0) -fi -lveclib  -lm
-#INLINE=
-#  **** Cray **** (SCC 3.0)
-#CFLAGS= -h nostdc,vector3,scalar3,ivdep,fastaddr $(XDR) $(PARLIBC) $(CFLAGS0)
-#LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" -lsci -lm
-#INLINE=
-#  **** Cray T3D/T3E ****
-#CC=TARGET=cray-t3d cc
-#CC=TARGET=cray-t3e cc
-#CFLAGS= -O2 $(XDR) $(PARLIBC) $(CFLAGS0)
-#CFLAGS2=-hrestrict=a
-#
-# The benchmark lib contains fast trig and sqrt functions. 
-# It's not essential but it speeds the program up slightly.
-#LDFLAGS=$(PARLIBL) $(LDFLAGS0) -L/usr/local/lib/bnchlib -lbnch -lsci -lm
-#  ***** End *****
+# -DUSE_XDR             If the Sun XDR library is available
+# -DSPMD                For parallel execution
+# -DBSP -DTCGMSG -DMPI -DSHMEM Must specify one of these library defs
+# -DMPPMANY
+DEFS = @DEFS@
+
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+
+# where the installed binary goes
+bindir = $(exec_prefix)/bin
+
+
 W32BIN=w32bin
 PRFLAGS=-c "-DUSE_XDR -DSPMD -D__MSDOS__"
 LINT=		lint
@@ -166,11 +76,17 @@ UTILS = moldyext dumpanal dumpconv dumpext  manalyze
 
 UTILS2= mdshak msd mdavpos 
 
-EXTRA0 = $(UTILS:%=%.c) $(UTILS2:%=%.c) ReadDCD.c ReadDCD.h  ewald_parallel.c force_parallel.c
+UTILC= $(UTILS:%=%.c) $(UTILS2:%=%.c)
 
-EXTRAS = $(EXTRA0) ewald-RIL.c
+UTILO= $(UTILC:%.c=%.o) ReadDCD.o
 
-HFILES=		structs.h defs.h string.h time.h stddef.h stdlib.h messages.h xdr.h
+EXTRA0 = $(UTILC) getopt.c ReadDCD.c ReadDCD.h ewald_parallel.c force_parallel.c configure.in config.h.in defconf.h aclocal.m4 config.guess config.sub 
+
+EXTRAS= $(EXTRA0) ewald-RIL.c configure Makefile.in install-sh
+
+HFILES=		structs.h defs.h messages.h xdr.h 
+AHFILES=        string-subst.h time-subst.h stddef-subst.h stdlib-subst.h 
+AHLINK=         $(AHFILES:%-subst.h=%.h)
 
 FIGTEXPS=	fig_arralloc.ftx fig_dostep-a.ftx fig_dostep-b.ftx \
                 fig_ewald.ftx fig_link-cell.ftx fig_main.ftx \
@@ -186,40 +102,42 @@ FIGTEXPS=	fig_arralloc.ftx fig_dostep-a.ftx fig_dostep-b.ftx \
 
 FIGS= $(FIGTEXPS:%=figures/%)
 
-DOC=		READ.ME BENCHMARK COPYING RELNOTES moldy.tex moldy.bbl \
-		$(FIGS) moldy.sty moldy.perl
+DOCCI=          READ.ME BENCHMARK COPYING RELNOTES moldy.tex moldy.sty moldy.perl
+DOC=		$(DOCCI) moldy.bbl $(FIGS) 
 
 VMSBUILD=	compile_moldy.com link_moldy.com defcomm.com\
 		compile_utils.com link_utils.com compile.com
 
-DOSBUILD=	Makefile.mak OFILES.RSP SHAKOBJS.RSP
+DOSBUILD=	Makefile.mak OFILES.RSP SHAKOBJS.RSP Makefile.w32
+
+all:		moldy utilities
 
 moldy:		$(OFILES) $(EXTRA_OBJ) $(HFILES)
-		$(CC) -o moldy $(LDFLAGS1) $(OFILES) $(EXTRA_OBJ) $(LDFLAGS)  
+		$(CC) -o moldy $(LDFLAGS) $(OFILES) $(EXTRA_OBJ)  $(LIBS)
 
 moldyext:	moldyext.c $(GETOPT) $(HFILES)
-		$(CC) $(CFLAGS) -o moldyext $(LDFLAGS1) moldyext.c $(GETOPT) $(LDFLAGS)
+		$(CC) $(CFLAGS) -o moldyext $(OPT) $(DEFS) $(LDFLAGS1) moldyext.c $(GETOPT) $(LDFLAGS) $(LIBS)
 
 manalyze:	manalyze.c $(HFILES)
-		$(CC) $(CFLAGS)  -o manalyze $(LDFLAGS1) manalyze.c $(LDFLAGS)
+		$(CC) $(CFLAGS)  -o manalyze $(OPT) $(DEFS) $(LDFLAGS1) manalyze.c $(LDFLAGS) $(LIBS)
 
 dumpanal:	dumpanal.c xdr.o $(HFILES)
-		$(CC) $(CFLAGS) -o dumpanal $(LDFLAGS1) dumpanal.c xdr.o  $(LDFLAGS)
+		$(CC) $(CFLAGS) -o dumpanal $(OPT) $(DEFS) $(LDFLAGS1) dumpanal.c xdr.o  $(LDFLAGS) $(LIBS)
 
 dumpext:	dumpext.c xdr.o $(GETOPT) $(HFILES)
-		$(CC) $(CFLAGS) -o dumpext $(LDFLAGS1) dumpext.c xdr.o $(GETOPT) $(LDFLAGS)
+		$(CC) $(CFLAGS) -o dumpext $(OPT) $(DEFS) $(LDFLAGS1) dumpext.c xdr.o $(GETOPT) $(LDFLAGS) $(LIBS)
 
 dumpconv:	dumpconv.c xdr.o $(HFILES)
-		$(CC) $(CFLAGS) -o dumpconv $(LDFLAGS1) dumpconv.c xdr.o $(LDFLAGS)
+		$(CC) $(CFLAGS) -o dumpconv $(OPT) $(DEFS) $(LDFLAGS1) dumpconv.c xdr.o $(LDFLAGS) $(LIBS)
 
 mdshak:		mdshak.o $(SHAKOBJS) $(GETOPT) 
-		$(CC) -o mdshak $(LDFLAGS1) mdshak.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) 
+		$(CC) -o mdshak $(LDFLAGS) mdshak.o $(SHAKOBJS) $(GETOPT) $(LIBS)
 
 msd:		msd.o $(SHAKOBJS) $(GETOPT) 
-		$(CC) -o msd $(LDFLAGS1) msd.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) 
+		$(CC) -o msd $(LDFLAGS1) msd.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) $(LIBS)
 
 mdavpos:	mdavpos.o $(SHAKOBJS) $(GETOPT) 
-		$(CC) -o mdavpos $(LDFLAGS1) mdavpos.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) 
+		$(CC) -o mdavpos $(LDFLAGS1) mdavpos.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS)  $(LIBS)
 
 utilities:	$(UTILS) $(UTILS2)
 
@@ -240,27 +158,43 @@ proto-mdshak:	mdshak.c $(SHAKC)
 		protoize mdshak.c $(SHAKC)
 
 install:	moldy $(UTILS) $(UTILS2)
-		for file in $?; do install $$file $$HOME/bin/; done
+		for file in $?; do $(INSTALL) $$file $(bindir); done
 
-install2:	moldy $(UTILS) $(UTILS2)
-		for file in $?; do install $$file $$HOME/bin.$$HOSTTYPE/; done
-
-Makefile:	xmakefile
+Makefile.in:	xmakefile
 		@PATH=/usr/5bin:${PATH};\
-		echo		'{{{{{{{\n/^CFILES *=/  c\\\nCFILES=' $(CFILES)\
+		echo	  '{{{{{{{{{\n/^CFILES *=/  c\\\nCFILES=' $(CFILES)\
 				'\n}\n/^OFILES *=/  c\\\nOFILES=' $(OFILES)\
 				'\n}\n/^LFILES *=/  c\\\nLFILES=' $(LFILES)\
-				'\n}\n/^EXTRA0 *=/  c\\\nEXTRA0=' $(EXTRA0)\
-				'\n}\n/^EXTRAS *=/  c\\\nEXTRAS=' $(EXTRAS)\
+				'\n}\n/^AHLINK *=/  c\\\nAHLINK=' $(AHLINK)\
 				'\n}\n/^SHAKC *=/   c\\\nSHAKC='  $(SHAKC)\
 				'\n}\n/^SHAKOBJS *=/  c\\\nSHAKOBJS='$(SHAKOBJS)\
+				'\n}\n/^UTILC *=/   c\\\nUTILC='  $(UTILC)\
+				'\n}\n/^UTILO *=/   c\\\nUTILO='  $(UTILO)\
+				'\n}\n/^FIGS *=/   c\\\nFIGS='  $(FIGS)\
 				'\n}\n/^%\.[a-z][a-z]*:	/,/^$$/ d\n'\
 				'/^moldy.bbl:	/,/^$$/ d\n' \
 				'/^moldy.aux:	/,/^$$/ d\n' \
 				 > make.sed 
-		sed -f make.sed ./xmakefile > Makefile
+		sed -f make.sed ./xmakefile > Makefile.in
+		@ $(RM) make.sed
 
-Makefile.mak:	Makefile
+Makefile.w32:	Makefile.in
+		@PATH=/usr/5bin:${PATH};\
+		echo	's/ -\<lm\>//\n'\
+			's/@\(CC\)@/gcc/\n'\
+			's/@\(CPPFLAGS\)@//\n'\
+			's/@\(CFLAGS\)@/-g/\n'\
+			's/@\(OPT\)@/-O2 -ffast-math -mcpu=pentium -malign-double/\n'\
+			's/@\(OPT2\)@/-O2 -ffast-math -mcpu=pentium -malign-double/\n'\
+			's/@\(OPTAUX\)@/-funroll-loops/\n'\
+			's/@\(LDFLAGS\)@//\n'\
+			's/@\(LIBS\)@//\n'\
+			'/$$(CFILES).*:/,/	co/d\n'\
+			'/^.SUFFIXES/d' > makew32.sed
+		sed -f makew32.sed ./Makefile.in > Makefile.w32
+		@$(RM) makew32.sed
+
+Makefile.mak:	Makefile.in
 		@PATH=/usr/5bin:${PATH};\
 		echo	's/^\([ 	].*\)$$(OFILES)/\1@OFILES.RSP/g\n'\
 			's/^\([ 	].*\)$$(SHAKOBJS)/\1@SHAKOBJS.RSP/g\n'\
@@ -268,12 +202,18 @@ Makefile.mak:	Makefile
 			's/\.o$$/.obj/g\n'\
 			's/ -\<o\> *\(\<[a-z]*\>\)/ -e\1 /\n'\
 			's/ -\<lm\>//\n'\
-			'/^#  \*\*\*\* MSDOS/,/^#  \*/ s/^#\([A-Z]\)/\1/\n'\
-			's/XDR=/#XDR=/\n'\
-			's/^\(CFLAGS=.*$$(XDR)\)/#\1/\n'\
+			's/@\(CC\)@/tcc/\n'\
+			's/@\(CPPFLAGS\)@//\n'\
+			's/@\(CFLAGS\)@/-A -Z -G/\n'\
+			's/@\(OPT\)@/-f287 -mh -O/\n'\
+			's/@\(OPT2\)@/-f287 -mh -O/\n'\
+			's/@\(OPTAUX\)@//\n'\
+			's/@\(LDFLAGS\)@/-mh/\n'\
+			's/@\(LIBS\)@//\n'\
 			'/$$(CFILES).*:/,/	co/d\n'\
 			'/^.SUFFIXES/d' > makedos.sed
-		sed -f makedos.sed ./Makefile > Makefile.mak
+		sed -f makedos.sed ./Makefile.in > Makefile.mak
+		@$(RM) makedos.sed
 
 OFILES.RSP:	xmakefile
 		echo $(OFILES)   | sed -e 's/\.\<o\>/.obj/g'  > OFILES.RSP
@@ -285,13 +225,13 @@ cflow:		$(CFILES)
 		cflow $(CFILES) > moldy.cflow
 		cflow -r $(CFILES) > moldy.cflow.r
 
-ci:		$(CFILES) $(HFILES) xmakefile $(EXTRAS) $(DOC)
+ci:		$(CFILES) $(HFILES) $(AHFILES) xmakefile $(EXTRA0) $(DOCCI)
 		ci -u $(RCSFLAGS) $?
 
-co:		$(CFILES) $(HFILES) xmakefile $(EXTRAS) $(DOC)
+co:		$(CFILES) $(HFILES) $(AHFILES) xmakefile $(EXTRA0) $(DOCCI)
 
-print:		$(CFILES) $(HFILES)
-		for file in $(CFILES) $(HFILES) ;do\
+print:		$(CFILES) $(HFILES) $(AHFILES)
+		for file in $(CFILES) $(HFILES) $(AHFILES) ;do\
 			a2ps $(A2FLAGS) ${SHFILE} | lpr -l\
                         ;done
 		touch print
@@ -311,31 +251,35 @@ tags:		$(CFILES) $(HFILES)
 		etags $(CFILES) $(HFILES)  
 
 clean:		
-		$(RM) $(OFILES) $(LFILES) moldy $(UTILS) $(UTILS2) \
-			mdshak.o msd.o mdavpos.o moldy.ps moldy.dvi moldy.toc moldy.log
+		$(RM)    $(OFILES) $(LFILES) $(UTILO) $(GETOPT)\
+			 moldy $(UTILS) $(UTILS2) \
+			 moldy.ps moldy.dvi moldy.log moldy.blg \
+                         moldy.cflow moldy.cflow.r
 
-spotless:	
-		$(MAKE) clean
-		$(RM) moldy.shar* moldy.shar.Z* cray.job* cray.job.Z* \
-			   moldy.job* moldy.job.Z* \
-			   moldy.com* moldy.com.Z* moldy.aux; /bin/true
-annihilate:
-		$(MAKE) spotless
+distclean:	clean
+		$(RM)      moldy.com* moldy.tar* moldy.zip\
+                           moldy.aux moldy.toc moldy.lof moldy.lot\
+			   Makefile config.cache config.h config.status \
+			   config.log $(AHLINK) \
+			   $(DOSBUILD) $(VMSBUILD)
+
+maintainer-clean:	distclean
 		if ( [ -d RCS ] ) then\
-                    rcsclean $(CFILES) $(HFILES) $(EXTRAS) moldy.tex;\
+                    rcsclean $(CFILES) $(HFILES) $(AHFILES) $(EXTRA0) $(DOC) \
                 else \
                    echo "RCS directory not present."\
                         "You don't REALLY want to delete the sources do you?";\
-		fi             
+		fi;\
+		$(RM) Makefile.in       
 #
 #  Export options
 #
- 
-moldy.tar:	$(CFILES) $(HFILES)  Makefile xmakefile \
-		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
+
+moldy.tar:	$(CFILES) $(HFILES) $(AHFILES) \
+		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD) $(DOSBUILD)
 		$(TAR) cf moldy.tar\
-		$(CFILES)  $(HFILES) Makefile xmakefile \
-		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
+		$(CFILES)  $(HFILES) $(AHFILES) \
+		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD) $(DOSBUILD)
 
 moldy.tar.Z:	moldy.tar
 		compress -c moldy.tar > moldy.tar.Z
@@ -343,38 +287,23 @@ moldy.tar.Z:	moldy.tar
 moldy.tar.gz:	moldy.tar
 		gzip -c moldy.tar > moldy.tar.gz
 
-moldy.shar:	$(CFILES) $(HFILES)  Makefile xmakefile \
-		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
-		shar $(CFILES)  $(HFILES) Makefile xmakefile \
-		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)\
-			 > moldy.shar
-
-moldy.shar.Z:	moldy.shar
-		compress moldy.shar
-
-moldy.zip:	$(CFILES) $(HFILES)  Makefile xmakefile \
-		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
+moldy.zip:	$(CFILES) $(HFILES) $(AHFILES)  \
+		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD) $(DOSBUILD)
 		$(ZIP) -l -q moldy.zip\
-		$(CFILES)  $(HFILES) Makefile xmakefile \
-		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD);\
+		$(CFILES)  $(HFILES) $(AHFILES) \
+		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD) $(DOSBUILD);\
 		$(ZIP) -r -j  -q moldy.zip $(W32BIN)
 
-cray:		$(CFILES) $(HFILES)  
-		./cray_make $(CFILES)  $(HFILES) > cray.job
-
-moldy.job:	$(CFILES) $(HFILES)  
-		./make_cray $(CFILES)  $(HFILES) > moldy.job
-
-compile_moldy.com:	Makefile
+compile_moldy.com:	Makefile.in
 		./make_vms_compile $(FILES) > compile_moldy.com
 
-link_moldy.com:		Makefile
+link_moldy.com:		Makefile.in
 		./make_vms_link moldy $(FILES) > link_moldy.com
 
-compile_utils.com:	Makefile
+compile_utils.com:	Makefile.in
 		./make_vms_compile getopt ReadDCD $(UTILS) $(UTILS2) > compile_utils.com
 
-link_utils.com:	Makefile
+link_utils.com:	Makefile.in
 		$(RM) link_utils.com; \
 		for file in $(UTILS); do ./make_vms_link $$file $$file getopt>> \
 			link_utils.com; done
@@ -382,10 +311,27 @@ link_utils.com:	Makefile
 			./make_vms_link $$file $$file getopt $(SHAKS) >> \
 			link_utils.com; done
 
-moldy.com:	$(CFILES) $(HFILES) $(EXTRAS)\
+defcomm.com:	
+		@echo '$$ dir = F$$TRNLNM("SYS$$DISK")+F$$DIRECTORY()' > defcomm.com
+		@for prog in moldy $(UTILS) $(UTILS2); do \
+		   echo "$$ $$prog :== $$'dir'$$prog" >> defcomm.com ;\
+		done
+
+compile.com:
+		/bin/echo >compile.com \
+	'$$ write sys$$output "===========Building Moldy============"\n'\
+	'$$ @compile_moldy\n'\
+	'$$ @link_moldy\n'\
+	'$$ write sys$$output "===========Building utilities========"\n'\
+	'$$ @compile_utils\n'\
+	'$$ @link_utils\n'\
+	'$$ @defcomm\n'\
+	'$$ write sys$$output "===========Done======================"'
+
+moldy.com:	$(CFILES) $(HFILES) $(AHFILES) $(EXTRAS)\
 		$(INFILES) Aaaa_Read.Me $(DOC) $(VMSBUILD) $(DOSBUILD)
-		$(DCLAR) Aaaa_Read.Me compile.com $(CFILES) $(HFILES)\
-		$(INFILES) $(EXTRAS) getopt.c $(DOC) $(VMSBUILD)  $(DOSBUILD)\
+		$(DCLAR) Aaaa_Read.Me compile.com $(CFILES) $(HFILES) $(AHFILES)\
+		$(INFILES) $(EXTRAS) $(DOC) $(VMSBUILD)  $(DOSBUILD)\
 			> moldy.com
 
 moldy.com.Z:	moldy.com
@@ -405,7 +351,7 @@ moldy.bbl:	moldy.aux
 moldy.aux:	moldy.tex
 		TEXINPUTS=figures:: latex moldy
 
-$(LFILES):	$(HFILES)
+$(LFILES):	$(HFILES) $(AHFILES)
 
 #
 #  Dependencies of objects on headers.
@@ -424,24 +370,24 @@ ReadDCD.o:	ReadDCD.h
 #  Special options for performance-critical modules
 #
 auxil.o:	auxil.c defs.h
-	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSAUX) -c  $<
+	$(CC) $(DEFS) $(CFLAGS) $(OPT2) $(OPTAUX) -c  $<
 
 ewald.o:	ewald.c structs.h defs.h
-	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSP) -c $(INLINE) $<
+	$(CC) $(DEFS) $(CFLAGS) $(OPT2) $(CFLAGSP) -c $(INLINE) $<
 
 rdf.o:		rdf.c structs.h defs.h
-	$(CC) $(CFLAGS) $(CFLAGS2) -c $<
+	$(CC) $(DEFS) $(CFLAGS) $(OPT2) -c $<
 
 kernel.o:	kernel.c structs.h defs.h
-	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSP) -c $<
+	$(CC) $(DEFS) $(CFLAGS) $(OPT2) $(CFLAGSP) -c $<
 
 force.o:	force.c structs.h defs.h
-	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSP) $(INLINE) -c $<
+	$(CC) $(DEFS) $(CFLAGS) $(OPT2) $(CFLAGSP) $(INLINE) -c $<
 
 #
 #  Rule for checking out source under RCS
 #
-$(CFILES) $(HFILES) $(EXTRA0) moldy.tex moldy.sty BENCHMARK COPYING READ.ME xmakefile:
+$(CFILES) $(HFILES) $(AHFILES) $(EXTRA0) $(DOCCI) xmakefile:
 	co $@
 
 ewald-RIL.c:
@@ -450,5 +396,4 @@ ewald-RIL.c:
 .SUFFIXES:	.c .o
 
 .c.o:
-	$(CC) $(CFLAGS) -c $<
-
+	$(CC) $(DEFS) $(CFLAGS) $(OPT) -c $<
