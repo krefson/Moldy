@@ -10,6 +10,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	force.c,v $
+ * Revision 1.8  89/08/23  15:00:21  keith
+ * Fixed bug in fill_cells() on increment of species counter.
+ * 
  * Revision 1.7  89/08/22  14:48:39  keith
  * Created new variable 'n_nab_sites' for max size of vector arrays.
  * 
@@ -37,7 +40,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/force.c,v 1.7 89/08/22 14:48:39 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/force.c,v 1.8 89/08/23 15:00:21 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -159,9 +162,9 @@ cell_t  mol[];                          /* What 'cell' points to         (out)*/
 #ifdef DEBUG
    printf("  ix    iy    iz  icell isite\n");
 #endif
-   for(imol = 0; imol < nmols; imol++)
+   for(imol = 0, im = 0; imol < nmols; imol++, im++)
    {
-      if(im++ == spec->nmols)
+      if(im == spec->nmols)
       {
 	 im = 0;
 	 spec++;
