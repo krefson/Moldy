@@ -157,7 +157,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.32 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.33 $ $}
 \newcommand{\moldyversion}{2.16}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -2771,7 +2771,7 @@ prototype is \Fname{MDDUMP} then successive files will be named
 not convenient for the sequence number to appear at the end of the
 file, include the characters ``\%d'' at an appropriate
 point.\footnote{This is actually the code \Lit{sprintf()}, the C
-  library function uses to signify converting an integer to a decimal
+  library function, uses to signify converting an integer to a decimal
   character string. This function is used to create the actual file
   name from the prototype and the integer dump sequence number. (See
   any C library manual for details.)}  For example under VMS,
@@ -2868,10 +2868,10 @@ computer time.
 %more record than recorded.  \moldy\  ignores it and recalculates and
 %dumps the data.
 
-Two utility programs included in the distribution are \emph{dumpanal}
-which identifies dump files by printing out the headers and
-\emph{dumpext} which extracts atomic or molecular trajectories.  The
-latter should be useful as a prototype for writing programs to analyse
+A utility program included in the distribution, \emph{dumpext},
+identifies dump files by printing out the headers and
+can be used to extract atomic or molecular trajectories. This
+should be useful as a prototype for writing programs to analyse
 dump data.
 
 It is frequently convenient to perform analysis of dump data, and
@@ -5107,22 +5107,12 @@ unix systems in mind using unix-style option arguments, but ought to
 compile and run under VMS if defined as foreign commands.
 
 Several of them require you to specify lists of (integer) numbers, for
-example selected molecules, timeslices \etc, which share a common
+example selected molecules, time slices \etc, which share a common
 syntax for such options. The numbers 1, 5, 17 to 20 inclusive and
 34,44,54\ldots94 are selected by the command-line argument
 \mbox{\Lit{-t 1,5,17-20,34-100:10}}.  Selectors are separated by
 commas and each one may be a range separated by a hyphen with an
 optional increment following a colon.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Dumpanal}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\emph{Dumpanal} examines the dump files given as arguments and
-prints out the header information to help with identification. For
-example
-\begin{center}
-\Lit{dumpanal} \textit{dump-file1 dump-file2} \ldots
-\end{center}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Dumpconv}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -5154,7 +5144,7 @@ text format dump.
 \section{Dumpext}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Dumps are designed so that \moldy\ can take care of all the
-bookkeeping, perform data security checks and to divide a lot of data
+bookkeeping and perform data security checks, and to divide a lot of data
 into manageable portions.  It is therefore not in a convenient form
 for reading by other programs, especially FORTRAN ones.
 \emph{Dumpext} is a program which processes dump files, extracts a
@@ -5163,7 +5153,7 @@ reading by other programs.  It is invoked with the command:
 \begin{center}
 \Lit{dumpext -R} \textit{nmols} \Lit{-Q} \textit{nquats} 
 \Lit{-c} \textit{components}
-\Lit{[-t} \textit{timeslices}\Lit{]} \\
+\Lit{[-t} \textit{time-slices}\Lit{]} \\
 \Lit{[-m} \textit{molecules}\Lit{]}
 \Lit{[-v]} 
 \Lit{[-o} \textit{output-file}\Lit{]}
@@ -5174,7 +5164,7 @@ The meanings of its arguments are
 \begin{Argdescription}
 \item[-R] the total number of molecules.  This argument is compulsory.
 \item[-Q] the number of polyatomic molecules.  This argument is compulsory.
-\item[-c] which piece (``component'') of the information in dump
+\item[-c] which piece (''component'') of the information in dump
 record to extract.  
 \begin{enumerate}
 \itemsep=0pt
@@ -5194,10 +5184,10 @@ record to extract.
 \item stress tensor
 \end{enumerate}
 This argument is compulsory.
-\item[-t] which timeslices (or dump records) to extract.  This is a
+\item[-t] which time slices (or dump records) to extract.  This is a
 selector format list and is the index in the whole dump sequence, not
-just a single file.  Timeslices or dump records are sequentially
-numbered in the dump files from 1.  Defaults to all timeslices.
+just a single file.  Time slices or dump records are sequentially
+numbered in the dump files from 1.  Defaults to all time slices.
 \item[-m] extract information for selected molecules.  This is a
 selector list specifying the molecule index.  Defaults to all
 molecules.
@@ -5212,7 +5202,8 @@ number of molecules and polyatomic molecules.  (This information is
 not recorded in the dump header and is needed to determine the number
 of co-ordinates and quaternions in each dump record.)  You must
 specify which pieces of information to extract using the \Lit{-c}
-option.
+option. Typing \Lit{-c 0} extracts all components. Option \Lit{-c -1} 
+outputs header info from the dump file/s in list format.  
 
 The dump files must, of course, be part of the same dump sequence;
 this is carefully checked.  They may be supplied as arguments in any
@@ -5249,14 +5240,13 @@ each record.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \emph{Mdavpos} is a utility for calculating the average positions of particles
-from dump slices recorded during a \moldy\ run. The utility is similar to
+from time slices recorded during a \moldy\ run. The utility is similar to
 \emph{Mdshak}, with command line options
 
 \begin{center}
 \Lit{mdavpos}
-\Lit{[-s} \textit{system-specification} \Lit{|}
-\Lit{-r} \textit{restart-file}\Lit{]}
-\Lit{[-d} \textit{dump-file-format}\Lit{]}
+\Lit{-s} \textit{system-specification} \Lit{|}
+\Lit{-r} \textit{restart-file}
 \Lit{[-t} \textit{dump-range}\Lit{]} \\
 \Lit{[-f} \textit{output-type}\Lit{]} 
 \Lit{[-a]}
@@ -5264,6 +5254,7 @@ from dump slices recorded during a \moldy\ run. The utility is similar to
 \Lit{[-i]}
 \Lit{[-v]} 
 \Lit{[-o} \textit{output-file}\Lit{]}
+\textit{dump-file1 dump-file2} \ldots
 \end{center}
 
 where the arguments have the following meanings
@@ -5271,10 +5262,8 @@ where the arguments have the following meanings
 \begin{Argdescription}
 \item[-s] read a system specification file.
 \item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
-\item[-d] read configurational data from a dump file given as a prototype name
-containing a \Lit{printf()} format string - see section~\ref{sec:dumping}.
 \item[-t] range of records in the dump file, specified as a selector format list, to
-average positions over.
+average positions over. Defaults to all time slices.
 \item[-f] give the output in the specified format (see table~\ref{tab:output}).
 \item[-a] calculate the average positions using the Cartesian (absolute)
 coordinates rather than the fractional coordinates. The default is to
@@ -5286,6 +5275,8 @@ MD cell.
 \item[-v] give more verbose information while processing dump files.
 \item[-o] name of optional output file. Defaults to standard output.
 \end{Argdescription}
+
+The dump files can be given in prototype form (as in the control file), or as individual files names.
 
 \begin{table}[h]
 \caption{Structure File Output Types}
@@ -5299,7 +5290,7 @@ MD cell.
 \Fname{vmd}   &   same as \Fname{dcd}.\\
 \Fname{cssr}  &   Cambridge Structure Search and Retrieval (CSSR) format.\\
 \Fname{arc}   &   Accelrys' Insight II ARC (also CAR, MDF, COR) archive file format.\\
-\Fname{xtl}   &   Accelry's Insight II XTL format.\\
+\Fname{xtl}   &   Accelrys' Insight II XTL format.\\
 \Fname{bin}   &   raw binary format.\\ \hline
 \end{tabular}
 \end{table}
@@ -5328,9 +5319,9 @@ The command line options are:
 
 \begin{center}
 \Lit{mdbond}
-\Lit{[-s} \textit{system-specification} \Lit{|}
-\Lit{-r} \textit{restart-file}\Lit{]}
-\Lit{[-d} \textit{dump-file-format}\Lit{]}
+\Lit{-s} \textit{system-specification} \Lit{|}
+\Lit{-r} \textit{restart-file}
+\Lit{[-d} \textit{dump-file1 dump-file2} \ldots\Lit{]}
 \Lit{[-t} \textit{dump-range}\Lit{]} \\
 \Lit{[-b} \textit{bond-limits}\Lit{]} 
 \Lit{[-a} \textit{angle-limits}\Lit{]} 
@@ -5346,10 +5337,10 @@ where the arguments have the following meanings:
 \begin{Argdescription}
 \item[-s] read a system specification file.
 \item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
-\item[-d] read configurational data from a dump file given as a prototype name
-  containing a \Lit{printf()} format string - see section~\ref{sec:dumping}. 
-\item[-t] range of records in the dump file, specified in selector
-  format, to average positions over.
+\item[-d] read configurational data from dump files given either as a prototype name
+containing a \Lit{printf()} format string - see section~\ref{sec:dumping} - or as individual file names.
+\item[-t] range of records in the dump file to average positions over (specified in selector
+  format). Defaults to all time slices (when configurational data is read from dump file/s.)
 \item[-b] bond limits in tenths of angstroms entered in form
   ``minimum-maximum''. Limits may be entered as integers only, so
   smallest difference is 0.1{\AA}. Defaults to 0.2 to 2{\AA}.
@@ -5468,7 +5459,7 @@ Alternatively, the command line options are
 \Lit{mdshak}
 \Lit{[-s} \textit{system-specification} \Lit{|}
 \Lit{-r} \textit{restart-file}\Lit{]}
-\Lit{[-d} \textit{dump-file-format}\Lit{]}
+\Lit{[-d} \textit{dump-file1 dump-file2} \ldots\Lit{]}
 \Lit{[-t} \textit{dump-range}\Lit{]} \\
 \Lit{[-f} \textit{output-type}\Lit{]}
 \Lit{[-y]}
@@ -5481,11 +5472,10 @@ where the meanings of the options are
 \item[-s] read a system specification file
 \item[-r] read a restart file.  Only one of \Lit{-s} or \Lit{-r} may
 be given.
-\item[-d] read the configurational information from a dump file.  The
-argument is a dump prototype name containing a \Lit{printf()} format
-string -- see section~\ref{sec:dumping}.
+\item[-d] read configurational data from dump files given either as a prototype name
+containing a \Lit{printf()} format string - see section~\ref{sec:dumping} - or as individual file names.
 \item[-t] range of records in dump file, specified in selector
-format.
+format. Defaults to all records (when configurational data read from dump file/s).
 \item[-f] Write the output file in the format specified (see table~\ref{tab:output}).
 \item[-y] Join up trajectory fragments to eliminate molecules ``leaping''
   from one side of the MD cell to the other.
@@ -5539,7 +5529,6 @@ The command line options are:
 
 \begin{center}
 \Lit{mdvaf}
-\Lit{[-d} \textit{dump-file-format}\Lit{]}
 \Lit{[-t} \textit{dump-range}\Lit{]} \\
 \Lit{[-l} \textit{vaf-range}\Lit{]}
 \Lit{[-g} \textit{species-range}\Lit{]}
@@ -5547,14 +5536,12 @@ The command line options are:
 \Lit{[-q]}
 \Lit{[-v]} 
 \Lit{[-o} \textit{output-file}\Lit{]}
+\textit{dump-file1 dump-file2} \ldots
 \end{center}
 
 where the arguments have the following meanings:
 \begin{Argdescription}
-\item[-d] read the system info and centre of mass velocities from a dump file (of \Lit{dump-level}
-$>= 2$) given as a prototype name containing a \Lit{printf()} format
-string -- see section~\ref{sec:dumping} .
-\item[-t] range of records in dump file, specified in selector format.
+\item[-t] range of records in dump file, specified in selector format. Defaults to all time slices.
 \item[-l] time intervals to calculate the VACF or VTF values for, specified
 in selector format. Default is 0 to half the number of dump
 records selected, with an increment of 1.
@@ -5565,6 +5552,10 @@ where \Lit{1} represents the \emph{first} species. Defaults to all species.
 \item[-v] give more verbose information while processing dump files.
 \item[-o] name of optional output file. Defaults to standard output.
 \end{Argdescription}
+
+The system info and centre of mass velocities are read from dump files (of \Lit{dump-level}
+$>= 2$) given either as a prototype name containing a \Lit{printf()} format
+string - see section~\ref{sec:dumping} - or individual dump files.
 
 If the executable file is named \Fname{mdvaf} then the default calculation
 is the VACF. If it is renamed to \Fname{mdvtf}, then the default is the
@@ -5627,7 +5618,6 @@ specified in command line mode:
 
 \begin{center}
 \Lit{msd}
-\Lit{[-d} \textit{dump-file-format}\Lit{]}
 \Lit{[-t} \textit{dump-range}\Lit{]} \\
 \Lit{[-m} \textit{msd-time-range}\Lit{]}
 \Lit{[-i} \textit{initial-time-increment}\Lit{]}
@@ -5636,14 +5626,12 @@ specified in command line mode:
 \Lit{[-x|-X]} \Lit{[-y|-Y]} \Lit{[-z|-Z]}
 \Lit{[-v]} 
 \Lit{[-o} \textit{output-file} \Lit{]}
+\textit{dump-file1 dump-file2} \ldots
 \end{center}
 
 where the meanings of the options are
 \begin{Argdescription}
-\item[-d] read the system info and centre of mass coordinates from a dump file given as a
-prototype name containing a \Lit{printf()} format string -- see
-section~\ref{sec:dumping}. 
-\item[-t] range of records in dump file, specified in selector format.
+\item[-t] range of records in dump file, specified in selector format. Defaults to all time slices.
 \item[-m] time intervals to calculate the msd values for, specified in
   selector format. Default is zero to half the number of time slices specified with \Lit{-t}.
 \item[-i] the increment the initial time, $t_0$, is increased by during
@@ -5671,13 +5659,18 @@ Type \Lit{gnu} for format readable by GNUPlot (default) or \Lit{gen} for the gen
 \item[-o] name of optional output file. Defaults to standard output.
 \end{Argdescription}
 
+The dump files can be given in prototype form (as in the control file), or as individual files names.
+
+The system info and centre of mass coordinates are read from dump files (of \Lit{dump-level}
+$>= 1$) given either as a prototype name containing a \Lit{printf()} format
+string - see section~\ref{sec:dumping} - or individual dump files.
 
 The output format for msd calculations consists of four columns for each species
 corresponding to the $x, y, z$ components and total msd, with
 increasing time intervals down the columns.
 
 The time intervals specified by \Lit{-m} (and initial time increment
-\Lit{-i}) are taken relative to the dump slices selected with \Lit{-t}
+\Lit{-i}) are taken relative to the dump records selected with \Lit{-t}
 rather than the complete dump records stored in the dump files. For
 example, if dump records 1,3,5,\ldots{}19 are extracted using \Lit{-t}, then
 time intervals of \Lit{-m} 1-5 correspond to ``real'' intervals of
@@ -5685,7 +5678,7 @@ time intervals of \Lit{-m} 1-5 correspond to ``real'' intervals of
 pointed out that the msds for each time interval are only averaged
 over as many initial time slices as the \emph{longest} time interval.
 Therefore it is usual to specify the largest value of \Lit{-m} to be
-half that of the total number of dump slices in order to optimise the
+half that of the total number of dump records in order to optimise the
 msd time interval and number of calculations over which each msd is
 averaged.
 
@@ -6034,7 +6027,7 @@ to the potential parameter file format.
 % LocalWords:  quaterns sysdef init potpar thermalise conv Abramowitz Stegun kJ
 % LocalWords:  PVM accel ithread nthreads istep icell icell Moldyext KE's AVS
 % LocalWords:  Dumpanal Dumpconv dumpconv SCHAKAL Quentrec nsteps rtmass mol ps
-% LocalWords:  amu MPa nbins ndumps Debye MDDUMP dumpanal stdlib stddef LIBS mt
+% LocalWords:  amu MPa nbins ndumps Debye MDDUMP stdlib stddef LIBS mt
 % LocalWords:  aalloc alloc arralloc talloc tfree nspecies nsites nmols NPOTP
 % LocalWords:  algorith ansi pre Pappalardo mdavpos bdist Murashov mdbond
 % LocalWords:  ransub mdshak Fernandez Wentzcovitch wentzcovitch characterizing
