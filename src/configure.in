@@ -20,7 +20,7 @@ if test $parlib = "mpi"; then
 elif test $parlib = "bsp"; then
    compilers="bspcc pgcc cc c89 gcc egcs"
 else
-   compilers="pgcc cc c89 gcc egcs"
+   compilers="icc pgcc cc c89 gcc egcs"
 fi
 
 AC_PROG_CC($compilers)
@@ -47,7 +47,7 @@ dnl
 dnl
 dnl Alternative compilers for Linux
 dnl
-      i?86-pc-linux*)     DEFCC=pgcc ALTCC="mpicc bspcc";;
+      i?86-pc-linux*)     DEFCC=pgcc ALTCC="icc mpicc bspcc";;
                      *)   ALTCC="cc mpicc bspcc";;
    esac
 dnl
@@ -97,8 +97,12 @@ dnl
      alphaev*-cray-unicosmk*) : ${OPT=-O2} ${OPTAUX=-O3\ -hunroll,aggress,restrict=a} \
                           ${OPT2=$OPTAUX,inlinefrom=auxil.c} \
                           ${LIBS=-lsci} ;;
-     i?86-pc-linux*)      if test $CC = "pgcc" ; then
+     i?86-pc-linux*)      ${CPPFLAGS=-D_XOPEN_SOURCE} 
+			  if test $CC = "pgcc" ; then
 			   :  ${OPT=-O2} ${OPT2=$OPT} ${OPTAUX=$OPT2 -Munroll}
+		  	  fi
+      			  if test $CC = "icc" ; then
+			   :  ${OPT=-O3} ${OPT2=$OPT} ${OPTAUX=$OPT2}
 		  	  fi ;;
 
                     *)  : ${OPT=-O} ${OPT2=$OPT} ${OPTAUX=$OPT2}
