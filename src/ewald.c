@@ -22,7 +22,14 @@ what you give them.   Help stamp out software-hoarding!  */
  * Ewald	The reciprocal-space part of the standard Ewald sum technique *
  ******************************************************************************
  *      Revision Log
- *       $Log: ewald_parallel.c,v $
+ *       $Log: ewald.c,v $
+ * Revision 2.9  1994/07/07  16:58:14  keith
+ * Versions for SPMD parallel machines.
+ * These are based on the *_parallel.c versions for shared-memory but
+ * with the parallel loops and compiler directives deleted.
+ *
+ * Ewald.c has some more optimization of the serial bits.
+ *
  * Revision 2.7  1994/06/08  13:13:59  keith
  * New version of array allocator which breaks up requests for DOS.
  * Now must use specific "afree()" paired with arralloc().
@@ -174,7 +181,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 2.7 1994/06/08 13:13:59 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 2.9 1994/07/07 16:58:14 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -480,21 +487,36 @@ VECTORIZE
       sinhx[is] = sinky[is] = sinlz[is] = 0.0;
    }      
 
-   coshx = chx[1]; cosky = cky[1]; coslz = clz[1];
-   sinhx = shx[1]; sinky = sky[1]; sinlz = slz[1];
    site0 = site[0]; site1 = site[1]; site2 = site[2];
-VECTORIZE
-   for(is = 0; is < nsites; is++)
+   if( hmax >= 1 )
    {
-      kx = astar[0]*site0[is]+astar[1]*site1[is]+astar[2]*site2[is];
-      ky = bstar[0]*site0[is]+bstar[1]*site1[is]+bstar[2]*site2[is];
-      kz = cstar[0]*site0[is]+cstar[1]*site1[is]+cstar[2]*site2[is];
-      coshx[is] = cos(kx);
-      sinhx[is] = sin(kx);
-      cosky[is] = cos(ky);
-      sinky[is] = sin(ky);
-      coslz[is] = cos(kz);
-      sinlz[is] = sin(kz);
+      coshx = chx[1]; sinhx = shx[1];
+VECTORIZE
+      for(is = 0; is < nsites; is++)
+      {
+	 kx = astar[0]*site0[is]+astar[1]*site1[is]+astar[2]*site2[is];
+	 coshx[is] = cos(kx); sinhx[is] = sin(kx);
+      }
+   }
+   if( kmax >= 1 )
+   {
+      cosky = cky[1]; sinky = sky[1];
+VECTORIZE
+      for(is = 0; is < nsites; is++)
+      {
+	 ky = bstar[0]*site0[is]+bstar[1]*site1[is]+bstar[2]*site2[is];
+	 cosky[is] = cos(ky); sinky[is] = sin(ky);
+      }
+   }
+   if( lmax >= 1 )
+   {
+      coslz = clz[1]; sinlz = slz[1];
+VECTORIZE
+      for(is = 0; is < nsites; is++)
+      {
+	 kz = cstar[0]*site0[is]+cstar[1]*site1[is]+cstar[2]*site2[is];
+	 coslz[is] = cos(kz); sinlz[is] = sin(kz);
+      }
    }
 /*
  * Use addition formulae to get sin(h*astar*x)=sin(Kx*x) etc for each site
