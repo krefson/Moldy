@@ -19,9 +19,26 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 2.3 93/10/28 10:28:29 keith Stab $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 2.5 94/01/12 11:12:49 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 2.5  94/01/12  11:12:49  keith
+ * Removed linebreak in preprocessor conditional because VMS CC doesn't grok it.
+ * 
+ * Revision 2.4  93/12/22  17:13:30  keith
+ * Mods for HP ANSI Compiler c89.
+ * Workaround for bugs and defined symbol _HPUX_SOURCE needed to compile xdr.
+ * 
+ * Revision 2.3.1.1  93/12/21  19:02:17  keith
+ * Mods to allow HP's ANSI compiler to work.  I think it's broken.
+ * Not tested on other architectures yet so don't incorporate
+ * into main line.
+ * NB Added _POSIX_SOURCE and _XOPEN_SOURCE symbols for *all* architectures.
+ * This might or might no avoid problems.
+ * 
+ * Revision 2.3  93/10/28  17:41:01  keith
+ * Added __unix to the list of recognised macros
+ * 
  * Revision 2.3  93/10/28  10:28:29  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -135,15 +152,15 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 2.3 $"
-#define		 REVISION_DATE    "$Date: 93/10/28 10:28:29 $"
-#define		 REVISION_STATE   "$State: Stab $"
+#define          REVISION         "$Revision: 2.5 $"
+#define		 REVISION_DATE    "$Date: 94/01/12 11:12:49 $"
+#define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
  ******************************************************************************/
 /*
- * See if we can detect IBM RS6000. No preprocessor by default, so
- * user MUST user "-DRS6000" on command line".
+ * See if we can detect IBM RS6000. No preprocessor macro by default, so
+ * user MUST define "-DRS6000" on command line".
  * _ALL_SOURCE is necessary to make XDR stuff work.
  */
 #ifdef RS6000
@@ -151,8 +168,20 @@ what you give them.   Help stamp out software-hoarding!  */
 #   define _ALL_SOURCE
 #   define ANSI_LIBS
 #endif
-#if (defined(__unix__) || defined(__unix)) && !defined(unix)
+/*
+ * To allow XDR stuff to work on HP.  Surely there's a more general
+ * way of doing this? I think that HPs header files are broken.
+ */
+#ifdef __hpux
+#define _HPUX_SOURCE
+#endif
+
+#if (defined(__unix__) || defined(__unix) || defined(_unix_) || defined(_unix)) && !defined(unix)
 #   define unix
+#endif
+#ifdef __vms
+#   define vms
+#   define VMS
 #endif
 /*
  *  Set symbol USG to identify system V variant of unix, BSD for Berkeley.
@@ -174,7 +203,7 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  * Define operating-system dependant default filenames
  */
-#ifdef VMS
+#ifdef vms
 #   define BACKUP_FILE	"MDBACKUP.DAT"
 #   define TEMP_FILE	"MDTEMPXXXX.DAT"
 #   define LOCKEX		"$LCK"
@@ -281,7 +310,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #define MAX3(x,y,z)	MAX(x, MAX(y,z))
 #undef  MIN
 #define MIN(x,y)	((x) < (y) ? (x) : (y))
-#define	MIN3(x,y,z)	MIN(x, MIN(y,z))
+#define	MIN3(x,y,z)	MIN(((x) < (y) ? (x) : (y)),z)
 #define SUMSQ(x)	(x[0]*x[0] + x[1]*x[1] +x[2]*x[2])
 #define SUMSQ2(x)	(x[1]*x[1] + x[2]*x[2] +x[3]*x[3])
 #define	SQR(x)		((x) * (x))
