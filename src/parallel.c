@@ -22,6 +22,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ * Revision 2.9  1994/07/11  11:15:30  keith
+ * Tidied up startup routine with par_broadcast() function.
+ * Documented parallel routine interface calls for porting.
+ *
  * Revision 2.8  1994/07/07  17:00:26  keith
  * Interface to BSP, TCGMSG and MPI message-passing libraries.
  *
@@ -326,7 +330,7 @@ char	***argv;
 int	*ithread;
 int	*nthreads;
 {
-   bspstart(0, nthreads, ithread);
+   bspstart(*argc, *argv, 0, nthreads, ithread);
 }
 #endif
 #ifdef MPI
