@@ -34,6 +34,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.14  2000/12/08 15:22:07  keith
+ *       Reorganized order of potentials to maintain existing numberinf of HIW
+ *       etc -- for restart file compatibility.
+ *
  *       Revision 2.13  2000/12/08 12:22:33  keith
  *       Incorporated Morse and HIW potentials
  *
@@ -174,7 +178,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/kernel.c,v 2.13 2000/12/08 12:22:33 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/kernel.c,v 2.14 2000/12/08 15:22:07 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -194,7 +198,7 @@ void	message(int *,...);		/* Write a warning or error message   */
 			/* U= p0*exp(-p1*r) + p2/r^12 - p3/r^4 -p4/r^6 -p5/r^8 */
 #define HIWPOT 4	/* HIW pot. R.R.Pappalardo, J.Phys.Chem 97,4500(1993) */
 			/*		    U= p0/r^4 + p1/r^6 + p2/r^12      */
-#define RSRVD  5	/* Reserved					      */
+#define HIWWIN  5	/* HIW+ harmonic window potential		      */
 #define MORPOT 6	/* Busing-Ida-Gilbert plus Morse-potential of Mdxorto */
 			/* Material Design using Personal computer, Ed        */
                         /* Kazuyuki Hirao,  (1994) ISBN 4-7853-6803-9         */
@@ -206,7 +210,7 @@ const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
                               {"mcy",4},
 		              {"generic",6},
 			      {"hiw",3},
-		              {"reserved for developer",1},
+		              {"hiw+win",5},
 		              {"morse",7},
 		              {0,0}};	            /* MUST be null-terminated*/
 /*
@@ -221,7 +225,7 @@ const dim_mt   pot_dim[][NPOTP]= {
    /* MCY           */  {{1,2,-2},{0,-1,0},{1,2,-2},{0,-1,0}},
    /* Generic       */  {{1,2,-2},{0,-1,0},{1,14,-2},{1,6,-2},{1,8,-2},{1,10,-2}}, 
    /* HIW           */  {{1,6,-2},{1,8,-2},{1,14,-2}},
-   /* Reserved      */  {{0,0,0}},
+   /* HIW+Win       */  {{1,6,-2},{1,8,-2},{1,14,-2},{1,0,-2},{0,1,0}},
    /* Morse         */  {{1,2,-2},{0, 1,0},{0,-1, 0},
 			          {1,8,-2},{1,2,-2},{0,-1,0},{0, 1, 0}}
                                   };
@@ -246,9 +250,6 @@ const dim_mt   pot_dim[][NPOTP]= {
 double	dist_pot(real *potpar,          /* Array of potential parameters      */
 		 double cutoff,         /* Cutoff distance                    */ 
 		 int ptype)             /* Potential type selector            */
-    	         		
-      	       			
-   	      			
 {
    switch(ptype)
    {
@@ -274,6 +275,8 @@ double	dist_pot(real *potpar,          /* Array of potential parameters      */
 	    +2.0 / CUBE(potpar[5])) * exp(-potpar[5]*(cutoff-potpar[6])));
       else
          return( potpar[3] / ( 3.0*CUBE(cutoff)) );
+    case HIWWIN:
+       /*FALLTHRU*/
     case HIWPOT:
          return( - potpar[0] /cutoff - potpar[1] /CUBE(cutoff)/3.0 -
                    potpar[2] /CUBE(CUBE(cutoff))/9.0);
@@ -303,6 +306,7 @@ void	kernel(int jmin,
    register real erfc_term;		/* Intermediates in erfc calculation. */
    	    real ppe = 0.0;		/* Local accumulator of pot. energy.  */
    	    real exp_f1, exp_f2, exp_f3; /* Temporary for b*exp(-cr) etc      */
+   register real rmr0, fwin;            /* Temporaries for window potential   */
    register int	jsite;			/* Loop counter for vectors.	      */
    real *p0 = pot[0], *p1 = pot[1],     /* Local bases for arrays of pot'l    */
         *p2 = pot[2], *p3 = pot[3],     /* parameters.			      */
@@ -482,6 +486,38 @@ VECTORIZE
                                + 12.0 * r_12_r + erfc_term );  
          }
          break; 
+       case HIWWIN:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+         {
+            /*
+             * Calculate r and coulombic part
+             */
+            r       = sqrt(r_sqr[jsite]);
+            ar      = alpha*r;
+            t = 1.0/(1.0+PP*ar);
+            erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+            r_r  = 1.0 / r;
+            t = POLY5(t) * erfc_term * r_r;
+            erfc_term = t + norm * erfc_term;
+            r_sqr_r = SQR(r_r);
+            /*
+             * Non-coulombic ie potential-specific part
+             */
+            r_4_r = SQR(r_sqr_r);
+            r_6_r = r_sqr_r * r_4_r;
+            r_12_r = p2[jsite] * SQR(r_6_r);
+            r_6_r *= p1[jsite];
+            r_4_r *= p0[jsite];
+	    rmr0 = (r - p4[jsite]);
+	    fwin = p3[jsite]*rmr0;
+
+            ppe += t + r_4_r + r_6_r + r_12_r + 0.5*fwin*rmr0;
+
+            forceij[jsite] =   r_sqr_r * ( 4.0 * r_4_r + 6.0 * r_6_r  
+                               + 12.0 * r_12_r + erfc_term - r*fwin);  
+         }
+         break; 
       }
    else
       switch(ptype)
@@ -588,6 +624,27 @@ VECTORIZE
                                + 12.0 * r_12_r);  
 	 }  
          break;      
+       case HIWWIN:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+         {
+            r       = sqrt(r_sqr[jsite]);
+            r_r  = 1.0 / r;
+            r_sqr_r = SQR(r_r);
+            r_4_r = SQR(r_sqr_r);
+            r_6_r = r_sqr_r * r_4_r;
+            r_12_r = SQR(r_6_r) * p2[jsite];
+            r_6_r *= p1[jsite]; 
+            r_4_r *= p0[jsite];
+	    rmr0 = (r - p4[jsite]);
+	    fwin = p3[jsite]*rmr0;
+
+            ppe += r_4_r + r_6_r + r_12_r + 0.5*fwin*rmr0;
+
+            forceij[jsite] =   r_sqr_r * ( 4.0 * r_4_r + 6.0 * r_6_r  
+                               + 12.0 * r_12_r  - r*fwin); 
+         }
+         break; 
       }     
    *pe += ppe;
 }
