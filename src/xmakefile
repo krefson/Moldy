@@ -65,8 +65,8 @@ INFILES = 	control.water control.tip4p control.mgclh2o control.clay \
 		argon-example.out tips2-example.out \
 		quartz-example.out
 
-SHAKS=	algorith alloc auxil ansi eigens kernel input matrix\
-		quaterns restart startup values xdr ReadDCD
+SHAKS=	algorith alloc auxil ansi convert eigens kernel input matrix\
+		quaterns restart startup values xdr ReadDCD utlsup molout
 
 SHAKC= $(SHAKS:%=%.c)
 
@@ -74,7 +74,7 @@ SHAKOBJS= $(SHAKS:%=%.o)
 
 UTILS = moldyext dumpanal dumpconv dumpext  manalyze bdist
 
-UTILS2= mdshak msd mdavpos mdbond ransub 
+UTILS2= mdshak msd mdavpos mdbond ransub mdvaf mdtraj
 
 UTILC= $(UTILS:%=%.c) $(UTILS2:%=%.c)
 
@@ -82,7 +82,7 @@ UTILO= $(UTILC:%.c=%.o) ReadDCD.o
 
 EXTRA0 = $(UTILC) getopt.c ReadDCD.c ReadDCD.h ewald_parallel.c \
          force_parallel.c configure.in config.h.in defconf.h aclocal.m4 \
-         config.guess config.sub list.h plotrdf
+         config.guess config.sub list.h plotrdf utlsup.c utlsup.h molout.c
 
 EXTRAS= $(EXTRA0) ewald-RIL.c configure Makefile.in install-sh 
 
@@ -126,11 +126,14 @@ manalyze:	manalyze.c $(HFILES)
 dumpanal:	dumpanal.c xdr.o $(HFILES)
 		$(CC) $(CFLAGS) -o dumpanal $(OPT) $(DEFS) $(LDFLAGS1) dumpanal.c xdr.o  $(LDFLAGS) $(LIBS)
 
-dumpext:	dumpext.c xdr.o $(LIBOBJS) $(HFILES)
-		$(CC) $(CFLAGS) -o dumpext $(OPT) $(DEFS) $(LDFLAGS1) dumpext.c xdr.o $(LIBOBJS) $(LDFLAGS) $(LIBS)
+dumpext:	dumpext.c xdr.o utlsup.o matrix.o $(LIBOBJS) $(HFILES)
+		$(CC) $(CFLAGS) -o dumpext $(OPT) $(DEFS) $(LDFLAGS1) dumpext.c xdr.o utlsup.o matrix.o $(LIBOBJS) $(LDFLAGS) $(LIBS)
 
 dumpconv:	dumpconv.c xdr.o $(HFILES)
 		$(CC) $(CFLAGS) -o dumpconv $(OPT) $(DEFS) $(LDFLAGS1) dumpconv.c xdr.o $(LDFLAGS) $(LIBS)
+
+mdtraj:		mdtraj.o $(SHAKOBJS) $(LIBOBJS) 
+		$(CC) -o mdtraj $(LDFLAGS) mdtraj.o $(SHAKOBJS) $(LIBOBJS) $(LIBS)
 
 mdshak:		mdshak.o $(SHAKOBJS) $(LIBOBJS) 
 		$(CC) -o mdshak $(LDFLAGS) mdshak.o $(SHAKOBJS) $(LIBOBJS) $(LIBS)
@@ -138,6 +141,8 @@ mdshak:		mdshak.o $(SHAKOBJS) $(LIBOBJS)
 msd:		msd.o $(SHAKOBJS) $(LIBOBJS) 
 		$(CC) -o msd $(LDFLAGS1) msd.o $(SHAKOBJS) $(LIBOBJS) $(LDFLAGS) $(LIBS)
 
+mdvaf:		mdvaf.o $(SHAKOBJS) $(LIBOBJS) 
+		$(CC) -o mdvaf $(LDFLAGS1) mdvaf.o $(SHAKOBJS) $(LIBOBJS) $(LDFLAGS) $(LIBS)
 mdavpos:	mdavpos.o $(SHAKOBJS) $(LIBOBJS) 
 		$(CC) -o mdavpos $(LDFLAGS1) mdavpos.o $(SHAKOBJS) $(LIBOBJS) $(LDFLAGS)  $(LIBS)
 
@@ -147,8 +152,8 @@ mdbond:	mdbond.o $(SHAKOBJS) $(LIBOBJS)
 bdist:	bdist.c $(HFILES)
 		$(CC) $(CFLAGS)  -o bdist $(OPT) $(DEFS) $(LDFLAGS1) bdist.c $(LIBOBJS) $(LDFLAGS) $(LIBS)
 
-ransub:	ransub.o $(SHAKOBJS) $(LIBOBJS) convert.o
-		$(CC) -o ransub $(LDFLAGS1) ransub.o convert.o $(SHAKOBJS) $(LIBOBJS) $(LDFLAGS)  $(LIBS)
+ransub:	ransub.o $(SHAKOBJS) $(LIBOBJS) 
+		$(CC) -o ransub $(LDFLAGS1) ransub.o $(SHAKOBJS) $(LIBOBJS) $(LDFLAGS)  $(LIBS)
 
 utilities:	$(UTILS) $(UTILS2)
 
@@ -255,10 +260,15 @@ print:		$(CFILES) $(HFILES) $(AHFILES)
 lint:		
 		$(LINT) $(XDR) $(LFLAGS) $(CFILES) -lm
 
-lint-mdshak:		
+lint-utils2:		
 		$(LINT) $(XDR) $(LFLAGS) mdshak.c $(SHAKC) -lm
+		$(LINT) $(XDR) $(LFLAGS) msd.c $(SHAKC) -lm
+		$(LINT) $(XDR) $(LFLAGS) mdbond.c $(SHAKC) -lm
+		$(LINT) $(XDR) $(LFLAGS) mdavpos.c $(SHAKC) -lm
+		$(LINT) $(XDR) $(LFLAGS) ransub.c $(SHAKC) -lm
+		$(LINT) $(XDR) $(LFLAGS) mdvaf.c $(SHAKC) -lm
 
-lint-utils:	lint-mdshak
+lint-utils:	lint-utils2
 		for file in moldyext.c dumpanal.c dumpconv.c dumpext.c manalyze.c bdist.c;do\
 			$(LINT) $(XDR) $(LFLAGS) $$file\
                         ;done
@@ -387,6 +397,8 @@ algorith.o alloc.o matrix.o:	defs.h messages.h
 xdr.o restart.o dump.o:	structs.h defs.h messages.h xdr.h
 
 ReadDCD.o:	ReadDCD.h
+
+dumpext.o mdavpos.o mdbond.o mdshak.o mdvaf.o msd.o ransub.o: utlsup.h
 
 mdbond.o bdist:	list.h
 #
