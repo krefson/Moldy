@@ -1,7 +1,10 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.9 90/04/12 16:23:44 keith Exp $
+ * $Header: /usr/data/keith/moldy/RCS/defs.h,v 1.11 90/08/10 17:47:29 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.10  90/05/02  15:43:52  keith
+ * Got rid of typedefs time_t and size_t. 
+ * 
  * Revision 1.9  90/04/12  16:23:44  keith
  * Used <errno.h> to check for Berkeley unix and define symbol BSD
  * 
@@ -40,8 +43,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.9 $"
-#define		 REVISION_DATE    "$Date: 90/04/12 16:23:44 $"
+#define          REVISION         "$Revision: 1.11 $"
+#define		 REVISION_DATE    "$Date: 90/08/10 17:47:29 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -73,9 +76,13 @@
 #define TEMP_FILE	"MDTEMP XXXXXXXX A1"
 #endif
 /*
+ * Set ANSI_LIBS only if you have the standard ANSI headers and libraries
+ */
+#undef ANSI_LIBS
+/*
  * Set HAVE_VPRINTF if this function is in target machine's library.
  */
-#ifdef __STDC__				/* ANSI has it			*/
+#ifdef ANSI_LIBS			/* ANSI has it			*/
 #define HAVE_VPRINTF
 #endif
 #if defined(sun) || defined(vms) || defined(stellar) /* So do these     */
@@ -94,7 +101,7 @@
  * Vectorisation directive translation.  N.B. Most preprocessors munge 
  * directives so the #define must substiture the preprocessor OUTPUT.
  */
-#ifdef CRAY
+#if defined(CRAY) && !defined(__STDC__)
 #define VECTORIZE ## ivdep
 #define NOVECTOR  ## novector
 #else
@@ -195,8 +202,6 @@ typedef	real	quat_t[4];
 typedef quat_t	*quat_p;
 typedef real    mat_t[3][3];
 typedef vec_t	*mat_p;
-
-#define		cfree	xfree
 
 char	*talloc();
 #define aalloc(n, type) (type *)talloc((long)n,sizeof(type),__LINE__, __FILE__)
