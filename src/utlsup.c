@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/utlsup.c,v 1.12 2001/08/09 16:41:09 keith Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/utlsup.c,v 1.13 2002/06/21 11:29:08 kr Exp $";
 #endif
 
 #include "defs.h"
@@ -83,7 +83,7 @@ void    message(int *nerrs, ...)
  *  error.   Deliver error message to possibly exiting.                       *
  ******************************************************************************/
 /*VARARGS*/
-void	error(char *format, ...)
+void    error(char *format, ...)
 {
    va_list	ap;
    va_start(ap, format);
@@ -384,56 +384,37 @@ int	xi, yi, zi;
        return 0;   /* Molecule c_of_m isn't within selected region */ 
 }
 /******************************************************************************
- *  get_line  read an input line skipping blank and comment lines             *
+ *  get_line  read an input line with or without skipping blank/comment lines *
  ******************************************************************************/
-char    *get_line(char *line, int len, FILE *file)
+char    *get_line(char *line, int len, FILE *file, int skip)
 {
    char *s;
    int  i;
-   do
+
+   if( skip )
+   {
+      do
+      {
+         s = fgets(line, len, file);               /* Read one line of input     */
+         if(s == NULL) break;                      /* exit if end of file        */
+         i = strlen(s) - 1;
+         while(i >= 0 && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
+            s[i--] = '\0';                         /* Strip trailing white space */
+      }
+      while(*s == '\0' || *s == '#');              /* Repeat if blank or comment */
+   }
+   else
    {
       s = fgets(line, len, file);               /* Read one line of input     */
-      if(s == NULL) break;                      /* exit if end of file        */
-      i = strlen(s) - 1;
-      while(i >= 0 && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
-         s[i--] = '\0';                         /* Strip trailing white space */
+      if(s != NULL)                             /* ignore if end of file        */
+      {
+         i = strlen(s) - 1;
+         while(i >= 0 && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
+            s[i--] = '\0';                         /* Strip trailing white space */
+      }
    }
-   while(*s == '\0' || *s == '#');              /* Repeat if blank or comment */
+
    if(s == NULL)
       *line = '\0';                             /* Return null at eof         */
    return(line);
-}
-/******************************************************************************
- * read_ele().  Read elemental data from file.                                *
- ******************************************************************************/
-int          read_ele(spec_data *element, char *filename)
-{
-int        n=0;                  /* No of records read */
-char       name[NLEN];
-char       symbol[4];
-double     mass, chg;
-spec_data  *ele = element;
-char       line[LLEN];
-char       *success_read;
-FILE       *Fe;
-
-     if( (Fe = fopen(filename,"r")) == NULL)
-        return -1;
-
-     for( ele = element; ele < element+NELEM; ele++ )
-     {
-        if( (sscanf(get_line(line,LLEN,Fe),"%32s %4s %lf %lf", name, symbol, &mass, &chg) < 4) && !feof(Fe) )
-            error("Unexpected format in \"%s\"", filename);
-        if( feof(Fe) )
-            break;
-        strcpy(ele->name, name);
-        strcpy(ele->symbol, symbol);
-        ele->mass = mass;
-        ele->charge = chg;
-        n++;
-     }
-     fclose(Fe);
-
-     message(NULLI,NULLP,INFO,DATAREC,n,n==1?" ":"s ",filename);
-     return n;
 }

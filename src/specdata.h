@@ -10,6 +10,13 @@
 
 #define NOELEM  "Couldn't open element data file \"%s\" for reading"
 #define NOPOTL  "Couldn't open potential parameter file \"%s\" for reading"
+#define NOSUB   "Species \"%s\" cannot be found for substitution"
+
+#define  PDB              0
+#define  CSSR             1
+#define  SHAK             2
+
+#define TITLE_SIZE  80
 
 typedef struct              /* Element/species data */
 {
@@ -17,7 +24,5 @@ typedef struct              /* Element/species data */
                 symbol[4];  /* Symbol of species */
    double       mass,       /* Mass of species */
                 charge;     /* Charge of species */
-   int          *pos,       /* Positions of atoms in configuration - ransub only */
-                nmols;      /* No of molecules of species */
 } spec_data;
 

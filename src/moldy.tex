@@ -157,7 +157,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.27.2.1 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.27 $ $}
 \newcommand{\moldyversion}{2.16}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -166,9 +166,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \title{Moldy User's Manual}
-\author{Keith Refson\\CLRC Rutherford Appleton
-  Laboratory\\Chilton\\Didcot\\Oxfordshire OX11 0QX\\
-\htmladdnormallink{Keith.Refson@earth.ox.ac.uk}{mailto:K.Refson@rl.ac.uk}\\}
+\author{Keith Refson\\Department of Earth Sciences\\Parks Road
+\\Oxford OX1 3PR\\
+\htmladdnormallink{Keith.Refson@earth.ox.ac.uk}{mailto:Keith.Refson@earth.ox.ac.uk}\\}
 \version{\RCSrevision for release \moldyversion}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -669,7 +669,7 @@ This is a composite which contains terms of several inverse powers
 which may be useful for ionic solution simulations.
 \end{list}
 
-In addition to the short-range potential electric charges may be
+In addition to the short-range potential, electric charges may be
 specified for each atomic site which interact according to Coulomb's
 Law.  See the following section for details.
 
@@ -5615,13 +5615,13 @@ specified in command line mode:
 \Lit{[-m} \textit{msd-time-range}\Lit{]}
 \Lit{[-i} \textit{initial-time-increment}\Lit{]}
 \Lit{[-g} \textit{species-range}\Lit{]}
-\Lit{[-u]} \\
-\Lit{[-w} \textit{trajectory-output-format}\Lit{]}
+\Lit{[-u]}
+\Lit{[-w]} \\
 \Lit{[-x|-X]} \Lit{[-y|-Y]} \Lit{[-z|-Z]}
 \Lit{[-o} \textit{output-file} \Lit{]}
 \end{center}
 
-where meanings of the options are
+where the meanings of the options are
 \begin{Argdescription}
 \item[-s] read the species data from a system specification file.
 \item[-r] read the species data from a restart file. Only one of
@@ -5631,7 +5631,7 @@ prototype name containing a \Lit{printf()} format string -- see
 section~\ref{sec:dumping}. 
 \item[-t] range of records in dump file, specified in ``selector'' format.
 \item[-m] time intervals to calculate the msd values for, specified in
-  ``selector'' format.
+  ``selector'' format. Default is zero to half the number of time slices specified with \Lit{-t}.
 \item[-i] the increment the initial time, $t_0$, is increased by during
 calculation of msd for a given time interval. Defaults to 1.
 \item[-g] range of species to be included, given in ``selector''
@@ -5639,9 +5639,8 @@ calculation of msd for a given time interval. Defaults to 1.
   to all species. 
 \item[-u] option to by-pass msd calculation and output the connected particle
 trajectories in the format selected by \Lit{-w}. 
-\item[-w] selects output format for trajectory data. Set to 
-  \Lit{0} for format readable by GNUPlot (default) or
-  \Lit{1} for generic format (simple matrix).
+\item[-w] selects the generic (simple matrix) format for outputting trajectory data. 
+The default format is that used by GNUPlot (see below). 
 \item[-x, -y, -z, -X, -Y, -Z] indicate that limits (in {\AA}) are to be
   specified in the given cartesian direction. If the direction is in
   lowercase, only particles whose initial positions lie \emph{within}
@@ -5649,7 +5648,7 @@ trajectories in the format selected by \Lit{-w}.
   output. If the direction is in uppercase, the program will only
   include particles lying \emph{outside} these limits. limits can be
   imposed in one, two or all three directions in any possible
-  combination. However, if both options for a single direction (e.g.
+  combination. However, if both options for a single direction (\e.g.\
   \Lit{-x} and \Lit{-X}) are used, priority will be given to the
   latter option entered on the command line. The user is prompted for
   the limits at run time. The default is to include all particles.
@@ -5679,7 +5678,7 @@ instead sends the connected trajectory coordinates to the output. The
 default format for trajectory data is ``\# \textit{species-name}'' followed by a
 row of $x y z$ for a single particle for each increasing time interval.
 Trajectory data for each particle are separated by two blank lines.
-This is the format favoured by GNUPlot. Specifying \Lit{-w 1}  selects
+This is the format favoured by GNUPlot. Option \Lit{-w}  selects
 the generic matrix format in which a single row contains consecutive $x
 y z$ coordinates for all particles, with time increasing down the
 columns.
@@ -5763,8 +5762,13 @@ The command line options are:
 \Lit{[-w} \textit{mass}\Lit{]} 
 \Lit{[-q} \textit{charge}\Lit{]} \\
 \Lit{[-z} \textit{symbol}\Lit{]}
+\Lit{[-a} \textit{dopant-structure-file}\Lit{]}
 \Lit{[-e} \textit{species-data-file}\Lit{]} 
 \Lit{[-y} \textit{potential-parameter-file}\Lit{]} 
+\Lit{[-x]}
+\Lit{[-h]}
+\Lit{[-k]}
+\Lit{[-j]}
 \Lit{[-c]}
 \Lit{[-o} \textit{output-file}\Lit{]}
 \end{center}
@@ -5781,12 +5785,14 @@ where the arguments have the following meanings:
   species.
 \item[-n] the number of molecules to be substituted.
 \item[-u] the name of the substituting or ``solute'' species.
-\item[-w] mass of the solute species. Defaults to same mass as the
+\item[-w] mass of the (monatomic) solute species. Defaults to same mass as the
   first atom of the solvent species.
-\item[-q] charge of the solute species. Defaults to same charge as the
+\item[-q] charge of the (monatomic) solute species. Defaults to same charge as the
   first atom of the solvent species.
-\item[-z] name/symbol of the solute species. Defaults to same name as the
+\item[-z] name/symbol of the (monatomic) solute species. Defaults to same name as the
   first atom of the solvent species.
+\item[-a] file containing structural information for polyatomic solute species. Can be in CSSR, PDB
+  or SCHAKAL format.
 \item[-e] read the species data (mass, charge, symbol) corresponding to the
 solute species name from the file specified.
 (Defaults to \Fname{elements.dat}). Overridden  by options \Lit{-w}, \Lit{-q}, \Lit{-z}.
@@ -5807,22 +5813,50 @@ from the file specified. This is a text file of format:
 \end{displaymath}
 where the number of parameters, their values, order and units are the
 same as in a system specification file (see section~\ref{sec:sys-spec}).
+\item[-x] activate strict matching of species components, \i.e.\, match both site name and charge.
+  Default is to match to site name only.
+\item[-h] position first site of solute molecule on first site of solvent molecule it is replacing.
+  Default is to position molecules using centres of mass.
 \item[-c] if reading system specification file, skip any preceding
   control parameter info.
-\item[-o] name of optional output file. System specification data
-  created from multiple time slices are written consecutively to the
-  same file.
+\item[-k] generate new quaternions (orientations) for all solute molecules (if polyatomic). Default is to use same quaternions (if available)
+as molecule being replaced.
+\item[-j] generate new quaternions (orientations) for all solvent and solute molecules (if polyatomic).
+\item[-o] name of optional output file.
 \end{Argdescription}
 
-The properties of the solute species can be entered explicitly on the command
-line using options \Lit{-w}, \Lit{-q}, \Lit{-z}, or by reading it
-from a species data file. The default species data file,
-\Fname{elements.dat}, is searched for automatically, and contains data for the
+Polyatomic species can be added using the \Lit{-a} option, which requires a structural data file
+of Cambridge CSSR, Brookhaven PDB or Schakal format to be specified. If the new polyatomic
+species is replacing another polyatomic species, by default the same quaternions (orientation) will be used;
+ otherwise quaternions are generated randomly for the new species. The \Lit{-k} option generates
+new quaternions for the substituting molecules regardless of whether the species it replaces is
+monatomic or polyatomic.
+By default, the centre of mass of a dopant molecule is positioned on the centre of mass of the solvent molecule it
+is replacing. Specifying the \Lit{-h} option instead matches the position of the first site of the dopant molecule with
+the first site of the solvent molecule. In both cases, the principal frame coordinates of both species in the
+header file are written relative to the first site (\i.e.\ the first site is taken as the principal frame origin). \textbf{N.B.} It
+is possible to add a systematic shift (using \Lit{-h}) or positional disorder (using \Lit{-h} and \Lit{-k}) to dopant positions 
+by specifying a structure file that contains only a single atom. This atom's
+principal frame coordinates (in {\AA}) should correspond to the desired shift vector (relative to the first site 
+of the species being
+replaced).
+
+The properties of monatomic solute species can be entered explicitly on the command
+line using options \Lit{-w}, \Lit{-q}, \Lit{-z}, or by reading them
+from a species data file. In the case of polyatomic solutes, these options are ignored and the species components
+matched with pre-existing components in the original structure or from the species data file when available. The \Lit{-x} option
+forces components to be matched by both name and charge (but not weight), otherwise 
+the sites will be matched by name only, \i.e.\ the dopant atoms will be given the same properties as the first
+identically named site in the original system specification/restart file or species data file, irrespective 
+of the charges read in from the dopant structure file.
+
+ The default species data file,
+\Fname{elements.dat}, is read automatically, and contains data for the
 first 103 elements in order of increasing atomic number. The format is
 {\textit{species-name}$_{i}$ %
                   \textit{symbol}$_{i}$ \textit{mass}$_{i}$} \textit{charge}$_{i}$
-where $mass_{i}$ is in amu, and $charge_{i}$ is the "commonly occurring" valence.
-Since most elements have multiple valences, this
+where $mass_{i}$ is in amu, and $charge_{i}$ is the ``commonly occurring'' valence.
+Since most elements can have a variety of valences, this
 should be edited manually to match the species of interest. This file,
 or a file of the same format, can be
 modified to contain data for other species (atoms, isotopes or molecules)
@@ -5831,10 +5865,12 @@ read from a species data file is, by default, 150. This limit can be
 increased or decreased by the user by changing the parameter NELEM in
 \Fname{specdata.h} and recompiling \emph{ransub}.
 
-If no data is available for the solute species, it
+If no data is available for a monatomic solute species, it
 will be given the same symbol, charge and mass as the first component
-of the species it is replacing, as described
-for options \Lit{-w}, \Lit{-q}, \Lit{-z}.
+of the species it is replacing. In the case of polyatomic dopants,
+masses of unrecognized sites will be assigned a value of zero. \textbf{N.B.}
+If none of the sites in a polyatomic molecule can be identified, the substitution will
+be aborted because the molecule's centre of mass cannot be determined.
 
 If the system data comes from a restart file, the user is prompted for
 the energy units to use when writing the potential parameters to the
@@ -5843,7 +5879,7 @@ input parameters depending on the exact value of the time-unit used
 in the control file to specify energy units other than kJ\,mol$^{-1}$. See
 section~\ref{sec:sys-spec}. The parameters for the species being introduced
 can be read in from a potential parameter file (using option \Lit{-y}),
-otherwise the parameters between the dopant and
+otherwise the parameters between the solute components and
 other atoms wll be assumed to be zero. It is up to the user to ensure that
 the potential parameter file uses the same units as the sys-spec and/or restart
 files.
@@ -5855,11 +5891,8 @@ files can be changed to suit the user's local environment by editing the
 parameters ELEPATH and POTPATH in \Fname{specdata.h} before compiling
 \emph{ransub}.
 
-At present, \emph{ransub} can only introduce monatomic solute species, but
-these can be changed easily to
-polyatomic species by editing the system
-specification file that \emph{ransub} creates. It is also possible to introduce
-randomly distributed vacancies by prefixing the solute name with ``\#''.
+Note that it is possible to introduce
+randomly distributed vacancies or empty sites by prefixing the solute name with ``\#''.
 
 The \moldy\ distribution comes with three widely-used Buckingham potential
 parameter sets (\Fname{bush.pot}, \Fname{catlow.pot} and
@@ -5874,8 +5907,9 @@ and initial configuration files from either Cambridge CSSR, Brookhaven
 PDB or Schakal structural data files. This utility is useful for
 automating the creation of \moldy\ input files from the output of standard
 molecular graphics packages. At present \emph{syswrite} treats all species
-as monatomic, so some modification of the output file will be
-necessary to simulate multicomponent species.
+as monatomic; polyatomic species can be added using the ransub utility after
+creating a system specification file containing the species' centres of mass
+using syswrite.
 
 The physical properties of each species not already contained in the
 structure files are read in automatically from the text file
@@ -5925,8 +5959,8 @@ as in a system specification file (see section~\ref{sec:sys-spec}).
 \end{Argdescription}
 
 In interactive mode, the user is prompted for the name of the structure
-file to read from. This must end in either "\Fname{.pdb}", "\Fname{.cssr}"
-or "\Fname{.shak}" (upper- or lowercase), so that \emph{syswrite} can
+file to read from. This must end in either ``\Fname{.pdb}'', ``\Fname{.cssr}''
+or ``\Fname{.shak}'' (upper- or lowercase), so that \emph{syswrite} can
 recognise the file format and successfully read in the data.
 
 The default directory in which \emph{syswrite} searches for both the
