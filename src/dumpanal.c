@@ -19,11 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/dumpanal.c,v 2.9 1999/12/20 15:23:32 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dumpanal.c,v 2.10 2000/04/27 17:57:06 keith Exp $";
 #endif
 
 /*
  * $Log: dumpanal.c,v $
+ * Revision 2.10  2000/04/27 17:57:06  keith
+ * Converted to use full ANSI function prototypes
+ *
  * Revision 2.9  1999/12/20 15:23:32  keith
  * Removed parenthesis from check
  *
@@ -164,7 +167,7 @@ void analyze(char *file)
 void	print_header(dump_mt *header)
 {
    printf("Title\t\t\t= \"%s\"\n",header->title);
-   printf("RCS Revision\t\t= %.*s\n", (int)strlen(header->vsn)-1, header->vsn);
+   printf("RCS Revision\t\t= %.*s\n", (int)strlen(header->vsn), header->vsn);
    printf("Istep\t\t\t= %d\n",header->istep);
    printf("Dump_interval\t\t= %d\n", header->dump_interval);
    printf("Dump_level\t\t= %d\n", header->dump_level);

@@ -43,6 +43,16 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.15  2000/11/06 16:02:05  keith
+ *       First working version with a Nose-Poincare thermostat for rigid molecules.
+ *
+ *       System header updated to include H_0.
+ *       Dump performs correct scaling  of angular velocities, but dumpext still
+ *          needs to be updated to read this.
+ *       XDR functions corrected to work with new structs.
+ *       Parallel broadcast of config also updated.
+ *       Some unneccessary functions and code deleted.
+ *
  *       Revision 2.14  2000/10/20 14:38:47  keith
  *       Brought up to date with fixed from Beeman branch.
  *       Fixed a few other minor errors.
@@ -185,7 +195,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.14 2000/10/20 14:38:47 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.15 2000/11/06 16:02:05 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -205,9 +215,10 @@ gptr            *talloc(int n, size_mt size, int line, char *file);
 void            tfree(gptr *p);	       /* Free allocated memory	      	      */
 static char	*mutate(char *name);
 double		mdrand1(void);
-void		mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
-void            vscale( int n,  double s,  real *x, int ix); /* Vector* const multiply */
-static void	dump_convert(float *buf, system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3], double pe);
+void		mat_vec_mul(real (*m)[3], vec_mp , vec_mp , int );
+void            vscale( int,  double,  real *, int); /* Vector* const multiply */
+static void	dump_convert(float *, system_mp, vec_mt (*), vec_mt (*), 
+			     mat_mt, double );
 static void	real_to_float(real *b, float *a, int n);
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
@@ -216,12 +227,6 @@ extern contr_mt	control;                    /* Main simulation control parms. */
 #ifdef USE_XDR
 static   XDR		xdrs;
 #endif
-/*========================== Macros ==========================================*/
-#define DUMP_SIZE(level)  (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
-			            (3*system->nmols + 4*system->nmols_r + 9)+ \
-			     (level>>3 & 1) * \
-			            (3*system->nmols + 3*system->nmols_r + 9) +\
-			     (level & 1))
 /*============================================================================*/
 static
 int read_dump_hdr(char *fname, FILE **dumpf, dump_mt *hdr_p, boolean *xdr_write)
@@ -268,7 +273,8 @@ int read_dump_hdr(char *fname, FILE **dumpf, dump_mt *hdr_p, boolean *xdr_write)
 
 /*============================================================================*/
 
-void	dump(system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3], double pe, restrt_mt *restart_header, int backup_restart)
+void	dump(system_mp system, vec_mt (*force), vec_mt (*torque), mat_mt stress, 
+	     double pe, restrt_mt *restart_header, int backup_restart)
 {
    FILE		*dumpf=NULL;		/* File pointer to dump files	      */
    dump_mt	dump_header,		/* Header record proforma	      */
@@ -281,7 +287,8 @@ void	dump(system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3]
 		ndumps =(control.istep-control.begin_dump) /
    			 control.dump_interval % control.maxdumps; 
    int		istep_hdr;		/* Timestep for dump header	      */
-   unsigned     dump_size = DUMP_SIZE(control.dump_level);
+   unsigned     dump_size = DUMP_SIZE(control.dump_level,
+				      system->nmols, system->nmols_r);
                                         /* Size in floats of each dump record */
    float	*dump_buf=aalloc(dump_size,float);      /* For converted data */
    long		file_pos=0,		/* Offset within file of current rec. */
@@ -293,7 +300,7 @@ void	dump(system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3]
    boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.14 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.16 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    if( ! strchr(control.dump_file, '%') )
@@ -402,6 +409,8 @@ void	dump(system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3]
       dump_header.maxdumps	= control.maxdumps;
       dump_header.dump_size	= dump_size;
       dump_header.dump_init     = time((time_t *)0);
+      dump_header.nmols         = system->nmols;
+      dump_header.nmols_r       = system->nmols_r;
 
       note(DUMPST, cur_file, control.istep);
    }
@@ -552,7 +561,8 @@ static char	*mutate(char *name)
  *  All quantities are converted to floats (from real, whatever that is) and  *
  *  c_of_m and its derivatives are converted to unscaled co-ordinates.	      *
  ******************************************************************************/
-static void	dump_convert(float *buf, system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3], double pe)
+static void	dump_convert(float *buf, system_mp system, vec_mt (*force), 
+			     vec_mt (*torque), mat_mt stress, double pe)
 {
    int		nmols   = system->nmols,
    		nmols_r = system->nmols_r;
@@ -570,6 +580,7 @@ static void	dump_convert(float *buf, system_mp system, vec_mt (*force), vec_mt (
 	 buf += 4*nmols_r;
       }
       real_to_float(system->h[0],    buf, 9);		buf += 9;
+      real_to_float(&system->ts, buf, 1);		buf += 1;
       real_to_float(&ppe, buf, 1);		buf += 1;
    }
    if( control.dump_level & 2)
@@ -585,6 +596,7 @@ static void	dump_convert(float *buf, system_mp system, vec_mt (*force), vec_mt (
 	 buf += 4*nmols_r;
       }
       real_to_float(system->hdot[0],    buf, 9);	buf += 9;
+      real_to_float(&system->tsmom, buf, 1);		buf += 1;
    }
    if( control.dump_level & 8)
    {

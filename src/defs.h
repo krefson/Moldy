@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.14.4.1 2000/10/20 11:48:53 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.15 2000/10/20 15:15:47 keith Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.15  2000/10/20 15:15:47  keith
+ * Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
+ *
  * Revision 2.14.4.1  2000/10/20 11:48:53  keith
  * Incorporated new neighbour list indexing algorithm from 2.16
  *
@@ -280,7 +283,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * Version ID strings
  */
 #define          REVISION         "$Name:  $"
-#define		 REVISION_DATE    "$Date: 2000/10/20 11:48:53 $"
+#define		 REVISION_DATE    "$Date: 2000/10/20 15:15:47 $"
 #define		 REVISION_STATE   "$State: Exp $"
 
 #ifdef HAVE_CONFIG_H
@@ -356,10 +359,14 @@ what you give them.   Help stamp out software-hoarding!  */
 #define SITEPBC 0
 #define	L_name		128			/* Max Length of file names  */
 #define	NPE		2			/* real & Ewald PE's	     */
+#ifdef MAX
 #undef  MAX
+#endif
 #define MAX(x,y)	((x) > (y) ? (x) : (y))
 #define MAX3(x,y,z)	MAX(x, MAX(y,z))
+#ifdef MIN
 #undef  MIN
+#endif
 #define MIN(x,y)	((x) < (y) ? (x) : (y))
 #define	MIN3(x,y,z)	MIN(((x) < (y) ? (x) : (y)),z)
 #define SUMSQ(x)	(x[0]*x[0] + x[1]*x[1] +x[2]*x[2])
@@ -477,3 +484,10 @@ typedef vec_mt	*mat_mp;
 #   define memst(s,c,n)   (void)memset( (gptr*)(s), (c), (int)(n))
 #endif
 #endif
+/*========================== Dump ==========================================*/
+#define DUMP_SIZE(level, n, n_r)  \
+   			 (( (level & 1) + (level>>1 & 1) ) * \
+                                    (3*n + 4*n_r + 9 + 1)+ \
+                             (level>>3 & 1) * \
+                                    (3*n + 3*n_r + 9) +\
+                             (level & 1))

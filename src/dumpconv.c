@@ -19,11 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/dumpconv.c,v 2.10 1998/05/22 11:11:47 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dumpconv.c,v 2.11 2000/04/27 17:57:06 keith Exp $";
 #endif
 
 /*
  * $Log: dumpconv.c,v $
+ * Revision 2.11  2000/04/27 17:57:06  keith
+ * Converted to use full ANSI function prototypes
+ *
  * Revision 2.10  1998/05/22 11:11:47  keith
  * Protected va_dcl redefinition.
  *
@@ -248,17 +251,18 @@ int	read_header(dump_mt *header)
    num  = 2;
    num += scanf("%d %d %d %d %d", &header->istep, &header->dump_interval,
 	  &header->dump_level, &header->maxdumps, &header->ndumps);
-   num += scanf("%ld %ld %ld %d",&header->timestamp,
+   num += scanf("%ld %ld %ld %d %d %d",&header->timestamp,
 		 &header->restart_timestamp,
-		 &header->dump_init, &header->dump_size);
-   if( num == 11 ) return 0;
+		 &header->dump_init, &header->dump_size,
+		 &header->nmols, &header->nmols_r);
+   if( num == 11 || num == 13 ) return 0;
    else            return -1;
 }
 
 void write_native_hdr(dump_mt *header)
 {
    char *s;
-   if( (s = strstr(header->vsn,"(XDR)") ) != 0 )
+   if( (s = strstr(header->vsn,"(XDR") ) != 0 )
       *s = 0;
    if( ! fwrite((char*)header, sizeof(dump_mt), 1, stdout) )
       error("Write error on output file (Error code %d).",ferror(stdout));
@@ -277,13 +281,14 @@ void write_xdr_hdr(dump_mt *header)
 void	print_header(dump_mt *header)
 {
    char *s;
-   if( (s = strstr(header->vsn,"(XDR)") ) != 0 )
+   if( (s = strstr(header->vsn,"(XDR") ) != 0 )
       *s = 0;
    printf("%s\n%s\n",header->title, header->vsn);
    printf("%d %d %d %d %d\n", header->istep, header->dump_interval,
 	  header->dump_level, header->maxdumps, header->ndumps);
-   printf("%ld %ld %ld %d\n",header->timestamp, header->restart_timestamp,
-	   header->dump_init, header->dump_size); 
+   printf("%ld %ld %ld %d %d %d\n",header->timestamp, header->restart_timestamp,
+	   header->dump_init, header->dump_size,
+	  header->nmols, header->nmols_r); 
 }
 
 int

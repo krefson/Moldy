@@ -26,6 +26,16 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.16  2000/11/06 16:02:08  keith
+ *       First working version with a Nose-Poincare thermostat for rigid molecules.
+ *
+ *       System header updated to include H_0.
+ *       Dump performs correct scaling  of angular velocities, but dumpext still
+ *          needs to be updated to read this.
+ *       XDR functions corrected to work with new structs.
+ *       Parallel broadcast of config also updated.
+ *       Some unneccessary functions and code deleted.
+ *
  *       Revision 2.15  2000/04/27 17:57:12  keith
  *       Converted to use full ANSI function prototypes
  *
@@ -98,7 +108,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.15 2000/04/27 17:57:12 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.16 2000/11/06 16:02:08 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -228,6 +238,15 @@ bool_t xdr_restrt(XDR *xdrs, restrt_mt *sp)
 }
 
 bool_t xdr_dump(XDR *xdrs, dump_mt *sp)
+{
+   return
+      xdr_opaque(xdrs, sp->title, L_name+16) &&
+      xdr_vector(xdrs, (gptr*)&sp->istep, 2, sizeof(long), (xdrproc_t)xdr_long) &&
+      xdr_vector(xdrs, (gptr*)&sp->dump_level, 4, sizeof(int), (xdrproc_t)xdr_int) &&
+      xdr_vector(xdrs, (gptr*)&sp->timestamp, 3, sizeof(unsigned long), (xdrproc_t)xdr_u_long) &&
+      xdr_vector(xdrs, (gptr*)&sp->nmols, 2, sizeof(int), (xdrproc_t)xdr_int);
+}
+bool_t xdr_dump_v2(XDR *xdrs, dump_mt *sp)
 {
    return
       xdr_opaque(xdrs, sp->title, L_name+16) &&

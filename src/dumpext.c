@@ -50,13 +50,6 @@ int av_convert;
 #undef MIN
 #define MIN(x,y) ( (x) > (y) ? (y) : (x))
 
-/*========================== Macros ==========================================*/
-#define DUMP_SIZE(level, n, n_r)  \
-   			 (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
-                                    (3*n + 4*n_r + 9)+ \
-                             (level>>3 & 1) * \
-                                    (3*n + 3*n_r + 9) +\
-                             (level & 1))
 /*============================================================================*/
 typedef struct list_mt
 {
@@ -243,22 +236,21 @@ main(int argc, char **argv)
    static cpt_mt cpt[] = {{3, 0, 3, 1, "C of M positions"},
 			 {4, 0, 4, 1, "quaternions"},
 			 {9, 0, 1, 0, "unit cell matrix"},
+			 {1, 0, 1, 0, "Thermostat variable"},
 			 {1, 0, 1, 0, "potential energy"},
 			 {3, 0, 3, 1, "C of M velocities"},
-			 {4, 0, 4, 1, "quaternion derivatives"},
+			 {4, 0, 4, 1, "angular velocities"},
 			 {9, 0, 1, 0, "unit cell velocities"},
-			 {3, 0, 3, 1, "C of M accelerations"},
-			 {4, 0, 4, 1, "quaternion accelerations"},
-			 {9, 0, 1, 0, "unit cell accelerations"},
+			 {1, 0, 1, 0, "Thermostat momentum"},
 			 {3, 0, 3, 1, "C of M forces"},
 			 {3, 0, 3, 1, "torques"},
 			 {9, 0, 1, 0, "stress tensor"} };
 #define NCPT (int)(sizeof(cpt)/sizeof(cpt_mt))
 
-   static int level_mask[16] = {  0x0000,0x000f,0x0070,0x007f,
-				  0x0380,0x038f,0x03f0,0x03ff,
-				  0x1c00,0x1c0f,0x1c70,0x1c7f,
-				  0x1f80,0x1f8f,0x1ff0,0x1fff};
+   static int level_mask[16] = {  0x0000,0x001f,0x01e0,0x01ff,
+				  0x0000,0x001f,0x01e0,0x01ff,
+				  0x0e00,0x0e1f,0x0fe0,0x0fff,
+				  0x0e00,0x0e1f,0x0fe0,0x0fff};
 
    dump_mt	proto_header, header;
 
@@ -331,10 +323,12 @@ main(int argc, char **argv)
    /*
     *  Interactive input of parameters not supplied as argument
     */
+#if 0
    if( nmols <= 0)
       nmols = get_int("Number of molecules? ",1,1000000);
    if( nmols_r < 0)
       nmols_r = get_int("Number of polyatomic molecules? ",0,1000000);
+#endif
    if( xcpt < 0 )
    {
       fprintf(stderr,"Which quantity do you require?\n");
@@ -343,29 +337,6 @@ main(int argc, char **argv)
 	 fprintf(stderr,"\t%-32s %d\n",cpt[icpt].name,icpt+1);
       xcpt=get_int("Quantity index (0-13)? ",0,NCPT);
    }
-   /*
-    * Check molecule selections are in range.
-    */
-   for(cur=mol_head.next; cur; cur = cur->next)
-   {
-      if( cur->i < 0 || cur->i+cur->num > nmols)
-      {
-	 fprintf(stderr, "Error in molecule selection: \"%d-%d\" out of range.\n",
-		cur->i, cur->i+cur->num-1);
-	 exit(2);
-      }
-   }
-   /*
-    *  Molecule mask
-    */
-   if(mol_head.next == 0)
-   {
-      cur = (list_mt*)calloc(1,sizeof(list_mt));
-      cur->i = 0;
-      cur->num = nmols;
-      mol_head.next = cur;
-   }
-
    /*
     *  Generate list of dump files if required
     */
@@ -445,7 +416,11 @@ main(int argc, char **argv)
       }
       
       if( nfiles++ == 0 )
+      {
 	 proto_header = header;
+	 nmols = header.nmols;
+	 nmols_r = header.nmols_r;
+      }
       else if( strncmp(header.title, proto_header.title, L_name) ||
 	      strncmp(header.vsn, proto_header.vsn, sizeof header.vsn) ||
 	    header.dump_interval != proto_header.dump_interval ||
@@ -471,6 +446,29 @@ main(int argc, char **argv)
       fprintf(stderr,"File \"%s\" \nslice %5d length %5d\n",
 	              dump_name, cur->i, cur->num);
 #endif
+   }
+
+   /*
+    * Check molecule selections are in range.
+    */
+   for(cur=mol_head.next; cur; cur = cur->next)
+   {
+      if( cur->i < 0 || cur->i+cur->num > nmols)
+      {
+	 fprintf(stderr, "Error in molecule selection: \"%d-%d\" out of range.\n",
+		cur->i, cur->i+cur->num-1);
+	 exit(2);
+      }
+   }
+   /*
+    *  Molecule mask
+    */
+   if(mol_head.next == 0)
+   {
+      cur = (list_mt*)calloc(1,sizeof(list_mt));
+      cur->i = 0;
+      cur->num = nmols;
+      mol_head.next = cur;
    }
 
    if( xcpt > 0 && ! (1 << (xcpt-1) & level_mask[proto_header.dump_level]) )
@@ -537,8 +535,8 @@ main(int argc, char **argv)
    fprintf(stderr,"Size Offset\n");
 #endif
    offset=0;
-   cpt[0].size = cpt[4].size = cpt[7].size = cpt[10].size = nmols;
-   cpt[1].size = cpt[5].size = cpt[8].size = cpt[11].size = nmols_r;
+   cpt[0].size = cpt[5].size = cpt[9].size = nmols;
+   cpt[1].size = cpt[6].size = cpt[10].size = nmols_r;
    for(icpt = 0; icpt < NCPT; icpt++)
    {
       cpt[icpt].size *= cpt[icpt].ncpt;

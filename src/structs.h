@@ -19,9 +19,19 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.11 2000/05/23 15:23:09 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.12 2000/11/06 16:02:07 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.12  2000/11/06 16:02:07  keith
+ * First working version with a Nose-Poincare thermostat for rigid molecules.
+ *
+ * System header updated to include H_0.
+ * Dump performs correct scaling  of angular velocities, but dumpext still
+ *    needs to be updated to read this.
+ * XDR functions corrected to work with new structs.
+ * Parallel broadcast of config also updated.
+ * Some unneccessary functions and code deleted.
+ *
  * Revision 2.11  2000/05/23 15:23:09  keith
  * First attempt at a thermostatted version of the Leapfrog code
  * using either a Nose or a Nose-Poincare thermostat
@@ -339,7 +349,23 @@ typedef struct                  /* Dump file header format                    */
    time_mt      timestamp,      /* Time file was written                      */
                 dump_init,      /* Time dump run was started (ie first file)  */
                 restart_timestamp;/* Time corresponding restart file written  */
+   int		nmols, nmols_r; /* Number of molecules and rotations          */
 }       dump_mt;
+
+typedef struct                  /* Dump file header format                    */
+{
+   char         title[L_name],  /* Run title at beginning of dump run         */
+                vsn[16];        /* RCS Revision number                        */
+   long         istep,          /* Timestep at beginning of this file         */
+                dump_interval;  /* How many steps between dumps               */
+   int          dump_level,     /* Parameter determining contents of record   */
+                maxdumps,       /* Maximum number of dump records in file     */
+                ndumps,         /* How many dump records in file              */
+                dump_size;      /* Size of a dump record                      */
+   time_mt      timestamp,      /* Time file was written                      */
+                dump_init,      /* Time dump run was started (ie first file)  */
+                restart_timestamp;/* Time corresponding restart file written  */
+}       dump_2_mt;
 
 #define MAX_ROLL_INTERVAL       100
 typedef struct
