@@ -172,7 +172,7 @@ int	bflg, nmols;
    }
 
    dump_base = sizeof(dump_t)+tslice*header.dump_size*sizeof(float);
-   while(tslice < num && tslice < header.dump_interval * header.ndumps)
+   while(tslice < num && tslice < header.ndumps)
    {
 #ifdef DEBUG
       fprintf(stderr,"Timeslice %d of %d\n", tslice, num);
@@ -440,6 +440,15 @@ char	*argv[];
 #ifdef DEBUG
       fprintf(stderr,"%6d %6d\n",cpt[icpt].size,cpt[icpt].offset);
 #endif
+   }
+   /*
+    *  Safety.  Have we correctly calculated the dump record length?
+    */
+   if( offset != proto_header.dump_size )
+   {
+      fprintf(stderr,"Internal error in dump record length (%d,%d)\n",
+	      offset,proto_header.dump_size);
+      exit(3);
    }
    /*
     *  Do the extraction
