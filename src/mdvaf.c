@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1.2 1999/10/11 14:05:19 keith Exp keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1.3 1999/10/11 14:13:29 keith Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,13 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.4  1999/10/12 17:41:24  craig
+ *  Added new function 'vel_to_moldy' to read velocity data
+ *
+ *  Revision 1.3  1999/10/11 14:13:29  keith
+ *  Removed common functions to "utlsup.c".
+ *  Removed some unused variables.
+ *
  *  Revision 1.1  1999/10/11 10:50:07  keith
  *  Initial revision
  *
@@ -78,12 +85,32 @@ void	zero_real();
 void	tfree();
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
-static char  *comm;
+char    *comm;
 contr_mt                control;
 
 #define VAF  0
 #define VTF  1
 
+/******************************************************************************
+ * vel_to_moldy.  Fill the 'system' velocity arrays with the dump data in     *
+ * 'buf' (see dump.c for format), expanding floats to doubles if necessary.   *
+ ******************************************************************************/
+void
+vel_to_moldy(buf, system)
+float   *buf;
+system_mt *system;
+{
+   int i;
+   float        *vel    = buf;
+
+/* $dir no_recurrence */
+   for(i = 0; i < system->nmols; i++)
+   {
+      system->vel[i][0] = vel[3*i];
+      system->vel[i][1] = vel[3*i+1];
+      system->vel[i][2] = vel[3*i+2];
+   }
+}
 /******************************************************************************
  * vel_copy().  Copy molecular c_of_m velocities to array                     * 
  ******************************************************************************/
@@ -529,7 +556,7 @@ char	*argv[];
         if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
            error("Error reading record %d in dump file - \n%s\n",
               irec, strerror(errno));
-        dump_to_moldy(dump_buf, &sys);  /*read dump data */
+        vel_to_moldy(dump_buf, &sys);  /*read dump data */
         vel_copy(species, vel[irec/inc], sp_range);  /* copy to velocity-time array */
 
 #ifdef DEBUG
