@@ -29,6 +29,11 @@ what you give them.   Help stamp out software-hoarding!  */
  *		module (kernel.c) for ease of modification.		      *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.12  1996/05/03 16:14:20  keith
+ *       Fixed bug whereby reloc could overflow in strict cutoff mode by
+ *       tightening up test condition. Also fixed the calculation of
+ *       n_nab_sites to reflect the increased cutoff in strict mode.
+ *
  *       Revision 2.11  1996/01/17 17:12:47  keith
  *       Incorporated rdf accumulation into forces and parallelized.
  *       New functions rdf_inner(), calls rdf_accum() from rdf.c
@@ -96,7 +101,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.12 1996/04/25 14:10:47 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.12 1996/05/03 16:14:20 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -743,24 +748,20 @@ mat_mt          stress;                 /* Stress virial                (out) */
    {
       note("MD cell divided into %d subcells (%dx%dx%d)",ncells,nx,ny,nz);
 
-      reloc_lim_sc = NSH*MIN3(system->h[0][0]*(nx-1)/nx,
-			      system->h[1][1]*(ny-1)/ny,
-			      system->h[2][2]*(nz-1)/nz)  - mol_diam;
+      reloc_lim_sc = MIN3(system->h[0][0]*(NSH*nx-1.0)/nx,
+                          system->h[1][1]*(NSH*ny-1.0)/ny,
+		          system->h[2][2]*(NSH*nz-1.0)/nz)  - mol_diam;
       reloc_lim = NSH*MIN3(system->h[0][0], system->h[1][1], system->h[2][2]);
       if(control.cutoff >= (control.strict_cutoff?reloc_lim_sc:reloc_lim))
 	 if( ithread == 0 )
 	    message(NULLI, NULLP, FATAL, CUTOFF, NSH);
-#ifdef SPMD
          else
-	    par_abort(3);
-#endif
+	    exit(3);
       if(control.limit >= reloc_lim_sc)
 	 if( ithread == 0 )
 	    message(NULLI, NULLP, FATAL, CUTRDF, NSH);
-#ifdef SPMD
          else
-	    par_abort(3);
-#endif
+	    exit(3);
 
       if( reloc )
 	 xfree((reloc-NSH*onx));
