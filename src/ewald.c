@@ -3,6 +3,13 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.23  93/03/12  12:21:50  keith
+ * *** empty log message ***
+ * 
+ * Revision 1.22  93/03/09  15:58:28  keith
+ * Changed all *_t types to *_mt for portability.
+ * Reordered header files for GNU CC compatibility.
+ * 
  * Revision 1.21  92/06/26  17:02:58  keith
  * Got rid of assumption that memory returned by talloc() or
  * arralloc() is zeroed.  This enhances ANSI compatibility.
@@ -94,12 +101,12 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.21 92/06/26 17:02:58 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.23 93/03/12 12:21:50 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
 /*========================== Library include files ===========================*/
-#if  defined(convexvc) || defined(stellar)
+#ifdef stellar
 #   include 	<fastmath.h>
 #else
 #ifdef ardent

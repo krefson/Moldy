@@ -3,6 +3,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.21  93/03/09  15:59:58  keith
+ * Changed all *_t types to *_mt for portability.
+ * Reordered header files for GNU CC compatibility.
+ * 
  * Revision 1.20  93/03/05  15:01:53  keith
  * Added CRAY parallelising directives
  * 
@@ -106,12 +110,12 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.20 93/03/05 15:01:53 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.21 93/03/09 15:59:58 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
 /*========================== Library include files ===========================*/
-#if  defined(convexvc) || defined(stellar)
+#ifdef stellar
 #   include 	<fastmath.h>
 #else
 #ifdef titan
