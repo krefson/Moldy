@@ -34,6 +34,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ *       Revision 2.21  2002/09/19 09:26:31  kr
+ *       Tidied up header declarations.
+ *       Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *       Revision 2.20  2001/07/26 17:30:18  keith
  *       Now prints both conserved hamiltonian and total system energy
  *       (T+V) in the same vertical column.
@@ -202,7 +206,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/values.c,v 2.20 2001/07/26 17:30:18 keith Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/values.c,v 2.21 2002/09/19 09:26:31 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -543,14 +547,14 @@ void	values(system_mt *system,        /* record of system info             */
    if( firstcall )
    {
       firstcall = false;
-      tkep1 = dalloc(system->nspecies);
-      tkem1 = dalloc(system->nspecies);
-      tkem3 = dalloc(system->nspecies);
-      tkem5 = dalloc(system->nspecies);
-      rkep1 = dalloc(system->nspecies);
-      rkem1 = dalloc(system->nspecies);
-      rkem3 = dalloc(system->nspecies);
-      rkem5 = dalloc(system->nspecies);
+      tkep1 = (double*)aalloc(system->nspecies, double);
+      tkem1 = (double*)aalloc(system->nspecies, double);
+      tkem3 = (double*)aalloc(system->nspecies, double);
+      tkem5 = (double*)aalloc(system->nspecies, double);
+      rkep1 = (double*)aalloc(system->nspecies, double);
+      rkem1 = (double*)aalloc(system->nspecies, double);
+      rkem3 = (double*)aalloc(system->nspecies, double);
+      rkem5 = (double*)aalloc(system->nspecies, double);
       for(ispec=0; ispec < system->nspecies; ispec++)
       {
 	 tkep1[ispec] = rkep1[ispec] = 

@@ -27,6 +27,9 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.19  2004/11/23 12:20:30  kr
+ *  Removed C99 array allocation => arralloc
+ *
  *  Revision 1.18  2004/11/22 18:21:10  kr
  *  Merget "util_updates" branch into main
  *
@@ -169,7 +172,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/ransub.c,v 1.18 2004/11/22 18:21:10 kr Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/ransub.c,v 1.19 2004/11/23 12:20:30 kr Exp $";
 #endif  
 
 #include "defs.h"
@@ -648,7 +651,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    vec_mt       solute_pos;     /* Position vector of dopant relative to solvent cofm */
    mat_mt       rot_mat;        /* Rotation matrix */
    real		inertia[6];     /* Inertia tensor for rot to principal frame */
-   double	*mass=dalloc(dopant->nsites);	/* Temporary storage for dopant site mass */
+   double	*mass=aalloc(dopant->nsites,double);	/* Temporary storage for dopant site mass */
    int		*num_site = ialloc(max_id); /* No of each site type */
    vec_mt	mult;	/* Factor for multiplying positions after eigensort (+1 or -1) */
 
@@ -1033,7 +1036,7 @@ main(int argc, char **argv)
    int          newsites=0;
    int          insw = -1;
    double       simbox[3];
-   real		euler[3];
+   double	euler[3];
    boolean      strict_match = OFF;
    boolean      shift_cofm = OFF;
 
@@ -1041,8 +1044,8 @@ main(int argc, char **argv)
    control.page_length=1000000;
    dopspec.nmols = dopspec.rdof = 0;
    zero_real(h[0],9);
-   zero_real(charge,MAX_ATOMS);
-   zero_real(euler,3);
+   zero_double(charge,MAX_ATOMS);
+   zero_double(euler,3);
    strcpy(spgr,"P 1");
 
    comm = argv[0];

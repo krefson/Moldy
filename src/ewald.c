@@ -23,6 +23,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.24  2002/09/19 09:26:28  kr
+ *       Tidied up header declarations.
+ *       Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *       Revision 2.23  2001/03/02 11:43:30  keith
  *       Corrected fix for cache re-use bug.  The fix meant cache was never re-used!
  *
@@ -251,7 +255,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/ewald.c,v 2.23 2001/03/02 11:43:30 keith Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/ewald.c,v 2.24 2002/09/19 09:26:28 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -286,7 +290,7 @@ void	mat_sca_mul(register real s, real (*a)[3], real (*b)[3]);
 void	transpose(real (*a)[3], real (*b)[3]); /* Transposes a 3x3 matrix     */
 void    zero_real(real *r, int n);      /* Initialiser                        */
 void    zero_double(double *r, int n); 	/* Initialiser                        */
-double	sum(register int n, register double *x, register int ix);
+double	sum(register int n, register real *x, register int ix);
 					/* Sum of elements of 'real' vector   */
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 void	note(char *,...);		/* Write a message to the output file */

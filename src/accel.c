@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.41  2002/09/19 09:26:27  kr
+ *       Tidied up header declarations.
+ *       Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *       Revision 2.40  2002/09/18 09:03:20  kr
  *       Merged H_0 NVT bugfix for ewald46 branch
  *
@@ -349,7 +353,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/accel.c,v 2.40 2002/09/18 09:03:20 kr Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/accel.c,v 2.41 2002/09/19 09:26:27 kr Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include        "defs.h"
@@ -425,7 +429,7 @@ void   rdf_calc(real **site, system_mp system, spec_mt *species);
 double value(av_n type, int comp); /* Return thermodynamic average             */
 double roll_av(av_n type, int comp); /* Return thermodynamic average             */
 double vdot(int n, real *x, int ix, real *y, int iy); /* Fast  dot product   */
-double sum(int n, double *x, int ix); /* Fast sum */
+double sum(int n, real *x, int ix); /* Fast sum */
 void   vscale(int n, double s, real *x, int ix); /* Vector by const multiply */
 void   thermalise(system_mp system, spec_mt *species);              
                                       /* Randomize velocities to given temp  */
@@ -478,7 +482,7 @@ rescale(system_mp system, spec_mp species)
 {
    spec_mp        spec;
    int                ispec, imol, i;
-   double         *temp_value = dalloc(2*system->nspecies);
+   double         *temp_value = (double*)aalloc(2*system->nspecies,double);
    double        min_temp=MIN(value(t_n,0),roll_av(t_n,0));
    double        rtemp = 0.0, ttemp = 0.0, scale;
    double        total_mass;
@@ -975,7 +979,7 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
  * system, and are set equal to (eg) force[0]
  */
    vec_mp   force_base = ralloc(sys->nmols),
-            torque_base = sys->nmols_r?ralloc(sys->nmols_r):0;
+            torque_base = sys->nmols_r?ralloc(sys->nmols_r):0L;
    mat_mt          ke_dyad;
    double           ke, tke;
    spec_mp         spec;

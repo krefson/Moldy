@@ -23,7 +23,10 @@ what you give them.   Help stamp out software-hoarding! */
  * spgrexp code for expanding unit cells from primitive coordinates and space group   *
  **************************************************************************************
  *  Revision Log
- *  $Log$
+ *  $Log: spgrexp.c,v $
+ *  Revision 2.5  2004/11/22 18:21:10  kr
+ *  Merget "util_updates" branch into main
+ *
  *  Revision 2.4.8.1  2003/07/29 09:45:20  moldydv
  *  Improvements, added functions and bug fixes for several utilities.
  *
@@ -97,7 +100,8 @@ void    sgtransform(T_RTMx m, mat_mp x, mat_mp xp, int natoms)
 int     symm_gen(T_RTMx matrix, mat_mp apos, char (*atype)[NLEN], double *charge, int max, int natoms, int abegin, int aend)
 {
    int          iatom, i, iatt, idupl;
-   double       trial_pos[3], da, db, dc;
+   double       da, db, dc;
+   real         trial_pos[3];
 
    for(iatom = abegin; iatom < aend; iatom++)
    {

@@ -24,7 +24,10 @@ what you give them.   Help stamp out software-hoarding! */
  *              -y selects .pot file from which potentials are read                   *
  **************************************************************************************
  *  Revision Log
- *  $Log$
+ *  $Log: syswrite.c,v $
+ *  Revision 2.7  2004/11/22 18:21:10  kr
+ *  Merget "util_updates" branch into main
+ *
  *  Revision 2.6.10.3  2004/04/09 06:02:55  moldydv
  *  Moved xtoupper definition to utlsup.h
  *
@@ -68,7 +71,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/syswrite.c,v 2.7 2004/11/22 18:21:10 kr Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -306,7 +309,7 @@ main(int argc, char **argv)
    }
 
    zero_real(h[0],9);
-   zero_real(charge,MAX_ATOMS);
+   zero_double(charge,MAX_ATOMS);
    strcpy(spgr,"P 1");
 
    switch(insw)  /* Read in data according to format selected */
