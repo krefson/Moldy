@@ -1,0 +1,18 @@
+title=Example TIPS2 Simulation
+surface-dipole=1
+temperature=300
+subcell=2.5
+density=1
+scale-interval=10
+scale-end=500
+average-interval=1000
+sys-spec-file=tips2.in
+page-length=44
+step=0.0005
+nsteps=10
+print-interval=10
+dump-level=0
+save-file=
+time-unit=4.8888213e-14 #Kcal mol-1 amu A
+rdf-limit=6
+end

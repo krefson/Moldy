@@ -1,0 +1,11 @@
+sys-spec-file=quartz-vbst.in
+time-unit=1.0181e-14
+nsteps=10
+step=0.001
+print-interval=10
+scale-interval=1
+temperature=300
+lattice-start=1
+cutoff=8.48
+subcell=3
+end

@@ -1,0 +1,83 @@
+ *I* control file read in successfully
+	Tue Mar 19 15:15:39 1996	Example TIP4P Simulation	Page 1
+ *I* reading system specification file
+ *W* no potential parameters given between sites 1 and 2
+ *W* no potential parameters given between sites 1 and 3
+ *W* no potential parameters given between sites 2 and 2
+ *W* no potential parameters given between sites 2 and 3
+ *W* no potential parameters given between sites 3 and 3
+ *I* system specification file successfully read in
+	Tue Mar 19 15:15:39 1996	Example TIP4P Simulation	Page 2
+
+
+		#     # ####### #       ######  #     #
+		##   ## #     # #       #     #  #   # 
+		# # # # #     # #       #     #   # #  
+		#  #  # #     # #       #     #    #   
+		#     # #     # #       #     #    #   
+		#     # #     # #       #     #    #   
+		#     # ####### ####### ######     #   
+
+		Version 2.10  (Exp ) 1996/03/06 18:16:21 
+
+		Keith Refson
+		Department of Earth Sciences
+		Parks Road, Oxford OX1 3PR
+		keith@earth.ox.ac.uk
+
+		Moldy Copyright (C) Keith Refson 1988, 1992, 1993
+		Moldy comes with ABSOLUTELY NO WARRANTY:
+		This is free software and you are welcome to
+		redistribute it under certain conditions.
+		For details see file COPYING included with source.
+
+ System specification read in from file tip4p.in
+ Water
+	Number of molecules              = 256
+	Number of sites                  = 4
+	Mass                             = 18 amu
+	Electric Charge                  = 0 Qe
+	Dipole moment                    = 2.17592 D
+	Moments of inertia               = 0.610236 1.75618 1.14595 amuA**2
+
+ MD cell vectors
+	a                                = 19.7055 0 0 A
+	b                                = 0 19.7055 0 A
+	c                                = 0 0 19.7055 A
+ Run parameters
+	Final step                       = 10
+	Size of step                     = 0.0005 ps
+	CPU limit                        = 1e+20 s
+ Temperature will be scaled using instantaneous kinetic energy
+	No. steps between scalings       = 10
+	End scaling at step              = 500
+	Applied Temperature              = 300 K
+	Tue Mar 19 15:15:39 1996	Example TIP4P Simulation	Page 3
+	Interaction cut-off              = 8.93822 A
+	Alpha parameter for Ewald sum    = 0.379401 A(-1)
+	Reciprocal space cut-off         = 2.57322 A(-1)
+ Radial distribution functions will be calculated
+	Starting at timestep             = 1000000
+	No. steps between binnings       = 20
+	Calculate and print after        = 5000
+ New run entitled "Example TIP4P Simulation" started Tue Mar 19 15:15:39 1996
+ *I* Distant potential correction = -64.115635, Pressure correction = -27.801126
+ *I* MD cell divided into 512 subcells (8x8x8)
+ *I* Neighbour list contains 204 cells
+ *I* Ewald self-energy = 1722.888659 Kj/mol
+ *I* 1102 K-vectors included in reciprocal-space sum
+	Tue Mar 19 15:16:01 1996	Example TIP4P Simulation	Page 4
+    Trans KE      Rot KE  Pot Energy  Tot Energy  TTemp  RTemp   Temp h(1,*) h(2,*) h(3,*)     Stress     Stress     Stress
+======== Timestep 10      Current values ==================================================================================
+      922.49      1589.3     -1410.9      1079.1  288.9  497.8  393.4  19.71   0.00   0.00        881       -485      -16.1
+                              -21.87                                    0.00  19.71   0.00       -485        903        110
+                                                                        0.00   0.00  19.71      -16.1        110       -452
+-------- Rolling averages over last 10 timesteps --------------------------------------------------------------------------
+      913.44      1187.8     -1088.8      1078.8  286.1  372.0  329.1  19.71   0.00   0.00        492       -221        441
+                              66.438                                    0.00  19.71   0.00       -221   1.18e+03        236
+                                                                        0.00   0.00  19.71        441        236       -364
+-------- Standard deviations ----------------------------------------------------------------------------------------------
+      4.6929      213.58      171.89     0.60279    1.5   66.9   34.2   0.00   0.00   0.00   1.61e+03        820   1.39e+03
+                              46.168                                    0.00   0.00   0.00        820        455        317
+                                                                        0.00   0.00   0.00   1.39e+03        317        114
+ *I* Run used 10.88s of CPU time and 22.93s elapsed

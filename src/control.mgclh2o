@@ -1,0 +1,14 @@
+title=Magnesium Chloride Solution
+sys-spec-file=mgclh2o.in
+step=0
+nsteps=1
+print-interval=1
+density=1
+cutoff=6.25
+k-cutoff = 3
+alpha = 0.45
+text-mode-save=1
+save-file=mdsave.mgclh2o
+#restart-file=mdsave.water.1
+time-unit=4.8888213e-14
+end

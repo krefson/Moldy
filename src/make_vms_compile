@@ -1,0 +1,5 @@
+#! /bin/sh
+for file do
+   echo \$ write sys\$output \"Compiling $file\"
+   echo \$ CC $file
+done

@@ -1,0 +1,97 @@
+ *I* control file read in successfully
+	Tue Mar 19 15:16:27 1996	Magnesium Chloride Solution	Page 1
+ *I* reading system specification file
+ *W* no potential parameters given between sites 1 and 3
+ *W* no potential parameters given between sites 2 and 3
+ *W* no potential parameters given between sites 3 and 3
+ *W* no potential parameters given between sites 3 and 4
+ *W* no potential parameters given between sites 3 and 5
+ *W* no potential parameters given between sites 4 and 4
+ *W* no potential parameters given between sites 5 and 5
+ *I* system specification file successfully read in
+	Tue Mar 19 15:16:27 1996	Magnesium Chloride Solution	Page 2
+
+
+		#     # ####### #       ######  #     #
+		##   ## #     # #       #     #  #   # 
+		# # # # #     # #       #     #   # #  
+		#  #  # #     # #       #     #    #   
+		#     # #     # #       #     #    #   
+		#     # #     # #       #     #    #   
+		#     # ####### ####### ######     #   
+
+		Version 2.10  (Exp ) 1996/03/06 18:16:21 
+
+		Keith Refson
+		Department of Earth Sciences
+		Parks Road, Oxford OX1 3PR
+		keith@earth.ox.ac.uk
+
+		Moldy Copyright (C) Keith Refson 1988, 1992, 1993
+		Moldy comes with ABSOLUTELY NO WARRANTY:
+		This is free software and you are welcome to
+		redistribute it under certain conditions.
+		For details see file COPYING included with source.
+
+ System specification read in from file mgclh2o.in
+ Water
+	Number of molecules              = 200
+	Number of sites                  = 4
+	Mass                             = 18 amu
+	Electric Charge                  = 0 Qe
+	Dipole moment                    = 2.19159 D
+	Moments of inertia               = 0.610236 1.75618 1.14595 amuA**2
+ Magnesium
+	Number of molecules              = 4
+	Number of sites                  = 1
+	Mass                             = 24.31 amu
+	Electric Charge                  = 2 Qe
+	Magnesium molecule has no rotational degrees of freedom
+ Chloride
+	Number of molecules              = 8
+	Number of sites                  = 1
+	Mass                             = 35.45 amu
+	Electric Charge                  = -1 Qe
+	Chloride molecule has no rotational degrees of freedom
+
+	Tue Mar 19 15:16:27 1996	Magnesium Chloride Solution	Page 3
+ MD cell vectors
+	a                                = 18.7676 0 0 A
+	b                                = 0 18.7676 0 A
+	c                                = 0 0 18.7676 A
+ Run parameters
+	Final step                       = 1
+	Size of step                     = 0 ps
+	CPU limit                        = 1e+20 s
+ Temperature will be scaled using instantaneous kinetic energy
+	No. steps between scalings       = 10
+	End scaling at step              = 1000000
+	Applied Temperature              = 0 K
+	Interaction cut-off              = 6.25 A
+	Alpha parameter for Ewald sum    = 0.45 A(-1)
+	Reciprocal space cut-off         = 3 A(-1)
+ Radial distribution functions will be calculated
+	Starting at timestep             = 1000000
+	No. steps between binnings       = 20
+	Calculate and print after        = 5000
+ New run entitled "Magnesium Chloride Solution" started Tue Mar 19 15:16:27 1996
+ *I* Distant potential correction = -72.207003, Pressure correction = -18.188941
+ *I* MD cell divided into 3375 subcells (15x15x15)
+ *I* Neighbour list contains 486 cells
+ *I* Ewald self-energy = 11332.778403 Kj/mol
+ *I* 1484 K-vectors included in reciprocal-space sum
+	Tue Mar 19 15:16:28 1996	Magnesium Chloride Solution	Page 4
+    Trans KE      Rot KE  Pot Energy  Tot Energy  TTemp  RTemp   Temp h(1,*) h(2,*) h(3,*)     Stress     Stress     Stress
+======== Timestep 1      Current values ===================================================================================
+           0           0      3209.1      2423.7    0.0    0.0    0.0  18.77   0.00   0.00   3.36e+04   1.68e+04   7.49e+03
+           0           0     -785.41                0.0    0.0          0.00  18.77   0.00   1.68e+04   5.84e+03   1.19e+03
+           0           0                            0.0    0.0          0.00   0.00  18.77   7.49e+03   1.19e+03   3.65e+03
+-------- Rolling averages over last 1 timesteps ---------------------------------------------------------------------------
+           0           0      3209.1      2423.7    0.0    0.0    0.0  18.77   0.00   0.00   3.36e+04   1.68e+04   7.49e+03
+           0           0     -785.41                0.0    0.0          0.00  18.77   0.00   1.68e+04   5.84e+03   1.19e+03
+           0           0                            0.0    0.0          0.00   0.00  18.77   7.49e+03   1.19e+03   3.65e+03
+-------- Standard deviations ----------------------------------------------------------------------------------------------
+           0           0           0           0    0.0    0.0    0.0   0.00   0.00   0.00          0          0          0
+           0           0           0                0.0    0.0          0.00   0.00   0.00          0          0          0
+           0           0                            0.0    0.0          0.00   0.00   0.00          0          0          0
+ *I* Run used 0.85s of CPU time and 1.21s elapsed

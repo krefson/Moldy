@@ -1,0 +1,84 @@
+ *I* control file read in successfully
+	Tue Mar 19 15:25:39 1996	Test Simulation	Page 1
+ *I* reading system specification file
+ *I* system specification file successfully read in
+ *I* system successfully initialised from lattice start
+	Tue Mar 19 15:25:39 1996	Test Simulation	Page 2
+
+
+		#     # ####### #       ######  #     #
+		##   ## #     # #       #     #  #   # 
+		# # # # #     # #       #     #   # #  
+		#  #  # #     # #       #     #    #   
+		#     # #     # #       #     #    #   
+		#     # #     # #       #     #    #   
+		#     # ####### ####### ######     #   
+
+		Version 2.10  (Exp ) 1996/03/06 18:16:21 
+
+		Keith Refson
+		Department of Earth Sciences
+		Parks Road, Oxford OX1 3PR
+		keith@earth.ox.ac.uk
+
+		Moldy Copyright (C) Keith Refson 1988, 1992, 1993
+		Moldy comes with ABSOLUTELY NO WARRANTY:
+		This is free software and you are welcome to
+		redistribute it under certain conditions.
+		For details see file COPYING included with source.
+
+ System specification read in from file quartz-vbst.in
+ oxygen
+	Number of molecules              = 384
+	Number of sites                  = 1
+	Mass                             = 16 amu
+	Electric Charge                  = -1.2 Qe
+	oxygen molecule has no rotational degrees of freedom
+ silicon
+	Number of molecules              = 192
+	Number of sites                  = 1
+	Mass                             = 28.0855 amu
+	Electric Charge                  = 2.4 Qe
+	silicon molecule has no rotational degrees of freedom
+
+ MD cell vectors
+	a                                = 19.612 0 0 A
+	b                                = -9.806 16.9845 0 A
+	c                                = 1.3209e-15 2.28787e-15 21.572 A
+ Run parameters
+	Final step                       = 10
+	Size of step                     = 0.001 ps
+	Tue Mar 19 15:25:39 1996	Test Simulation	Page 3
+	CPU limit                        = 1e+20 s
+ Temperature will be scaled using instantaneous kinetic energy
+	No. steps between scalings       = 1
+	End scaling at step              = 1000000
+	Applied Temperature              = 300 K
+	Interaction cut-off              = 8.48 A
+	Alpha parameter for Ewald sum    = 0.352007 A(-1)
+	Reciprocal space cut-off         = 2.38743 A(-1)
+ Radial distribution functions will be calculated
+	Starting at timestep             = 1000000
+	No. steps between binnings       = 20
+	Calculate and print after        = 5000
+ New run entitled "Test Simulation" started Tue Mar 19 15:25:39 1996
+ *I* Distant potential correction = -2097.957193, Pressure correction = -969.585951
+ *I* MD cell divided into 1560 subcells (12x10x13)
+ *I* Neighbour list contains 552 cells
+ *I* Ewald self-energy = 457724.399972 Kj/mol
+ *I* 833 K-vectors included in reciprocal-space sum
+	Tue Mar 19 15:25:51 1996	Test Simulation	Page 4
+    Trans KE      Rot KE  Pot Energy  Tot Energy  TTemp  RTemp   Temp h(1,*) h(2,*) h(3,*)     Stress     Stress     Stress
+======== Timestep 10      Current values ==================================================================================
+      4420.6           0 -5.4959e+05 -1.0005e+06  923.0    0.0  733.4  19.61  -9.81   0.00   1.36e+03  -4.15e+03        114
+       848.2           0 -4.5614e+05              354.2    0.0          0.00  16.98   0.00  -4.15e+03   1.45e+04       -176
+                                                                        0.00   0.00  21.57        114       -176  -7.07e+03
+-------- Rolling averages over last 10 timesteps --------------------------------------------------------------------------
+      4401.2           0 -5.3414e+05  -9.844e+05  919.0    0.0  749.1  19.61  -9.81   0.00       -480  -2.62e+03   1.95e+03
+      980.16           0 -4.5565e+05              409.3    0.0          0.00  16.98   0.00  -2.62e+03    1.8e+04   1.27e+03
+                                                                        0.00   0.00  21.57   1.95e+03   1.27e+03  -9.95e+03
+-------- Standard deviations ----------------------------------------------------------------------------------------------
+      1053.4           0       10253       10141  220.0    0.0  153.2   0.00   0.00   0.00   2.49e+03   2.11e+03   8.08e+03
+      125.59           0      325.13               52.4    0.0          0.00   0.00   0.00   2.11e+03   2.91e+03   2.76e+03
+                                                                        0.00   0.00   0.00   8.08e+03   2.76e+03   1.08e+04
+ *I* Run used 5.47s of CPU time and 12.35s elapsed
