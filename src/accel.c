@@ -5,6 +5,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	accel.c,v $
+ * Revision 1.5  89/06/22  15:42:17  keith
+ * Tidied up loops over species to use one pointer as countes
+ * 
  * Revision 1.4  89/06/14  18:18:12  keith
  * Removed call to SCILIB function VCOPY and equivalents - use memcpy instead.
  * 
@@ -291,18 +294,20 @@ mat_t           stress;		       /* Virial part of stress	(out) */
  * Reciprocal-space part of Ewald sum
  */
    if (control.alpha > ALPHAMIN)
+   {
       ewald(site_base, s_f_base, sys, species, chg, pe + 1, stress);
 /*
  * Dipole moment contribution to forces and potential (De Leeuw, Perram
  * and Smith Proc Roy Soc A373, 27-56 (1980)
  */
-   for (i = 0; i < 3; i++)
-   {
-      dip_mom[i] = vdot(sys->nsites, site_base[0] + i, 3, chg, 1);
-      for ( isite = 0; isite < sys->nsites; isite++ )
-         s_f_base[isite][i] -= 4.0*PI/(3.0*vol) * dip_mom[i] * chg[isite];
+      for (i = 0; i < 3; i++)
+      {
+	 dip_mom[i] = vdot(sys->nsites, site_base[0] + i, 3, chg, 1);
+	 for ( isite = 0; isite < sys->nsites; isite++ )
+	    s_f_base[isite][i] -= 4.0*PI/(3.0*vol) * dip_mom[i] * chg[isite];
+      }
+      pe[1] += 2.0*PI/(3.0*vol) * SUMSQ(dip_mom);
    }
-   pe[1] += 2.0*PI/(3.0*vol) * SUMSQ(dip_mom);
 
 /*
  * Calculate the centre of mass forces and torques from the site forces
