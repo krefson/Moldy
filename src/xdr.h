@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.h,v $
+ *       Revision 2.15  2001/08/01 11:56:37  keith
+ *       Incorporated all info from "species" struct into dump file headers.
+ *       - fixed utilities and a few bugs.
+ *
  *       Revision 2.14  2001/07/31 17:58:19  keith
  *       Incorporated all info from "species" struct into dump file headers.
  *
@@ -92,7 +96,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSidh = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.h,v 2.14 2001/07/31 17:58:19 keith Exp $";
+static char *RCSidh = "$Header: /home/kr/CVS/moldy/src/xdr.h,v 2.15 2001/08/01 11:56:37 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef USE_XDR
@@ -164,6 +168,7 @@ void   xdr_set_npotpar(int npotpar);
 bool_t xdr_pot(XDR *xdrs, pot_mt *sp);
 bool_t xdr_restrt(XDR *xdrs, restrt_mt *sp);
 bool_t xdr_dump(XDR *xdrs, dump_mt *sp);
+bool_t xdr_dump_sysinfo_hdr(XDR *xdrs, dump_sysinfo_mt *sp);
 bool_t xdr_dump_sysinfo(XDR *xdrs, dump_sysinfo_mt *sp, int vmajor, int vminor);
 void   xdr_set_av_size_conv(size_mt size, int av_conv);
 bool_t xdr_averages(XDR *xdrs, gptr *ap);

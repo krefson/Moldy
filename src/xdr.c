@@ -26,6 +26,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.26  2002/02/27 17:48:34  kr
+ *       Reworked auto-setting of Ewald parameters.
+ *         Added new control parameter "ewald-accuracy" to refine auto-setting.
+ *         If cutoff > necessary, optimize execution time by decreasing alpha and k_cutoff
+ *           and moving more of calculation to real space
+ *
  *       Revision 2.25  2001/07/31 17:58:19  keith
  *       Incorporated all info from "species" struct into dump file headers.
  *
@@ -157,7 +163,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/xdr.c,v 2.25 2001/07/31 17:58:19 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/xdr.c,v 2.26 2002/02/27 17:48:34 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -290,6 +296,15 @@ bool_t xdr_dump(XDR *xdrs, dump_mt *sp)
       xdr_vector(xdrs, (gptr*)&sp->timestamp, 4, sizeof(unsigned long), (xdrproc_t)xdr_u_long);
 }
 
+bool_t xdr_dump_sysinfo_hdr(XDR *xdrs, dump_sysinfo_mt *sp)
+{
+   int i, ispec;
+   i = 
+      xdr_float(xdrs, &sp->deltat) &&
+      xdr_vector(xdrs, (gptr*)&sp->nmols, 3, sizeof(int), (xdrproc_t)xdr_int);
+   return i;
+}
+
 bool_t xdr_dump_sysinfo_2_23(XDR *xdrs, dump_sysinfo_mt *sp)
 {
    int i, ispec;
@@ -304,6 +319,7 @@ bool_t xdr_dump_sysinfo_2_23(XDR *xdrs, dump_sysinfo_mt *sp)
    }
    return i;
 }
+
 
 bool_t xdr_dump_sysinfo_2_18(XDR *xdrs, dump_sysinfo_mt *sp)
 {

@@ -144,7 +144,7 @@ int rewind_dump(FILE *dumpf, int xdr)
 
 static
 int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_write,
-		     int sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
+		     size_mt sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
 {
    int      errflg = true;	/* Provisionally !!   */
    char     vbuf[sizeof hdr_p->vsn + 1];
@@ -185,24 +185,56 @@ int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_writ
        */
       errflg = true;
       if( sscanf(hdr_p->vsn, "%d.%d", &vmajor, &vminor) < 2 )
-	 message(NULLI, NULLP, WARNING, INRVSN, hdr_p->vsn);
+	 message(NULLI, NULLP, WARNING, INDVSN, hdr_p->vsn);
       if( vmajor < 2 || vminor <= 17)
 	 message(NULLI, NULLP, WARNING, OLDVSN, hdr_p->vsn);
       else
 	 errflg = false;
    }
-   if( ! errflg && dump_sysinfo )
+   if( errflg ) return errflg;
+
+   
+   if( dump_sysinfo == 0)
+      return errflg;
+   else if ( sysinfo_size == sizeof(dump_sysinfo_mt) )
    {
-      if( hdr_p->sysinfo_size != sysinfo_size )
-	 message(NULLI, NULLP, WARNING, CORUPT, fname, sysinfo_size, 
-		 hdr_p->sysinfo_size);
       /*
-       * Now check for sysinfo and read it
+       * Now check for sysinfo and read fixed part of it.  This is needed to
+       * determine species count to read the whole thing.
+       */
+#ifdef USE_XDR
+      if( *xdr_write ) {
+	 if( ! xdr_dump_sysinfo_hdr(&xdrs, dump_sysinfo) )
+	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+	 errflg = false;
+      } else
+#endif
+      {
+	 if( fread((gptr*)dump_sysinfo,sizeof(dump_sysinfo_mt), 1, dumpf) == 0)
+	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+	 errflg = false;
+      }
+   }
+   else
+   {
+      /*
+       * Now check for sysinfo and read it all.  N.B.  Buffer must be 
+       * allocated to full expected size by prior call to read_dump_header.
        */
 #ifdef USE_XDR
       if( *xdr_write ) {
 	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo, vmajor, vminor) )
 	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+      if (sizeof(dump_sysinfo_mt) 
+	  + sizeof(mol_mt) * (dump_sysinfo->nspecies-1) > sysinfo_size)
+      {
+	 /*
+	  * We have already overrun the end of the "dump_sysinfo" buffer.
+	  * Perhaps we can exit gracefully before crashing?
+          */
+	 message(NULLI, NULLP, FATAL, RDHERR,  sizeof(dump_sysinfo_mt) 
+		 + sizeof(mol_mt) * (dump_sysinfo->nspecies-1), sysinfo_size);
+      }
 	 errflg = false;
       } else
 #endif
@@ -338,7 +370,7 @@ void	print_header(dump_mt *header, dump_sysinfo_mt *sysinfo)
    printf("Timestamp\t\t\t= %s", ctime((time_t*)&header->timestamp));
    printf("Restart Timestamp\t\t= %s", ctime((time_t*)&header->restart_timestamp));
    printf("Dump Start\t\t\t= %s", ctime((time_t*)&header->dump_init));
-   printf("Time between dumps\t\t= %fps\n", sysinfo->deltat);
+   printf("Time between dumps\t\t= %f %s\n", sysinfo->deltat, TUNIT_N);
    printf("Number of molecules\t\t= %d\n", sysinfo->nmols);
    printf("Number of polyatomics\t\t= %d\n", sysinfo->nmols_r);
    printf("Number of species\t\t= %d\n", sysinfo->nspecies);
@@ -350,12 +382,12 @@ void	print_header(dump_mt *header, dump_sysinfo_mt *sysinfo)
 	 printf("  Molecule is a framework\n");
       else
 	 printf("  Rotational deg. of freedom\t= %d\n", sysinfo->mol[ispec].rdof);
-      printf("  Mass\t\t\t\t= %f\n", sysinfo->mol[ispec].mass);
+      printf("  Mass\t\t\t\t= %f amu\n", sysinfo->mol[ispec].mass);
       if (sysinfo->mol[ispec].rdof > 0 )
-	 printf("  Moments of Inertia\t\t= %f  %f  %f\n", sysinfo->mol[ispec].inertia[0],
-		sysinfo->mol[ispec].inertia[1],sysinfo->mol[ispec].inertia[2]);
-      printf("  Charge\t\t\t= %f\n", sysinfo->mol[ispec].charge); 
-      printf("  Dipole Moment\t\t\t= %f\n", sysinfo->mol[ispec].dipole);
+	 printf("  Moments of Inertia\t\t= %f  %f  %f %s\n", sysinfo->mol[ispec].inertia[0],
+		sysinfo->mol[ispec].inertia[1],sysinfo->mol[ispec].inertia[2], IUNIT_N);
+      printf("  Charge\t\t\t= %f %s\n", CONV_Q*sysinfo->mol[ispec].charge, CONV_Q_N); 
+      printf("  Dipole Moment\t\t\t= %f %s\n", CONV_D*sysinfo->mol[ispec].dipole, CONV_D_N);
    }
 }
 
@@ -379,6 +411,7 @@ main(int argc, char **argv)
    int		idump0;
    int		xdr = 0;
    dump_sysinfo_mt *dump_sysinfo;
+   size_mt	sysinfo_size;
    
    static cpt_mt cpt[] = {{3, 0, 3, 1, "C of M positions"},
 			  {4, 0, 4, 1, "quaternions"},
@@ -531,12 +564,24 @@ main(int argc, char **argv)
 	 fprintf(stderr, "Failed to open dump file \"%s\"\n", dump_name);
 	 exit(2);
       }
-      if( read_dump_header(dump_name, dump_file, &header, &xdr, 0, 0) 
+
+      /*
+       * Read dump header. On first call we need to read only the first
+       * part of sysinfo to determine nspecies and consequently the size
+       * of the buffer needed to hold all of it.
+       */
+      sysinfo_size = sizeof(dump_sysinfo_mt);
+      dump_sysinfo = (dump_sysinfo_mt*)malloc(sysinfo_size);
+      if( read_dump_header(dump_name, dump_file, &header, &xdr, 
+			   sysinfo_size, dump_sysinfo) 
 	                       || ferror(dump_file) || feof(dump_file) )
       {
 	 fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
 	 exit(2);
       }
+      sysinfo_size = sizeof(dump_sysinfo_mt) 
+	                   + sizeof(mol_mt) * (dump_sysinfo->nspecies-1);
+      (void)free(dump_sysinfo);
       
       if( nfiles++ == 0 )
       {
@@ -544,13 +589,13 @@ main(int argc, char **argv)
 	 /*
 	  * Allocate space for and read dump sysinfo.
 	  */
-	 dump_sysinfo = (dump_sysinfo_mt*)malloc(header.sysinfo_size);
+	 dump_sysinfo = (dump_sysinfo_mt*)malloc(sysinfo_size);
 	 /*
 	  * Rewind and reread header, this time including sysinfo.
 	  */
 	 (void)rewind_dump(dump_file, xdr);
 	 if( read_dump_header(dump_name, dump_file, &header, &xdr, 
-			      header.sysinfo_size, dump_sysinfo) 
+			      sysinfo_size, dump_sysinfo) 
 	     || ferror(dump_file) || feof(dump_file) )
 	 {
 	    fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
@@ -723,7 +768,7 @@ main(int argc, char **argv)
 	 extract(cur->p, xcpt?1<<(xcpt-1):~0, mol_head.next, cpt, NCPT, 
 		 tslice-cur->i,
 		 MIN(cur->num,numslice-cur->i), inc, bflg, nmols, xdr,
-		 proto_header.sysinfo_size);
+		 sysinfo_size);
 	 tslice += (cur->i + cur->num - tslice - 1) / inc * inc + inc;
       }
    }

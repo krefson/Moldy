@@ -19,11 +19,15 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dumpconv.c,v 2.15 2001/07/31 17:58:18 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/dumpconv.c,v 2.16 2001/08/01 11:56:36 keith Exp $";
 #endif
 
 /*
  * $Log: dumpconv.c,v $
+ * Revision 2.16  2001/08/01 11:56:36  keith
+ * Incorporated all info from "species" struct into dump file headers.
+ * - fixed utilities and a few bugs.
+ *
  * Revision 2.15  2001/07/31 17:58:18  keith
  * Incorporated all info from "species" struct into dump file headers.
  *
@@ -231,8 +235,10 @@ static dump_sysinfo_mt *dump_sysinfo;
 
 int	read_header(dump_mt *header, dump_sysinfo_mt **sysinfo)
 {
-   int num, ispec;
-   char *c;
+   int num, ispec, nmols, nmols_r, nspecies;
+   float deltat;
+   char *c, next;
+   size_mt sysinfo_size;
    mol_mt *mol_p;
    
    fgets(header->title, sizeof header->title, stdin);
@@ -248,10 +254,15 @@ int	read_header(dump_mt *header, dump_sysinfo_mt **sysinfo)
 		 &header->dump_init, &header->dump_size, &header->sysinfo_size);
    if( num < 12 ) 
       return -1;
+   num = scanf("%f %d %d %d ", &deltat, &nmols, &nmols_r, &nspecies);
+   sysinfo_size = sizeof(dump_sysinfo_mt) + sizeof(mol_mt) * (nspecies-1);
    if ( ( dump_sysinfo = *sysinfo = malloc(header->sysinfo_size)) == 0)
       error("Failed to malloc memory for sysinfo header");
-   num = scanf("%f %d %d %d ", &dump_sysinfo->deltat, &dump_sysinfo->nmols, 
-	                      &dump_sysinfo->nmols_r, &dump_sysinfo->nspecies);
+
+   dump_sysinfo->deltat =   deltat;
+   dump_sysinfo->nmols  =   nmols;
+   dump_sysinfo->nmols_r=   nmols_r;
+   dump_sysinfo->nspecies = nspecies;
    for(ispec = 0; ispec < dump_sysinfo->nspecies; ispec++)
    {
       mol_p = &dump_sysinfo->mol[ispec];
@@ -263,6 +274,11 @@ int	read_header(dump_mt *header, dump_sysinfo_mt **sysinfo)
       num += scanf("%f %f %f %f", &mol_p->mass, &mol_p->inertia[0],
 		   &mol_p->inertia[1],&mol_p->inertia[2]);
       num += scanf("%f %f", &mol_p->charge, &mol_p->dipole);
+      do 
+      {
+	 next = fgetc(stdin);
+      } while( isspace(next) );
+      ungetc(next, stdin);
    }
    if( num < 4+10*dump_sysinfo->nspecies) 
       return -1;
@@ -375,12 +391,10 @@ void dump_setpos(FILE *dumpf, size_mt file_pos, boolean xdr_write)
 
 static
 int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_write,
-		     int sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
+		     size_mt sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
 {
    int      errflg = true;	/* Provisionally !!   */
-#ifdef USE_XDR
    char     vbuf[sizeof hdr_p->vsn + 1];
-#endif
    int	    vmajor,vminor;
 
    *xdr_write = false;
@@ -418,26 +432,56 @@ int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_writ
        */
       errflg = true;
       if( sscanf(hdr_p->vsn, "%d.%d", &vmajor, &vminor) < 2 )
-	 message(NULLI, NULLP, WARNING, INRVSN, hdr_p->vsn);
-      if( vmajor < 2 || vminor <= 22)
+	 message(NULLI, NULLP, WARNING, INDVSN, hdr_p->vsn);
+      if( vmajor < 2 || vminor <= 17)
 	 message(NULLI, NULLP, WARNING, OLDVSN, hdr_p->vsn);
       else
 	 errflg = false;
    }
-   if( ! errflg && dump_sysinfo )
+   if( errflg ) return errflg;
+
+   
+   if( dump_sysinfo == 0)
+      return errflg;
+   else if ( sysinfo_size == sizeof(dump_sysinfo_mt) )
    {
-#if 0
-      if( hdr_p->sysinfo_size != sysinfo_size )
-	 message(NULLI, NULLP, WARNING, CORUPT, fname, sysinfo_size, 
-		 hdr_p->sysinfo_size);
-#endif
       /*
-       * Now check for sysinfo and read it
+       * Now check for sysinfo and read fixed part of it.  This is needed to
+       * determine species count to read the whole thing.
+       */
+#ifdef USE_XDR
+      if( *xdr_write ) {
+	 if( ! xdr_dump_sysinfo_hdr(&xdrs, dump_sysinfo) )
+	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+	 errflg = false;
+      } else
+#endif
+      {
+	 if( fread((gptr*)dump_sysinfo,sizeof(dump_sysinfo_mt), 1, dumpf) == 0)
+	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+	 errflg = false;
+      }
+   }
+   else
+   {
+      /*
+       * Now check for sysinfo and read it all.  N.B.  Buffer must be 
+       * allocated to full expected size by prior call to read_dump_header.
        */
 #ifdef USE_XDR
       if( *xdr_write ) {
 	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo, vmajor, vminor) )
 	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
+      if (sizeof(dump_sysinfo_mt) 
+	  + sizeof(mol_mt) * (dump_sysinfo->nspecies-1) > sysinfo_size)
+      {
+	 /*
+	  * We have already overrun the end of the "dump_sysinfo" buffer.
+	  * Perhaps we can exit gracefully before crashing?
+          */
+	 message(NULLI, NULLP, FATAL, RDHERR,  sizeof(dump_sysinfo_mt) 
+		 + sizeof(mol_mt) * (dump_sysinfo->nspecies-1), sysinfo_size);
+      }
 	 errflg = false;
       } else
 #endif
@@ -458,7 +502,7 @@ void write_dump_header(FILE *dumpf, char *cur_file, dump_mt *dump_header,
    int vmajor, vminor;
 
    if( sscanf(dump_header->vsn, "%d.%d", &vmajor, &vminor) < 2 )
-      message(NULLI, NULLP, WARNING, INRVSN, dump_header->vsn);
+      message(NULLI, NULLP, WARNING, INDVSN, dump_header->vsn);
 
    dump_setpos(dumpf, 0L, xdr_write);
 #ifdef USE_XDR
@@ -532,6 +576,7 @@ main(int argc, char **argv)
    int   idump;
    int   textin = 0, textout = 1, xdrin, xdrout = 1;
    dump_sysinfo_mt *dump_sysinfo;
+   size_mt	sysinfo_size;
 
    while( argc > 0 && argv[1][0] == '-' )
    {
@@ -574,11 +619,15 @@ main(int argc, char **argv)
    else
    {
       reopen_dump(stdin,"rb");
-      if( read_dump_header("", stdin, &header, &xdrin, 0, 0) )
+      sysinfo_size = sizeof(dump_sysinfo_mt);
+      dump_sysinfo = (dump_sysinfo_mt*)malloc(sysinfo_size);
+      if( read_dump_header("", stdin, &header, &xdrin, sysinfo_size, dump_sysinfo) )
 	 error("Failed to read dump header");
-      dump_sysinfo = (dump_sysinfo_mt*)malloc(header.sysinfo_size);
+      sysinfo_size = sizeof(dump_sysinfo_mt) + sizeof(mol_mt) * (dump_sysinfo->nspecies-1);
+      (void)free(dump_sysinfo);
+       dump_sysinfo = (dump_sysinfo_mt*)malloc(sysinfo_size);
       /*
-       * Rewind and reread header, this time including sysinfo.
+       * Rewind and reread header, this time including all of sysinfo.
        */
       (void)rewind_dump(stdin, xdrin);
       if( read_dump_header("", stdin, &header, &xdrin, 

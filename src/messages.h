@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/kr/CVS/moldy/src/messages.h,v 2.28 2001/08/01 11:56:37 keith Exp $
+ * $Header: /home/kr/CVS/moldy/src/messages.h,v 2.29 2002/02/27 17:48:34 kr Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -135,6 +135,7 @@ rotational degrees of freedom (%d vs %d)"
 #define DOERRR	"Failed to open dump file \"%s\"\n    -  %s"
 #define DRERR	"Read from dump file \"%s\" failed\n    -  %s"
 #define DHDERR	"Failed to read header from dump file \"%s\""
+#define RDHERR  "Internal error in read_sump_header (%lu,%lu)"
 #define DMPALT	"Dump-level altered on restart: new dump run started"
 #define DMPAL2	"Dump-interval or maxdumps altered on restart: new dump run started"
 #define DMPEXS	"File \"%s\" exists - Dumps will be written to \"%s\""
@@ -151,6 +152,7 @@ number of words"
 #define NCNVRG  "Do_step: velocities failed to converge after %d iterations \
 - dist = %f"
 #define INRVSN	"Init_averages: Invalid RCS version \"%s\""
+#define INDVSN  "Read_dump_header:  Invalid RCS version \"%s\""
 #define OLDVSN	"Attempt to append to incompatible version of dump files (RCS version \"%s\")"
 #define CPOTFL  "Not enough space to store potential parameters from restart\
  file.  Increase NPOTP in \"defs.h\" from %d to at least %d and recompile"

@@ -43,6 +43,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.25  2002/02/05 12:11:48  kr
+ *       Fixed divide-by-zero bug which gave SIGFPE on Cray
+ *
  *       Revision 2.24  2001/08/01 11:56:36  keith
  *       Incorporated all info from "species" struct into dump file headers.
  *       - fixed utilities and a few bugs.
@@ -237,7 +240,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/dump.c,v 2.24 2001/08/01 11:56:36 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/dump.c,v 2.25 2002/02/05 12:11:48 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -382,7 +385,7 @@ int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_writ
        */
       errflg = true;
       if( sscanf(hdr_p->vsn, "%d.%d", &vmajor, &vminor) < 2 )
-	 message(NULLI, NULLP, WARNING, INRVSN, hdr_p->vsn);
+	 message(NULLI, NULLP, WARNING, INDVSN, hdr_p->vsn);
       if( vmajor < 2 || vminor <= 22)
 	 message(NULLI, NULLP, WARNING, OLDVSN, hdr_p->vsn);
       else
@@ -422,7 +425,7 @@ void write_dump_header(FILE *dumpf, char *cur_file, dump_mt *dump_header,
    int vmajor, vminor;
 
    if( sscanf(dump_header->vsn, "%d.%d", &vmajor, &vminor) < 2 )
-      message(NULLI, NULLP, WARNING, INRVSN, dump_header->vsn);
+      message(NULLI, NULLP, WARNING, INDVSN, dump_header->vsn);
 
    dump_setpos(dumpf, 0L, xdr_write);
 #ifdef USE_XDR
@@ -507,7 +510,7 @@ void	dump(system_mp system, spec_mt *species,
    boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.24 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.25 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    if( ! strchr(control.dump_file, '%') )
