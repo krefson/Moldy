@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.39.4.3  2002/06/21 11:42:16  kr
+ *       Added some declarations
+ *
  *       Revision 2.39.4.2  2002/06/20 17:50:59  kr
  *       Patrick's mods to do 1/r**7 terms with an Ewald sum
  *       (very slightly tidied up).
@@ -354,7 +357,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/accel.c,v 2.39.4.2 2002/06/20 17:50:59 kr Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/accel.c,v 2.39.4.3 2002/06/21 11:42:16 kr Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -1068,8 +1071,9 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
       ke = tot_ke(sys, species,1);
       sys->H_0 = ke + saved_pe + SQR(sys->tsmom)/(2.0*control.ttmass) 
                             + sys->d_of_f*kB*control.temp * log(sys->ts)
-	                    + ke_cell(sys->hmom, control.pmass)
-                            + control.pressure*det(sys->h);
+                   	 + ke_cell(sys->hmom, control.pmass);
+       if( control.const_pressure )
+	 sys->H_0 += control.pressure*det(sys->h);
    }
 #ifdef DEBUG_THERMOSTAT
    if( control.istep%control.print_interval == 0 && ithread == 0 )
@@ -1080,7 +1084,11 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
       HHP = ke_cell(sys->hmom, control.pmass);
       HHS = control.pressure*det(sys->h);
       ke = tot_ke(sys, species,1);
-      H = ke + pe[0] + pe[1] + HP + HS + HHP + HHS;
+      H = ke + pe[0] + pe[1];
+      if( control.const_temp )
+	 H += HP + HS;
+      if( control.const_pressure )
+	 H += HHP + HHS;
       fprintf(stderr,
              "do_step:  s= %7.4g          ps= %9.5g      H= %12.7g  HK= %12.7g  HV= %12.7g  \n          HP= %12.7g    HS= %12.7g   HHP= %12.7g  HHS= %12.7g   (H-H_0)s= %12.7g\n",
              sys->ts,sys->tsmom, H,ke, pe[0] + pe[1], HP, HS,HHP, HHS, 
