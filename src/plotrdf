@@ -71,7 +71,11 @@ sub pfout {
 
 sub gpout {
     my($hdrlist, $plotfile, $psflag, $title) = @_;
-    my($i);
+    my($i, $ncols);
+    $ncols = $#$hdrlist;
+    $filenum  = 0 if( $filenum == "") ;
+    $onefile = !( $plotfile =~ /\.data(\d+)$/);
+    $filenum = $1 if (! $onefile);
 
     $| = 1;
 
@@ -88,13 +92,15 @@ sub gpout {
     print   "set xlabel \"r(A)\"\n";
     print   "set ylabel \"g(r)\"\n";
 #    print   "set yrange  [0:5]\n";
-    if( ! $nofirst ) {
-    print   "plot \"$plotfile\" using 1:2 title \"$$hdrlist[0]\"";
-    } else {
-    print   "replot \"$plotfile\" using 1:2 title \"$$hdrlist[0]\"";
-    }
-    foreach $i (2..@$hdrlist ) {
-	print   ", \"$plotfile\" using 1:",$i+1," title \"$$hdrlist[$i-1]\"" ;
+    print   "re" if( $nofirst );
+    print   "plot ";
+    foreach $i (0..$ncols) {
+      if( $onefile ) {
+	print   "\"$plotfile\" using 1:",$i+2," title \"$$hdrlist[$i]\"" ;
+      } else {
+	print   "\"$plotfile\" using 1:",$i+2," title \"$$hdrlist[$i] (set $filenum)\"" ;
+      }
+      print   ", " if ($i < $ncols);
     }
     print   "\npause -1\n";
     if ( ! $nofirst ) {$nofirst=1};
@@ -102,7 +108,7 @@ sub gpout {
 
 sub graceout {
     my($hdrlist, $plotfile, $psflag, $title) = @_;
-    my($i);
+    my($i, $ncols, $onefile, $filenum);
 
     $| = 1;
 
@@ -113,12 +119,23 @@ sub graceout {
     print   "\@yaxis label \"g(r)\"\n";
 
     $ncols = $#$hdrlist;
+    $setnum = 0 if( $setnum == "") ;
+    $filenum  = 0 if( $filenum == "") ;
 
     print   "\@read block \"$plotfile\"\n";
+
+    $onefile = !( $plotfile =~ /\.data(\d+)$/);
+    $filenum = $1 if (! $onefile);
+
     foreach $i (0..$ncols ) {
-        print "\@with s",$i,"\n";
-	print "\@block xy \"1:",$i+2,"\"\n";
-	print "\@s",$i," legend \"$$hdrlist[$i]\"\n" ;
+      print "\@with s",$setnum,"\n";
+      print "\@block xy \"1:",$i+2,"\"\n";
+      if( $onefile ) {
+        print "\@s",$setnum," legend \"$$hdrlist[$i]\"\n" ;
+      } else {
+        print "\@s",$setnum," legend \"$$hdrlist[$i] (set $filenum)\"\n" ;
+      }
+      $setnum++;
     }
     if( $psflag == 1){
       print   "\@hardcopy device \"PS\"\n";
