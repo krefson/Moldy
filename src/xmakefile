@@ -5,18 +5,19 @@
 #  **** Scalar machines using default C compiler ****
 #CFLAGS=	-O  $(CFLAGS0)
 #CFLAGS=	-O4 $(CFLAGS0)
-#
+#LDFLAGS= $(LDFLAGS0)
 #  **** Scalar machines using gcc - can compile with -g ****
 CC=	gcc
 CFLAGS= -g -O $(CFLAGS0)
+LDFLAGS= $(LDFLAGS0) -g
 #  **** Stellar ****
 #CFLAGS= -g -O2 -va -na  $(CFLAGS0)
 #CFLAGS2= +CaliasFreePointers
-#LDFLAGS= -g -z 
+#LDFLAGS= $(LDFLAGS0) -g -z 
 #  **** convex ****
 #CC=	vc
 #CFLAGS= -g -O2 -va -na  $(CFLAGS0)
-#LDFLAGS= -lveclib 
+#LDFLAGS= $(LDFLAGS0) -lveclib 
 #  **** Cray **** (CC 4.n) - Link in FORTRAN kernel
 #CFLAGS= -h vector,olevel_3,vmesg_1,ivdep  $(CFLAGS0)
 #CFLAGSF= -DFKERNEL
@@ -57,7 +58,7 @@ SHAKOBJS=	algorith.o alloc.o aux.o jacobi.o kernel.o input.o matrix.o\
 
 UTILS = moldyextract dumpanalyze dumpconvert dumpextract  moldyanalyze
 
-EXTRAS = $(UTILS:%=%.c) mdshak.c
+EXTRAS = $(UTILS:%=%.c) mdshak.c ewald_parallel.c force_parallel.c
 
 HFILES=		structs.h defs.h string.h time.h stddef.h stdlib.h messages.h
 
@@ -71,6 +72,12 @@ mdshak:		mdshak.o $(SHAKOBJS)
 		$(CC) $(LDFLAGS) -o mdshak mdshak.o $(SHAKOBJS) -lm
 
 utilities:	$(UTILS) mdshak
+
+install:	moldy $(UTILS) mdshak
+		cp -p $? $(HOME)/bin
+
+install2:	moldy $(UTILS) mdshak
+		cp -p $? $(HOME)/bin.$(HOSTTYPE)
 
 Makefile:	xmakefile
 		@PATH=/usr/5bin:${PATH};\
@@ -102,7 +109,7 @@ tags:		$(CFILES) $(HFILES) kernel.f
 
 clean:		
 		/bin/rm -f $(OFILES) $(LFILES) moldy $(UTILS) mdshak\
-			moldy.dvi moldy.toc moldy.aux
+			mdshak.o moldy.dvi moldy.toc moldy.aux
 
 spotless:	
 		$(MAKE) clean
@@ -123,14 +130,20 @@ annihilate:
 #
 moldy.tar:	READ.ME $(CFILES) $(HFILES) kernel.f Makefile moldy.tex\
 		$(EXTRAS) $(INFILES)
-		tar cvBf moldy.tar\
+		tar cvf moldy.tar\
 		READ.ME $(CFILES) kernel.f $(HFILES) Makefile moldy.tex\
 		$(EXTRAS) $(INFILES)
+
+moldy.tar.Z:	moldy.tar
+		compress moldy.tar
 
 moldy.shar:	READ.ME $(CFILES) $(HFILES) kernel.f Makefile moldy.tex\
 		$(EXTRAS) $(INFILES)
 		shar READ.ME $(CFILES) kernel.f $(HFILES) Makefile moldy.tex\
 		$(EXTRAS) $(INFILES) > moldy.shar
+
+moldy.shar.Z:	moldy.shar
+		compress moldy.shar
 
 cray:		$(CFILES) $(HFILES) kernel.f 
 		./cray_make $(CFILES) kernel.f $(HFILES) > cray.job
@@ -145,6 +158,9 @@ moldy.com:	$(CFILES) $(HFILES) kernel.f compile.com moldy.tex $(EXTRAS)\
 		$(INFILES) Aaaa_Read.Me
 		./make_vms Aaaa_Read.Me compile.com $(CFILES) $(HFILES)\
 		 kernel.f $(INFILES) moldy.tex $(EXTRAS) > moldy.com
+
+moldy.com.Z:	moldy.com
+		compress moldy.com
 
 $(LFILES):	$(HFILES)
 
