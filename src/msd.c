@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.20 1999/10/11 14:05:19 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.21 1999/10/29 16:44:28 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,10 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.2
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 1.21  1999/10/29 16:44:28  keith
+ *  Updated usage message
+ *  Now uses mat_vec_mul() not m.._mul3().
+ *
  *  Revision 1.21  1999/10/25  15:34:32  craig
  *  Re-added zeroing of range_flag for non-ANSI machines.
  *  Tidied up usage message.
@@ -350,7 +354,7 @@ char	*argv[];
    vec_mt 	**traj_cofm;
    mat_mt	*hmat;
    real		range[3][2];
-   int		range_flag[3]={0,0,0};
+   int		range_flag[3];
    site_mt	*site_info;
    pot_mt	*potpar;
    quat_mt	*qpf;
@@ -359,6 +363,7 @@ char	*argv[];
    real         ***msd;
    int		it;
 
+   range_flag[0] = range_flag[1] = range_flag[2] = 0;
 #define MAXTRY 100
    control.page_length=1000000;
 
