@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.14 2000/11/09 16:54:12 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.15 2000/12/06 10:47:33 keith Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *
@@ -28,6 +28,10 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.15  2000/12/06 10:47:33  keith
+ *  Fixed call of make_sites() in utlsup.c to be compatible with new version.
+ *  Tidied up declarations and added lint flags to reduce lint noise.
+ *
  *  Revision 2.14  2000/11/09 16:54:12  keith
  *  Updated utility progs to be consistent with new dump format
  *
@@ -143,6 +147,8 @@ contr_mt                control;
 #define DCD 3
 #define PDB 4
 #define CSSR 5
+#define ARC 6
+#define XTL 7
 /******************************************************************************
  * copy_spec().  Duplicate species data in another array    	              *
  ******************************************************************************/
@@ -288,7 +294,7 @@ main(int argc, char **argv)
 
    comm = argv[0];
 
-   while( (c = getopt(argc, argv, "cr:s:d:t:o:hxbvpg") ) != EOF )
+   while( (c = getopt(argc, argv, "cr:s:d:t:o:f:") ) != EOF )
       switch(c)
       {
        case 'c':
@@ -312,24 +318,24 @@ main(int argc, char **argv)
        case 't':
 	 dumplims = mystrdup(optarg);
 	 break;
-       case 'h':
-	 outsw = SHAK;
-	 break;
-       case 'x':
-	 outsw = XYZ;
-	 break;
-       case 'b':
-	 outsw = OUTBIN;
-	 break;
-       case 'v':
-	 outsw = DCD;
-	 break;
-       case 'p':
-         outsw = PDB;
-	 break;
-       case 'g':
-	 outsw = CSSR;
-	 break;
+       case 'f':
+	  if( !strcasecmp(optarg, "shak") )
+	     outsw = SHAK;
+	  else if (!strcasecmp(optarg, "pdb") )
+	     outsw = PDB;
+	  else if (!strcasecmp(optarg, "xyz") )
+	     outsw = XYZ;
+	  else if (!strcasecmp(optarg, "dcd") || !strcasecmp(optarg, "vmd") )
+	     outsw = DCD;
+	  else if (!strcasecmp(optarg, "cssr") )
+	     outsw = CSSR;
+	  else if (!strcasecmp(optarg, "arc") )
+	     outsw = ARC;
+	  else if (!strcasecmp(optarg, "xtl") )
+	     outsw = XTL;
+	  else if (!strcasecmp(optarg, "bin") )
+	     outsw = OUTBIN;
+	  break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error("failed to open file \"%s\" for output", optarg);
@@ -342,7 +348,7 @@ main(int argc, char **argv)
    if( errflg )
    {
       fputs("Usage: mdavpos [-r restart-file | -s sys-spec-file] ",stderr);
-      fputs("[-c] [-h|-p|-x|-v|-g] -d dump-files ",stderr);
+      fputs("[-c] [-f output-type] -d dump-files ",stderr);
       fputs("[-t s[-f[:n]]] [-o output-file]\n",stderr);
       exit(2);
    }

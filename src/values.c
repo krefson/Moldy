@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ *       Revision 2.17  2001/02/13 17:45:10  keith
+ *       Added symplectic Parrinello-Rahman constant pressure mode.
+ *
  *       Revision 2.16  2000/12/06 17:45:34  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -179,7 +182,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.16 2000/12/06 17:45:34 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.17 2001/02/13 17:45:10 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -501,6 +504,7 @@ void	values(system_mt *system,        /* record of system info             */
    double	e, tot_ke = 0.0, tot_pe = 0.0;
    double	ske, gktls, hke, hpe;
    int		i, j, k;
+   int		tdof = 0;
    mat_mt	ke_dyad,
                 stress;
    double	vol = det(system->h);
@@ -534,6 +538,9 @@ void	values(system_mt *system,        /* record of system info             */
       tsold = system->ts;
    }
 
+    for (spec = species; spec < &species[system->nspecies]; spec++)
+      if( ! spec->framework )
+        tdof += 3*spec->nmols;
    /*
     * Mazur's leapfrog KE predictor. [J. Comp. Phys (1997) 136, 354-365) Eq. 30]
     */
@@ -562,7 +569,7 @@ void	values(system_mt *system,        /* record of system info             */
       add_average(CONV_E * e, tke_n, ispec);	/* c of m  kinetic energy     */
       tot_ke += e;
 
-      add_average(e/(1.5*spec->nmols*kB), tt_n, ispec);
+      add_average(e/(1.5*spec->nmols*kB)*tdof/(tdof-3), tt_n, ispec);
 						/* c of mass temp.	      */
       if(spec->rdof > 0)			/* Only if polyatomic species */
       {

@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdshak.c,v 2.24 2000/12/06 10:47:32 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdshak.c,v 2.25 2000/12/06 17:45:31 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -41,6 +41,8 @@ contr_mt		control;
 #define DCD 3
 #define PDB 4
 #define CSSR 5
+#define ARC 6
+#define XTL 7
 /******************************************************************************
  * main().   Driver program for generating SCHAKAL input files from MOLDY     *
  * files.    Acceptable inputs are sys-spec files, or restart files. Actual   *
@@ -93,10 +95,14 @@ main(int argc, char **argv)
      outsw = DCD;
    else if (strstr(comm, "mdcssr") )
      outsw = CSSR;
+   else if (strstr(comm, "mdarc") )
+     outsw = ARC;
+   else if (strstr(comm, "mdxtl") )
+     outsw = XTL;
    else
      outsw = OUTBIN;
 
-   while( (c = getopt(argc, argv, "d:o:cr:s:d:t:i:hxbvpyg") ) != EOF )
+   while( (c = getopt(argc, argv, "o:cr:s:d:t:i:yf:") ) != EOF )
       switch(c)
       {
        case 'o':
@@ -127,26 +133,26 @@ main(int argc, char **argv)
        case 'i':
 	 insert = optarg;
 	 break;
-       case 'h':
-	 outsw = SHAK;
-	 break;
-       case 'x':
-	 outsw = XYZ;
-	 break;
-       case 'b':
-	 outsw = OUTBIN;
-	 break;
-       case 'v':
-	 outsw = DCD;
-	 break;
-       case 'p':
-         outsw = PDB;
-	 break;
        case 'y':
          trajsw = 1;
 	 break;
-       case 'g':
-	 outsw = CSSR;
+       case 'f':
+	  if( !strcasecmp(optarg, "shak") )
+	     outsw = SHAK;
+	  else if (!strcasecmp(optarg, "pdb") )
+	     outsw = PDB;
+	  else if (!strcasecmp(optarg, "xyz") )
+	     outsw = XYZ;
+	  else if (!strcasecmp(optarg, "dcd") || !strcasecmp(optarg, "vmd") )
+	     outsw = DCD;
+	  else if (!strcasecmp(optarg, "cssr") )
+	     outsw = CSSR;
+	  else if (!strcasecmp(optarg, "arc") )
+	     outsw = ARC;
+	  else if (!strcasecmp(optarg, "xtl") )
+	     outsw = XTL;
+	  else if (!strcasecmp(optarg, "bin") )
+	     outsw = OUTBIN;
 	 break;
        default:
        case '?':
@@ -156,7 +162,7 @@ main(int argc, char **argv)
    if( errflg )
    {
       fprintf(stderr,
-	      "Usage: %s [-x|-v|-h|-p|-g] [-y] [-c] [-s sys-spec-file|-r restart-file] ",
+	      "Usage: %s [-f out-type] [-y] [-c] [-s sys-spec-file|-r restart-file] ",
 	      comm);
       fputs("[-d dump-files] [-t s[-f[:n]]] [-o output-file]\n", stderr);
       exit(2);
