@@ -5,12 +5,15 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.1  89/04/27  16:52:17  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header: alloc.c,v 1.1 89/04/27 15:12:59 keith Exp $";
+static char *RCSid = "$Header: alloc.c,v 1.1 89/04/27 16:52:17 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
-#ifdef ANSI
+#if ANSI || __STDC__
 #include <stdarg.h>
 #else
 #include <varargs.h>
@@ -48,6 +51,10 @@ char	*file;
 void	cfree(p)
 char	*p;
 {
+#ifdef DEBUG
+   if( ! malloc_verify() )
+      message(NULLI, NULLP, FATAL, "Internal Error: Heap corrupt");
+#endif
    free(p);
 }
 /******************************************************************************
@@ -58,7 +65,7 @@ char	*p;
  *  block, so to free whole array, just free lowest element.                  *
  *  array = (double*) arralloc(sizeof(double), 3, 0, 10, -10, 10, 0, 5);      *
  ******************************************************************************/
-#ifdef ANSI
+#if ANSI || __STDC__
 #define	va_alist size_t size, int ndim, ...
 #define va_dcl /* */
 #endif
@@ -74,7 +81,7 @@ va_dcl
    long		n_elem, n_data, n_p_data, n_ptr, stride, i;
    int		idim;
 
-#ifdef ANSI
+#if ANSI || __STDC__
    va_start(ap, ndim);
 #else
    size_t	size;			/* size of array element	      */
