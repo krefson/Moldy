@@ -17,6 +17,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	algorith.c,v $
+ * Revision 1.1.1.5  90/05/16  18:39:06  keith
+ * *** empty log message ***
+ * 
  * Revision 1.1.1.4  90/04/16  18:19:29  keith
  * Modified rahman() to arbitrarily constrain h matrix by new parameter "mask".
  * 
@@ -35,7 +38,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 1.1.1.4 90/04/16 18:19:29 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 1.1.1.5 90/05/16 18:39:06 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include 	<math.h>
@@ -326,7 +329,7 @@ int	nmols;			/* Size of vel and acc/ number molecules (in) */
 
    for(i = 0; i < 3; i++)                       /* Add correction term        */
       for(imol = 0; imol < nmols; imol++)       /* to accelerations           */
-         acc_out[imol][i] = acc[imol][i] + acc_corr[imol][i];
+         acc_out[imol][i] = acc[imol][i] - acc_corr[imol][i];
 
    tfree((char*)acc_corr);
 }
