@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.13  1999/07/22 13:10:49  keith
+ *       Added fflush() call tp message() to ensure error messages not lost
+ *       before abort.
+ *
  *       Revision 2.12  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -181,7 +185,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/output.c,v 2.12 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/output.c,v 2.13 1999/07/22 13:10:49 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -217,14 +221,12 @@ static  int	out_line = 999999;	    /* Which line of output           */
 /*========================== Special Control output cases ====================*/
 static        int	one=1;
 extern	      unit_mt	prog_unit;
+extern	      unit_mt	input_unit;
 static	const match_mt	special[] = {
         {"lattice-start",	"%d", "",	(gptr*)&one},
 	{"restart-file",	"%s", "",	(gptr*)""},
 	{"sys-spec-file",	"%s", "",	(gptr*)""},
-	{"mass-unit",		"%lf", "",	(gptr*)&prog_unit.m},
-	{"length-unit",		"%lf", "",	(gptr*)&prog_unit.l},
-	{"time-unit",		"%lf", "",	(gptr*)&prog_unit.t},
-	{"charge-unit",		"%lf", "",	(gptr*)&prog_unit.q}
+	{"save-file",	        "%s", "",	(gptr*)""}
 		      };
 static	const int	nspecial = sizeof(special) / sizeof(match_mt);
 /******************************************************************************
@@ -655,7 +657,7 @@ pot_mt          potpar[];               /* Potential parameter array          */
       (void)fprintf(file, " %-16s  %d  %s\n", spec->name, spec->nmols,
 		    spec->framework ? "framework" : "");
       for(isite=0; isite < spec->nsites; isite++)
-         (void)fprintf(file, " %6d %9g %9g %9g %9g %9g %s\n",
+         (void)fprintf(file, " %6d %12.12g %12.12g %12.12g %12.12g %12.12g %s\n",
                         spec->site_id[isite],
                         spec->p_f_sites[isite][0],
                         spec->p_f_sites[isite][1],
@@ -674,7 +676,7 @@ pot_mt          potpar[];               /* Potential parameter array          */
          {
             (void)fprintf(file, " %6d %6d", idi, idj);
             for(ip = 0; ip < n_potpar; ip++)
-               (void)fprintf(file, " %9g",potpar[idij].p[ip]);
+               (void)fprintf(file, " %16.16g",potpar[idij].p[ip]);
             (void)fputc('\n',file);
          }
       }
@@ -704,6 +706,8 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
     * Save current values and restore afterwards.
     */
    conv_control(&prog_unit, false);
+   conv_potentials(&prog_unit, &input_unit, potpar, system->n_potpar,
+                         system->ptype, site_info, system->max_id);
 
    if( (out = fopen(save_name, "w")) == NULL )
       message(NULLI, NULLP, FATAL, OSFAIL, save_name);
@@ -730,7 +734,7 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
 	 (void)fprintf(out, "%s = %d\n", cur->key, *(int*)cur->ptr);
 	 break;
        case 'f':
-	 (void)fprintf(out, "%s = %.7g\n", cur->key, *(double*)cur->ptr);
+	 (void)fprintf(out, "%s = %.9g\n", cur->key, *(double*)cur->ptr);
 	 break;
        default:
 	 message(NULLI, NULLP, FATAL,
@@ -770,6 +774,8 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
       message(NULLI,NULLP,FATAL,REWRT,strerror(errno));
 
    conv_control(&prog_unit, true);
+   conv_potentials(&input_unit, &prog_unit, potpar, system->n_potpar,
+		   system->ptype, site_info, system->max_id);
 }
 
 	 
