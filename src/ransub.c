@@ -27,6 +27,15 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.17.10.1  2003/07/29 09:36:04  moldydv
+ *  Polyatomic dopants can now be read in xtl and xyz formats.
+ *  Options -f,-t,-p added for specifying Euler angles phi, theta and psi of all polyatomic dopant molecules.
+ *  Corrected file pathname specifier.
+ *  Quaternions now written correctly when replacing monatomic with polyatomic.
+ *  Changed 'abs' to 'fabs'.
+ *  Replaced explicit lengths of name variables with NLEN.
+ *  Fixed bug when counting substituted positions.
+ *
  *  Revision 1.17  2002/09/20 15:45:08  kr
  *  Corrected some C errors/removed dependence on gcc extensions.
  *
@@ -134,7 +143,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/ransub.c,v 1.17 2002/09/20 15:45:08 kr Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/ransub.c,v 1.17.10.1 2003/07/29 09:36:04 moldydv Exp $";
 #endif  
 
 #include "defs.h"
@@ -163,7 +172,7 @@ void	init_averages(int nspecies, char *vsn, long int roll_interval, long int old
 void    conv_potentials(const unit_mt *unit_from, const unit_mt *unit_to, pot_mt *potpar, int npotpar, int ptype, site_mt *site_info, int max_id);
 void    q_to_rot(real *quat,mat_mt rot);
 int	getopt(int, char *const *, const char *);
-gptr	*talloc(int n, size_mt size, int line, char *file);
+void    afree(gptr *p);
 char    *atime(void);
 double  det(mat_mt a);
 char	*read_ftype(char *filename);
@@ -173,7 +182,7 @@ int     read_cssr(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char
 int     read_shak(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, double *);
 int     read_xtl(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
 int     read_xyz(char *, mat_mp, char (*)[NLEN], vec_mp, char *);
-
+int     sgexpand(int , int , vec_mt *, char (*)[NLEN], double *, char *);
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 extern const  unit_mt prog_unit;
@@ -596,7 +605,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    }
    (void)printf("end\n");
 
-   afree(site);
+   afree((gptr*) site);
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
 }
