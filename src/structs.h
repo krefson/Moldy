@@ -1,7 +1,16 @@
 /*
- * $Header: structs.h,v 1.5 89/06/01 21:25:33 keith Exp $
+ * $Header: /home/tigger/keith/md/RCS/structs.h,v 1.6 89/06/20 18:25:36 keith Stab $
  *
  * $Log:	structs.h,v $
+ * Revision 1.6.1.2  89/09/04  18:07:31  keith
+ * Added 'charge' field to spec_t
+ * 
+ * Revision 1.6.1.1  89/08/25  15:24:21  keith
+ * Mods to add framework structures to simulation model
+ * 
+ * Revision 1.6  89/06/20  18:25:36  keith
+ * Moved definition of match_t to structs.h 
+ * 
  * Revision 1.5  89/06/01  21:25:33  keith
  * Control.out eliminated, use printf and freopen instead to direct output.
  * 
@@ -116,7 +125,8 @@ typedef struct			/* Information for one species		      */
 {
    real		inertia[3],	/* Principal moments of inertia 	      */
 		mass,		/* Mass of whole molecule		      */
-		dipole;		/* Dipole Moment			      */
+		dipole,		/* Dipole Moment			      */
+   		charge;		/* Total charge				      */
    int		nsites, 	/* Number of sites on this species	      */
 		nmols;		/* Number of molecules of this species	      */
    int		rdof;		/* Rotational degrees of freedom (2=linear)   */
