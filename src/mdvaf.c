@@ -33,6 +33,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.7  1999/11/18  10:45:24  craig
+ *  Fixed bug in zeroing vaf array.
+ *
  *  Revision 1.6  1999/11/12  11:15:48  craig
  *  Fixed bug in species number iteration.
  *
@@ -588,7 +591,7 @@ char	*argv[];
           max_av = 1;
 
      vaf = (real**)arralloc(sizeof(real),2,0,nvaf-1,0,nspecies-1);
-     zero_real(vaf[0],nvaf*(nspecies+1));
+     zero_real(vaf[0],nvaf*nspecies);
 
   /* Calculate and print vaf/vtf values */
      if( outsw )
