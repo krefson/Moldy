@@ -26,7 +26,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/restart.c,v 1.4 89/06/22 15:45:14 keith Stab $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/restart.c,v 1.5 89/11/01 17:05:13 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -61,16 +61,16 @@ char	*ptr;
 int	size;
 int	nitems;
 {
-   unsigned long	stored_size = 0;
+   long	stored_size = 0;
 
    (void)fread((char*)&stored_size, sizeof stored_size, 1, file); 
    if(ferror(file))
       message(NULLI,NULLP,FATAL,REREAD,ferror(file),ftell(file));
    else if(feof(file))
       message(NULLI,NULLP,FATAL,REEOF);
-   if(stored_size != (unsigned long)size * nitems)
+   if(stored_size != (long)size * nitems)
       message(NULLI,NULLP,FATAL,REFORM, ftell(file),
-              stored_size, (unsigned long)size * nitems);
+              stored_size, (long)size * nitems);
    (void)fread(ptr, size, nitems, file);
    if(ferror(file))
       message(NULLI,NULLP,FATAL,REREAD,ferror(file),ftell(file));
@@ -83,14 +83,14 @@ int	nitems;
 void	cskip(file)
 FILE	*file;
 {
-   unsigned long	stored_size = 0;
+   long	stored_size = 0;
 
    (void)fread((char*)&stored_size, sizeof stored_size, 1, file); 
    if(ferror(file))
       message(NULLI,NULLP,FATAL,REREAD,ferror(file),ftell(file));
    else if(feof(file))
       message(NULLI,NULLP,FATAL,REEOF);
-   fseek(file, stored_size, 1);
+   (void)fseek(file, stored_size, 1);
    if(ferror(file))
       message(NULLI,NULLP,FATAL,REREAD,ferror(file),ftell(file));
    else if(feof(file))
@@ -105,7 +105,7 @@ char	*ptr;
 int	size;
 int	nitems;
 {
-   unsigned long       length = (unsigned long)size*nitems;
+   long       length = (long)size*nitems;
    (void)fwrite((char*)&length, sizeof length, 1, file);
    (void)fwrite(ptr, size, nitems, file);
    if(ferror(file))
@@ -229,7 +229,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
    }
 
    (void)memcpy((char*)&save_header, (char*)&restart_header, sizeof(restrt_t));
-   (void)strncpy(save_header.vsn, "$Revision: 1.4 $"+11,
+   (void)strncpy(save_header.vsn, "$Revision: 1.5 $"+11,
 		                  sizeof save_header.vsn-1);
    save_header.prev_timestamp = restart_header.timestamp;
    save_header.timestamp = time((time_t*)0);		/* Update header      */
