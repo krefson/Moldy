@@ -17,6 +17,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	startup.c,v $
+ * Revision 1.5  89/07/06  16:23:56  keith
+ * Eliminated 'dump-offset' - renumbering starts at 1 for new dump run.
+ * 
  * Revision 1.4  89/06/23  15:35:10  keith
  * print-control option deleted.
  * 
@@ -32,7 +35,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: startup.c,v 1.5 89/07/05 18:41:16 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/startup.c,v 1.6 89/08/30 12:36:26 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -139,7 +142,7 @@ spec_t		species[];
    int		sel = mdrand() * system->nmols;
    spec_p	spec;
 
-   for (spec = species; spec < &species[system->nspecies]; spec++)
+   for (spec = species; spec < species+system->nspecies; spec++)
    {
       if(sel < spec->nmols)
          return(spec);
@@ -167,7 +170,7 @@ spec_t	species[];
                 delta_y = (double)ny / system->nmols,
                 delta_z = (double)nz / system->nmols;
 
-   for (spec = species; spec < &species[system->nspecies]; spec++)
+   for (spec = species; spec < species+system->nspecies; spec++)
       mass += spec->mass * spec->nmols;
       
    system->h[0][0] = system->h[1][1] = system->h[2][2] 
@@ -205,7 +208,7 @@ spec_t	species[];
    int		imol, i;		/* Counters for species, molecules etc*/
    double	mass = 0.0;		/* Whole system mass		      */
 
-   for (spec = species; spec < &species[system->nspecies]; spec++)
+   for (spec = species; spec < species+system->nspecies; spec++)
       mass += spec->mass * spec->nmols;
       
    system->h[0][0] = system->h[1][1] = system->h[2][2] 
@@ -233,7 +236,7 @@ spec_t	species[];
    vec_t	momentum;	      	/* Whole system momentum	      */
 
    zero_real(momentum, 3);
-   for (spec = species; spec < &species[system->nspecies]; spec++)
+   for (spec = species; spec < species+system->nspecies; spec++)
    {
       root_ktm = sqrt(kB * control.temp / spec->mass) / system->h[0][0];
       total_mass += spec->mass*spec->nmols;
@@ -281,7 +284,7 @@ void	initialise_sysdef(system, species, site_info, qpf)
 system_p	system;
 spec_t		species[];
 site_t		site_info[];
-quat_t		qpf;			/* Quaternion rotation to princ.frame*/
+quat_t		qpf[];			/* Quaternion rotation to princ.frame*/
 {
    vec_t	c_of_m;			/* Co-ordinates of centre of mass    */
    vec_t	dipole;			/* Molecular dipole moment	     */
@@ -297,7 +300,7 @@ quat_t		qpf;			/* Quaternion rotation to princ.frame*/
    system->nsites  = 0;  system->nmols  = 0;
    system->nmols_r = 0;  system->d_of_f = 0;
 
-   for (spec = species; spec < &species[system->nspecies]; spec++)
+   for (spec = species; spec < species+system->nspecies; spec++)
    {					/* Loop over molecular species       */
       system->nmols  += spec->nmols;
       system->nsites += spec->nmols * spec->nsites;
@@ -344,7 +347,7 @@ quat_t		qpf;			/* Quaternion rotation to princ.frame*/
 #endif
          jacobi(inertia, 3, spec->inertia, v, &nrot);
          transpose(v,v);			/* Rotation matrix to pr. fr.*/
-	 rot_to_q(v, qpf);			/* make equivalent quaternion*/
+	 rot_to_q(v, qpf[spec-species]);	/* make equivalent quaternion*/
 #ifdef	DEBUG
          print_mat(v," *D* Rotation Mat.");
 #endif
@@ -422,7 +425,7 @@ spec_t	species[];
        "hddot",system->hddot,"hddoto",system->hddoto,"hddotvo",system->hddotvo);
 #endif
 
-   for (spec = species; spec < &species[system->nspecies]; spec++)
+   for (spec = species; spec < species+system->nspecies; spec++)
    {
       spec->c_of_m = system->c_of_m + nmol_cum;
       spec->vel    = system->vel    + nmol_cum;
@@ -515,7 +518,7 @@ spec_t	species[];		/* NEW 'species' struct array	      */
 
    if(system->nspecies != sys_tmp.nspecies)
       message(NULLI, NULLP, FATAL, NSPCON, system->nspecies, sys_tmp.nspecies);
-   for (spec = species; spec < &species[system->nspecies]; spec++)
+   for (spec = species; spec < species+system->nspecies; spec++)
    {
       if(spec->nmols != spec_tmp->nmols)
          message(NULLI, NULLP, FATAL, NMLCON, spec_tmp->name,
@@ -555,7 +558,7 @@ pot_p		*potpar;		/* Pointer to pot'l parameter array   */
    long		pos;			/* Where control info starts on input */
    restrt_t	backup_header;		/* To read backup file header into    */
    contr_t	backup_control;		/* Control struct from backup file    */
-   quat_t	qpf;			/* Quat of rotation to principal frame*/
+   quat_t	*qpf;			/* Quat of rotation to princ. frame   */
 
    if(contr_name[0] == '\0')		/* Null name - read control from      */
       contr_file = stdin;		/* standard input.		      */
@@ -626,6 +629,7 @@ pot_p		*potpar;		/* Pointer to pot'l parameter array   */
 
       conv_potentials(&input_unit, &prog_unit, *potpar, system->n_potpar,
                          system->ptype, *site_info, system->max_id);
+      qpf = qalloc(system->nspecies);
       initialise_sysdef(system, *species, *site_info, qpf);
       allocate_dynamics(system, *species);	/* Allocate dynamic arrays    */
 
@@ -710,6 +714,7 @@ pot_p		*potpar;		/* Pointer to pot'l parameter array   */
 #ifdef	DEBUG
          printf(" *D* Read and converted new system specification\n");
 #endif
+	 qpf = qalloc(system->nspecies);
          initialise_sysdef(system, *species, *site_info, qpf);
          check_sysdef(restart, system, *species);/* Consistent with saved one?*/
          if(sysdef != contr_file)
@@ -735,4 +740,5 @@ pot_p		*potpar;		/* Pointer to pot'l parameter array   */
          message(NULLI, NULLP, FATAL, OOFAIL, control.out_file);
    }
    banner_page(system, *species);
+   (void)cfree((char*)qpf);
 }
