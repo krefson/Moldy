@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.27 92/09/18 14:57:47 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.28 92/09/22 14:55:09 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -111,6 +111,7 @@ void    	force_inner();          /* Inner loop forward reference       */
 int     	nprocessors();          /* Return no. of procs to execute on. */
 double  	precision();            /* Floating pt precision.             */
 void    	kernel();               /* Force kernel routine               */
+double 		mol_radius();           /* Radius of largest molecule.        */
 /*========================== External data references ========================*/
 extern  contr_t control;
 /*========================== Structs local to module =========================*/
@@ -272,8 +273,9 @@ double  cutoff;
  *  Strict_Neighbour_list.  Build the list of cells within cutoff radius      *
  *  This is the strict version and includes every cell which has an interior  *
  *  point at a distance less than the cutoff from any interior point of the   *
- *  reference cell.  This ensures that all molecule pairs are included whose  *
- *  separation is within the cutoff.					      *
+ *  reference cell.  In fact the distance criterion is cutoff+2*(maximum mol- *
+ *  ecular radius).  This ensures that all *sites* which might be closer to-  *
+ *  gether than the cutoff are included.				      *
  *     The method used is based on the fact that the closest interior points  *
  *  of a pair of parallelopiped cells are either at corners of both cells or  *
  *  at the ends of a line perpendicular to the faces of both parallelopipeds. *
@@ -726,7 +728,8 @@ mat_t           stress;                 /* Stress virial                (out) */
       init = false;
    }
    if( control.strict_cutoff )
-      nabor = strict_neighbour_list(&n_nabors, system->h, control.cutoff);
+      nabor = strict_neighbour_list(&n_nabors, system->h, control.cutoff
+				    +2.0*mol_radius(species, system->nspecies));
    else
       nabor = neighbour_list(&n_nabors, system->h, control.cutoff);
    
