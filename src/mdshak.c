@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/mdshak.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/mdshak.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -28,17 +28,14 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/mdshak.c,v 2.5.1.
 #else
 #include <varargs.h>
 #endif
+#include <errno.h>
 #include <math.h>
 #include "stdlib.h"
 #include "stddef.h"
 #include "string.h"
 #include <stdio.h>
-#define error(str, args) message(NULLI, NULLP, FATAL, str, args)
 #include "structs.h"
 #include "messages.h"
-#ifdef USE_XDR
-#   include	"xdr.h"
-#endif
 #if defined(ANSI) || defined(__STDC__)
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 #else
@@ -59,17 +56,18 @@ void	read_restart();
 void	init_averages();
 int	getopt();
 gptr	*talloc();
+FILE	*popen();
 /******************************************************************************
  * Dummies of 'moldy' routines so that mdshak may be linked with moldy library*
  ******************************************************************************/
 void 	init_rdf()
 {}
 gptr *rdf_ptr()
-{}
+{return 0;}
 void new_lins()
 {}
 int lines_left()
-{}
+{return 0;}
 void new_page()
 {}
 void	new_line()
@@ -85,51 +83,91 @@ void	conv_potentials()
 void	conv_control()
 {}
 /******************************************************************************
- *  message.   Deliver error message to possibly exiting. 		      *
+ *  message.   Deliver error message to possibly exiting.  It can be called   *
+ *             BEFORE output file is opened, in which case outt to stderr.    *
  ******************************************************************************/
 #if defined(ANSI) || defined(__STDC__)
-#undef  va_alist
-#define	va_alist int *nerrs, ...
-#ifdef  va_dcl
-#   undef  va_dcl
-#endif
-#define va_dcl /* */
+#   undef  va_alist
+#   define      va_alist int *nerrs, ...
+#   ifdef va_dcl
+#      undef va_dcl
+#   endif
+#   define va_dcl /* */
 #endif
 /*VARARGS*/
-void	message(va_alist)
+void    message(va_alist)
 va_dcl
 {
-   va_list	ap;
-   char		*buff;
-   int		sev;
-   char		*format;
+   va_list      ap;
+   char         *buff;
+   int          sev;
+   char         *format;
+   static char  *sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
 #if defined(ANSI) || defined(__STDC__)
    va_start(ap, nerrs);
 #else
-   int		*nerrs;
+   int          *nerrs;
 
    va_start(ap);
    nerrs = va_arg(ap, int *);
 #endif
-
    buff  = va_arg(ap, char *);
    sev   = va_arg(ap, int);
    format= va_arg(ap, char *);
 
    (void)fprintf(stderr, "mdshak: ");
    (void)vfprintf(stderr, format, ap);
-   fputc('\n',stderr);
    va_end(ap);
+   fputc('\n',stderr);
 
    if(buff != NULL)                     /* null ptr means don't print buffer  */
    {
-      (void)printf("     buffer contents=\"%s\"",buff);
-      new_line();
+      (void)fprintf(stderr,"     buffer contents=\"%s\"",buff);
+      fputc('\n',stderr);
    }
    if(sev >= ERROR && nerrs != NULL)
       (*nerrs)++;
    if(sev == FATAL)
       exit(3);
+}
+
+/******************************************************************************
+ *  message.   Deliver error message to possibly exiting. 		      *
+ ******************************************************************************/
+#if defined(ANSI) || defined(__STDC__)
+#undef  va_alist
+#define	va_alist char *format, ...
+#ifdef  va_dcl
+#   undef  va_dcl
+#endif
+#define va_dcl /* */
+#endif
+/*VARARGS*/
+void	error(va_alist)
+va_dcl
+{
+   va_list	ap;
+#if defined(ANSI) || defined(__STDC__)
+   va_start(ap, format);
+#else
+   char		*format;
+
+   va_start(ap);
+   format= va_arg(ap, char *);
+#endif
+
+   (void)fprintf(stderr, "mdshak: ");
+   (void)vfprintf(stderr, format, ap);
+   fputc('\n',stderr);
+   va_end(ap);
+
+   exit(3);
+}
+static char * mystrdup(s)
+char *s;
+{
+   char * t=malloc(strlen(s)+1);
+   return t?strcpy(t,s):0;
 }
 /******************************************************************************
  * get_int().  Read an integer from stdin, issuing a prompt and checking      *
@@ -211,11 +249,11 @@ char	*prompt;
  *          returning integer values of s,f,n. f defaults to s and n to 1     *
  ******************************************************************************/
 int
-forstr(str, start, finish, inc)
-char	*str;
+forstr(instr, start, finish, inc)
+char	*instr;
 int	*start, *finish, *inc;
 {
-   char	*p, *pp;
+   char	*p, *pp, *str = mystrdup(instr);
    long strtol();
    
    if( (p = strchr(str,':')) != NULL)
@@ -251,6 +289,11 @@ int	*start, *finish, *inc;
  * dump_to_moldy.  Fill the 'system' arrays with the dump data in 'buf' (see  *
  * dump.c for format), expanding floats to doubles if necessary.              *
  ******************************************************************************/
+#define DUMP_SIZE(level)  (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
+			            (3*sys.nmols + 4*sys.nmols_r + 9)+ \
+			     (level>>3 & 1) * \
+			            (3*sys.nmols + 3*sys.nmols_r + 9) +\
+			     (level & 1))
 void
 dump_to_moldy(buf, system)
 float	*buf;
@@ -363,6 +406,8 @@ char		*insert;
       (void)printf("%s\n", insert);
 
    (void)printf("END %d\n", n);
+   if( ferror(stdout) )
+      error("Error writing output - \n%s\n", strerror(errno));
 }
 /******************************************************************************
  * atoms_out().  Write a system configuration to stdout in the form of an     *
@@ -405,7 +450,8 @@ char		*atom_sel;
 	 }
       }
    }
-
+   if( ferror(stdout) )
+      error("Error writing output - \n%s\n", strerror(errno));
 }
  /******************************************************************************
  * Centre_mass.  Shift system centre of mass to origin (in discrete steps),   *
@@ -516,34 +562,30 @@ char	*argv[];
    int		intyp = 0;
    int		start, finish, inc;
    int		rflag;
-   int		idump, idump0, jdump, irec;
+   int		irec;
    int		iout = 0;
    int		outsw=0;
    char		*filename = NULL, *dump_name = NULL;
    char		*dumplims = NULL, *atom_sel = NULL;
    char		*insert = NULL;
-   char		cur_dump[256];
+   char		*tempname;
+   char		dumpcommand[256];
    int		dump_size;
    float	*dump_buf;
    FILE		*Fp, *Dp;
-   dump_mt	header;
    restrt_mt	restart_header;
-   system_mt	system;
+   system_mt	sys;
    spec_mt	*species;
    site_mt	*site_info;
    pot_mt	*potpar;
    quat_mt	*qpf;
    contr_mt	control_junk;
-   int		xdr = 0;
    int		av_convert;
-#ifdef USE_XDR
-   XDR          xdrs;
-#endif
    
 #define MAXTRY 100
    control.page_length=1000000;
 
-   while( (c = getopt(argc, argv, "a:bo:cr:s:d:n:i:") ) != EOF )
+   while( (c = getopt(argc, argv, "a:bo:cr:s:d:t:i:") ) != EOF )
       switch(c)
       {
        case 'a': 
@@ -569,7 +611,7 @@ char	*argv[];
        case 'd':
 	 dump_name = optarg;
 	 break;
-       case 'n':
+       case 't':
 	 dumplims = optarg;
 	 break;
        case 'i':
@@ -583,7 +625,7 @@ char	*argv[];
    if( errflg )
    {
       fputs("Usage: mdshak [-c] [-s sys-spec-file] [-r restart-file] ",stderr);
-      fputs("[-d dump-files] [-n s[-f[:n]]] [-o output-file]\n", stderr);
+      fputs("[-d dump-files] [-t s[-f[:n]]] [-o output-file]\n", stderr);
       exit(2);
    }
 
@@ -613,10 +655,7 @@ char	*argv[];
    {
     case 's':
       if( (Fp = fopen(filename,"r")) == NULL)
-      {
-	 error("Couldn't open sys-spec file \"%s\" for reading\n", filename);
-	 exit(2);
-      }
+	 error("Couldn't open sys-spec file \"%s\" for reading", filename);
       if( cflg )
       {
 	 do
@@ -626,23 +665,21 @@ char	*argv[];
 	 }
 	 while(! feof(stdin) && strcmp(line,"end"));
       }
-      read_sysdef(Fp, &system, &species, &site_info, &potpar);
-      qpf = qalloc(system.nspecies);
-      initialise_sysdef(&system, species, site_info, qpf);
+      read_sysdef(Fp, &sys, &species, &site_info, &potpar);
+      qpf = qalloc(sys.nspecies);
+      initialise_sysdef(&sys, species, site_info, qpf);
       break;
     case 'r':
       if( (Fp = fopen(filename,"rb")) == NULL)
-      {
-	 error("Couldn't open restart file \"%s\" for reading\n", filename);
-	 exit(2);
-      }
+	 error("Couldn't open restart file \"%s\" for reading -\n%s\n", 
+	       filename, strerror(errno));
       re_re_header(Fp, &restart_header, &control_junk);
-      re_re_sysdef(Fp, &system, &species, &site_info, &potpar);
+      re_re_sysdef(Fp, &sys, &species, &site_info, &potpar);
       break;
     default:
       error("Internal error - invalid input type", "");
    }
-   allocate_dynamics(&system, species);
+   allocate_dynamics(&sys, species);
 
    if( data_source == 0 )		/* If called interactively	      */
    {
@@ -666,15 +703,15 @@ char	*argv[];
    switch(data_source)			/* To read configurational data	      */
    {
     case 's':				/* Lattice_start file		      */
-	lattice_start(Fp, &system, species, qpf);
-	moldy_out(1, &system, species, site_info, atom_sel, outsw, insert);
+	lattice_start(Fp, &sys, species, qpf);
+	moldy_out(1, &sys, species, site_info, atom_sel, outsw, insert);
       break;
     case 'r':				/* Restart file			      */
-	init_averages(system.nspecies, restart_header.vsn,
+	init_averages(sys.nspecies, restart_header.vsn,
 		      control_junk.roll_interval, control_junk.roll_interval,
 		      &av_convert);
-	read_restart(Fp, &system, av_convert);
-	moldy_out(1, &system, species, site_info, atom_sel, outsw, insert);
+	read_restart(Fp, &sys, av_convert);
+	moldy_out(1, &sys, species, site_info, atom_sel, outsw, insert);
       break;
     case 'd':				/* Dump dataset			      */
 	if( dump_name == 0 )
@@ -717,101 +754,52 @@ char	*argv[];
 	   }
 	} while(rflag);   
 		
-	idump0 = -1;
-	do			/* Search for a dump file matching pattern */
-	   sprintf(cur_dump, dump_name, ++idump0);
-	while( (Dp = fopen(cur_dump, "rb")) == NULL && idump0 < MAXTRY);
-	if( Dp == NULL )	/* If we didn't find one . . 		   */
-	   error("I can't find any dump files to match \"%s\".",dump_name);
-	/*
-	 * At this stage we should have the first dump file open.
-	 * Read the header.
-	 */
-#ifdef USE_XDR
-	/*
-	 * Attempt to read dump header in XDR format
-	 */
-	xdrstdio_create(&xdrs, Dp, XDR_DECODE);
-	if( xdr_dump(&xdrs, &header) )
-	{
-	   header.vsn[sizeof header.vsn - 1] = '\0';
-	   if( strstr(header.vsn,"(XDR)") )
-	   {
-	      errflg = 0;
-	      xdr = 1;
-	   }
-	}
-	else
-	   errflg = 1;
-#endif
-	/*
-	 * If we failed, try to read header as native struct image.
-	 */
-	if( ! xdr )
-	{
-	   if( fseek(Dp, 0L, 0) == 0 &&
-             fread((char*)&header, sizeof(dump_mt), 1, Dp) == 1) 
-	      errflg = 0;
-	}
-	if( errflg || ferror(Dp) || feof(Dp) )
-	{
-	   fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
-	   exit(2);
-	}
-
-	if( (header.dump_level & 1) == 0 )
-	   error("Dump at level %d doesn't contain co-ordinate information",
-		 header.dump_level);
 	/*
 	 * Allocate buffer for data
          */
-	dump_size = header.dump_size*sizeof(float);
-	dump_buf = (float*)malloc(dump_size);
-	idump = idump0;
+	dump_size = DUMP_SIZE(~0)*sizeof(float);
+	if( (dump_buf = (float*)malloc(dump_size)) == 0)
+	   error("malloc failed to allocate dump record buffer (%d bytes)",
+		 dump_size);
 	/*
 	 * Loop over dump records, ascertaining which file they are in
 	 * and opening it if necessary.  Call output routine.
 	 */
+#if defined (unix) || defined (__unix__)
+	sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %s %s",
+		sys.nmols,sys.nmols_r, dumplims, dump_name);
+	if( (Dp = popen(dumpcommand,"r")) == 0)
+	   error("Failed to execute \'dumpext\" command - \n%s",
+		 strerror(errno));
+#else
+	tempname = tmpnam((char*)0);
+	sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %s -o %s %s",
+		sys.nmols,sys.nmols_r, dumplims, tempname, dump_name);
+	system(dumpcommand);
+	if( (Dp = fopen(tempname,"rb")) == 0)
+	   error("Failed to open \"%s\"",tempname);
+#endif
 	for(irec = start; irec <= finish; irec+=inc)
 	{
-	   jdump = irec/header.maxdumps + idump0;   /* Which file is rec. in? */
-	   if( jdump != idump )			    /*   currently open file? */
-	   {
-	      (void)fclose(Dp);
-	      sprintf(cur_dump, dump_name, jdump);  /* Make new name          */
-	      if( freopen(cur_dump, "rb", Dp) == NULL )
-		 error("Failed to open dump file \"%s\"", cur_dump);
-	      idump = jdump;			    /* Mark as current dump   */
-	   }
-	   /*
-	    *  Now go and get the data
-	    */
-#ifdef USE_XDR
-	    if( xdr )
-	    {
-	       xdr_setpos(&xdrs, XDR_DUMP_SIZE + irec%header.maxdumps
-			  *header.dump_size*XDR_FLOAT_SIZE);
-	       xdr_vector(&xdrs, (char*)dump_buf, header.dump_size, 
-			  XDR_FLOAT_SIZE, xdr_float);
-	    }
-	    else
-#endif
-	    {
-	       fseek(Dp, sizeof header + irec%header.maxdumps*dump_size, 0);
-	       fread(dump_buf, dump_size, 1, Dp);
-	    }
-	   if(ferror(Dp))
-	      error("Error reading record %d in dump file",
-		    irec%header.maxdumps);
+	   
+	   if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
+              error("Error reading record %d in dump file - \n%s\n",
+		    irec, strerror(errno));
 
-	   dump_to_moldy(dump_buf, &system);
+	   dump_to_moldy(dump_buf, &sys);
 
-	   moldy_out(iout++, &system, species, site_info, atom_sel, outsw, insert);
+	   moldy_out(iout++, &sys, species, site_info, atom_sel, outsw, insert);
 #ifdef DEBUG
 	   fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
-		   irec%header.maxdumps, cur_dump);
+		   irec%header.maxdumps, dump_name);
 #endif
 	}
+#if defined (unix) || defined (__unix__)
+	pclose(Dp);
+#else
+	fclose(Dp);
+	remove(tempname);
+#endif
 	break;
       default:
 	break;
