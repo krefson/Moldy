@@ -11,13 +11,16 @@
  *      the macros "ralloc" etc in "defs.h" will have to be converted into    *
  *      functions here which do type-dependant initialisation to zero.        *
  * 2)   arralloc() relies on a common format for pointers to different data   *
- *      types.   It will not work (and cannot be made to work) on machines    *
- *      for which this is false.  As a kludge, it could be fixed for 'double' *
- *      only, which constitutes the vast majority of calls.  (The exception   *
- *      is the struct type reloc_t in "force.c".			      *
+ *      types, and assumes that the representation of a "data" pointer is the *
+ *      same as of an integer pointer.  (N.B.  it can not be used to allocate *
+ *      character data). It will not work (and cannot be made to work) on     *
+ * 	machines for which this is false. 				      *
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.5  90/03/26  16:54:46  keith
+ * Added portability warning to header comments.
+ * 
  * Revision 1.4  90/01/15  17:22:25  keith
  * New version of arralloc() orders memory so that pointers come FIRST.
  * This means you can simply free() the pointer returned (if l.b. = 0).
@@ -33,7 +36,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.4 90/01/15 17:22:25 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.5 90/03/26 16:54:46 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
@@ -97,13 +100,15 @@ char	*p;
 
 #define	MAXDIM	11
                  /*VARARGS*/
-char	*arralloc(va_alist)
+typedef char	canon_t;
+canon_t		*arralloc(va_alist)
 va_dcl
 {
    int		lb[MAXDIM], ub[MAXDIM];
    va_list	ap;
-   long		xsize, stride, idim, n_ptr, n_data;
-   char		**pointer, **end, *pointed, *start;
+   long		stride, idim, n_ptr, n_data;
+   typedef	int* 	ptr_t;
+   ptr_t	*pointer, *end, pointed, start;
 #if ANSI || __STDC__
    va_start(ap, ndim);
 #else
@@ -138,26 +143,45 @@ va_dcl
    for(idim = ndim-2; idim >= 0; idim--)
       n_ptr = (1 + n_ptr) * (ub[idim] - lb[idim] + 1);
  
-   start = talloc(1L, (size_t)(n_data*size + (n_ptr+1)*sizeof(char*)),
-		  __LINE__, __FILE__);
+   if( size % sizeof(ptr_t*) != 0 )
+      message(NULLI, NULLP, FATAL, WDPTR, size);
 
-   pointer = (char**)start;
-   pointed = (char*)(pointer + ub[0] - lb[0] + 1);
-   xsize = sizeof (char*);
-   for(idim = 1; idim < ndim ; idim++)
+   start = (ptr_t)talloc(1L, (size_t)(n_data*size + (n_ptr+1)*sizeof(ptr_t)),
+			   __LINE__, __FILE__);
+   size /= sizeof(ptr_t*);		/* Size is now in terms of "words"   */
+
+
+   pointer = (ptr_t *)start;
+   pointed = (ptr_t)(pointer + ub[0] - lb[0] + 1);
+   /*
+    *  Set up pointers for all but last dimension
+    */
+   for(idim = 1; idim < ndim-1 ; idim++)
    {
-      end = (char**)pointed;
-      if( idim == ndim - 1 ) 		/* Last iteration - set up pointers   */
-      {					/* to data this time.		      */
-	 xsize = size;			/* Increment is now sizeof(data)      */
-	 pointed = start + ((pointed-start)*sizeof(char)+size-1)/size*size;
-      }					/* Make sure 'pointed' is data-aligned*/
+      end = (ptr_t *)pointed;
       stride = ub[idim] - lb[idim] + 1;
       for(; pointer < end; pointer++)
       {
-	 *pointer = pointed - lb[idim]*xsize;
-	 pointed += stride*xsize;
+	 *pointer = pointed - lb[idim];
+	 pointed += stride;
       }
    }
-   return (start - lb[0]*(ndim > 1 ? sizeof(char*) : size));
+   /*
+    *  Pointers to last dimension
+    */
+   if( idim == ndim - 1 )
+   {
+      end = (ptr_t *)pointed;
+      pointed = start + ((pointed-start)+size-1)/size*size;
+      stride = ub[idim] - lb[idim] + 1;
+      for(; pointer < end; pointer++)
+      {
+	 *pointer = pointed - lb[idim]*size;
+	 pointed += stride*size;
+      }
+   }
+   if(ndim > 1)
+      return (canon_t*)(start - lb[0]);
+   else
+      return (canon_t*)(start - lb[0]*size);
 }
