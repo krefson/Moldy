@@ -5,6 +5,11 @@ SHELL=/bin/sh
 #
 #  USE_XDR.  Uncomment this line to enable XDR support.
 XDR=-DUSE_XDR
+#  **** MSDOS with Turbo C ****
+#CC=tcc
+#CFLAGS= -A -DANSI_LIBS -f287 -mh -O -Z -G $(CFLAGS0)
+#GETOPT=getopt.o
+#LDFLAGS1= -mh $(LDFLAGS0)
 #  **** Scalar machines using default C compiler ****
 CFLAGS=	-O  $(XDR) $(CFLAGS0)
 #LDFLAGS= $(LDFLAGS0)
@@ -59,8 +64,8 @@ CFLAGS=	-O  $(XDR) $(CFLAGS0)
 #CFLAGS= -O2 -vector_c -vreport $(XDR) $(CFLAGS0)
 #CFLAGS2=  -safe=ptrs
 #LDFLAGS= $(LDFLAGS0) 
-#CFLAGSAUX=-catalog=aux.in 
-#INLINE= -inline -Npaths=aux.in
+#CFLAGSAUX=-catalog=auxil.in 
+#INLINE= -inline -Npaths=auxil.in
 #  **** convex ****
 #CFLAGS= -O2 -na -nv -fi $(XDR) $(CFLAGS0)
 #CFLAGS2= -va -alias standard -alias ptr_args
@@ -79,7 +84,7 @@ PFLAGS=		-P
 EPFLAGS=	-2r
 A2FLAGS=
 SHFILE=		$$file
-FILES = accel algorith alloc aux beeman convert dump ewald force input \
+FILES = accel algorith alloc auxil beeman convert dump ewald force input \
 	eigens kernel main matrix output quaterns rdf restart startup \
 	values xdr
 
@@ -94,14 +99,14 @@ INFILES = control.water control.100 tips2.in\
 		methane.in mcy.in water-big.in control.big\
 		control.mgclh2o mgclh2o.in control.clay
 
-SHAKS=	algorith alloc aux eigens kernel input matrix\
+SHAKS=	algorith alloc auxil eigens kernel input matrix\
 		quaterns restart startup values xdr
 
 SHAKC= $(SHAKS:%=%.c)
 
 SHAKOBJS= $(SHAKS:%=%.o)
 
-UTILS = moldyextract dumpanalyze dumpconvert dumpextract  moldyanalyze
+UTILS = moldyext dumpanal dumpconv dumpext  manalyze
 
 EXTRAS = $(UTILS:%=%.c) mdshak.c ewald_parallel.c force_parallel.c
 
@@ -113,26 +118,28 @@ DOC=		READ.ME BENCHMARK water-canon.out COPYING \
 VMSBUILD=	compile_moldy.com link_moldy.com defcomm.com\
 		compile_utils.com link_utils.com compile.com
 
+DOSBUILD=	Makefile.mak OFILES.RSP SHAKOBJS.RSP
+
 moldy:		$(OFILES) $(EXTRA_OBJ) $(HFILES)
-		$(CC)  $(OFILES) $(EXTRA_OBJ) $(LDFLAGS) -lm -o moldy
+		$(CC) -o moldy $(LDFLAGS1) $(OFILES) $(EXTRA_OBJ) $(LDFLAGS) -lm 
 
-moldyextract:	moldyextract.c $(HFILES)
-		$(CC) $(CFLAGS) $@.c -o $@ $(LDFLAGS)
+moldyext:	moldyext.c $(GETOPT) $(HFILES)
+		$(CC) $(CFLAGS) -o moldyext $(LDFLAGS1) moldyext.c $(GETOPT) $(LDFLAGS)
 
-moldyanalyze:	moldyanalyze.c $(HFILES)
-		$(CC) $(CFLAGS) $@.c -o $@ $(LDFLAGS)
+manalyze:	manalyze.c $(HFILES)
+		$(CC) $(CFLAGS)  -o manalyze $(LDFLAGS1) manalyze.c $(LDFLAGS)
 
-dumpanalyze:	dumpanalyze.c xdr.o $(HFILES)
-		$(CC) $(CFLAGS) $@.c xdr.o -o $@ $(LDFLAGS)
+dumpanal:	dumpanal.c xdr.o $(HFILES)
+		$(CC) $(CFLAGS) -o dumpanal $(LDFLAGS1) dumpanal.c xdr.o  $(LDFLAGS)
 
-dumpextract:	dumpextract.c xdr.o $(HFILES)
-		$(CC) $(CFLAGS) $@.c xdr.o -o $@ $(LDFLAGS)
+dumpext:	dumpext.c xdr.o $(GETOPT) $(HFILES)
+		$(CC) $(CFLAGS) -o dumpext $(LDFLAGS1) dumpext.c xdr.o $(GETOPT) $(LDFLAGS)
 
-dumpconvert:	dumpconvert.c xdr.o $(HFILES)
-		$(CC) $(CFLAGS) $@.c xdr.o -o $@ $(LDFLAGS)
+dumpconv:	dumpconv.c xdr.o $(HFILES)
+		$(CC) $(CFLAGS) -o dumpconv $(LDFLAGS1) dumpconv.c xdr.o $(LDFLAGS)
 
-mdshak:		mdshak.o $(SHAKOBJS)
-		$(CC) -o mdshak mdshak.o $(SHAKOBJS) $(LDFLAGS) -lm
+mdshak:		mdshak.o $(SHAKOBJS) $(GETOPT) 
+		$(CC) -o mdshak $(LDFLAGS1) mdshak.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) -lm
 
 utilities:	$(UTILS) mdshak
 
@@ -150,17 +157,35 @@ install2:	moldy $(UTILS) mdshak
 
 Makefile:	xmakefile
 		@PATH=/usr/5bin:${PATH};\
-		echo		'{{{{{{\n/^CFILES/  c\\\nCFILES='  $(CFILES)\
-				'\n}\n/^OFILES/  c\\\nOFILES='  $(OFILES)\
-				'\n}\n/^LFILES/  c\\\nLFILES='  $(LFILES)\
-				'\n}\n/^EXTRAS/  c\\\nEXTRAS='  $(EXTRAS)\
-				'\n}\n/^SHAKC/   c\\\nSHAKC='    $(SHAKC)\
-				'\n}\n/^SHAKOBJS/  c\\\nSHAKOBJS='  $(SHAKOBJS)\
+		echo		'{{{{{{\n/^CFILES *=/  c\\\nCFILES=' $(CFILES)\
+				'\n}\n/^OFILES *=/  c\\\nOFILES=' $(OFILES)\
+				'\n}\n/^LFILES *=/  c\\\nLFILES=' $(LFILES)\
+				'\n}\n/^EXTRAS *=/  c\\\nEXTRAS=' $(EXTRAS)\
+				'\n}\n/^SHAKC *=/   c\\\nSHAKC='  $(SHAKC)\
+				'\n}\n/^SHAKOBJS *=/  c\\\nSHAKOBJS='$(SHAKOBJS)\
 				'\n}\n/^%\.[a-z][a-z]*:	/,/^$$/ d\n'\
 				'/^moldy.bbl:	/,/^$$/ d\n' \
 				'/^moldy.aux:	/,/^$$/ d\n' \
 				 > make.sed 
 		sed -f make.sed ./xmakefile > Makefile
+
+Makefile.mak:	Makefile
+		@PATH=/usr/5bin:${PATH};\
+		echo		's/^\([ 	].*\)$$(OFILES)/\1@OFILES.RSP/g\n'\
+				's/^\([ 	].*\)$$(SHAKOBJS)/\1@SHAKOBJS.RSP/g\n'\
+				's/\.\<o\>/.obj/g\n'\
+				's/\.o$$/.obj/g\n'\
+				's/ -\<o\> *\(\<[a-z]*\>\)/ -e\1 /\n'\
+				's/ -\<lm\>//\n'\
+				'/$$(CFILES).*:/,/	co/d\n'\
+				'/^.SUFFIXES/d' > makedos.sed
+		sed -f makedos.sed ./Makefile > Makefile.mak
+
+OFILES.RSP:	xmakefile
+		echo $(OFILES)   | sed -e 's/\.\<o\>/.obj/g'  > OFILES.RSP
+
+SHAKOBJS.RSP:	xmakefile
+		echo $(SHAKOBJS) | sed -e 's/\.\<o\>/.obj/g'  > SHAKOBJS.RSP
 
 cflow:		$(CFILES)
 		cflow $(CFILES) > moldy.cflow
@@ -168,6 +193,8 @@ cflow:		$(CFILES)
 
 ci:		$(CFILES) $(HFILES) xmakefile $(EXTRAS) $(DOC)
 		ci -u $(RCSFLAGS) $?
+
+co:		$(CFILES) $(HFILES) xmakefile $(EXTRAS) $(DOC)
 
 print:		$(CFILES) $(HFILES)
 		for file in $(CFILES) $(HFILES) ;do\
@@ -202,18 +229,19 @@ annihilate:
 #  Export options
 #
 moldy.tar:	$(CFILES) $(HFILES)  Makefile \
-		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD)
+		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
 		$(TAR) cf moldy.tar\
 		$(CFILES)  $(HFILES) Makefile \
-		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD)
+		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
 
 moldy.tar.Z:	moldy.tar
 		compress moldy.tar
 
 moldy.shar:	$(CFILES) $(HFILES)  Makefile \
-		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD)
+		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
 		shar $(CFILES)  $(HFILES) Makefile \
-		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) > moldy.shar
+		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)\
+			 > moldy.shar
 
 moldy.shar.Z:	moldy.shar
 		compress moldy.shar
@@ -239,9 +267,10 @@ link_utils.com:	Makefile
 			link_utils.com; done
 
 moldy.com:	$(CFILES) $(HFILES) $(EXTRAS)\
-		$(INFILES) Aaaa_Read.Me $(DOC) $(VMSBUILD)
+		$(INFILES) Aaaa_Read.Me $(DOC) $(VMSBUILD) $(DOSBUILD)
 		$(DCLAR) Aaaa_Read.Me compile.com $(CFILES) $(HFILES)\
-		$(INFILES) $(EXTRAS) getopt.c $(DOC) $(VMSBUILD) > moldy.com
+		$(INFILES) $(EXTRAS) getopt.c $(DOC) $(VMSBUILD)  $(DOSBUILD)\
+			> moldy.com
 
 moldy.com.Z:	moldy.com
 		compress moldy.com
@@ -262,37 +291,44 @@ moldy.aux:	moldy.tex
 
 $(LFILES):	$(HFILES)
 
-$(OFILES):	structs.h defs.h
+#
+#  Dependencies of objects on headers.
+#
+eigens.o quaterns.o:	defs.h
 
-xdr.o restart.o dump.o:	xdr.h
+accel.o beeman.o convert.o input.o main.o output.o startup.o values.o:	\
+	structs.h defs.h messages.h
 
-#  Special options for aux.c
-aux.o:	aux.c 
+algorith.o alloc.o matrix.o:	defs.h messages.h
+
+xdr.o restart.o dump.o:	structs.h defs.h messages.h xdr.h
+
+#
+#  Special options for performance-critical modules
+#
+auxil.o:	auxil.c defs.h
 	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSAUX) -c  $<
 
-ewald.o:	ewald.c 
+ewald.o:	ewald.c structs.h defs.h
 	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSP) -c $(INLINE) $<
 
-rdf.o:	rdf.c 
+rdf.o:		rdf.c structs.h defs.h
 	$(CC) $(CFLAGS) $(CFLAGS2) -c $<
 
-kernel.o:	kernel.c 
+kernel.o:	kernel.c structs.h defs.h
 	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSP) -c $<
 
-force.o:	force.c 
+force.o:	force.c structs.h defs.h
 	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSP) $(INLINE) -c $<
 
-
-%.tex:		RCS/%.tex,v
-		co $@
-
-%.c:		RCS/%.c,v
-		co $@
-
-%.h:		RCS/%.h,v
-		co $@
+#
+#  Rule for checking out source under RCS
+#
+$(CFILES) $(HFILES) $(EXTRAS) moldy.tex:
+	co $@
 
 .SUFFIXES:	.c .o
 
 .c.o:
 	$(CC) $(CFLAGS) -c $<
+
