@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.20 91/11/26 12:47:25 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.21 92/02/26 14:34:10 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -104,6 +104,7 @@ void    	message();              /* Send message to stderr             */
 void    	invert();               /* 3x3 matrix inverter                */
 void    	mat_vec_mul();          /* Matrix by vector multiplier        */
 void    	spaxpy();               /* Scattered vector add               */
+void    	spxpy();                /* Scattered vector add               */
 void    	transpose();            /* Generate 3x3 matrix transpose      */
 void    	zero_real();            /* Initialiser                        */
 void    	force_inner();          /* Inner loop forward reference       */
