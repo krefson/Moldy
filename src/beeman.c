@@ -38,6 +38,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: beeman.c,v $
+ *       Revision 2.9  1996/08/14 16:23:24  keith
+ *       Fixed error in thermoststat implementation and integration.
+ *
  *       Revision 2.8  1995/12/04 11:45:49  keith
  *       Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
  *       Thanks to V. Murashov.
@@ -52,7 +55,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Got rid of all global (external) data items except for
  * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
+ * (pot_dim, potspec, prog_unit) are declared with const
  * qualifier macro which evaluates to "const" or nil
  * depending on ANSI/K&R environment.
  * Also moved as many "write" instantiations of "control"
@@ -100,7 +103,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/beeman.c,v 2.8 1995/12/04 11:45:49 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/beeman.c,v 2.9 1996/08/14 16:23:24 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -110,7 +113,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/beeman.c,v 2
 #include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 void	note(char *, ...);		/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
 #else
@@ -160,7 +163,7 @@ quat_mp		qdot;			/* Quaternion derivatives (update)    */
       for(j = 0; j < 4; j++)
          delta += quat[i][j]*qdot[i][j];
       if( fabs(delta)*control.step > TOLERANCE)
-         message(NULLI, NULLP, FATAL, QCONST, i, delta);
+         message(NULLI, NULLP, FATAL, Qconst, i, delta);
       for(j=0; j<4; j++)  qdot[i][j] -= delta * quat[i][j];
    }
 }

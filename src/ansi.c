@@ -28,7 +28,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #   define _POSIX_SOURCE
 #endif
 /*========================== Library include files ===========================*/
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #include 	<stdarg.h>
 #else
 #include 	<varargs.h>
@@ -37,11 +37,11 @@ what you give them.   Help stamp out software-hoarding!  */
 #include	"stddef.h"
 #include	"stdlib.h"
 #include	<stdio.h>
-#ifndef ANSI_LIBS
+#ifndef STDC_HEADERS
 /******************************************************************************
  * strerror for pre-ANSI unix machines					      *
  ******************************************************************************/
-#if defined(unix) || defined(__unix__)
+#ifndef HAVE_STRERROR
 char	*strerror(i)
 int i;
 {
@@ -56,7 +56,7 @@ int i;
 /******************************************************************************
  * raise for pre-ANSI unix machines					      *
  ******************************************************************************/
-#if defined(unix) || defined(__unix__)
+#ifndef HAVE_RAISE
 int 	raise(sig)
 int sig;
 {
@@ -69,8 +69,9 @@ int sig;
 /******************************************************************************
  * strstr replacement for pre-ANSI machines which don't have it.              *
  ******************************************************************************/
+#ifndef HAVE_STRSTR
 char *strstr(cs, ct)
-CONST char *cs, *ct;
+const char *cs, *ct;
 {
    int  i, sl = strlen(cs)-strlen(ct);
 
@@ -79,17 +80,20 @@ CONST char *cs, *ct;
 	 return (char*)cs+i;
    return 0;      
 }
+#endif
 /******************************************************************************
  * mem{cpy,set} and strchr replacement for BSD machines which don't have them.*
  ******************************************************************************/
-#ifdef BSD
+#ifndef HAVE_STRCHR
 char *strchr(s, c)
-CONST char	*s;
+const char	*s;
 int	c;
 {
    extern char	*index();
    return index(s,c);
 }
+#endif
+#ifndef HAVE_MEMCPY
 gptr *memcpy(s1, s2, n)
 gptr *s1, *s2;
 int n;
@@ -98,6 +102,8 @@ int n;
    (void)bcopy((char *)s2, (char *)s1, n);
    return(s1);
 }
+#endif
+#ifndef HAVE_MEMSET
 gptr *memset(s, c, n)
 gptr *s;
 int c, n;
@@ -117,9 +123,9 @@ int c, n;
 /******************************************************************************
  * remove.  delete (unlink) a file.   (ANSI replacement)		      *
  ******************************************************************************/
-#if defined(unix) || defined(__unix__)
+#ifndef HAVE_REMOVE
 int remove(file)
-CONST char	*file;
+const char	*file;
 {
    int unlink();
    return (unlink(file));
@@ -158,7 +164,7 @@ va_list	args;
 
 #include <ctype.h>
 int	vprintf (format, ap)
-CONST char	*format;
+const char	*format;
 va_list	ap;
 {
     int     pos, charsout, fpos, error, modflag;

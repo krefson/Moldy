@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: quaterns.c,v $
+ *       Revision 2.7  1994/06/08 13:22:31  keith
+ *       Null update for version compatibility
+ *
  * Revision 2.5  1994/01/18  13:32:54  keith
  * Null update for XDR portability release
  *
@@ -43,7 +46,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/quaterns.c,v 2.5 1994/01/18 13:32:54 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/quaterns.c,v 2.7 1994/06/08 13:22:31 keith stab $";
 #endif
 /*========================== Library include files ===========================*/
 #include <math.h>

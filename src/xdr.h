@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.h,v $
+ *       Revision 2.9  1996/09/25 16:29:12  keith
+ *       Fixed restart structure correctly - broken in prev version.
+ *       Thermostat parameters may not be properly read.
+ *
  *       Revision 2.8  1996/03/07 15:01:57  keith
  *       Made "malloc in types.h" macro protection conditional on "ANSI_LIBS"
  *
@@ -61,7 +65,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSidh = "$Header: /home/eeyore_data/keith/md/moldy/RCS/xdr.h,v 2.9 1996/09/25 16:28:13 keith Exp $";
+static char *RCSidh = "$Header: /home/eeyore_data/keith/md/moldy/RCS/xdr.h,v 2.9 1996/09/25 16:29:12 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef USE_XDR
@@ -73,7 +77,7 @@ static char *RCSidh = "$Header: /home/eeyore_data/keith/md/moldy/RCS/xdr.h,v 2.9
  * In case an implementation (eg SGI) does it right by including <stdlib.h>
  * ensure that any Moldy module includes "stdlib.h" *before* "xdr.h".
 */
-#ifndef ANSI_LIBS
+#ifndef STDC_HEADERS
 #define free xxfree
 #define exit xxexit
 #define malloc xxmalloc
@@ -91,7 +95,7 @@ static char *RCSidh = "$Header: /home/eeyore_data/keith/md/moldy/RCS/xdr.h,v 2.9
 #endif
 
 
-#ifndef ANSI_LIBS
+#ifndef STDC_HEADERS
 #undef free
 #undef exit
 #undef malloc

@@ -20,7 +20,7 @@ You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #include "defs.h"
 #include "string.h"
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #include <stdarg.h>
 #else
 #include <varargs.h>
@@ -34,7 +34,7 @@ int	getopt();
 #define NSIGNAL 8
 #define buf_inc 128
 
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #undef  va_alist
 #define	va_alist char *format, ...
 #ifdef  va_dcl
@@ -47,7 +47,7 @@ void error(va_alist)
 va_dcl
 {
    va_list p;
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
    va_start(p, format);
 #else
    char	*format;
