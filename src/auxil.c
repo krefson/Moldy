@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.12  1998/05/21 18:27:01  keith
+ *       Fixed rt_clock() to avoid spurious compiler warnings re return value.
+ *
  *       Revision 2.11  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -258,7 +261,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2.11 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2.12 1998/05/21 18:27:01 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -267,6 +270,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2
 #include 	"string.h"
 #include	<stdio.h>
 /*================= System Library include files - unix only ================*/
+#if defined(unix) || defined(__unix) || defined(__unix__)
 #if defined(HAVE_TIMES) && defined(HAVE_SYS_TIMES_H)
 #   include <sys/times.h>
 #else
@@ -297,7 +301,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2
 #if !defined(CLOCKS_PER_SEC) && defined(CLK_TCK)
 #   define  CLOCKS_PER_SEC CLK_TCK
 #endif
-
+#endif /* unix */
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
@@ -776,7 +780,7 @@ VECTORIZE
 /******************************************************************************
  *  replace - replace file1 by file2, renaming or overwriting		      *
  ******************************************************************************/
-#if defined(unix) || defined(__unix__)
+#if defined(unix) || defined(__unix) || defined(__unix__)
 int	replace(file1, file2)
 char	*file1, *file2;
 {
@@ -815,7 +819,7 @@ char	*file;
    tfree(name);
 }
 #else				/*  VMS				*/
-#   if defined(unix) || defined(__unix__)
+#   if defined(unix) || defined(__unix) || defined(__unix__)
 void	purge(file)
 char	*file;
 {
