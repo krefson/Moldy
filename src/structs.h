@@ -1,7 +1,11 @@
 /*
- * $Header: structs.h,v 1.3 89/05/15 15:48:13 keith Exp $
+ * $Header: structs.h,v 1.3 89/05/15 16:12:04 keith Exp $
  *
  * $Log:	structs.h,v $
+ * Revision 1.3  89/05/15  16:12:04  keith
+ * Added new members, 'vsn' and 'dump_size' to dump_t.
+ * * Must use with r1.3 or later of 'dump.c'.
+ * 
  * Revision 1.2  89/05/11  13:50:32  keith
  * Modified restrt_t to allow commensurate sun3/sun4 padding
  * 
@@ -38,11 +42,11 @@ typedef struct			/* Control parameters for simulation	      */
    FILE		*out;		/* Pointer to main output file		      */
    int		nbins;		/* Number of bins for rdf calculation         */
    unsigned long seed; 		/* Seed for random number generator	      */
-   int		pad;		/* Padding for structure alignment	      */
    int		page_width,	/* Line width for output file		      */
 		page_length,	/* Length of page on output file	      */
 		scale_interval, /* Number of timesteps between scales	      */
 		scale_end,	/* Stop scaling after n timesteps	      */
+   		scale_separately,/* Scale each species separately	      */
 		begin_average,	/* Number of 'equilibration' steps	      */
 		average_interval,/* Frequency of averages calculation	      */
    		begin_dump,	/* When to start storing dumps for analysis   */

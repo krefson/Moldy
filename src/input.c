@@ -9,10 +9,13 @@
  * Read_control()       Read control file				      *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log:	input.c,v $
+ * Revision 1.1  89/04/20  16:00:42  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: input.c,v 1.1 89/04/20 16:00:42 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<ctype.h>
@@ -69,6 +72,7 @@ static	match_t	match[] = {
                 {"page-width",	    	"%d",	(char*)&control.page_width},
                 {"page-length",	   	"%d",	(char*)&control.page_length},
                 {"scale-interval",    	"%d",	(char*)&control.scale_interval},
+		{"scale-separately",	"%d", (char*)&control.scale_separately},
                 {"const-pressure",  	"%d",	(char*)&control.const_pressure},
                 {"reset-averages",  	"%d",	(char*)&control.reset_averages},
                 {"scale-end",	   	"%d",	(char*)&control.scale_end},

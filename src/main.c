@@ -7,12 +7,15 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.2  89/04/21  10:48:38  keith
+ * Corrected bug which left step counter 1 too high at end of run
+ * 
  * Revision 1.1  89/04/20  16:00:48  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: main.c,v 1.1 89/04/20 16:00:48 keith Exp $";
+static char *RCSid = "$Header: main.c,v 1.2 89/04/21 10:48:38 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -27,7 +30,6 @@ void	rescale();
 void	note();
 void	dump();
 void	print_rdf();
-double	value();
 void	message();
 double	cpu();
 void	write_restart();
@@ -63,12 +65,12 @@ contr_t	control = {
 	NULL,			/* Pointer to main output file		      */
 	100,			/* Number of bins for rdf calculation	      */
 	1234567,		/* Seed for random number generator	      */
-	0,			/* Padding to align structure fields	      */
 	132,			/* Line width for output file		      */
 	44,			/* Length of page on output file	      */
 	0,			/* Number of timesteps between scales	      */
 	1000000,		/* Stop scaling after n timesteps	      */
 	1000,			/* Number of 'equilibration' steps	      */
+	0,			/* Whether to scale each species separately   */
 	100,			/* Frequency of averages calculation	      */
 	0,			/* Start of configuration dumps		      */
 	0,			/* Dump filename offset (internal use only)   */
@@ -128,7 +130,7 @@ char	*argv[];
       if(control.scale_interval > 0)
          if(control.istep < control.scale_end &&
             control.istep % control.scale_interval == 0)
-            rescale(value(t_n,0), control.temp, &system);
+            rescale(&system, species);
          else if(control.istep == control.scale_end)
             note("temperature scaling turned off");
 

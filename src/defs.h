@@ -1,7 +1,10 @@
 /*
- * $Header: defs.h,v 1.1 89/04/27 14:43:32 keith Exp $
+ * $Header: defs.h,v 1.1 89/05/02 10:51:58 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.1  89/05/02  10:51:58  keith
+ * Initial revision
+ * 
  * 
  */
 
@@ -12,7 +15,7 @@
  * Version ID strings
  */
 #define          REVISION         "$Revision: 1.1 $"
-#define		 REVISION_DATE    "$Date: 89/04/27 14:43:32 $"
+#define		 REVISION_DATE    "$Date: 89/05/02 10:51:58 $"
 #define		 REVISION_STATE   "$State: Exp $"
 
 /* Vectorisation directive translation*/

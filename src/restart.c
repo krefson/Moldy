@@ -11,13 +11,16 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 1.2  89/05/22  13:53:20  keith
+ * Fixed to put correct RCS Revision into restart file header
+ * 
  * Revision 1.1  89/04/27  15:16:09  keith
  * Initial revision
  * 
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: restart.c,v 1.2 89/05/15 18:07:31 keith Exp $";
+static char *RCSid = "$Header: restart.c,v 1.2 89/05/22 13:53:20 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
