@@ -3,6 +3,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.18  92/06/26  17:03:02  keith
+ * Got rid of assumption that memory returned by talloc() or
+ * arralloc() is zeroed.  This enhances ANSI compatibility.
+ * Removed memory zeroing from alloc.c() in consequence.
+ * 
  * Revision 1.17  92/02/26  14:33:48  keith
  * Got rid of pstrip pragmas for convex -- they just broke things
  * 
@@ -94,7 +99,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.17 92/02/26 14:33:48 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.18 92/06/26 17:03:02 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -676,9 +681,14 @@ int nprocessors()
    if( n <= 0 )
    {
       nphys = MT_NUMBER_OF_PROCS();
-      if( ( env = getenv("THREADS") ) == NULL || (n = atoi(env)) <= 0 
-	  || n > nphys)
-         n = nphys;
+      if( ( env = getenv("THREADS") ) == NULL )
+	 n = 1;
+      else
+      {
+	 n = atoi(env);
+	 if ( n <= 0 || n > nphys)
+	    n = nphys;
+      }
    }
    return n;
 }
@@ -687,11 +697,18 @@ int nprocessors()
 {
    char *env;
    static int n = 0;
+   int nphys = 4;
 
    if( n <= 0 )
    {
-      if( ( env = getenv("THREADS") ) == NULL || (n = atoi(env)) <= 0 )
-         n = 4;
+      if( ( env = getenv("THREADS") ) == NULL )
+	 n = 1;
+      else
+      {
+	 n = atoi(env);
+	 if ( n <= 0 || n > nphys)
+	    n = nphys;
+      }
    }
    return n;
 }
