@@ -6,29 +6,30 @@
 \author{Keith Refson\\Department of Earth Sciences\\Parks Road
 \\Oxford OX1 3PR\\keith@uk.ac.ox.earth\\}
 
-\newcommand{\moldy}{{\em Moldy\ }}
-\newcommand{\etc}{{\em etc\ }}
+\newcommand{\moldy}{{\em Moldy}}
+\newcommand{\etc}{{\em etc}}
 \newcommand{\eg}{{\em e.g.\ }}
 \newcommand{\ie}{{\em i.e.\ }}
+\newcommand{\bm}[1]{\mbox{\boldmath \protect\(#1\protect\)}}
 \begin{document}
 \maketitle
 \tableofcontents
 
 \chapter{Introduction}
 
-\moldy is a computer program for performing molecular dynamics
+\moldy\  is a computer program for performing molecular dynamics
 simulations of condensed matter.  It can handle any assembly of rigid
 polyatomic molecules, atoms or ions and any mixture thereof. It uses
 the `link cell' method to calculate short-range forces and the Ewald
 sum technique to handle long-range electrostatic forces.  Simulations
-may be performed either in the usual $NVT$ ensemble or in an $N\sigma
+may be performed either in the usual $NVE$ ensemble or in an $N\sigma
 T$ ensemble using the constant-stress method of Parinello and Rahman.
 As the MD cell need not be cubic, the program is equally suitable for
 simulations of solids and liquids.
 
 Most existing MD programs are limited in their capabilities, for
 example to one kind of potential function, or molecular symmetry, or
-to some restricted number of molecules.  \moldy is (as far as
+to some restricted number of molecules.  \moldy\  is (as far as
 possible) free from such arbitrary constraints.  The system is
 specified at the beginning of each run and its size is only limited by
 the amount of memory available to the program: if a system is too
@@ -39,54 +40,210 @@ molecules of each. Molecules or ions may be monatomic or polyatomic,
 linear or three dimensional in any combination.  The potential
 functions may be of the Lennard-Jones, Buckingham (including
 Born-Meyer) or MCY types, and other potential types may be easily
-added.  Such flexibility is possible because \moldy is written in the
+added.  Such flexibility is possible because \moldy\  is written in the
 `C' language which permits dynamic memory allocation.
 
-\moldy is written to be highly portable and has been tested on a wide
-range of computers and operating systems, including CRAY COS, VAX/VMS
-and Unix(tm) (both BSD and system V varieties).  It should be trivial to
-move it to any other machine with a good `C' compiler.
+\moldy\  is written to be highly portable and has been tested on a wide
+range of computers and operating  systems, including CRAY COS, VAX/VMS
+and  Unix(tm) (both   BSD  and  system  V  varieties).   It should  be
+straightforward to  move  it to  any  other machine  with a   good `C'
+compiler.
 
-To be of real use a simulation program must run efficiently on modern
-high-speed computers, which are increasingly of vector or parallel
-architectures. \moldy is written so as to be highly vectorisable and
-has been tested on a range of vector machines from manufacturers
-including Cray Research Inc, Convex, Stellar, Ardent and Alliant.  On
-the cray XMP-48 its performance can exceed 100 MFlop/sec (on a
-suitably large system). A experimental version for parallel machines
-with shared memory is also available.
+To be of real use a simulation  program must run efficiently on modern
+high-speed computers, which  are  increasingly of vector   or parallel
+architectures.  \moldy\  is written so  as to be highly vectorisable and
+has been  tested on a   range of  vector machines  from  manufacturers
+including Cray, Convex, Stardent and  Alliant.  On the cray XMP-48 its
+performance can exceed 100 MFlop/sec (on a suitably large  system).  A
+experimental version for parallel  machines with shared memory is also
+available.
 
 \chapter{Algorithms and Equations}
-% Disclaimer to purpose and refs here
-% Description of nature of models Moldy can handle -
-% rigid molecule and site pair forces.
+
+This chapter  describes the implementation  of the  molecular dynamics
+technique as used in \moldy.  It is not intended as an introduction to
+MD  simulations, and  does assume some    familiarity  with the  basic
+concepts of microscopic models  and simulations thereof.  The book  by
+Allen and Tildesly  \cite{allen:87}  is a  very good    introductory text,
+covering   both the  theory  and  the  practicalities and  is   highly
+recommended.  It   also  contains   comprehensive  references  to  the
+scientific literature of microscopic computer simulation.
+
+\moldy\  is designed to simulate a common class of models of atomic or
+molecular systems. The assumptions are: that the system is an assembly
+of  {\em rigid   molecules},  atoms   or  ions;  that  the  forces  of
+interaction are derived   from {\em  continuous  potential  functions}
+acting between (usually atomic) {\em sites} on each molecule; that the
+dynamics are governed by the {\em classical} Newton-Euler equations of
+motion.  A major aim of \moldy\ has been to allow the most  general of
+models within that class and to impose as few restrictions as possble.
+In particular arbitary mixtures of different molecules are allowed
+and several popular forms of potential functions are catered for.
+
 \section{The Equations of Motion}
-% Newton-Euler
+The forces determining the dynamics of the system are derived from the
+potential    function    denoted     by   $\phi_{i\alpha  j\beta}(\bm{r}
+_{i\alpha j\beta})$.  The indices $i$ and $j$ run  over all molecules
+in the system and  $\alpha$ and $\beta$ over  sites on  the respective
+molecule\footnote{A comment on notation is appropriate here.  In this
+chapter, site quantities are denoted by {\em lowercase} letters,
+molecular quantities by {\em uppercase}, sites are indexed by {\em greek}
+letters and molecules by {\em roman}. A missing index denotes
+a sum over the corresponding sites or molecules so that, for example
+$\bm{r}_{i\alpha j\beta}$ is a site-site vector and $\bm{F}_{ij}$ the
+molecule-molecule force}.  
+In that case the total potential energy of the system, $U$, is
+\begin{equation}
+U = \sum_i \sum_{j > i} \sum_\alpha \sum_\beta \phi_{i\alpha j\beta}(
+\bm{r}_{i\alpha j\beta}).
+\end{equation}
+The total force on molecule $i$ is
+\begin{equation}
+\bm{F}_i = \sum_j \sum_\beta \sum_\alpha \bm{f}_{i\alpha j\beta}
+\end{equation}
+where $\bm{f}_{i\alpha j\beta} = - \bm{\nabla} \phi_{i\alpha  j\beta}(
+\bm{r}_{i\alpha j\beta})$ is the force acting on site $\beta$ of molecule
+$j$ from site $\alpha$ of molecule $i$.  A torque
+\begin{equation}
+\bm{N}_i = \sum_\alpha (\bm{r}_{i \alpha} - \bm{R}_{i}) 
+\bm{\times f}_{i\alpha} 
+\end{equation}
+also acts on molecule $i$.  $\bm{R}_{i} = 1/M_i \sum_\alpha
+m_{i\alpha} \bm{r}_{i\alpha}$ is the centre of mass of molecule $i$.
+
+The motion is governed by the Newton-Euler equations
+\begin{equation}
+M_i\ddot{\bm{R}_i} = \bm{F}_i
+\end{equation}
+\begin{equation}
+\bm{I_i \cdot} \dot{\bm{\omega}}_i - \bm{\omega_i \times I_i \cdot
+\omega_i} = \bm{N_i} \label{eqn:euler}
+\end{equation}
+where  $\bm{\omega}_i$ is the angular velocity of the molecule, 
+$ \bm{I}_i = \sum_{\alpha} m_{i\alpha} 
+( p_{i\alpha}^2 \bm{1} - \bm{p}_{i\alpha}\bm{p}_{i\alpha} ) $ 
+is the inertia tensor and 
+$\bm{p}_{i\alpha} = \bm{r}_{i\alpha} - \bm{R}_i $
+is the atomic site co-ordinate relative to the molecular centre of mass.
+
 % Quaternions
 \label{sec:quaternions}
-% Sonnenschein's 2nd order method
+The orientations of the molecules are represented by {\em quaternions}
+as  has now  become common  practice.   They are  preferred over Euler
+angles for two reasons. Firstly they lead to equations of motion which
+are  free  of singularities   \cite{evans;77} which   means  that   no
+special-case  code is required. This  leads to much improved numerical
+stability      of  the  simulation  \cite{evans&murad:77}.   Secondly,
+molecular symmetry   operations   and  combinations of  rotations  are
+elegantly expressed   in    terms  of     a     simple      quaternion
+algebra\cite{evans&murad:77,pawley&dove:85}.
+
+A quaternion  is an ordered number  quartet  which obeys  the  algebra
+given  by   Pawley\cite{pawley:81}.  The multiplication   rule in that
+reference may be restated as a matrix product treating each quaternion
+as a  4-vector.  If  ${\bf p} \equiv (p_0,p_1,p_2,p_3)$ and  ${\bf q}
+\equiv  (q_0,q_1,q_2,q_3)$  are quaternions then
+\begin{equation}
+{\bf pq} = 
+\left(
+\begin{array}{rrrr}
+p_0 & -p_1 & -p_2 & -p_3 \\
+p_1 &  p_0 & -p_3 &  p_2 \\
+p_2 &  p_3 &  p_0 & -p_1 \\
+p_3 & -p_2 &  p_1 &  p_0 
+\end{array}
+\right) \left(
+\begin{array}{r}
+q_0 \\ q_1 \\ q_2 \\ q_3
+\end{array}
+\right)
+\end{equation}
+The quaternion $ {\bf \tilde{q}} $ conjugate to ${\bf q}$ is defined
+as ${\bf \tilde{q}} = (q_0,-q_1,-q_2,-q_3)$ so that 
+${\bf q\tilde{q}} = (q_0^2+q_1^2+q_2^2+q_3^2,0,0,0) $;
+the {\em norm} is defined as $ |{\bf q}| \equiv
+\sqrt{q_0^2+q_1^2+q_2^2+q_3^2} $ and {\bf q} is called a {\em unit}
+quaternion if $ |{\bf q}| = 1 $ .  
+
+Any rotation may be represented by a unit quaternion. Du Val shows
+\cite{duval:64} that if $ {\bf q} = (\cos \alpha/2, \bm{l} \sin
+\alpha/2) $ (where we have combined the last three components to form
+a 3-vector) and ${\bf p} = (0,\bm{r})$ then the operation
+\begin{equation}
+{\bf p'} \equiv (0,\bm{r'}) = {\bf q p \tilde{q}}
+\end{equation}
+corresponds to a rotation of the vector $\bm{r}$ by an angle of
+$\alpha$ about the axis $\bm{l}$.  The components may also be expressed in
+terms of the Euler angles as
+\footnote{The definition of quaternions used here differs from that used
+in Evans' paper \cite[equation 21]{evans:77} in the sign of $q_2$ or
+$\xi$.  This error has been compounded by subsequent authors
+\cite{sonnenschein:85} who also managed to permute the components
+which means that the parameters do not form an ordered number quartet
+which obeys quaternion algebra.  .  We follow the definition of of
+Goldstein \cite[pages 143 and 155]{goldstein:80}.} 
+\begin{eqnarray}
+q_0 & = & \cos \frac{\phi+\psi}{2} \cos \frac{\theta}{2} \nonumber \\
+q_1 & = & \sin \frac{\phi-\psi}{2} \sin \frac{\theta}{2} \nonumber \\
+q_2 & = & \cos \frac{\phi-\psi}{2} \sin \frac{\theta}{2} \nonumber \\
+q_3 & = & \sin \frac{\phi+\psi}{2} \cos \frac{\theta}{2}.
+\end{eqnarray}
+
+The relationship between the time  derivative of a  quaternion and the
+principal frame  angular velocity was  given  by Evans \cite{evans:77}
+and rewritten using quaternion algebra by Refson \cite{refson:87} as
+\begin{equation}
+2 {\bf \dot{q}} = {\bf q}(0,\bm{\omega}_p)
+\end{equation}
+The second derivative is given by
+\begin{eqnarray}
+2{\bf \ddot{q}} & = & {\bf q}(- 1/2 \omega_p^2,\dot{\bm{\omega}_p}) \\
+ & = & {\bf q}(-2 |{\bf \dot{q}}|^2,\dot{\bm{\omega_p}}) \label{eqn:qddot}
+\end{eqnarray}
+Equations \ref{eqn:qddot} and \ref{eqn:euler} allow the simulation to
+be implemented using quaternions and their derivatives as the dynamic
+variables for rotational motion, and this is the method employed in
+\moldy.  Sonnenschein showed\cite{sonnenschein:85} that it gives
+substantially better stability than if angular velocities and
+accelerations are used as dynamic variables.
+ 
+% Normalisation of quaternions and quaternion constraints
+% stability 
+% linear molecules.
 \section{Integration Algorithms}
 % Beeman Ref to vel dep forces and recent paper
 % Velocity Dependent forces
-% Normalisation of quaternions and quaternion constraints
 \section{The Ewald Sum}
 \label{sec:ewald}
-%Equations
-% Self energies & uniform sheet correction
+% Equations
+% Self energies
+% uniform sheet correction
 % Surface dipole term
-\section{Periodic Boundaries - the Link Cell Method}
+\section{Pressure and Temperature}
+% Virial, site-site & mol-mol correction.
+\section{Periodic Boundaries --- the Link Cell Method}
 \label{sec:link-cell}
 \section{Temperature Scaling}
 \label{sec:rescaling}
+% Per species and total rescaling
 \section{Constant Stress}
 \label{sec:const-stress}
 \section{Radial Distribution Functions}
+% Formulae for multi-component systems.
 \section{The Initial Configuration}
 \label{sec:skewstart}
 \section{Potential Functions}
+% LJ, Buckingham (Born-Meyer) & MCY
+% distant potential correction
+\section{Frameworks}
+% Zeolites, clay
+% Discussion of models - wrt unbalanced charges.
+% Framework is constrained
+\section{How Moldy implements all of this}
 
 \chapter{Running Moldy}
-The way \moldy is invoked depends to some extent on the operating
+
+The way \moldy\  is invoked depends to some extent on the operating
 system, but usually by issuing the command \verb'moldy'\footnote{On
 VMS, {\tt moldy} may be defined as a foreign command by {\tt \$ moldy
 :== \$mydisk:[mydir]moldy} For Unix(tm) the executable file {\tt
@@ -110,7 +267,7 @@ invoke \moldy. Under VMS the commands
         $ moldy control.dat output.lis
         $ moldy control.dat
 \end{verbatim}
-will start \moldy which will read its input from \verb'control.dat'.
+will start \moldy\  which will read its input from \verb'control.dat'.
 The output will be directed to the file \verb'output.lis' in the first
 case and written to the terminal or batch log in the second.  Under
 UNIX any of
@@ -127,17 +284,17 @@ Under COS (Cray Operating System) any of the control statements
         MOLDY,'CONTROL OUTPUT'.
         MOLDY,' < CONTROL > OUTPUT'.
 \end{verbatim}
-will invoke \moldy, which in the first example will read the control
+will invoke \moldy\ , which in the first example will read the control
 file from the job file following the first \verb'/EOF' marker and send
 the output to \verb'$OUT'.  In the last two examples
-\moldy will read from the local dataset \verb'CONTROL' (which might, for
+\moldy\  will read from the local dataset \verb'CONTROL' (which might, for
 example, be created using \verb'FETCH' or \verb'ACCESS') and create
 another local dataset called \verb'OUTPUT'.
 
 \section{The Control File}
 \label{sec:control}
 
-The information needed to initiate and control a run of \moldy is
+The information needed to initiate and control a run of \moldy\  is
 specified in a file known as the {\em control file}. This contains the
 parameters governing the run \eg the number of timesteps to be
 executed or the frequency of output, and the names of files to be used
@@ -178,7 +335,7 @@ should be terminated after a certain amount of computer time has been
 used - given by parameter \verb'cpu-limit'.  This will be particularly
 useful in batch mode systems, where the run is killed after some
 specified CPU time has elapsed.  Setting \verb'cpu-limit' to the
-maximum time allowed will cause \moldy to terminate the run {\em
+maximum time allowed will cause \moldy\  to terminate the run {\em
 before} the limit is reached and write out a backup file (see
 section~\ref{sec:backup}).
 
@@ -196,9 +353,9 @@ Unnecessary slashes may also be omitted so that, for example OWN//PDN
 and ID/PDN have the obvious meaning. If only a dataset name is
 present, and it is a valid local name, a local dataset is tried first.
 Failing that it is taken to be a permanent dataset name.}.  No checks
-are performed on the validity of the name (because \moldy has to work
+are performed on the validity of the name (because \moldy\  has to work
 on many different computer systems), so if you make a mistake you are
-likely to get an error message to the effect that \moldy couldn't find
+likely to get an error message to the effect that \moldy\  couldn't find
 the file you asked for.  To remove a default value, just specify a
 null string {\em e.g.} \verb'save-file = '.
 
@@ -363,9 +520,9 @@ Unit of charge for system specification file. \\ \hline
 \subsection{System Specification}
 \label{sec:sys-spec}
 
-The information which describes to \moldy the system to be simulated
+The information which describes to \moldy\  the system to be simulated
 and the interaction potentials is contained in a file known as the
-{\em system specification file}.  This may be presented to \moldy in
+{\em system specification file}.  This may be presented to \moldy\  in
 either of two ways: If the control file parameter \verb'sys-spec-file'
 is null or absent, it is assumed to be appended to the end of the
 control file.  Otherwise the it is read from the file whose name is
@@ -443,7 +600,7 @@ from another definition in common usage.
 has formula \[\phi(r_{ij}) = -A_{ij}/r^{6}_{ij} + B_{ij}exp(-C_{ij}r_{ij}).\]
 The three parameters appear on each line in the order $A, B, C$.
 \item[MCY] This type supports potentials of the form of the water
-model of Matsuoka, Clementi and Yoshimine\cite{MCY75}, 
+model of Matsuoka, Clementi and Yoshimine\cite{matsuoka:75}, 
 \[\phi(r_{ij}) = A_{ij}exp(-B_{ij}r_{ij}) - C_{ij}exp(-D_{ij}r_{ij}),\]
 and the four parameters appear on the line in the order $A, B, C, D$.
 \end{description}
@@ -469,7 +626,7 @@ principal frame (polyatomics only).
 
 \subsection{The Initial Configuration}
 
-\moldy provides two methods of setting up an initial configuration.
+\moldy\  provides two methods of setting up an initial configuration.
 By default the {\em skew start} method of section \ref{sec:skewstart}
 is used to place the molecular centres of mass in a regular
 arrangement which ensures molecular separation.  If there is more than
@@ -485,7 +642,7 @@ the {\em lattice start} method will be more appropriate.
 This method is activated by setting the control parameter
 \verb'lattice-start' to 1, and creates the initial configuration by
 periodic replication of some crystalline unit cell.  In that case
-\moldy expects to find, following the \verb'end' which terminates the
+\moldy\  expects to find, following the \verb'end' which terminates the
 system specification, an initial configuration specification of the
 following form:
 \begin{displaymath}
@@ -536,7 +693,7 @@ starting methods.
 At the end of a simulation run, it is often desirable to store the
 configuration of the system in a file.  This {\em restart file} may be
 used at a later date to continue the simulation from that point rather
-than from scratch.  To instruct \moldy to write a restart file, simply
+than from scratch.  To instruct \moldy\  to write a restart file, simply
 set the control parameter \verb'save-file' to a suitable filename; to
 start from a restart file, set \verb'restart-file' to be the name of
 that file.
@@ -584,7 +741,7 @@ change the number of sites on a molecule, subject to {\em 2}.
 \label{sec:backup}
 Closely related to restarting is the backup mechanism.  This is
 provided to guard against the complete loss of a simulation due to
-computer failure. Periodically during a run, \moldy writes its state
+computer failure. Periodically during a run, \moldy\  writes its state
 to a {\em backup file} -- which is in fact just a restart file.  In
 the event of a crash, the simulation can be restarted from the point
 the last backup was written rather than from the beginning. The
@@ -602,7 +759,7 @@ The restart from a backup is entirely automatic. If a backup file
 exists when a run is started, it is read in and the run continues from
 it.  In contrast to a normal restart all of the control parameters are
 taken from the backup file and the control file (and a restart file if
-one is specified) is ignored\footnote{This is not quite true. \moldy
+one is specified) is ignored\footnote{This is not quite true. \moldy\ 
 does read the control file and any restart file but only to determine the
 name of the backup file. Thus even if the backup has a non-standard name
 it can still be found.}.
@@ -628,7 +785,7 @@ control parameter
 
 \section{Setting the Temperature}
 
-To control the temperature of the simulated system, \moldy implements
+To control the temperature of the simulated system, \moldy\  implements
 the velocity rescaling technique described in section
 \ref{sec:rescaling}.  Every \verb'scale-interval' timesteps until
 \verb'scale-end', the velocities are adjusted so that the kinetic
@@ -639,7 +796,7 @@ the switch \verb'scale-separately' should be set to 1 (true).
 
 \section{Output}
 \label{sec:output}
-At the beginning of each run \moldy writes a {\em banner page}
+At the beginning of each run \moldy\  writes a {\em banner page}
 containing a summary of the system being simulated and details of the
 important control parameters. The bulk of the output file is the {\em
 periodic output} which contains the instantaneous values of various
@@ -653,7 +810,7 @@ interval required.  (This may be necessary to constrain the size of
 the output file which can grow to be very large indeed with the
 default interval of only 10.)  
 \begin{figure}
-\caption[Sample \moldy output.]{Sample \moldy output from a simulation 
+\caption[Sample \moldy\  output.]{Sample \moldy\  output from a simulation 
 of a two component mixture.  The first component is a polyatomic
 molecule and the second is atomic.  There are three {\em frames}, for
 the instantaneous values, the rolling averages and their associated
@@ -794,11 +951,11 @@ evaluated using the data in the dump.
 A dump consists of a sequence of files since the amount of data
 generated in a run can be very large indeed and it is usually more
 convenient to manipulate a series of smaller files rather than one
-large and unwieldy one. \moldy takes considerable pains to ensure that
+large and unwieldy one. \moldy\  takes considerable pains to ensure that
 a contiguous sequence of dump files is maintained and also ensures
 that dumps from different runs are not accidentally intermixed.  There
 is no requirement that a dump file be produced by a single run of
-\moldy, which extends an existing file or starts a new one as appropriate.
+\moldy\ , which extends an existing file or starts a new one as appropriate.
 A simulation may stop and be restarted many times without
 disturbing the dump file sequence.  The  sequence
 should (in most cases) even survive a system crash and a restart from
@@ -871,23 +1028,23 @@ since midnight on January 1, 1970.} of any restart file used to start
 the run.
 
 Unfortunately it is not possible to dump directly to magnetic tape.  
-\moldy must rewind to the beginning of a file to keep the
+\moldy\  must rewind to the beginning of a file to keep the
 header up to date with the number of dumps in the file, as well as
 extend existing files.  Neither operation is allowed on a tape drive.
 Large disk stores are now very cheap so this should not be a problem
 in practice.  If disk store {\em is} limited then the simulation may
-be divided into multiple \moldy runs interspersed with copying of dump
+be divided into multiple \moldy\  runs interspersed with copying of dump
 files to tape.
 
-Notice that \moldy must sometimes read an existing but complete dump
+Notice that \moldy\  must sometimes read an existing but complete dump
 file to propagate the unique marker to all of the files in a sequence.
 Therefore when continuing a simulation and a dump run, at least
 the immediately preceding dump file must still be accessible.  This
 should be borne in mind when copying dumps to tape!
 
-\moldy is careful to ensure that existing files are not
+\moldy\  is careful to ensure that existing files are not
 overwritten - especially necessary since dump records are added to
-the end of an existing dump file.  Whenever \moldy prepares to start a
+the end of an existing dump file.  Whenever \moldy\  prepares to start a
 new dump file it checks to see if one of that name is already present.
 If so, a new name is chosen by ``mutating'' the old one, and a warning
 message to that effect is written to the output file. On the other
@@ -901,17 +1058,17 @@ the dump control parameters have not been altered.  If they
 have, it is not possible to continue an existing dump sequence and a
 new one will be started.  (If existing dump files are present the new
 sequence will have mutated file names.)  This also happens if an
-existing file does not appear to be a \moldy dump.  Existing dump
+existing file does not appear to be a \moldy\  dump.  Existing dump
 files are also tested to ensure that there is no corruption (due, for
 example to a system crash) and that they contain the correct number of
 records.  If the dump sequence can not be continued in these
-circumstances, \moldy terminates with a fatal error rather than waste
+circumstances, \moldy\  terminates with a fatal error rather than waste
 computer time.
 
 %To ensure that the header always records the correct number of dump
 %records in a file, it is updated {\em after} the actual record has
 %been written.  It is possible that following s crash there may be one
-%more record than recorded.  \moldy ignores it and recalculates and
+%more record than recorded.  \moldy\  ignores it and recalculates and
 %dumps the data.
 
 It is frequently convenient to perform analysis of dump data, and
@@ -931,14 +1088,14 @@ analyse dump data.
 
 \section{Constant Stress Simulation}
 
-Setting the control parameter \verb'const-pressure' switches from a
-constant-volume simulation to a constant-stress simulation using the
-method of Parinello and Rahman\cite{PR81} (see section~\ref{sec:const-stress}).
-The value of the ``MD cell'' mass parameter, $W$ is given by the
-control parameter \verb'w' and the external pressure by
-\verb'pressure'. At present it is not possible to specify an anisotropic
-external stress, though this capability may be added in future
-versions of the program.
+Setting  the control parameter   \verb'const-pressure' switches from a
+constant-volume  simulation to a constant-stress  simulation using the
+method     of    Parinello     and    Rahman\cite{parinello:81}   (see
+section~\ref{sec:const-stress}).   The value of  the  ``MD cell'' mass
+parameter,  $W$  is given by the control  parameter \verb'w'  and  the
+external pressure by \verb'pressure'. At present it is not possible to
+specify an anisotropic external stress, though this  capability may be
+added in future versions of the program.
 
 \section{Cutoffs and Adjustable Parameters}
 
@@ -958,7 +1115,7 @@ the same accuracy is attained with $\alpha = 0.45$\AA$^{-1}$, $r_{c} =
 
 The other relevant parameter is the switch \verb'surface-dipole' which
 includes the dipole surface energy term of De Leeuw, Perram and
-Smith\cite{DLPS8?}.  See the note in section~\ref{sec:ewald} for an
+Smith\cite{deleeuw:8?}.  See the note in section~\ref{sec:ewald} for an
 explanation of why this term should {\em never} be used for an ionic
 (as opposed to dipolar) system.
 
@@ -975,7 +1132,7 @@ reduces the efficiency of the program.
 
 It is worth noting that it is unnecessary to recompile the program or
 change anything else when the cutoffs are modified. Unlike most MD
-codes, \moldy employs dynamic array allocation and automatically sets
+codes, \moldy\  employs dynamic array allocation and automatically sets
 up arrays of the correct size (and no more!) for any given $k_{c}$.
 In the case of $r_{c}$ any value up to the length of the smallest MD
 cell edge may be given. Any attempt to exceed this will result in the
@@ -989,7 +1146,7 @@ memory, but not unreasonably more}.
 
 There has recently been much interest in simulations of systems of
 molecules interacting with some rigid framework such as zeolites,
-clays and other surfaces.  \moldy has the capability to include such a
+clays and other surfaces.  \moldy\  has the capability to include such a
 framework in a simulation by defining it as a special kind of molecule.
 
 The system specification should contain an entry, similar to that for
@@ -1030,7 +1187,7 @@ a good space-filling structure.)
 \section{Messages and Errors}
 
 Apart from the periodic output, there are occasional ``once-off''
-messages which \moldy writes to the usual output file.  Such messages
+messages which \moldy\  writes to the usual output file.  Such messages
 begin with the characters \verb'*I*', \verb'*W*', \verb'*E*' or
 \verb'*F*' denoting the classes {\em information}, {\em warning}, {\em
 error} or {\em fatal} respectively.  Their meanings are
@@ -1061,8 +1218,8 @@ format.
 The text of the messages is intended to be self-explanatory.
 
 \chapter{Compiling and Modifying Moldy}
-The \moldy distribution consists of numerous files of `C' source code
-for \moldy and the utility programs, command or job files to compile
+The \moldy\  distribution consists of numerous files of `C' source code
+for \moldy\  and the utility programs, command or job files to compile
 the source, \LaTeX input for the manual and example control and system
 specification files.  For ease of transport these are packed into one
 large ``archive'' file, whose format and method of unpacking depends
@@ -1084,7 +1241,7 @@ front-end system.  N.B.  For unicos, use the unix distribution.
 
 
 \section{Compilation}
-The source code of \moldy consists of 20 files of C programs (which have
+The source code of \moldy\  consists of 20 files of C programs (which have
 suffix ``.c'') and 4 header files (suffix ``.h'')\footnote{There is
 also a supplementary file ``kernel.f'' which contains a FORTRAN
 replacement for the function {\bf kernel()} in ``kernel.c''. This is
@@ -1095,7 +1252,7 @@ define the preprocessor symbol ``FKERNEL'' while compiling
 ``force.c''; this selects the FORTRAN version. Compile ``kernel.f''
 and include it in the link {\em as well as ``kernel.c''}.  Both the
 JCL file for COS and the makefile for unicos do this.}.
-To build \moldy, all of the ``.c'' files must be compiled and linked
+To build \moldy\ , all of the ``.c'' files must be compiled and linked
 together to form an executable.  The method of doing this depends on
 the operating system of the target computer.
 \begin{description}
@@ -1103,11 +1260,11 @@ the operating system of the target computer.
 supplied in the distribution.  You will have to edit this file, called
 ``Makefile'' to select the  set of compiler flags appropriate for your
 machine (see the next section for what to do if it is not catered
-for). Then just type \verb'make' to compile and link \moldy and
+for). Then just type \verb'make' to compile and link \moldy\  and
 \verb'make utilities' for the utility programs.
 
 \item[VMS]  Simply type \verb'@compile' to execute the command file
-``compile.com''. This will build \moldy and the utilities.
+``compile.com''. This will build \moldy\  and the utilities.
 
 \item[COS]  In contrast to the other cases the cray COS distribution
 is a self-contained JCL  file which, when executed, will compile and
@@ -1115,14 +1272,14 @@ link \moldy.
 \end{description}
 
 \section{Portability}
-A major goal in writing \moldy was that it be as  portable as possible
-between different computers  and operating systems.   It is written in
-the Kernighan  and Ritchie\cite{KR78} compatible subset  of  ANSI C and
-assumes the  library  calls and  header  files   defined for a  hosted
-implementation of the standard.  It should therefore be possible
-to compile and run \moldy on any computer which has a good C compiler.
+A major goal in writing \moldy\ was that it be as portable as possible
+between different computers  and operating systems.  It is  written in
+the Kernighan and Ritchie\cite{kernighan:78} compatible subset of ANSI
+C and assumes the library calls and header files  defined for a hosted
+implementation of the  standard.  It  should therefore be possible  to
+compile and run \moldy\ on any computer which has a good C compiler.
 
-There are two sources of difficulty in moving \moldy to a new machine.
+There are two sources of difficulty in moving \moldy\  to a new machine.
 The library may not contain some necessary ANSI routine, or
 may not have the required header files.  Secondly, to make good use of
 vector or parallel architectures, compiler directives or calls to
@@ -1151,7 +1308,7 @@ for the major operating systems.
 \begin{itemize}
 \item The ANSI header file ``string.h''	is missing
 from Berkeley unix, and incomplete in other systems.  A file,
-``string.h'' is supplied with \moldy which conditionally includes
+``string.h'' is supplied with \moldy\  which conditionally includes
 ``strings.h'', or ``string.h'' for other systems. On a proper ANSI
 implementation it should be possible to remove this file altogether.
 \item The  ANSI typedefs \verb'time_t' and \verb'size_t' are not
@@ -1179,7 +1336,7 @@ do nothing respectively.
 \end{itemize}
 
 \subsection{Optimisation and Vectorisation}
-\moldy has been designed to run fast on a wide range of computers, and
+\moldy\  has been designed to run fast on a wide range of computers, and
 in particular on those with vector architectures. This is a difficult
 problem, since necessarily machine-specific compiler directives and
 optimisations are required for ultimate performance, and inevitably
@@ -1200,7 +1357,7 @@ particular has no  integer multiplication hardware, which operations
 are slow as a result.
 \item Make use of manufacturer's linear algebra library functions.
 \end{itemize}
-The performance of \moldy has been carefully studied using profiling
+The performance of \moldy\  has been carefully studied using profiling
 tools, and all critical regions of code are written as efficiently
 vectorizable loops.  
 
@@ -1231,18 +1388,18 @@ frequently contain bugs, and since some options generate ``unsafe''
 optimizations,  it may be necessary to restrict the highest
 optimisation level to those modules which contain critical code.
 
-To allow the compiler to generate vector code, machine-specific
-compiler directives must be inserted into the source. The reason is
-that the run-time dimensioned arrays necessary to implement such a
-flexible program must use pointers as their base.  (See any C
-textbook, \eg Kernighan and Ritchie\cite{KR78} for an explanation of C
-pointers and arrays.)  Unfortunately this means that the compiler can
-not determine that each iteration of the loop is independant of the
-preceding iterations.  In the jargon of vectorizing compilers, there
-may be a {\em vector dependency} or {\em recurrence}.  Each
-manufacturer's compiler has its own peculiar method to inform it that
-despite appearances there is no dependency.  For example the CRAY
-compilers use a \verb'#pragma'~\verb'ivdep' statement whereas the
+To  allow  the compiler  to  generate   vector code,  machine-specific
+compiler  directives must be inserted  into the  source. The reason is
+that the  run-time  dimensioned arrays necessary   to implement such a
+flexible  program   must use   pointers as  their  base.    (See any C
+textbook, \eg    Kernighan  and  Ritchie\cite{kernighan:78}    for  an
+explanation of C pointers  and arrays.)  Unfortunately this means that
+the  compiler  can not determine  that each iteration  of  the loop is
+independant of the preceding iterations.  In the jargon of vectorizing
+compilers, there may be a {\em vector dependency} or {\em recurrence}.
+Each manufacturer's compiler has its own  peculiar method to inform it
+that despite appearances there is no dependency.  For example the CRAY
+compilers use  a  \verb'#pragma'~\verb'ivdep'   statement  whereas the
 convex and Stellar compilers use a ``significant comment''
 \verb'/*$dir'~\verb'no_recurrence*/'.
 
@@ -1279,7 +1436,7 @@ al least identifies the appropriate loops.
 \section{Modifying Moldy}
 \subsection{Adding a New Potential}
 \label{sec:newpot}
-By default \moldy supports potential functions of the Lennard-Jones,
+By default \moldy\  supports potential functions of the Lennard-Jones,
 six-exp and MCY forms.  However it should be very easy to add further
 types. The program is written in a highly modular fashion so that {\em
 the only code which need be altered is in file ``aux.c''} (and
@@ -1312,13 +1469,13 @@ accordance with the usual C convention).  This constant should be used
 to define a new case in the \verb'switch' statement of
 \verb'kernel()', and this is where the code to evaluate the potential goes.
 
-The existing cases may be used as a model, especially for the
-evaluation of the electrostatic term $\mbox{erfc}(\alpha r) / r$ which is
-evaluated by the polynomial expansion in section 7.1.26 of Abramowitz and
-Stegun\cite{AS70}. There are currently {\em two} versions of each
-loop, the second omitting this term for efficiency when all the
-electric charges are zero (which case is flagged by a negative value of
-$\alpha$). 
+The  existing  cases  may  be  used as  a    model, especially for the
+evaluation of the electrostatic term $\mbox{erfc}(\alpha r) / r$ which
+is    evaluated  by  the   polynomial  expansion    of  Abramowitz and
+Stegun\cite[section 7.1.26]{abramowitz:70}. There  are  currently {\em
+two}   versions of each    loop,  the   second omitting this  term for
+efficiency when  all the  electric  charges  are  zero  (which case is
+flagged by a negative value of $\alpha$).
 
 Finally, the distant potential correction for the new potential should
 be added as a new case to function \verb'dist_pot()'. The code should evaluate
@@ -1327,14 +1484,14 @@ be added as a new case to function \verb'dist_pot()'. The code should evaluate
 \]
 for the potential $U(r)$.
 \subsection{Parallel Version}
-An experimental parallel version of \moldy is under development, and
+An experimental parallel version of \moldy\  is under development, and
 currently runs on a Stellar GS1000.   It consists of replacements for
 files ``force.c'' and ``ewald.c''. 
 
 The approach taken is to retain the vectorized inner loops and
 parallelize the the outer loops, over cells for ``force.c'' and {\bf
 k} vectors for ``ewald.c''.  The two parallel loops are structured by
-the method developed by the Kingston group\cite{C8?}. That is, a loop
+the method developed by the Kingston group\cite{clementi:8?}. That is, a loop
 of the form
 \begin{verbatim}
 	for(i = 0; i < N; i++)
@@ -1386,7 +1543,7 @@ Lennard-Jones
 \end{verbatim}
 \section{TIPS2 Water}
 This is the four-site water model of Jorgenson {\em et. al.\
-}\cite{JG??}.  Only the oxygen site interacts via the Lennard-Jones
+}\cite{jorgensen:??}.  Only the oxygen site interacts via the Lennard-Jones
 potential, and the charge site, M, is displaced 0.15\AA from the Oxygen.
 \begin{verbatim}
 # Modified TIPS2 water
@@ -1401,10 +1558,10 @@ lennard-jones
 end
 \end{verbatim}
 \section{Aqueous MgCl$_2$ Solution}
-This is a three-component system consisting of MCY water\cite{MCY76},
+This is a three-component system consisting of MCY water\cite{matsuoka:75},
 Magnesium and Chloride ions.  The Mg$^{2+}$ potential was fitted to
-the SCF calculations of Dietz and Heinzinger\cite{DH8?} and the Cl$^-$
-to the calculations of Kistenmacher, Popkie and Clementi\cite{KPC7?}.
+the SCF calculations of Dietz and Heinzinger\cite{dietz:8?} and the Cl$^-$
+to the calculations of Kistenmacher, Popkie and Clementi\cite{kistenmacher:7?}.
 Note that the potential parameters are expressed in kcal mol$^{-1}$,
 and the control file must set the parameter \verb'time-unit=4.8888213e-14'.
 \begin{verbatim}
