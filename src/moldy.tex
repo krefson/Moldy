@@ -157,7 +157,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.29.4.7 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.29.4.8 $ $}
 \newcommand{\moldyversion}{2.16}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -420,8 +420,8 @@ expressed in terms of the Euler angles as\footnote{The definition of
   of Goldstein\cite[pages 143 and 155]{goldstein:80}.}
 \begin{eqnarray}
 q_0 & = & \cos \frac{\phi+\psi}{2} \cos \frac{\theta}{2} \nonumber \\
-q_1 & = & \cos \frac{\phi-\psi}{2} \sin \frac{\theta}{2} \nonumber \\
-q_2 & = & \sin \frac{\phi-\psi}{2} \sin \frac{\theta}{2} \nonumber \\
+q_1 & = & \sin \frac{\phi-\psi}{2} \sin \frac{\theta}{2} \nonumber \\
+q_2 & = & \cos \frac{\phi-\psi}{2} \sin \frac{\theta}{2} \nonumber \\
 q_3 & = & \sin \frac{\phi+\psi}{2} \cos \frac{\theta}{2}.
 \label{eqn:qeuler}
 \end{eqnarray}
@@ -5781,7 +5781,6 @@ The command line options are:
 \Lit{[-p} \textit{Euler-angle-psi}\Lit{]} 
 \Lit{[-x]}
 \Lit{[-h]}
-\Lit{[-k]}
 \Lit{[-j]}
 \Lit{[-c]}
 \Lit{[-o} \textit{output-file}\Lit{]}
@@ -5832,34 +5831,30 @@ same as in a system specification file (see section~\ref{sec:sys-spec}).
   Default is to position molecules using centres of mass.
 \item[-c] if reading system specification file, skip any preceding
   control parameter info.
-\item[-k] generate new quaternions (orientations) for all solute molecules (if polyatomic). Default is to use same quaternions (if available)
-as molecule being replaced.
-\item[-j] generate new quaternions (orientations) for all solvent and solute molecules (if polyatomic).
+\item[-j] generate new quaternions (orientations) for all solute molecules (if polyatomic). Default is to use same quaternions (if available) as molecules being replaced or no rotation if solvent is monatomic.
 \item[-o] name of optional output file.
 \end{Argdescription}
 
 Polyatomic species can be added using the \Lit{-a} option, which requires a structural data file
 of Cambridge CSSR, Brookhaven PDB, Insight XTL, Schakal or generic XYZ format to be specified. If the new polyatomic
 species is replacing an existing polyatomic species, by default the same quaternions (orientation) will be used.
- If the species being replaced is monatomic, quaternions are generated randomly for the dopant molecules unless one or more of
- options \Lit{-f}, \Lit{-t} or \Lit{-p} are specified. The \Lit{-k} option randomly generates
-new quaternions for the substituting molecules regardless of whether the species it replaces is
-monatomic or polyatomic. This option is overridden by options \Lit{-f}, \Lit{-t} and \Lit{-p}. The Euler angles follow the same convention as that used in Allen and Tildesley\cite{allen:87}.
-
-Options \Lit{-f}, \Lit{-t} and \Lit{-p} are used to align all polyatomic solute molecules in the same direction, 
-specified in terms of Euler angles \phi, \theta and \psi (equations~\ref{eqn:qeuler}). Angles should be between -360 and 360{\textdegree}.
-If one or more of \Lit{-f}, \Lit{-t} and \Lit{-p} are specified on the command 
+ If the species being replaced is monatomic, the dopant molecules will be oriented the same as given in the input structure file unless one or more of
+ options \Lit{-f}, \Lit{-t}, \Lit{-p} or \Lit{-j} are specified. Options \Lit{-f}, \Lit{-t} and \Lit{-p} are used to input Euler angles \phi, \theta and \psi, respectively, for aligning all polyatomic solute molecules in the same direction (see equations~\ref{eqn:qeuler}).
+ Angles should be between -360 and 360{\textdegree}.
+If one or more of \Lit{-f}, \Lit{-t} and \Lit{-p} are specified on the command
 line, the remaining unspecified angles are set to 0.
-If used in combination with \item[-j], new quaternions are generated randomly only for the solvent molecules, but the 
-Euler angles specified with \Lit{-f}, \Lit{-t} and \Lit{-p} are used for the solute molecules.
+
+The \Lit{-j} option randomly generates
+new quaternions for the solute molecules regardless of whether the species it replaces is
+monatomic or polyatomic. This option overrides options \Lit{-f}, \Lit{-t} and \Lit{-p}.
 
 By default, the centre of mass of a dopant molecule is positioned on the centre of mass of the solvent molecule it
 is replacing. Specifying the \Lit{-h} option instead matches the position of the first site of the dopant molecule with
-the first site of the solvent molecule. In both cases, the site coordinates of both species in the
-header file are written relative to the first site. \textbf{N.B.} It
-is possible to add a systematic shift (using \Lit{-h}) or positional disorder (using \Lit{-h} and \Lit{-k}) to dopant positions 
+the first site of the solvent molecule.
+\textbf{N.B.} It
+is possible to add a systematic shift (using \Lit{-h}) or positional disorder (using \Lit{-h} and \Lit{-j}) to dopant positions 
 by specifying a structure file that contains only a single atom. This atom's
-site coordinate vector (in {\AA}) should correspond to the desired shift vector (relative to the first site 
+coordinates (in {\AA}) should correspond to the desired shift vector (relative to the first site 
 of the species being
 replaced).
 
@@ -5870,7 +5865,7 @@ matched with pre-existing components in the original structure or from the speci
 forces components to be matched by both name and charge (but not weight), otherwise 
 the sites will be matched by name only, \ie the dopant atoms will be given the same properties as the first
 identically named site in the original system specification/restart file or species data file, irrespective 
-of the charges read in from the dopant structure file.
+of the charges read in from the dopant structure file. Polyatomic solute species will be given the name of the structure file (without extension) unless specified with \Lit{-u}.
 
  The default species data file,
 \Fname{elements.dat}, is read automatically, and contains data for the
@@ -5955,8 +5950,8 @@ The command line options are:
 \begin{center}
 \Lit{syswrite}
 \Lit{[-i} \textit{input-file} \Lit{]}
-\Lit{[-e} \textit{species-data-file}\Lit{]}
-\Lit{[-y} \textit{potential-parameter-file}\Lit{]}
+\Lit{[-e} \textit{species-data-file}\Lit{]} 
+\Lit{[-y} \textit{potential-parameter-file}\Lit{]} 
 \Lit{[-n} \textit{number-of-molecules}\Lit{]}
 \Lit{[-l} \textit{species-label}\Lit{]}
 \Lit{[-o} \textit{output-file}\Lit{]}
