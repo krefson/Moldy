@@ -3,6 +3,16 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.12  91/08/15  18:13:17  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
  * Revision 1.11  91/05/29  17:02:00  keith
  * Modified for minor speed improvement on Stardent titan
  * 
@@ -68,7 +78,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.13 91/08/14 14:24:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.12 91/08/15 18:13:17 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -356,6 +366,8 @@ VECTORIZE
  */
 /*$dir parallel*/
 #pragma ipdep
+#pragma _CNX pstrip (1)
+#pragma _CNX force_parallel
 #pragma pproc ewald_inner
    for(ithread = 0; ithread < nthreads; ithread++)
       ewald_inner(ithread, nthreads, nhkl, hkl, nsites, nsitesxf, 
@@ -378,6 +390,8 @@ VECTORIZE
       ssf0 = s_f_n[ithread][0];
       ssf1 = s_f_n[ithread][1];
       ssf2 = s_f_n[ithread][2];
+#pragma _CNX force_parallel
+#pragma _CNX pstrip (1)
 #pragma ipdep
 VECTORIZE
       for(is = 0; is < nsites; is++)

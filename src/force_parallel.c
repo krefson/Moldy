@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.14 91/08/14 14:24:20 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.13 91/08/15 18:14:21 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -562,6 +562,8 @@ NOVECTOR
  *   Start of main loop over processors
  */
 /*$dir parallel*/
+#pragma _CNX pstrip (1)
+#pragma _CNX force_parallel
 #pragma ipdep
    for(ithread = 0; ithread < nthreads; ithread++)
       force_inner(ithread, nthreads, site, chg, potp, id,
@@ -590,6 +592,8 @@ NOVECTOR
       ssf0 = s_f_n[ithread][0];
       ssf1 = s_f_n[ithread][1];
       ssf2 = s_f_n[ithread][2];
+#pragma _CNX pstrip (1)
+#pragma _CNX force_parallel
 #pragma ipdep
 VECTORIZE
       for(isite = 0; isite < nsites; isite++)
