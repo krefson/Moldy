@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/msd.c,v 2.7 2004/12/07 13:00:01 cf Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -34,7 +34,10 @@ static char *RCSid = "$Header$";
  *		nb. msd time intervals taken relative to extracted dump slices.       *
  ************************************************************************************** 
  *  Revision Log
- *  $Log$
+ *  $Log: msd.c,v $
+ *  Revision 2.7  2004/12/07 13:00:01  cf
+ *  Merged with latest utilities.
+ *
  *  Revision 2.4.10.7  2004/12/07 11:03:37  cf
  *  Added read_dump_header and made static.
  *  Added verbose option for dumpext.
@@ -523,7 +526,7 @@ main(int argc, char **argv)
    char		*dumplims = NULL;
    char		*msdlims = NULL;
    char		*tempname = NULL;
-   char		dumpcommand[256];
+   char		*dumpcommand;
    int		dump_size;
    float	*dump_buf;
    FILE         *Dp, *dump_file;
@@ -828,10 +831,14 @@ main(int argc, char **argv)
    if( (dump_buf = (float*)malloc(dump_size)) == 0)
       error("malloc failed to allocate dump record buffer (%d bytes)",
           dump_size);
+   if( (dumpcommand = malloc(256+strlen(dump_names))) == 0)
+      error("malloc failed to allocate dumpext command string buffer (%d bytes)",
+          256+strlen(dump_names));
 #if defined (HAVE_POPEN) 
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s",
       verbose?"-v":"", sys.nmols, sys.nmols_r, start, finish, inc, dump_names);
    
+   if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
    if( (Dp = popen(dumpcommand,"r")) == 0)
    {
       if( !strcmp(strerror(errno),"Success") )
@@ -844,6 +851,7 @@ main(int argc, char **argv)
    tempname = tmpnam((char*)0);
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d -o %s %s",
          sys.nmols, sys.nmols_r, start, finish, inc, tempname, dump_names);
+   if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
    system(dumpcommand);
    if( (Dp = fopen(tempname,"rb")) == 0)
         error("Failed to open \"%s\"",tempname);
