@@ -8,6 +8,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.18  93/03/09  15:59:09  keith
+ * Changed all *_t types to *_mt for portability.
+ * Reordered header files for GNU CC compatibility.
+ * 
  * Revision 1.17  92/11/02  17:31:17  keith
  * Fixed bug where counter array "nfrac" was not initialised.
  * 
@@ -76,12 +80,12 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.17 92/11/02 17:31:17 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.18 93/03/09 15:59:09 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
-#if  defined(convexvc) || defined(stellar)
+#ifdef stellar
 #include <fastmath.h>
 #else
 #include <math.h>

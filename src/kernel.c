@@ -14,6 +14,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 1.16  93/03/09  15:58:41  keith
+ * Changed all *_t types to *_mt for portability.
+ * Reordered header files for GNU CC compatibility.
+ * 
  * Revision 1.15  92/09/22  14:45:20  keith
  * A few efficiency improvements for the Titan
  * 
@@ -74,12 +78,12 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.15 92/09/22 14:45:20 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.16 93/03/09 15:58:41 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
-#if  defined(convexvc) || defined(stellar)
+#ifdef stellar
 #   include <fastmath.h>
 #else
 #ifdef ardent
