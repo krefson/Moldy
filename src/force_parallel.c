@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.10 90/11/13 16:56:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.12 91/05/29 17:01:33 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -87,25 +87,25 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,
 /*========================== External function declarations ==================*/
 char            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
-void    note();                         /* Make a note in output file         */
-char    *arralloc();                    /* General purpose array allocator    */
-int     search_lt();			/* Search a vector for el. < scalar   */
-double  vdot();                         /* Vector dot product                 */
-double  sum();                          /* Sum a vector                       */
-void    gather();                       /* Interface to CRAY gather routine   */
-void	gatheri();			/* Integer gather		      */
-int	wheneq();			/* Array indexer		      */
-void    mat_mul();                      /* Matrix multiplier                  */
-void    message();                      /* Send message to stderr             */
-void	invert();			/* 3x3 matrix inverter		      */
-void	mat_vec_mul();			/* Matrix by vector multiplier        */
-void	spaxpy();			/* Scattered vector add		      */
-void	transpose();			/* Generate 3x3 matrix transpose      */
-void    zero_real();                    /* Initialiser                        */
-void	force_inner();			/* Inner loop forward reference       */
-int	nprocessors();			/* Return no. of procs to execute on. */
-double	precision();			/* Floating pt precision.	      */
-void    kernel();                       /* Force kernel routine               */
+void    	note();                 /* Make a note in output file         */
+char    	*arralloc();            /* General purpose array allocator    */
+int     	search_lt();            /* Search a vector for el. < scalar   */
+double  	vdot();                 /* Vector dot product                 */
+double  	sum();                  /* Sum a vector                       */
+void    	gather();               /* Interface to CRAY gather routine   */
+void    	gatheri();              /* Integer gather                     */
+int     	wheneq();               /* Array indexer                      */
+void    	mat_mul();              /* Matrix multiplier                  */
+void    	message();              /* Send message to stderr             */
+void    	invert();               /* 3x3 matrix inverter                */
+void    	mat_vec_mul();          /* Matrix by vector multiplier        */
+void    	spaxpy();               /* Scattered vector add               */
+void    	transpose();            /* Generate 3x3 matrix transpose      */
+void    	zero_real();            /* Initialiser                        */
+void    	force_inner();          /* Inner loop forward reference       */
+int     	nprocessors();          /* Return no. of procs to execute on. */
+double  	precision();            /* Floating pt precision.             */
+void    	kernel();               /* Force kernel routine               */
 /*========================== External data references ========================*/
 extern  contr_t control;
 /*========================== Structs local to module =========================*/
@@ -117,7 +117,7 @@ typedef struct cell_s			/* Prototype element of linked list of*/
 
 typedef struct				/* Prototype of neighbour cell list   */
 {					/* element.			      */
-   short 	i, j, k;
+   int	 	i, j, k;
 }		ivec_t;
 
 typedef struct				/* Prototype for a 3Nx x 3Ny x 3Nz    */
@@ -394,7 +394,10 @@ real    reloc[][CUBE(NSHELL)];
             reloc[2][NREL(tx,ty,tz)] = tz*h[2][2];
          }
 }
+#ifdef PARALLEL
+#pragma opt_level 3
 #pragma pproc force_inner
+#endif
 /******************************************************************************
  * Force_calc.   This is the main intermolecular site force calculation       *
  * routine                                                                    *
@@ -434,6 +437,7 @@ mat_t           stress;                 /* Stress virial                (out) */
    cell_t       *c_ptr = aalloc(n_cell_list, cell_t );
    spec_p       spec;
    cell_t       **cell;
+   real		*sf0, *sf1, *sf2, *ssf0, *ssf1, *ssf2;
    
    static boolean       init = true;
    static int           n_nabors;
@@ -573,17 +577,23 @@ NOVECTOR
 	 for(j = 0; j < 3; j++)
 	    stress[i][j] += stress_n[ithread][i][j];
    }
+
+   sf0 = site_force[0]; sf1 = site_force[1]; sf2 = site_force[2];
    for(ithread = 0; ithread < nthreads-1; ithread++)
    {
+      ssf0 = s_f_n[ithread][0];
+      ssf1 = s_f_n[ithread][1];
+      ssf2 = s_f_n[ithread][2];
 #pragma ipdep
 VECTORIZE
       for(isite = 0; isite < nsites; isite++)
       {
-	 site_force[0][isite] += s_f_n[ithread][0][isite];
-	 site_force[1][isite] += s_f_n[ithread][1][isite];
-	 site_force[2][isite] += s_f_n[ithread][2][isite];
+	 sf0[isite] += ssf0[isite];
+	 sf1[isite] += ssf1[isite];
+	 sf2[isite] += ssf2[isite];
       }
    }
+
 #ifdef DEBUG2
    histout();
 #endif
@@ -593,6 +603,9 @@ VECTORIZE
    if( nthreads > 1)
       tfree((char*)s_f_n);
 }
+#ifdef PARALLEL
+#pragma opt_level 2
+#endif
 /******************************************************************************
  *  Force_inner() Paralellised inner loops of force_calc.  Loops over cells   *
  *  in MD cell with stride = nomber of processors available.  Should be       *
@@ -638,7 +651,8 @@ mat_t	stress;
 				   0, system->n_potpar-1, 0, n_nab_sites-1);
    real         force_cpt, site0, site1, site2, s00, s01, s02, s11, s12, s22;
    real         reloc_v[3][CUBE(NSHELL)];	/* PBC relocation vectors     */
-   short        ix, iy, iz;		/* 3-d cell indices for ref and neig. */
+   real 	**pp, **ppp;
+   int          ix, iy, iz;		/* 3-d cell indices for ref and neig. */
    int          icell,			/* Index for cells of molecule pair   */
                 nnab,	j0, jmin, jmax,	/* Number of sites in neighbour list  */
    		isite, jsite, ipot, lim;
@@ -725,8 +739,12 @@ VECTORIZE
          lim = cmol->isite + cmol->num;
          for(isite = cmol->isite; isite < lim; isite++)
          {                                   /* Loop over sites in molecule */
+            pp = potp[id[isite]];
+            ppp = nab_pot;
             for(ipot = 0; ipot < system->n_potpar; ipot++)
-               gather(jmax, nab_pot[ipot], potp[id[isite]][ipot], nab, nsites);
+            {
+               gather(jmax, *ppp++, *pp++, nab, nsites);
+            }
 #ifdef DEBUG1
             if(isite == 100)
 #endif
