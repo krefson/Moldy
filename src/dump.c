@@ -43,6 +43,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ * Revision 2.7  1994/06/08  13:11:43  keith
+ * Protected against possible bus error for systems with no
+ * rotational freedom by making all references to "quat" etc conditional
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -157,7 +161,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 2.7 1994/06/08 13:11:43 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -288,7 +292,7 @@ double		pe;
 
       istep_hdr = control.istep - ndumps*control.dump_interval;
       if( ndumps == 0 )
-	 istep_hdr -= control.maxdumps;
+	 istep_hdr -= control.maxdumps*control.dump_interval;
       errflg = true;
       /*
        * Attempt to read header and perform consistency checks which,
@@ -363,7 +367,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 2.6 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 2.7 $"+11,
 		                     sizeof dump_header.vsn-1);
 #ifdef USE_XDR
       if( control.xdr_write )
