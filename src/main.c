@@ -27,6 +27,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  * $Log: main.c,v $
+ * Revision 2.20  2001/06/27 11:49:49  keith
+ * Propogated update H_0 flag to all processors in parallel run -
+ * changes of temp, thermostat mas etc failed otherwise.
+ *
  * Revision 2.19  2001/02/19 19:36:44  keith
  * First working version of combined isothermic/isobaric ensemble.
  * (Previous version was faulty).
@@ -199,7 +203,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.19 2001/02/19 19:36:44 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.20 2001/06/27 11:49:49 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -238,6 +242,7 @@ double  rt_clock(void);
 gptr    *talloc(int n, size_mt size, int line, char *file);
 				       /* Interface to memory allocator       */
 void    tfree(gptr *p);		       /* Free allocated memory	      	      */
+void	save_version_inc(char *save_file, int namesize);
 #ifdef SPMD
 void    par_begin(int *argc, char ***argv, int *ithread, int *nthreads);
 void    par_sigintreset(void);
@@ -464,6 +469,15 @@ int main(int argc, char **argv)
       }
       else if(control.save_file[0] != '\0')
       {
+	 /*
+	  * Save-file name management.  Save overwriting.
+	  */
+	 if( strcmp(control.restart_file,control.save_file) == 0)
+	 {
+	    save_version_inc(control.save_file, L_name);
+	    message(NULLI, NULLP, WARNING, SAVINC, control.save_file);
+	 }
+
 	 if( control.print_sysdef )
 	    print_config(control.save_file, &system, species, site_info, potpar);
 	 else
