@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: startup.c,v $
+ * Revision 2.5  94/01/24  18:20:11  keith
+ * Null checkin for release compatibility.
+ * 
  * Revision 2.4  94/01/24  18:18:35  keith
  * Deleted commented-out code for NR jacobi() function. Eigens() is
  * now well-tested.  Eliminated compiler warnings.
@@ -182,7 +185,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 2.5 1994/01/24 18:20:11 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -230,37 +233,112 @@ void		note();			/* Write a message to the output file */
 void		message();		/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
-extern	unit_mt		input_unit;
-extern	contr_mt		control;
-extern	restrt_mt	restart_header;
-extern	match_mt		match[];
-extern	int		nmatch;
-extern	char		backup_lockfile[];
-extern	char		dump_lockfile[];
-int			backup_restart = 0;
+extern	contr_mt		control;    /* Main simulation control parms. */
 /*========================== GLOBAL variables ================================*/
-static	unit_mt	prog_unit = {MUNIT, LUNIT, TUNIT, QUNIT};
+CONST   unit_mt	prog_unit = {MUNIT, LUNIT, TUNIT, QUNIT};
+static	unit_mt	input_unit;		/* Unit specification (see Convert.c) */
+static	char		backup_lockname[L_name];
+static	char		dump_lockname[L_name];
 #ifdef	DEBUG
 static	char	afmt[] = "    %8s = %8X %8s = %8X %8s = %8X %8s = %8X\
  %8s = %8X %8s = %8X\n";
 #endif
+/*
+ *  Default backup and temporary file names if not set in "defs.h"
+ */
+#ifndef BACKUP_FILE
+#define BACKUP_FILE	"MDBACKUP"
+#endif
+#ifndef TEMP_FILE
+#define TEMP_FILE	"MDTEMPX"
+#endif
+/*========================== Control file keyword template ===================*/
+/*
+ * format SFORM is defined as %NAMLENs in structs.h, to avoid overflow.
+ */
+CONST match_mt	match[] = {
+{"title",            SFORM,  "Test Simulation",(gptr*) control.title},
+{"nsteps",           "%d",   "0",            (gptr*)&control.nsteps},
+{"step",             "%lf",  "0.005",        (gptr*)&control.step},
+{"text-mode-save",   "%d",   "0",            (gptr*)&control.print_sysdef},
+{"new-sys-spec",     "%d",   "0",            (gptr*)&control.new_sysdef},
+{"scale-options"   , "%d",   "0",            (gptr*)&control.scale_options},
+{"surface-dipole",   "%d",   "0",            (gptr*)&control.surface_dipole},
+{"lattice-start",    "%d",   "0",            (gptr*)&control.lattice_start},
+{"sys-spec-file",    SFORM,  "",             (gptr*)control.sysdef},
+{"restart-file",     SFORM,  "",             (gptr*)control.restart_file},
+{"save-file",        SFORM,  "",             (gptr*)control.save_file},
+{"dump-file",        SFORM,  "",             (gptr*)control.dump_file},
+{"backup-file",      SFORM,  BACKUP_FILE,    (gptr*)control.backup_file},
+{"temp-file",        SFORM,  TEMP_FILE,      (gptr*)control.temp_file},
+{"strict-cutoff",    "%d",   "0",            (gptr*)&control.strict_cutoff},
+{"xdr",    	     "%d",   "1",            (gptr*)&control.xdr_write},
+{"strain-mask",	     "%d",   "200",	     (gptr*)&control.strain_mask},
+{"nbins",            "%d",   "100",          (gptr*)&control.nbins},
+{"seed",             "%ld",  "1234567",      (gptr*)&control.seed},
+{"page-width",       "%d",   "132",          (gptr*)&control.page_width},
+{"page-length",      "%d",   "44",           (gptr*)&control.page_length},
+{"scale-interval",   "%d",   "10",           (gptr*)&control.scale_interval},
+{"const-pressure",   "%d",   "0",            (gptr*)&control.const_pressure},
+{"reset-averages",   "%d",   "0",            (gptr*)&control.reset_averages},
+{"scale-end",        "%d",   "1000000",      (gptr*)&control.scale_end},
+{"begin-average",    "%d",   "1001",         (gptr*)&control.begin_average},
+{"average-interval", "%d",   "5000",         (gptr*)&control.average_interval},
+{"begin-dump",       "%d",   "1",            (gptr*)&control.begin_dump},
+{"dump-interval",    "%d",   "20",           (gptr*)&control.dump_interval},
+{"dump-level",       "%d",   "0",            (gptr*)&control.dump_level},
+{"ndumps",           "%d",   "250",          (gptr*)&control.maxdumps},
+{"backup-interval",  "%d",   "500",          (gptr*)&control.backup_interval},
+{"roll-interval",    "%d",   "10",           (gptr*)&control.roll_interval},
+{"print-interval",   "%d",   "10",           (gptr*)&control.print_interval},
+{"begin-rdf",        "%d",   "1000000",      (gptr*)&control.begin_rdf},
+{"rdf-interval",     "%d",   "20",           (gptr*)&control.rdf_interval},
+{"rdf-out",          "%d",   "5000",         (gptr*)&control.rdf_out},
+{"temperature",      "%lf",  "0.0",          (gptr*)&control.temp},
+{"pressure",         "%lf",  "0.0",          (gptr*)&control.pressure},
+{"w",                "%lf",  "100.0",        (gptr*)&control.pmass},
+{"cutoff",           "%lf",  "10.0",         (gptr*)&control.cutoff},
+{"subcell",          "%lf",  "0.0",          (gptr*)&control.subcell},
+{"density",          "%lf",  "1.0",          (gptr*)&control.density},
+{"alpha",            "%lf",  "0.3",          (gptr*)&control.alpha},
+{"k-cutoff",         "%lf",  "2.0",          (gptr*)&control.k_cutoff},
+{"rdf-limit",        "%lf",  "10.0",         (gptr*)&control.limit},
+{"cpu-limit",        "%lf",  "1.0e20",       (gptr*)&control.cpu_limit},
+{"mass-unit",        "%lf",  "1.6605655e-27",(gptr*)&input_unit.m},
+{"length-unit",      "%lf",  "1.0e-10",      (gptr*)&input_unit.l},
+{"time-unit",        "%lf",  "1.0e-13",      (gptr*)&input_unit.t},
+{"charge-unit",      "%lf",  "1.6021892e-19",(gptr*)&input_unit.q},
+{0,0,0,0}	     }; 		/* Null termination essential.	*/
+
+/*============================================================================*
+ * Functions for external access to globals.		      *
+ *============================================================================*/
+void	rmlockfiles()
+{
+   if( backup_lockname[0] )
+      (void)remove(backup_lockname);
+   if( dump_lockname[0] )
+      (void)remove(dump_lockname);
+}
 /*============================================================================*/
 /******************************************************************************
  *  default_control.   Initialise 'control' with default values from 'match' *
  ******************************************************************************/
+static
 void	default_control()
 {
-   int	i;
+   CONST match_mt	*match_p;
    char	tmp[64];
 
-   for( i = 0; i < nmatch; i++ )
-      (void)sscanf(strncpy(tmp,match[i].defalt, sizeof tmp),
-		   match[i].format, match[i].ptr);
+   for( match_p = match; match_p->key; match_p++)
+      (void)sscanf(strncpy(tmp,match_p->defalt, sizeof tmp),
+		   match_p->format, match_p->ptr);
 }
 /******************************************************************************
  * gauss_rand. Return a random variable from a gaussian distribution with uni *
  * variance.  After Press, Plannery, Teulkolsk & Vetterling p202.             *
  ******************************************************************************/
+static
 double	gauss_rand()
 {
    static int		set = 1;
@@ -291,6 +369,7 @@ double	gauss_rand()
  * vector, generated from spherical co-ordinates theta and phi with           *
  * distribution p(theta) = sin(theta) 					      *
  ******************************************************************************/
+static
 void	random_quat(q, n)
 quat_mp	q;				/* First quaternion		(out) */
 int	n;				/* Number to be generated.       (in) */
@@ -312,6 +391,7 @@ int	n;				/* Number to be generated.       (in) */
 /******************************************************************************
  *  select_spec  Choose a species at random, weighted by proportion of whole  *
  ******************************************************************************/
+static
 spec_mp	select_spec(system, species)
 system_mp	system;
 spec_mt		species[];
@@ -333,6 +413,7 @@ spec_mt		species[];
  *  permits a reasonable spacing between molecules without restricting the    *
  *  number allowed as in a lattice start.                                     *
  ******************************************************************************/
+static
 void	skew_start(system, species)
 system_mp	system;
 spec_mt	species[];
@@ -356,7 +437,7 @@ spec_mt	species[];
    system->h[0][0] = system->h[1][1] = system->h[2][2] 
                    = exp((log(mass) - log(control.density))/3.0);
  					/* L = cube root of mass/density      */
-   (void)memset((char*)nmols, 0, system->nspecies*sizeof(int));
+   memst(nmols, 0, system->nspecies*sizeof(int));
    for(imol = 0; imol < system->nmols; imol++)
    {
       do
@@ -692,6 +773,7 @@ spec_mt	species[];
  *  routine for scaling derivatives for a new timestep.                       *
  *  Interpolate_derivatives calls it for all the dynamic variables.	      *
  ******************************************************************************/
+static
 void	interp(ratio, x, xo, xvo, n)
 double	ratio;				/* Between old and new timesteps      */
 real	*x, *xo, *xvo;			/* Pointers to 1st dynamic variable   */
@@ -713,6 +795,7 @@ int	n;				/* Size of arrays x, xo, xvo          */
       x++; xo++; xvo++;
    }
 }
+static
 void	interpolate_derivatives(sys, step, step1)
 system_mp	sys;
 double		step, step1;
@@ -739,6 +822,7 @@ double		step, step1;
  *  of each species and c) that the molecules have the same rotational degrees*
  *  of freedom.  The number of sites can change subject to c).                *
  ******************************************************************************/
+static
 void	check_sysdef(restart, system, species)
 FILE		*restart;		/* Restart file pointer		      */
 system_mp	system;			/* NEW 'system' struct		      */
@@ -775,13 +859,16 @@ spec_mt	species[];		/* NEW 'species' struct array	      */
  *  mass & moments of inertia and evaluation of 'whole system' quantities eg  *
  *  number of molecules.  						      *
  ******************************************************************************/
-void	start_up(contr_name, out_name, system, species, site_info, potpar)
+void	start_up(contr_name, out_name, system, species, site_info, 
+		 potpar, restart_header, backup_restart)
 char		*contr_name,		/* Name of control file "" for stdin  */
    		*out_name;		/* Name of output file "" for stdout  */
 system_mp	system;			/* Pointer to system struct	      */
 spec_mp		*species;		/* Pointer to species array	      */
 site_mp		*site_info;		/* Pointer to site_info array	      */
 pot_mp		*potpar;		/* Pointer to pot'l parameter array   */
+restrt_mt	*restart_header;	/* Pointer to restart hdr info (out)  */
+int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
 {
    FILE		*contr_file,		/* File pointer for control read      */
    		*sysdef,		/* File pointer for sysdef file read  */
@@ -797,7 +884,10 @@ pot_mp		*potpar;		/* Pointer to pot'l parameter array   */
    restrt_mt	backup_header;		/* To read backup file header into    */
    contr_mt	backup_control;		/* Control struct from backup file    */
    quat_mt	*qpf=0;			/* Quat of rotation to princ. frame   */
+   int		av_convert;		/* Flag for old-fmt averages in restrt*/
    int		i;
+   *backup_restart = 0;
+   (void)memset((char*)restart_header,0,sizeof(*restart_header));
 
    if(contr_name[0] == '\0')		/* Null name - read control from      */
       contr_file = stdin;		/* standard input.		      */
@@ -809,7 +899,7 @@ pot_mp		*potpar;		/* Pointer to pot'l parameter array   */
    }
    pos = ftell(contr_file);		/* Current file pos needed for cray   */
    default_control();			/* Set up default values of params    */
-   read_control(contr_file);		/* Do keyword read of control params  */
+   read_control(contr_file, match);	/* Do keyword read of control params  */
    conv_control(&prog_unit,true);	/* Convert to program units           */
 
    if(control.restart_file[0] != '\0')	/* Open restart file, get backup name */
@@ -817,7 +907,7 @@ pot_mp		*potpar;		/* Pointer to pot'l parameter array   */
       if((restart = fopen(control.restart_file,"rb")) == NULL)
          message(NULLI, NULLP, FATAL, ORFAIL, control.restart_file, 
 		 strerror(errno));
-      re_re_header(restart, &restart_header, &control);
+      re_re_header(restart, restart_header, &control);
       /*
        *  Now reread control file to override restart file defaults.
        *  Need to do this here in case backup file name changed.
@@ -837,7 +927,7 @@ pot_mp		*potpar;		/* Pointer to pot'l parameter array   */
       if( flag )
          message(NULLI,NULLP,FATAL,SEFAIL,contr_name[0]?contr_name:"stdin",
 		 strerror(errno));
-      read_control(contr_file);				/* Reread control file*/
+      read_control(contr_file, match);			/* Reread control file*/
       conv_control(&prog_unit,true);			/* Back to prog units */
    }
    /*
@@ -847,38 +937,38 @@ pot_mp		*potpar;		/* Pointer to pot'l parameter array   */
     *  all the parameter values we can set up and test the lockfiles.
     */
    if( control.backup_file[0] )
-      (void)strcat(strncpy(backup_lockfile,control.backup_file,L_name-5),
+      (void)strcat(strncpy(backup_lockname,control.backup_file,L_name-5),
 		   LOCKEX);
    if( control.dump_file[0] )
    {
-      (void)sprintf(dump_lockfile, control.dump_file, 0);
-      (void)strncat(dump_lockfile, LOCKEX, L_name-1);
+      (void)sprintf(dump_lockname, control.dump_file, 0);
+      (void)strncat(dump_lockname, LOCKEX, L_name-1);
    }
-   if( backup_lockfile[0] )
+   if( backup_lockname[0] )
    {
-      if( fopen(backup_lockfile,"r") )
+      if( fopen(backup_lockname,"r") )
       {
-	 message(NULLI, NULLP, ERROR, LOCKED, "backup", backup_lockfile);
+	 message(NULLI, NULLP, ERROR, LOCKED, "backup", backup_lockname);
 	 exit(2);
       }
-      if( (lock=fopen(backup_lockfile,"w")) != 0 )
+      if( (lock=fopen(backup_lockname,"w")) != 0 )
 	 (void)fclose(lock);
       else
-	 message(NULLI, NULLP, WARNING, LOCKFL, backup_lockfile);
+	 message(NULLI, NULLP, WARNING, LOCKFL, backup_lockname);
    }
-   if( dump_lockfile[0] )
+   if( dump_lockname[0] )
    {
-      if( fopen(dump_lockfile,"r") )
+      if( fopen(dump_lockname,"r") )
       {
-	 message(NULLI, NULLP, ERROR, LOCKED, "dump", dump_lockfile);
-	 if( backup_lockfile[0] )
-	    remove(backup_lockfile);
+	 message(NULLI, NULLP, ERROR, LOCKED, "dump", dump_lockname);
+	 if( backup_lockname[0] )
+	    remove(backup_lockname);
 	 exit(2);
       }
-      if( (lock=fopen(dump_lockfile,"w")) != 0 )
+      if( (lock=fopen(dump_lockname,"w")) != 0 )
 	 (void)fclose(lock);
       else
-	 message(NULLI, NULLP, WARNING, LOCKFL, dump_lockfile);
+	 message(NULLI, NULLP, WARNING, LOCKFL, dump_lockname);
    }
 
    /*
@@ -888,7 +978,7 @@ pot_mp		*potpar;		/* Pointer to pot'l parameter array   */
       ( backup = fopen(control.backup_file,"rb")) != NULL )  /* Backup exists */
    {
       re_re_header(backup, &backup_header, &backup_control);
-      if(restart && (backup_header.timestamp < restart_header.timestamp))
+      if(restart && (backup_header.timestamp < restart_header->timestamp))
          backup = NULL;			/* Backup older than restart-don't use*/
    }
 
@@ -901,18 +991,18 @@ pot_mp		*potpar;		/* Pointer to pot'l parameter array   */
     *    control and scaling since nothing can have changed.		      */
    {
       control = backup_control;
-      (void)strcpy(restart_header.init_date, backup_header.init_date);
-      (void)strcpy(restart_header.title,backup_header.title);
+      (void)strcpy(restart_header->init_date, backup_header.init_date);
+      (void)strcpy(restart_header->title,backup_header.title);
       re_re_sysdef(backup, system, species, site_info, potpar);
       allocate_dynamics(system, *species);/* Memory for dynamic variables     */
       init_averages(system->nspecies, backup_header.vsn,
-		    control.roll_interval, control.roll_interval);
+		    control.roll_interval, control.roll_interval,&av_convert);
       if(control.rdf_interval > 0)
          init_rdf(system);		/* Prepare to calculate rdf	      */
-      read_restart(backup, system);	/* Saved dynamic vars and averages    */
-      convert_averages(control.roll_interval, control.roll_interval);
+      read_restart(backup, system, av_convert);	/* Saved dynamic vars etc     */
+      convert_averages(control.roll_interval, control.roll_interval,av_convert);
       (void)fclose(backup);
-      backup_restart++;
+      (*backup_restart)++;
       message(NULLI, NULLP, INFO, BACKUP, control.backup_file);
    }
    else if( !restart )			
@@ -950,12 +1040,15 @@ pot_mp		*potpar;		/* Pointer to pot'l parameter array   */
       thermalise(system, *species);		/* Initialise velocities      */
 
       init_averages(system->nspecies, (char*)0,
-		    control.roll_interval, control.roll_interval);
+		    control.roll_interval, control.roll_interval ,&av_convert);
       if( control.rdf_interval > 0 )
          init_rdf(system);			/* Prepare to calculate rdf   */
+      if(control.limit <= 0.0)			/* Choose RDF limit           */
+	 control.limit = 0.5*MIN3(system->h[0][0],system->h[1][1],
+				  system->h[2][2]);
 
-      (void)strcpy(restart_header.init_date, atime());
-      (void)strcpy(restart_header.title,control.title);
+      (void)strcpy(restart_header->init_date, atime());
+      (void)strcpy(restart_header->title,control.title);
 
       if(sysdef != contr_file)
          (void)fclose(sysdef);			/* Finished with sys spec file*/
@@ -1018,12 +1111,13 @@ pot_mp		*potpar;		/* Pointer to pot'l parameter array   */
          control.reset_averages = 1;	/* Averages invalid if sysdef changed */
       }
       allocate_dynamics(system, *species);/* Memory for dynamic variables     */
-      init_averages(system->nspecies, restart_header.vsn,
-		    control.roll_interval, old_roll_interval);
+      init_averages(system->nspecies, restart_header->vsn,
+		    control.roll_interval, old_roll_interval, &av_convert);
       if(control.rdf_interval > 0)
          init_rdf(system);		/* Prepare to calculate rdf	      */
-      read_restart(restart, system);	/* Saved dynamic vars and averages    */
-      convert_averages(control.roll_interval, old_roll_interval);
+      read_restart(restart, system, av_convert);  /* Saved dynamic vars etc    */
+      convert_averages(control.roll_interval, old_roll_interval, av_convert);
+      control.reset_averages = 0;                /* This flag never propagated.*/
       if(control.step != old_step)
          interpolate_derivatives(system, old_step, control.step);
       for(i = 0; i < 9; i++)		/* Zap cell velocities if constrained */
@@ -1041,7 +1135,7 @@ pot_mp		*potpar;		/* Pointer to pot'l parameter array   */
       if( freopen(out_name, "a", stdout) == NULL )
          message(NULLI, NULLP, FATAL, OOFAIL, out_name, strerror(errno));
    }
-   banner_page(system, *species);
+   banner_page(system, *species, restart_header);
    if( qpf != NULL )
       xfree(qpf);
 }
