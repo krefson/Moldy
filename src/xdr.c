@@ -26,6 +26,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.12  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.11  1996/10/23 13:06:51  keith
  *       Fixed restart structure correctly - broken in prev version.
  *       Thermostat parameters may not be properly read.
@@ -84,7 +89,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/xdr.c,v 2.11 1996/10/23 13:06:51 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/xdr.c,v 2.12 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -116,7 +121,11 @@ contr_mt *cp;
       xdr_long(xdrs, &cp->istep) &&
       xdr_long(xdrs, &cp->nsteps) &&
       xdr_double(xdrs, &cp->step) &&
-      xdr_vector(xdrs, (gptr*)&cp->print_sysdef, 7, sizeof(boolean), (xdrproc_t)xdr_bool) &&
+      xdr_vector(xdrs, (gptr*)&cp->print_sysdef, 2, sizeof(boolean), (xdrproc_t)xdr_bool) &&
+      xdr_int(xdrs, &cp->const_pressure) &&
+      xdr_bool(xdrs, &cp->reset_averages) &&
+      xdr_int(xdrs, &cp->scale_options) &&
+      xdr_vector(xdrs, (gptr*)&cp->surface_dipole, 2, sizeof(boolean), (xdrproc_t)xdr_bool) &&
       xdr_opaque(xdrs, cp->sysdef, 6*L_name) &&
       xdr_vector(xdrs, (gptr*)cp->spare, 23, sizeof(int), (xdrproc_t)xdr_int) &&
       xdr_double(xdrs, &cp->ttmass) &&
