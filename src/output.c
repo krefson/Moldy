@@ -16,12 +16,15 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	output.c,v $
+ * Revision 1.1  89/04/27  16:52:19  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header: output.c,v 1.1 89/04/27 16:29:26 keith Exp $";
+static char *RCSid = "$Header: output.c,v 1.1 89/04/27 16:52:19 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
-#ifdef ANSI
+#if ANSI || __STDC__
 #include <stdarg.h>
 #else
 #include <varargs.h>
@@ -79,34 +82,10 @@ char	c;
    new_line();
 }
 /******************************************************************************
- *  note   write a message to the output file				      *
+ *  message.   Deliver error message to possibly exiting.  It can be called   *
+ *	       BEFORE output file is opened, in which case outt to stderr.    *
  ******************************************************************************/
-#ifdef ANSI
-#define	va_alist char *text, ...
-#define va_dcl /* */
-#endif
-/*VARARGS*/
-void	note(va_alist)
-va_dcl
-{
-   va_list	ap;
-#ifdef ANSI
-   va_start(ap, text);
-#else
-   char		*text;
-
-   va_start(ap);
-   text = va_arg(ap, char *);
-#endif
-
-   (void)fprintf(control.out," *I* "); 
-   (void)vfprintf(control.out, text, ap);  new_line();
-   va_end(ap);
-}
-/******************************************************************************
- *  message.   Deliver error message to stderr, possibly exiting	      *
- ******************************************************************************/
-#ifdef ANSI
+#if ANSI || __STDC__
 #undef  va_alist
 #define	va_alist int *nerrs, ...
 #define va_dcl /* */
@@ -120,7 +99,8 @@ va_dcl
    int		sev;
    char		*format;
    static char	*sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
-#ifdef ANSI
+   FILE		*out;
+#if ANSI || __STDC__
    va_start(ap, nerrs);
 #else
    int		*nerrs;
@@ -133,16 +113,50 @@ va_dcl
    sev   = va_arg(ap, int);
    format= va_arg(ap, char *);
 
-   (void)fprintf(stderr,sev_txt[sev]);
-   (void)vfprintf(stderr, format, ap);
+   if ( control.out )
+      out = control.out;
+   else
+      out = stderr;
+
+   (void)fprintf(out,sev_txt[sev]);
+   (void)vfprintf(out, format, ap);
    va_end(ap);
-   (void)fprintf(stderr,"\n");
+   if( control.out )
+      new_line();			/* To maintain pagination	      */
+   else
+      (void)fprintf(out,"\n");
+
    if(buff != NULL)                     /* null ptr means don't print buffer  */
-      (void)fprintf(stderr,"     buffer contents=\"%s\"\n",buff);
+      (void)fprintf(out,"     buffer contents=\"%s\"\n",buff);
    if(sev >= ERROR && nerrs != NULL)
       (*nerrs)++;
    if(sev == FATAL)
       exit(3);
+}
+/******************************************************************************
+ *  note   write a message to the output file				      *
+ ******************************************************************************/
+#if ANSI || __STDC__
+#define	va_alist char *text, ...
+#define va_dcl /* */
+#endif
+/*VARARGS*/
+void	note(va_alist)
+va_dcl
+{
+   va_list	ap;
+#if ANSI || __STDC__
+   va_start(ap, text);
+#else
+   char		*text;
+
+   va_start(ap);
+   text = va_arg(ap, char *);
+#endif
+
+   (void)fprintf(control.out," *I* "); 
+   (void)vfprintf(control.out, text, ap);  new_line();
+   va_end(ap);
 }
 /******************************************************************************
  *  Print_array    Print out an array of strings in a common format 	      *
