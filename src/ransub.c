@@ -27,6 +27,12 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.3  1999/09/24 16:47:36  craig
+ *  Minor changes to random seeder and terminology.
+ *
+ *  Revision 1.2  1999/09/21 11:16:29  keith
+ *  Fixed compile problem on pre-ANSI compilers
+ *
  *  Revision 1.1  1999/07/22 14:02:26  keith
  *  Initial revision
  *
@@ -541,7 +547,7 @@ int             totmol, submol, subpos[];
    int		ranpos, subflag;
    int		i, j;
 
-   srand(time(NULL)*rand());
+   srand(time(NULL)+rand());
 
    for( i = 0; i < submol; i++ )
    {   
@@ -551,7 +557,7 @@ int             totmol, submol, subpos[];
           ranpos = rand() % totmol;
           for ( j = 0; j < i; j++ ) 
              if( ranpos == subpos[j] )
-                 subflag = 1;
+                 subflag++;
        }
        while (subflag);
 
@@ -647,8 +653,8 @@ char	*argv[];
    if( errflg )
    {
       fputs("Usage: ransub [-r restart-file | -s sys-spec-file] ",stderr);
-      fputs("[-c] [-d dump-files] [-t s[-f[:n]]] [-m replaced species] ",stderr);
-      fputs("[-u substituting species] [-n no of substitutions] ",stderr);
+      fputs("[-c] [-d dump-files] [-t s[-f[:n]]] [-m solvent-species] ",stderr);
+      fputs("[-u solute-species] [-n no-of-substitutions] ",stderr);
       fputs("[-w mass] [-q charge] [-z symbol] [-o output-file]\n",stderr);
       exit(2);
    }
@@ -810,19 +816,19 @@ char	*argv[];
             fputs("Please specify range of dump records in form", stderr);
             fputs(" start-finish:increment\n", stderr);
             dumplims = get_str("s-f:n? ");
-         }
-         if( forstr(dumplims, &start, &finish, &inc) )
-         {
+        }
+        if( forstr(dumplims, &start, &finish, &inc) )
+        {
             rflag++;
             fputs("Invalid range for dump records \"", stderr);
             fputs(dumplims, stderr);
             fputs("\"\n", stderr);
-         }
-         if( rflag)
-         {
+        }
+        if( rflag)
+        {
             (void)free(dumplims);
             dumplims = NULL;
-         } 
+        } 
      } while(rflag);
       
     /*
@@ -832,7 +838,7 @@ char	*argv[];
 
      if( (dump_buf = (float*)malloc(dump_size)) == 0)
        error("malloc failed to allocate dump record buffer (%d bytes)",
-           dump_size);
+          dump_size);
 #if defined (HAVE_POPEN) 
      sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s",
         sys.nmols, sys.nmols_r, start, finish, inc, dump_name);
@@ -874,5 +880,5 @@ char	*argv[];
     default:
       break;
     }
-   return 0;    
+   return 0;
 }
