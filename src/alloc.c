@@ -34,6 +34,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: alloc.c,v $
+ *       Revision 2.11  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.10  1998/01/27 15:41:42  keith
  *       Got rid of copying of arg ptr ap and replaced with a rescan of
  *       the argument list in 'arralloc()'.  This is because va_list
@@ -154,11 +159,14 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/alloc.c,v 2.10 1998/01/27 15:41:42 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/alloc.c,v 2.11 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
 #include "messages.h"
+#ifdef DEBUGY
+#include <stdio.h>
+#endif
 /*========================== Library include files ===========================*/
 #ifdef HAVE_STDARG_H
 #   include <stdarg.h>
@@ -374,6 +382,7 @@ va_dcl
 #else /* ALLOC_SEPARATELY*/
 #define CSA(a) ((char*)(a))
 #define ALIGN(a,base,b)	((word_mt*)(CSA(base)+((CSA(a)-CSA(base))+(b)-1)/(b)*(b) ))
+word_mt w;
 static
 void 	subarray(size, ndim, prdim, pp, qq, base, ap)
 size_mt  size;
@@ -390,11 +399,11 @@ va_list	ap;
    {
       for( i = 0; i < prdim; i++)
       {
-	 inhibit_vectorization();  /* Circumvent bug in cray compiler v4.1   */
 	 pp[i] = qq + i*dim - lb;
       }
 
       subarray(size, ndim-1, prdim*dim, (word_mt***)qq, qq+prdim*dim, base, ap);
+      w=base[0];
    }
    else			/* Last recursion - set up pointers to data   */
       for( i = 0; i < prdim; i++)
