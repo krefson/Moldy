@@ -1,0 +1,77 @@
+Buckingham
+
+# G V Lewis and C R A Catlow,
+# Potential Models for Ionic Oxides
+# J Phys C, 18 (1985) 1149-1161
+
+O     -2          O     -2    27.879       22764.3         6.7114094
+Mg     2          O     -2         0         821.6        3.08451573
+#Al     3          O     -2         0        1114.9        3.20718409
+Ca     2          O     -2         0        1228.9        2.96559905
+Sc     2          O     -2         0         838.6        2.96559905
+Sc     3          O     -2         0        1299.4        3.01932367
+Ti     2          O     -2         0         633.3        2.96559905
+Ti     3          O     -2         0        1715.7        3.25839036
+Ti     4          O     -2         0         754.2        2.57798402
+V      2          O     -2         0         557.8        2.96559905
+V      3          O     -2         0        1790.2        3.26690624
+Cr     2          O     -2         0         619.8        2.96559905
+Cr     3          O     -2         0        1734.1        3.32225914
+Mn     2          O     -2         0         715.8        2.88683603
+Mn     3          O     -2         0        1257.9        3.11138768
+Fe     2          O     -2         0         694.1        2.94204178
+Fe     3          O     -2         0        1102.4        3.03122158
+#Co     2          O     -2         0         696.3        2.97441999
+Ni     2          O     -2         0         683.5        3.00120048
+Zn     2          O     -2         0         499.6        2.78164117
+Ge     4          O     -2         0        1035.5        2.88683603
+Sr     2          O     -2         0        1400.0        2.85714286
+Y      3          O     -2         0        1345.1        2.86450874
+Zr     4          O     -2         0        1453.8        2.85714286
+Cd     2          O     -2         0         868.3        2.85714286
+Sn     4          O     -2         0         938.7        2.62260687
+#Ba     2          O     -2         0         931.7        2.53228665
+La     3          O     -2         0        1439.7        2.73897562
+Nd     3          O     -2         0        1379.9        2.77700639
+Eu     2          O     -2         0         665.2        2.53228665
+Eu     3          O     -2         0        1358.0        2.81214848
+Gd     3          O     -2         0        1336.8        2.81610814
+Tb     4          O     -2         0         905.3        2.53228665
+Ho     3          O     -2         0        1350.2        2.86779467
+Yb     3          O     -2         0        1309.6        2.88850376
+Lu     3          O     -2         0        1347.1         2.9154519
+Hf     4          O     -2         0        1454.6        2.85714286
+Pu     3          O     -2         0        1376.2        2.78318954
+Th     4          O     -2         0        1147.7        2.53228665
+U      4          O     -2         0        1055.5        2.53228665
+Ce     4          O     -2         0        1013.6        2.53228665
+
+# H S Domingos and P D Bristowe,
+# Atomistic Simulation of Grain Boundary Segregation in Zinc Oxide
+# Scr Mater, 41[12] (1999) 1347-1352
+
+Ba     2          O     -2    0.0942        1080.0        2.59067358
+Co     2          O     -2         0.096     819.0        3.05810398
+
+# J R Walker and C R A Catlow,
+# Structure and Transport in Non-stoichiometric beta-Al2O3
+# J Phys C: Solid State Phys, 15 (1982) 6151-6161
+
+Na     1          O     -2         0       1226.84        3.26264274
+
+# C R A Catlow, R James, W C Mackrodt and R F Stewart,
+# Defect Energetics in alpha-Al2O3 and Rutile TiO2
+# Phys Rev B, 25[2] (1982) 1006-1026
+
+Al     3          O     -2         0        1460.3        3.34313988
+
+# P J Bendall, C R A Catlow, J Corish and P W M Jacobs,
+# Defect Aggregation in Anion-Excess Fluorites II. Clusters Containing More than Two Impurity Atoms
+# J Solid State Chem, 51 (1984) 159-169
+
+Cl    -1          Cl    -1         0        1227.2        3.11138768
+Sr     2          Cl    -1         0        2250.3        2.94377392
+La     3          Cl    -1         0        2624.46       2.95508274
+Gd     3          Cl    -1         0        1830.18       3.32778702
+Pr     3          Cl    -1         0        2580.5        2.94637596
+end

@@ -4,7 +4,7 @@ HFILES= structs.h defs.h messages.h xdr.h  list.h utlsup.h ReadDCD.h defconf.h e
 
 UTILC = algorith.c alloc.c auxil.c ansi.c convert.c eigens.c kernel.c input.c matrix.c quaterns.c restart.c startup.c values.c xdr.c ReadDCD.c utlsup.c molout.c
 
-UTILS =  moldyext dumpconv dumpext  manalyze bdist mdshak msd mdavpos mdbond ransub mdvaf
+UTILS =  moldyext dumpconv dumpext  manalyze bdist mdshak msd mdavpos mdbond ransub mdvaf syswrite
 
 bin_PROGRAMS = moldy $(UTILS)
 
@@ -33,6 +33,8 @@ dumpext_SOURCES = dumpext.c xdr.c utlsup.c matrix.c
 manalyze_SOURCES = manalyze.c 
 
 bdist_SOURCES = bdist.c
+
+syswrite_SOURCES = syswrite.c sgclib.c sginfo.h sgio.c spgrexp.c transparse.c $(UTILC)
 
 EXTRA_msd_SOURCES = getopt.c
 
@@ -104,6 +106,7 @@ lint-utils:
 		$(LCHECK) $(dumpext_SOURCES) 
 		$(LCHECK) $(manalyze_SOURCES) 
 		$(LCHECK) $(bdist_SOURCES) 
+		$(LCHECK) $(syswrite_SOURCES) 
 #
 # Figures and Manual
 #

@@ -30,7 +30,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%tth: \input moldy.sty
+%tth: \input moldy.sty
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% Use Times-Roman fonts. This works for PSNFSS Latex2e%%%%%%%%
 %%%%%%%%%%% mode.  Just comment it out if it doesn't work       %%%%%%%%
@@ -48,9 +48,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%% Dimensions and settings                                %%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\geometry{body={160mm,230mm},top=40mm,nohead}
-%% This gives the following settings on A4 paper.  For printing
-%% on US letter size, re-enable the \geometry and its \usepackage
+\geometry{body={160mm,230mm},top=40mm,nohead}
+% This gives the following settings on A4 paper.  For printing
+% on US letter size, re-enable the \geometry and its \usepackage
 %\textwidth  455.24408pt
 %\textheight 654.41338pt
 %\oddsidemargin  18.86191pt
@@ -96,12 +96,12 @@
 %%%%%%%%%%% does this  *right*. Otherwise use \mathbf, but you won't
 %%%%%%%%%%% get bold greek or symbols. 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%begin{latexonly}
-%%\typeout{^^JAttention - if the ``bm'' Package isn't installed you will
-%%  get an error here.^^JJust hit <ret> and continue. (Bold math won't
-%%  work quite as well).}
+%begin{latexonly}
+\typeout{^^JAttention - if the ``bm'' Package isn't installed you will
+  get an error here.^^JJust hit <ret> and continue. (Bold math won't
+  work quite as well).}
 \usepackage{bm}
-%%end{latexonly}
+%end{latexonly}
 \providecommand{\bm}[1]{\mathbf{#1}}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -146,6 +146,7 @@
 \newcommand{\etc}{\emph{etc.}}
 \newcommand{\eg}{\emph{e.g.}}
 \newcommand{\ie}{\emph{i.e.}}
+\newcommand{\cf}{\emph{c.f.}}
 \newcommand{\erf}{\mbox{erf}}
 \newcommand{\erfc}{\mbox{erfc}}
 \newcommand{\insqrt}{\sqrt{\mathstrut}}
@@ -161,7 +162,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%% Document fromt matter/titlepage stuff               %%%%%%%%%%%%
+%%%%%%% Document front matter/titlepage stuff               %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \title{Moldy User's Manual}
@@ -172,12 +173,14 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\begin{document}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\begin{document}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\pagenumbering{roman}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
 \pagenumbering{roman}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \maketitle
 \thispagestyle{empty}
 
@@ -203,7 +206,8 @@ The initial implementation of the Nos\'{e}-Hoover and Gaussian
 thermostats was by Vladimir Murashov at Dalhousie University.
 Rafael R. Pappalardo contributed the modifications to ``mdshak'' to
 write XYZ format molecular graphics files. Craig Fisher contributed
-the ``msd'', ``mdavpos'', ``bdist'', ``mdbond'' and ``ransub'' programs.
+the ``msd'', ``mdavpos'', ``bdist'', ``mdbond'', ``ransub'' and 
+``syswrite'' programs.
 
 Thanks are due to Craig Fisher and Jos\'{e} Manuel Martinez Fernandez
 for diligent proofreading of several versions of the manual and many
@@ -3224,7 +3228,7 @@ together to form an executable.  The method of doing this depends on
 the operating system of the target computer.
 \begin{description}
 \item[unix]  
-This version of Moldy uses the GNU autoconf system to configure for
+This version of \moldy\ uses the GNU autoconf system to configure for
 compilation.   In most cases it should be possible to do:
 
 \Lit{\% ./configure}\\
@@ -3232,14 +3236,14 @@ compilation.   In most cases it should be possible to do:
 
 The ``configure'' script will determine the capabilities of the
 compiling system and create the files \Fname{config.h} and
-\Fname{Makefile} tailored to the system.  It has built in information
+\Fname{Makefile} tailored to the system.  It has built-in information
 about the compiler names and optimization options (it should recognise
 most major workstation types)\footnote{Since these date rapidly as
   vendors improve their compilers and introduce new architectures
   feedback from users on appropriate options is welcome and will be
   included in future releases.}.  It should be able to determine the
-characteristics of an machine unknown to it and to create Makefile and
-config.h to build a working version.  In that case you may need to
+characteristics of a machine unknown to it and to create \Fname{Makefile} and
+\Fname{config.h} to build a working version.  In that case you may need to
 "hand-tune" compiler or optimization options, which may be specified
 by setting the OPT and OPT2 environment variables.
 
@@ -5093,7 +5097,7 @@ end
 \chapter{Utility Programs} %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Seven utility programs are included in the \moldy\ package, mostly for
+Twelve utility programs are included in the \moldy\ package, mostly for
 manipulation and analysis of dump data (see section~\ref{sec:dumping}).
 They are easily compiled on unix systems using the makefile: the
 command is ``\Lit{make}~\emph{progname}'' for each program or
@@ -5108,27 +5112,6 @@ syntax for such options. The numbers 1, 5, 17 to 20 inclusive and
 \mbox{\Lit{-t 1,5,17-20,34-100:10}}.  Selectors are separated by
 commas and each one may be a range separated by a hyphen with an
 optional increment following a colon.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Moldyext}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-It is usual to plot the instantaneous values of energy, temperature
-\etc\ during the course of a simulation, for example to monitor the
-approach to equilibrium.  \emph{Moldyext} processes the periodic
-output produced by \moldy\ (see section~\ref{sec:output}) and extracts
-this information from each timestep recorded.  It is presented in
-tabular form for input into plotting programs.  The command is
-\begin{center}
-\Lit{moldyext -f} \textit{fields output-file1 output-file2} \ldots
-\end{center}
-where \emph{fields} is a list in the selector format above.  The
-numbering runs from left to right, ignoring newlines and blank columns
-so that the translational KE's in figure~\ref{fig:output} are fields 1
-and 14 and the $\sigma_{zz}$ component of the stress tensor is 30.
-
-\emph{Moldyext} can currently only extract information from the
-``instantaneous'' section of the output, not the rolling averages or
-standard deviations.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Dumpanal}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -5179,9 +5162,9 @@ reading by other programs.  It is invoked with the command:
 \begin{center}
 \Lit{dumpext -R} \textit{nmols} \Lit{-Q} \textit{nquats} 
 \Lit{-c} \textit{components}
-\Lit{[-t} \textit{timeslices} \Lit{]} \\
-\Lit{[-m} \textit{molecules} \Lit{]}
-\Lit{[-o} \textit{output-file} \Lit{]}
+\Lit{[-t} \textit{timeslices}\Lit{]} \\
+\Lit{[-m} \textit{molecules}\Lit{]}
+\Lit{[-o} \textit{output-file}\Lit{]}
 \Lit{[-b]} 
 \textit{dump-file1 dump-file2} \ldots
 \end{center}
@@ -5257,14 +5240,171 @@ records\footnote{Be aware that the FORTRAN77 standard does not
   the documentation!} \Lit{OPEN(\ldots,ACCESS=DIRECT,LRECL=nnn)}.  In
 the above example there are $3 \times 4 + 4 \times 4 = 28$ bytes in
 each record.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Mdshak/Mdxyz}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Mdavpos}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\emph{Mdavpos} is a utility for calculating the average positions of particles
+from dump slices recorded during a \moldy\ run. The utility is similar to
+\emph{Mdshak}, with command line options
+
+\begin{center}
+\Lit{mdavpos}
+\Lit{[-s} \textit{system-specification} \Lit{|}
+\Lit{-r} \textit{restart-file}\Lit{]}
+\Lit{[-d} \textit{dump-file-format}\Lit{]}
+\Lit{[-t} \textit{dump-range}\Lit{]} \\
+\Lit{[-f} \textit{output-type}\Lit{]} 
+\Lit{[-a]}
+\Lit{[-l]}
+\Lit{[-i]}
+\Lit{[-o} \textit{output-file}\Lit{]}
+\end{center}
+
+where the arguments have the following meanings
+
+\begin{Argdescription}
+\item[-s] read a system specification file.
+\item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
+\item[-d] read configurational data from a dump file given as a prototype name
+containing a \Lit{printf()} format string - see section~\ref{sec:dumping}.
+\item[-t] range of records in the dump file, specified in ``selector'' format, to
+average positions over.
+\item[-f] give the output in the specified format (see table~\ref{tab:output}).
+\item[-a] calculate the average positions using the Cartesian (absolute)
+coordinates rather than the fractional coordinates. The default is to
+use fractional coordinates.
+\item[-l] orthonormalize the average MD cell so that all cell
+angles are 90 degrees.
+\item[-i] shift averaged positions so that all particles lie within the
+MD cell.
+\item[-o] name of optional output file. Defaults to standard output.
+\end{Argdescription}
+
+\begin{table}[h]
+\caption{Structure File Output Types}
+\label{tab:output}
+\begin{tabular}{ll}
+\textbf{Type} & \textbf{Description} \\\hline
+\Fname{shak}  &   SCHAKAL format (default).\\
+\Fname{pdb}   &   Brookhaven Protein Data Bank (PDB) format.\\
+\Fname{xyz}   &   XYZ format suitable for \emph{Xmol} or \emph{RasMol}.\\
+\Fname{dcd}   &   DCD format suitable for animation by \emph{VMD}.\\
+\Fname{vmd}   &   same as \Fname{dcd}.\\
+\Fname{cssr}  &   Cambridge Structure Search and Retrieval (CSSR) format.\\
+\Fname{arc}   &   MSI's Insight II ARC (also CAR, MDF, COR) archive file format.\\
+\Fname{xtl}   &   Biosym XTL format.\\
+\Fname{bin}   &   raw binary format.\\ \hline
+\end{tabular}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Mdbond and bdist}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\emph{Mdbond} is a utility for calculating the distances between the centres
+of mass of pairs of molecules, as well as angles between triplets of
+molecules within minimum and maximum values specified using options
+\Lit{-b} and \Lit{-a} (for bonds and angles, respectively). The
+utility calculates values for ALL pairs / triplets within the cutoffs,
+including those involving mirror atoms, so that maximum cutoffs
+greater than the simulation box lengths are possible.
+        
+Bond lengths are output in columnar format in increasing order with
+the number and species type of each pair of molecules given in the
+first two columns. The angle data are output after the bond data, also
+in columnar format. Each row contains the molecule numbers and species
+types for triplets \emph{i-j-k} , followed by the angle formed about
+molecule \emph{i} and the distances \emph{i-j} and \emph{i-k}.
+
+The command line options are:
+
+\begin{center}
+\Lit{mdbond}
+\Lit{[-s} \textit{system-specification} \Lit{|}
+\Lit{-r} \textit{restart-file}\Lit{]}
+\Lit{[-d} \textit{dump-file-format}\Lit{]}
+\Lit{[-t} \textit{dump-range}\Lit{]} \\
+\Lit{[-b} \textit{bond-limits}\Lit{]} 
+\Lit{[-a} \textit{angle-limits}\Lit{]} 
+\Lit{[-g} \textit{species-range}\Lit{]} 
+\Lit{[-c]}
+\Lit{[-o} \textit{output-file}\Lit{]}
+\end{center}
+
+where the arguments have the following meanings:
+\begin{Argdescription}
+\item[-s] read a system specification file.
+\item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
+\item[-d] read configurational data from a dump file given as a prototype name
+  containing a \Lit{printf()} format string - see section~\ref{sec:dumping}. 
+\item[-t] range of records in the dump file, specified in ``selector''
+  format, to average positions over.
+\item[-b] bond limits in tenths of Angstroms entered in form
+  ``minimum-maximum''. Limits may be entered as integers only, so
+  smallest difference is 0.1{\AA}. Defaults to 0.2 to 2{\AA}.
+\item[-a] angle limits in degrees entered in form ``minimum-maximum''.
+  Limits may be entered as integers only, so smallest difference is
+  1{\textdegree}. Defaults to 0 to 180{\textdegree}.
+\item[-g] range of species to be included, given in selector format
+  where 0 represents the first species. Defaults to all species.
+\item[-c] if reading system specification file, skip any preceding
+  control parameter info.
+\item[-o] name of optional output file. Defaults to standard output.
+\end{Argdescription}
+
+
+Species positions can be input using system specification, restart or dump
+files. If the latter case is chosen, the bond and angle data for each time
+slice are written consecutively to the same output file, with each set of
+data separated by a title indicating the number of the respective time
+slice.
+
+\emph{Bdist} converts the data output from \emph{mdbond} into a format
+suitable for
+plotting bond and angle distribution curves. The utility scans through the
+output file counting the number of bond lengths / angles within the
+specified intervals for different pairs / triplets of species types. The
+data is output in two columns, first for bonds and then for angles, with
+the mid-point of the bond/angle interval given in the first column and the
+number of bonds/angles within that interval in the second column. The
+utility is invoked on the command line by:
+
+\begin{center}
+\Lit{bdist}
+\Lit{[-i} \textit{input-file}\Lit{]}
+\Lit{[-b} \textit{bond-range}\Lit{]}
+\Lit{[-a} \textit{angle-range}\Lit{]}
+\Lit{[-o} \textit{output-file}\Lit{]}
+\end{center}
+
+where the options are:
+\begin{Argdescription}
+\item[-i] name of the input file.
+\item[-b] bond interval limits in tenths of Angstroms entered in form
+  ``minimum-maximum:increment''. Limits may be entered as integers
+  only, so smallest increment is 0.1{\AA}. Defaults to 0.2 to 2{\AA} with
+  a 0.5{\AA} increment.
+\item[-a] angle interval limits in degrees entered in form
+  ``minimum-maximum:increment''. Limits may be entered as integers only,
+  so smallest increment is 1{\textdegree}. Defaults to 0 to
+  180{\textdegree}\ with a 1{\textdegree}\ increment.
+\end{Argdescription}
+
+\textbf{N.B.} If the file to be analyzed contains
+multiple data sets (\eg\ from reading dump files), the data for each time slice
+must be copied manually into separate files and the ``- Time Slice \# -''
+headings removed before \emph{bdist} can be used.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Mdshak}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \emph{Mdshak} was originally written as an interface between \moldy\ 
 configurations and a molecular graphics program called
 SCHAKAL\cite{schakal:88}.  The current version can write the output in
-additional formats: Brookhaven PDB, Cambridge CSSR, or XYZ form, suitable
-for input to the freely available viewers such as
+a variety of formats (specified using option \Lit{-f}), suitable
+for input to freely available viewers such as
 \emph{VMD}\footnote{Available from
   \url{http://www.ks.uiuc.edu/Research/vmd/}.}, \emph{Xmol} and
 \emph{RasMol}.  There is also a file viewer called
@@ -5273,20 +5413,21 @@ purpose visualization program, and available free from the
 International AVS Centre.\footnote{\url{http://www.iavsc.org/}.}
 
 \emph{Mdshak} writes a file containing the co-ordinates of a
-single or of multiple time slices during a MD run.  It can read
+single or of multiple time slices during a \moldy\ run.  It can read
 configurations from (\emph{a}) a system specification file plus
 lattice start, (\emph{b}) a system specification file plus dump file
 (\emph{c}) a restart file or (\emph{d}) a restart file plus dump file.
 It can be driven either interactively or using command-line arguments.
 If the executable file is named \Fname{mdshak} then the default output
 is in SCHAKAL file format. If it is renamed to \Fname{mdxyz},
-\Fname{mdpdb}, \Fname{mdcssr}  or \Fname{mddcd} then the default
-output format is of the corresponding type.
+\Fname{mdpdb}, \Fname{mdcssr}, \Fname{mddcd} (or \Fname{mdvmd}),
+\Fname{mdarc} or \Fname{mdxtl} then the default output format
+is of the corresponding type.
 
 To assist in making animations of a simulation, the trajectory from
 many timesteps can be written to a file in the  CHARMM and Xplor DCD
-format, using the \Lit{[-v]} option.  In conjunction with a PDB file
-this may be used as input to the VMD visualization program.  Tools for
+format.  In conjunction with a PDB file
+this may be used as input to the \emph{VMD} visualization program.  Tools for
 manipulating DCD files and converting to other formats are also
 available from \url{http://www.ks.uiuc.edu/Development/MDTools/}.
 
@@ -5299,50 +5440,140 @@ or the output will go to the screen!
 Alternatively, the command line options are
 \begin{center}
 \Lit{mdshak}
-\Lit{[-s} \textit{system-specification} \Lit{]|}% 
-\Lit{[-r} \textit{restart-file} \Lit{]}
-\Lit{[-d} \textit{dump-file-format} \Lit{]}
-\Lit{[-t} \textit{dump-range} \Lit{]} \\
+\Lit{[-s} \textit{system-specification} \Lit{|}
+\Lit{-r} \textit{restart-file}\Lit{]}
+\Lit{[-d} \textit{dump-file-format}\Lit{]}
+\Lit{[-t} \textit{dump-range}\Lit{]} \\
 \Lit{[-c]}
-\Lit{[-x|-v|-h|-p|-g|-b]}
+\Lit{[-f} \textit{output-type}\Lit{]}
 \Lit{[-y]}
-\Lit{[-i} \textit{extra-text} \Lit{]}
-\Lit{[-o} \textit{output-file} \Lit{]}
+\Lit{[-i} \textit{extra-text}\Lit{]}
+\Lit{[-o} \textit{output-file}\Lit{]}
 \end{center}
 where the meanings of the options are
 \begin{Argdescription}
 \item[-s] read a system specification file
 \item[-r] read a restart file.  Only one of \Lit{-s} or \Lit{-r} may
 be given.
-\item[-c] if reading a system specification file, skip any preceding
-control parameter info.
 \item[-d] read the configurational information from a dump file.  The
 argument is a dump prototype name containing a \Lit{printf()} format
 string -- see section~\ref{sec:dumping}.
 \item[-t] range of records in dump file, specified in ``selector''
 format.
-\item[-i]   this inserts its argument into the output file and is used
-to add extra SCHAKAL commands, such as BOX.
-\item[-x] Write an output file in XYZ format suitable for \emph{Xmol}
-  or \emph{RasMol}
-\item[-v] Write co-ordinates from multiple dump files to an output
-  file in DCD format suitable for animation by \emph{VMD}.
-\item[-h] Write an output file in SCHAKAL format.
-\item[-p] Write an output file in Brookhaven PDB format suitable for
-  \emph{VMD}, \emph{Xmol}  or \emph{RasMol}
-\item[-g] Write an output file in Cambridge CSSR format suitable for
-  reading by, \eg\ Cerius2.
-\item[-b] Write the atom co-ordinates in raw binary (unformatted)
-  format.
+\item[-c] if reading a system specification file, skip any preceding
+control parameter info.
+\item[-f] Write the output file in the format specified (see table~\ref{tab:output}).
 \item[-y] Join up trajectory fragments to eliminate jumps when a
   molecule exits from one side of the MD cell and re-enters the
   opposite side.
+\item[-i]   this inserts its argument into the output file and is used
+to add extra SCHAKAL commands, such as BOX.
+\item[-o] name of output file. Defaults to standard output.
 \end{Argdescription}
 
 \emph{Mdshak} may be useful for more than just visualization purposes
 as it extracts atomic co-ordinates from the system specification,
 positions and quaternions.  It is written in a modular fashion
 to make it easy to add a new output routine (in file \Fname{molout.c}).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Mdvaf}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\emph{Mdvaf} is a utility for calculating the Velocity Autocorrelation 
+Function (VACF) from \moldy\ dump files of at least level 2 (see 
+Section\ref{sec:dumping}). It can also, optionally, calculate the Velocity 
+Total Correlation Function (VTF) from the same data source.
+
+For a species of $N$ particles, the VACF, $Z(t)$ is defined as:
+\begin{equation}
+  Z(t) = \frac{1}{N N_t} \sum_{t_0=0}^{N_t} \sum_{n=1}^N v_n(t_0) \cdot v_n(t_0 + t)
+\end{equation}
+and the VTF as
+\begin{equation}
+  VTF(t)= \frac{1}{N_t} \sum_{t_0=0}^{N_t} \left ( \sum_{n=1}^N q_n v_n(t_0) 
+  \cdot  \sum_{n=1}^N  q_n v_n(t_0 + t) \right )
+\end{equation}
+where $q$ is the total charge of the species, $v(t)$ the
+velocity at time $t$.
+
+The self-diffusion coefficient of a species, $D$ can be
+obtained from the integral of its VACF
+\begin{equation}
+  D = \frac{1}{3} \int_0^\infty Z(t) dt .
+\end{equation}
+
+Similarly, the frequency-dependent ionic conductivity, $\sigma(\omega)$, can
+be calculated directly from the VTF via:
+\begin{equation}
+  \sigma(\omega) = \frac{1}{3 V k_B T}    \int_0^\infty VTF(t) e^{-i \omega t} dt
+\end{equation}
+
+where $V$ is the volume of the simulation box, $k_{B}$ is Boltzmann's
+constant and $T$ is temperature.
+
+The command line options are:
+
+\begin{center}
+\Lit{mdvaf}
+\Lit{[-s} \textit{system-specification} \Lit{|}
+\Lit{-r} \textit{restart-file} \Lit{]}
+\Lit{[-d} \textit{dump-file-format}\Lit{]}
+\Lit{[-t} \textit{dump-range}\Lit{]} \\
+\Lit{[-v} \textit{vaf-range}\Lit{]}
+\Lit{[-g} \textit{species-range}\Lit{]} 
+\Lit{[-c]}
+\Lit{[-q]} 
+\Lit{[-o} \textit{output-file}\Lit{]}
+\end{center}
+
+where the arguments have the following meanings:
+\begin{Argdescription}
+\item[-s] read the species data from a system specification file.
+\item[-r] read the species data from a restart file. Only one of \Lit{-s} 
+or \Lit{-r} may be given.
+\item[-d] read the centre of mass velocities from a dump file (of \Lit{dump-level} 
+$>= 2$) given as a prototype name containing a \Lit{printf()} format 
+string -- see section~\ref{sec:dumping} .
+\item[-t] range of records in dump file, specified in ``selector'' format.
+\item[-v] time intervals to calculate the VACF or VTF values for, specified 
+in ``selector'' format. Default is 0 to half the number of dump 
+records selected, with an increment of 1.
+\item[-g] range of species to be included, given in ``selector'' format 
+where 0 represents the \emph{first} species. Defaults to all species.
+\item[-c] if reading system specification file, skip any preceding control 
+parameter info.
+\item[-q] calculate the VTF instead of the VACF.
+\item[-o] name of optional output file. Defaults to standard output.
+\end{Argdescription}
+
+If the executable file is named \Fname{mdvaf} then the default calculation 
+is the VACF. If it is renamed to \Fname{mdvtf}, then the default is the 
+VTF. In both cases, the output is in the form of a single column 
+of data headed by the name of the species in question. The lines 
+down each column correspond to increasing time intervals. Similar 
+to \emph{msd}, the time intervals selected using \Lit{-m} are taken relative 
+to the dump slices selected using \Lit{-t}. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Moldyext}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+It is usual to plot the instantaneous values of energy, temperature
+\etc\ during the course of a simulation, for example to monitor the
+approach to equilibrium.  \emph{Moldyext} processes the periodic
+output produced by \moldy\ (see section~\ref{sec:output}) and extracts
+this information from each timestep recorded.  It is presented in
+tabular form for input into plotting programs.  The command is
+\begin{center}
+\Lit{moldyext -f} \textit{fields output-file1 output-file2} \ldots
+\end{center}
+where \emph{fields} is a list in the selector format above.  The
+numbering runs from left to right, ignoring newlines and blank columns
+so that the translational KE's in figure~\ref{fig:output} are fields 1
+and 14 and the $\sigma_{zz}$ component of the stress tensor is 30.
+
+\emph{Moldyext} can currently only extract information from the
+``instantaneous'' section of the output, not the rolling averages or
+standard deviations.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Msd}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -5362,7 +5593,7 @@ calculated as
 \begin{equation}  
         <|\bm{r}(t)-\bm{r}(0)|^2> = \frac{1}{N N_t}
         \sum_{n=1}^{N} \sum_{t_0}^{N_t}
-        |\bm{r}_n(t+t_0) - \bm{r}(t_0)|^2
+        |\bm{r}_n(t+t_0) - \bm{r}_n(t_0)|^2
 \end{equation}
 
 where $\bm{r}_n(t)$ is the position of particle $n$ at
@@ -5377,16 +5608,15 @@ specified in command line mode:
 
 \begin{center}
 \Lit{msd}
-\Lit{[-s} \textit{system-specification} \Lit{]|}% 
-\Lit{[-r} \textit{restart-file} \Lit{]}
-\Lit{[-d} \textit{dump-file-format} \Lit{]}
-\Lit{[-t} \textit{dump-range} \Lit{]} \\
-
-\Lit{[-m} \textit{msd-time-range} \Lit{]}
-\Lit{[-i} \textit{initial-time-increment} \Lit{]}
-\Lit{[-g} \textit{species-range} \Lit{]}
-\Lit{[-u]}
-\Lit{[-w} \textit{trajectory-output-format} \Lit{]}
+\Lit{[-s} \textit{system-specification} \Lit{|}
+\Lit{-r} \textit{restart-file}\Lit{]}
+\Lit{[-d} \textit{dump-file-format}\Lit{]}
+\Lit{[-t} \textit{dump-range}\Lit{]} \\
+\Lit{[-m} \textit{msd-time-range}\Lit{]}
+\Lit{[-i} \textit{initial-time-increment}\Lit{]}
+\Lit{[-g} \textit{species-range}\Lit{]}
+\Lit{[-u]} \\
+\Lit{[-w} \textit{trajectory-output-format}\Lit{]}
 \Lit{[-x|-X]} \Lit{[-y|-Y]} \Lit{[-z|-Z]}
 \Lit{[-o} \textit{output-file} \Lit{]}
 \end{center}
@@ -5455,281 +5685,6 @@ y z$ coordinates for all particles, with time increasing down the
 columns.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Mdvaf}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Mdvaf is a utility for calculating the Velocity Autocorrelation 
-Function (VACF) from moldy dump files of at least level 2 (see 
-Section\ref{sec:dumping}). It can also, optionally, calculate the Velocity 
-Total Correlation Function (VTF) from the same data source.
-
-For a species of $N$ particles, the VACF, $Z(t)$ is defined as:
-\begin{equation}
-  Z(t) = \frac{1}{N N_t} \sum_{t_0=0}^{N_t} \sum_{n=1}^N v_n(t_0) \cdot v_n(t_0 + t)
-\end{equation}
-and the VTF as
-\begin{equation}
-  VTF(t)= \frac{1}{N_t} \sum_{t_0=0}^{N_t} \left ( \sum_{n=1}^N q_n v_n(t_0) 
-  \cdot  \sum_{n=1}^N  q_n v_n(t_0 + t) \right )
-\end{equation}
-where $q$ is the total charge of the species, $v(t)$ the
-velocity at time $t$.
-
-The self-diffusion coefficient of a species, $D$ can be
-obtained from the integral of its VACF
-\begin{equation}
-  D = \frac{1}{3} \int_0^\infty Z(t) dt .
-\end{equation}
-
-Similarly, the frequency-dependent ionic conductivity, $\sigma(\omega)$, can
-be calculated directly from the VTF via:
-\begin{equation}
-  \sigma(\omega) = \frac{1}{3 V k_B T}    \int_0^\infty VTF(t) e^{-i \omega t} dt
-\end{equation}
-
-where $V$ is the volume of the simulation box, $k_{B}$ is Boltzmann's
-constant and $T$ is temperature.
-
-The command line options are:
-
-\begin{center}
-\Lit{mdvaf}
-\Lit{[-s} \textit{system-specification} \Lit{]|}
-\Lit{[-r} \textit{restart-file} \Lit{]}
-\Lit{[-d} \textit{dump-file-format} \Lit{]}
-\Lit{[-t} \textit{dump-range} \Lit{]} \\
-\Lit{[-v} \textit{vaf-range}\Lit{]}
-\Lit{[-g} \textit{species-range}\Lit{]} 
-\Lit{[-c]}
-\Lit{[-q]} 
-\Lit{[-o} \textit{output-file}\Lit{]}
-\end{center}
-
-where the arguments have the following meanings:
-\begin{Argdescription}
-\item[-s] read the species data from a system specification file.
-\item[-r] read the species data from a restart file. Only one of \Lit{-s} 
-or \Lit{-r} may be given.
-\item[-c] if reading system specification file, skip any preceding control 
-parameter info.
-\item[-d] read the centre of mass velocities from a dump file (of dump-level 
-$>= 2$) given as a prototype name containing a printf() format 
-string -- see section~\ref{sec:dumping} .
-\item[-t] range of records in dump file, specified in ``selector'' format.
-\item[-v] time intervals to calculate the VACF or VTF values for, specified 
-in ``selector'' format. Default is 0 to half the number of dump 
-records selected, with an increment of 1.
-\item[-g] range of species to be included, given in ``selector'' format 
-where 0 represents the \emph{first} species. Defaults to all species.
-\item[-q] calculate the VTF instead of the VACF.
-\item[-o] name of optional output file. Defaults to standard output.
-\end{Argdescription}
-
-If the executable file is named mdvaf then the default calculation 
-is the VACF. If it is renamed to mdvtf, then the default is the 
-VTF. In both cases, the output is in the form of a single column 
-of data headed by the name of the species in question. The lines 
-down each column correspond to increasing time intervals. Similar 
-to msd, the time intervals selected using \Lit{-m} are taken relative 
-to the dump slices selected using \Lit{-t}. 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Mdavpos}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Mdavpos is a utility for calculating the average positions of particles
-from dump slices recorded during a Moldy run. The utility is similar to
-Mdshak, with command line options
-
-\begin{center}
-\Lit{mdavpos}
-\Lit{[-s} \textit{system-specification}\Lit{]}
-\Lit{[-r} \textit{restart-file}\Lit{]}
-\Lit{[-d} \textit{dump-file-format}\Lit{]}
-\Lit{[-t} \textit{dump-range}\Lit{]} 
-\Lit{[-h]}
-\Lit{[-p]}
-\Lit{[-x]}
-\Lit{[-o} \textit{output-file}\Lit{]}
-\end{center}
-
-where the arguments have the following meanings
-
-\begin{Argdescription}
-\item[-s] read a system specification file.
-\item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
-\item[-d] read configurational data from a dump file given as a prototype name
-containing a printf() format string - see section~\ref{sec:dumping}.
-\item[-t] range of records in the dump file, specified in ``selector'' format, to
-average positions over.
-\item[-h] give the output in SCHAKAL format (default).
-\item[-p] give the output in Brookhaven Protein Data Bank (PDB) format.
-\item[-x] give the output in XYZ format suitable for Xmol or RasMol.
-\item[-o] name of optional output file. Defaults to standard output.
-\end{Argdescription}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Mdbond and bdist}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Mdbond is a utility for calculating the distances between the centres
-of mass of pairs of molecules, as well as angles between triplets of
-molecules within minimum and maximum values specified using options
-\Lit{-b} and \Lit{-a} (for bonds and angles, respectively). The
-utility calculates values for ALL pairs / triplets within the cutoffs,
-including those involving mirror atoms, so that maximum cutoffs
-greater than the simulation box lengths are possible.
-        
-Bond lengths are output in columnar format in increasing order with
-the number and species type of each pair of molecules given in the
-first two columns. The angle data are output after the bond data, also
-in columnar format. Each row contains the molecule numbers and species
-types for triplets \emph{i-j-k} , followed by the angle formed about
-molecule \emph{i} and the distances \emph{i-j} and \emph{i-k}.
-
-The command line options are:
-
-\begin{center}
-\Lit{mdbond}
-\Lit{[-s} \textit{system-specification}\Lit{]}
-\Lit{[-r} \textit{restart-file}\Lit{]}
-\Lit{[-d} \textit{dump-file-format}\Lit{]}
-\Lit{[-t} \textit{dump-range}\Lit{]} 
-\Lit{[-b} \textit{bond-limits}\Lit{]} 
-\Lit{[-a} \textit{angle-limits}\Lit{]} 
-\Lit{[-g} \textit{species-range}\Lit{]} 
-\Lit{[-c]}
-\Lit{[-o} \textit{output-file}\Lit{]}
-\end{center}
-
-where the arguments have the following meanings:
-\begin{Argdescription}
-\item[-s] read a system specification file.
-\item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
-\item[-d] read configurational data from a dump file given as a prototype name
-  containing a printf() format string - see section~\ref{sec:dumping}. 
-\item[-t] range of records in the dump file, specified in ``selector''
-  format, to average positions over.
-\item[-b] bond limits in tenths of Angstroms entered in form
-  ``minimum-maximum''. Limits may be entered as integers only, so
-  smallest difference is 0.1{\AA}. Defaults to 0.2 to 2{\AA}.
-\item[-a] angle limits in degrees entered in form ``minimum-maximum''.
-  Limits may be entered as integers only, so smallest difference is
-  1{\textdegree}. Defaults to 0 to 180{\textdegree}.
-\item[-g] range of species to be included, given in selector format
-  where 0 represents the first species. Defaults to all species.
-\item[-c] if reading system specification file, skip any preceding
-  control parameter info.
-\item[-o] name of optional output file. Defaults to standard output.
-\end{Argdescription}
-
-
-Species positions can be input using system specification, restart or dump
-files. If the latter case is chosen, the bond and angle data for each time
-slice are written consecutively to the same output file, with each set of
-data separated by a title indicating the number of the respective time
-slice.
-
-Bdist converts the data output from mdbond into a format suitable for
-plotting bond and angle distribution curves. The utility scans through the
-output file counting the number of bond lengths / angles within the
-specified intervals for different pairs / triplets of species types. The
-data is output in two columns, first for bonds and then for angles, with
-the mid-point of the bond/angle interval given in the first column and the
-number of bonds/angles within that interval in the second column. The
-utility is invoked on the command line by:
-
-\begin{center}
-\Lit{bdist}
-\Lit{[-i} \textit{input-file}\Lit{]}
-\Lit{[-b} \textit{bond-range}\Lit{]}
-\Lit{[-a} \textit{angle-range}\Lit{]}
-\Lit{[-o} \textit{output-file}\Lit{]}
-\end{center}
-
-where the options are:
-\begin{Argdescription}
-\item[-i] name of the input file.
-\item[-b] bond interval limits in tenths of Angstroms entered in form
-  ``minimum-maximum:increment''. Limits may be entered as integers
-  only, so smallest increment is 0.1{\AA}. Defaults to 0.2 to 2{\AA} with
-  a 0.5{\AA} increment.
-\item[-a] angle interval limits in degrees entered in form
-  ``minimum-maximum:increment''. Limits may be entered as integers only,
-  so smallest increment is 1{\textdegree}. Defaults to 0 to
-  180{\textdegree}\ with a 1{\textdegree}\ increment.
-\end{Argdescription}
-
-Note that if the mdbond output file to be analyzed contains
-multiple data sets (from reading dump files), the data for each time slice
-must be copied manually into separate files and the ``- Time Slice \# -''
-headings removed before bdist can be used.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Ransub}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-It is sometimes necessary to simulate a crystalline system in which one or
-more of the components have been randomly substituted onto lattice sites
-normally occupied by another species. For large numbers of substitutions,
-doing this by hand can be tedious, so the utility ransub has been provided
-to speed up the construction of system specification files in which
-``solute'' or ``dopant'' molecules are randomly distributed.
-        
-The command line options are:
-\begin{center}
-\Lit{ransub}
-\Lit{[-s} \textit{system-specification}\Lit{]}
-\Lit{[-r} \textit{restart-file}\Lit{]}
-\Lit{[-d} \textit{dump-file-format}\Lit{]}
-\Lit{[-t} \textit{dump-range}\Lit{]} 
-\Lit{[-m} \textit{solvent-species}\Lit{]} 
-\Lit{[-n} \textit{no. of substitutions}\Lit{]} 
-\Lit{[-u} \textit{solute-species}\Lit{]} 
-\Lit{[-w} \textit{mass}\Lit{]} 
-\Lit{[-q} \textit{charge}\Lit{]} 
-\Lit{[-z} \textit{symbol}\Lit{]} 
-\Lit{[-c]}
-\Lit{[-o} \textit{output-file}\Lit{]}
-\end{center}
-
-where the arguments have the following meanings:
-\begin{Argdescription}
-\item[-s] read a system specification file.
-\item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
-\item[-d] read configurational data from a dump file given as a prototype name
-  containing a printf() format string - see section~\ref{sec:dumping}. 
-\item[-t] range of records in the dump file, specified in ``selector''
-  format, to average positions over.
-\item[-m] the name of the species to be replaced, i.e. the ``solvent''
-  species.
-\item[-u] the name of the substituting or ``solute'' species.
-\item[-n] the number of molecules to be substituted.
-\item[-w] mass of the solute species. Defaults to same mass as the
-  first atom of the solvent species.
-\item[-q] charge of the solute species. Defaults to same charge as the
-  first atom of the solvent species.
-\item[-z] symbol of the solute species. Defaults to same symbol as the
-  first atom of the solvent species.
-\item[-c] if reading system specification file, skip any preceding
-  control parameter info.
-\item[-o] name of optional output file. System specification data
-  created from multiple time slices are written consecutively to the
-  same file.
-\end{Argdescription}
-
-If the species data come from a restart file, the user is prompted for
-the energy units to use when writing the potential parameters to the
-output.  \textbf{N.B.}. These may vary slightly from the original
-inputted parameters depending on the exact value of the time-unit used
-in the control file to specify energy units other than kJ\,mol$^{-1}$. See
-section~\ref{sec:sys-spec}.
-
-At present, ransub can only introduce monatomic solute species, but
-polyatomic species can easily be added manually by modifying the system
-specification file created by ransub. It is also possible to introduce
-randomly distributed vacancies by prefixing the solute name with ``\#''.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Plotrdf}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Plotrdf is a \emph{perl} script which reads \moldy\ output files and
@@ -5760,7 +5715,8 @@ have \emph{perl} installed on your computer to use it.
       \item[-xg]        Write a script and invoke GRACE to plot data.
       \item[-ps]        Invoke GNUPLOT or GRACE to plot data and write as a PostScript file.
       \item[-eps]       Invoke GNUPLOT or GRACE to plot data and write as an encapsulated PostScript (EPS) file.
-      \item[-np]        Do not plot data, write a GNUPLOT or GRACE script.                                      \item[-m]  output/plot only columns which match the (perl) regular expression REGEXP. (no '//' needed)    
+      \item[-np]        Do not plot data, write a GNUPLOT or GRACE script.
+      \item[-m]  output/plot only columns which match the (\emph{perl}) regular expression REGEXP. (no '//' needed)    
 \end{Argdescription}
 
 The output format is in columns with different components laid out
@@ -5783,6 +5739,218 @@ Columns may be selected by matching with a PERL regular expression
 (without the usual delimiters) given as the argument to the \Lit{-m}
 option.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Ransub}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\label{sec:ransub}
+It is sometimes necessary to simulate systems in which one or
+more components have been randomly substituted onto sites
+normally occupied by another species. For large numbers of substitutions,
+doing this by hand can be tedious, so the utility \emph{ransub} has been
+provided to speed up the construction of system specification files in which
+``solute'' or ``dopant'' molecules are randomly distributed.
+        
+The command line options are:
+\begin{center}
+\Lit{ransub}
+\Lit{[-s} \textit{system-specification} \Lit{|}
+\Lit{-r} \textit{restart-file}\Lit{]}
+\Lit{[-d} \textit{dump-file-format}\Lit{]}
+\Lit{[-t} \textit{dump-range}\Lit{]} \\
+\Lit{[-m} \textit{solvent-species}\Lit{]} 
+\Lit{[-n} \textit{no. of substitutions}\Lit{]} 
+\Lit{[-u} \textit{solute-species}\Lit{]}
+\Lit{[-w} \textit{mass}\Lit{]} 
+\Lit{[-q} \textit{charge}\Lit{]} \\
+\Lit{[-z} \textit{symbol}\Lit{]}
+\Lit{[-e} \textit{species-data-file}\Lit{]} 
+\Lit{[-y} \textit{potential-parameter-file}\Lit{]} 
+\Lit{[-c]}
+\Lit{[-o} \textit{output-file}\Lit{]}
+\end{center}
+
+where the arguments have the following meanings:
+\begin{Argdescription}
+\item[-s] read a system specification file.
+\item[-r] read a restart file. Only one of \Lit{-s} or \Lit{-r} may be given.
+\item[-d] read configurational data from a dump file given as a prototype name
+  containing a \Lit{printf()} format string - see section~\ref{sec:dumping}. 
+\item[-t] range of records in the dump file, specified in ``selector''
+  format, to average positions over.
+\item[-m] the name of the species to be replaced, \ie\ the ``solvent''
+  species.
+\item[-n] the number of molecules to be substituted.
+\item[-u] the name of the substituting or ``solute'' species.
+\item[-w] mass of the solute species. Defaults to same mass as the
+  first atom of the solvent species.
+\item[-q] charge of the solute species. Defaults to same charge as the
+  first atom of the solvent species.
+\item[-z] name/symbol of the solute species. Defaults to same name as the
+  first atom of the solvent species.
+\item[-e] read the species data (mass, charge, symbol) corresponding to the
+solute species name from the file specified.
+(Defaults to \Fname{elements.dat}). Overridden  by options \Lit{-w}, \Lit{-q}, \Lit{-z}.
+\item[-y] read pair interaction parameters between the dopant and other components
+from the file specified. This is a text file of format:
+\begin{displaymath}
+\begin{array}{llllllll}
+\multicolumn{4}{l}{\textit{potential-type}} \\
+\textit{symbol}_1 & \textit{charge}_1 & \textit{symbol}_2 & \textit{charge}_2
+ & p^{1}_{ij} & p^{2}_{ij} & \ldots & p^{r}_{ij}  \\
+\textit{symbol}_3 & \textit{charge}_3 & \textit{symbol}_4 & \textit{charge}_4
+ & p^{1}_{kl} & p^{2}_{kl} & \ldots & p^{r}_{kl}  \\
+\vdots & \vdots & \vdots & \vdots & \vdots & \vdots \\
+\textit{symbol}_5 & \textit{charge}_5 & \textit{symbol}_6 & \textit{charge}_6
+ & p^{1}_{mn} & p^{2}_{mn} & \ldots & p^{r}_{mn}  \\
+\Lit{end} \\
+\end{array}
+\end{displaymath}
+where the number of parameters, their values, order and units are the
+same as in a system specification file (see section~\ref{sec:sys-spec}).
+\item[-c] if reading system specification file, skip any preceding
+  control parameter info.
+\item[-o] name of optional output file. System specification data
+  created from multiple time slices are written consecutively to the
+  same file.
+\end{Argdescription}
+
+The properties of the solute species can be entered explicitly on the command
+line using options \Lit{-w}, \Lit{-q}, \Lit{-z}, or by reading it
+from a species data file. The default species data file,
+\Fname{elements.dat}, is searched for automatically, and contains data for the
+first 103 elements in order of increasing atomic number. The format is
+{\textit{species-name}$_{i}$ %
+                  \textit{symbol}$_{i}$ \textit{mass}$_{i}$} \textit{charge}$_{i}$
+where $mass_{i}$ is in amu, and $charge_{i}$ is the "commonly occurring" valence.
+Since most elements have multiple valences, this
+should be edited manually to match the species of interest. This file,
+or a file of the same format, can be
+modified to contain data for other species (atoms, isotopes or molecules)
+as desired. \textbf{N.B.} The maximum number of species that can be
+read from a species data file is, by default, 150. This limit can be
+increased or decreased by the user by changing the parameter NELEM in
+\Fname{specdata.h} and recompiling \emph{ransub}.
+
+If no data is available for the solute species, it
+will be given the same symbol, charge and mass as the first component
+of the species it is replacing, as described
+for options \Lit{-w}, \Lit{-q}, \Lit{-z}.
+
+If the system data comes from a restart file, the user is prompted for
+the energy units to use when writing the potential parameters to the
+output. \textbf{N.B.} These may vary slightly from the original
+input parameters depending on the exact value of the time-unit used
+in the control file to specify energy units other than kJ\,mol$^{-1}$. See
+section~\ref{sec:sys-spec}. The parameters for the species being introduced
+can be read in from a potential parameter file (using option \Lit{-y}),
+otherwise the parameters between the dopant and
+other atoms wll be assumed to be zero. It is up to the user to ensure that
+the potential parameter file uses the same units as the sys-spec and/or restart
+files.
+
+The directory in which \emph{ransub} searches for the species data
+file and potential parameter file (if specified) is by default the current
+directory. The default paths for these
+files can be changed to suit the user's local environment by editing the
+parameters ELEPATH and POTPATH in \Fname{specdata.h} before compiling
+\emph{ransub}.
+
+At present, \emph{ransub} can only introduce monatomic solute species, but
+these can be changed easily to
+polyatomic species by editing the system
+specification file that \emph{ransub} creates. It is also possible to introduce
+randomly distributed vacancies by prefixing the solute name with ``\#''.
+
+The \moldy\ distribution comes with three widely-used Buckingham potential
+parameter sets (\Fname{bush.pot}, \Fname{catlow.pot} and
+\Fname{grimes.pot}) taken from the literature. These may act as guides
+to the potential parameter file format.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Syswrite}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\emph{Syswrite} is a utility for creating \moldy\ system specification
+and initial configuration files from either Cambridge CSSR, Brookhaven
+PDB or Schakal structural data files. This utility is useful for
+automating the creation of \moldy\ input files from the output of standard
+molecular graphics packages. At present \emph{syswrite} treats all species
+as monatomic, so some modification of the output file will be
+necessary to simulate multicomponent species.
+
+The physical properties of each species not already contained in the
+structure files are read in automatically from the text file
+\Fname{elements.dat}. An alternative
+file name can be specified using option \Lit{-e}. If a potential
+parameter file name is given on the command line using option
+\Lit{-y}, the appropriate pair interactions read from this file are
+included in the system specification file (output).
+
+The command line options are:
+\begin{center}
+\Lit{syswrite}
+\Lit{[-g} \textit{CSSR-input-file} \Lit{|}
+\Lit{-p} \textit{PDB-input-file} \Lit{|}
+\Lit{-h} \textit{Schakal-input-file}\Lit{]}
+\Lit{[-e} \textit{species-data-file}\Lit{]} 
+\Lit{[-y} \textit{potential-parameter-file}\Lit{]} 
+\Lit{[-o} \textit{output-file}\Lit{]}
+\end{center}
+
+where the arguments have the following meanings:
+\begin{Argdescription}
+\item[-g] read the structural data from a CSSR file.
+\item[-p] read the structural data from a PDB file.
+\item[-h] read the structural data from a Schakal file. Only one of \Lit{-g},
+\Lit{-p} or \Lit{-h} may be given.
+\item[-e] read the species data (name, mass, charge, symbol) from the file
+specified. (Defaults to \Fname{elements.dat}).
+\item[-y] read interaction parameters for pairs of species
+from the file specified. This is a text file of format:
+\begin{displaymath}
+\begin{array}{llllllll}
+\multicolumn{4}{l}{\textit{potential-type}} \\
+\textit{symbol}_1 & \textit{charge}_1 & \textit{symbol}_2 & \textit{charge}_2
+ & p^{1}_{ij} & p^{2}_{ij} & \ldots & p^{r}_{ij}  \\
+\textit{symbol}_3 & \textit{charge}_3 & \textit{symbol}_4 & \textit{charge}_4
+ & p^{1}_{kl} & p^{2}_{kl} & \ldots & p^{r}_{kl}  \\
+\vdots & \vdots & \vdots & \vdots & \vdots & \vdots \\
+\textit{symbol}_5 & \textit{charge}_5 & \textit{symbol}_6 & \textit{charge}_6
+ & p^{1}_{mn} & p^{2}_{mn} & \ldots & p^{r}_{mn}  \\
+\Lit{end} \\
+\end{array}
+\end{displaymath}
+where the number of parameters, their values, order and units are the same
+as in a system specification file (see section~\ref{sec:sys-spec}).
+\item[-o] name of output file. Defaults to standard output.
+\end{Argdescription}
+
+In interactive mode, the user is prompted for the name of the structure
+file to read from. This must end in either "\Fname{.pdb}", "\Fname{.cssr}"
+or "\Fname{.shak}" (upper- or lowercase), so that \emph{syswrite} can
+recognise the file format and successfully read in the data.
+
+The default directory in which \emph{syswrite} searches for both the
+species data file and potential parameter file (if specified) is the
+current directory. The default pathnames for these
+files can be changed to suit the user by re-defining the
+parameters ELEPATH and POTPATH in \Fname{specdata.h} (and
+recompiling \emph{syswrite}). Further details about the species data
+and potential parameters file can be found in appendix~\ref{sec:ransub}.
+
+Since both symbol and charge are specified in the potential parameter file,
+\emph{syswrite} is able to handle species of the same name but different charge.
+In this case, \emph{syswrite} modifies the species names by appending consecutive
+numbers to distinguish between them, \eg\ Ce$^{+3}$ and Ce$^{+4}$ would be labelled
+\Lit{cerium} and \Lit{cerium1}, respectively, if appearing in the same
+structure file. If no potential parameter file is specified, all
+parameters are given default values of 0 and the potential type is given
+as \textit{Potential parameters}.
+
+The \moldy\ distribution comes with three widely-used Buckingham potential
+parameter sets (\Fname{bush.pot}, \Fname{catlow.pot} and
+\Fname{grimes.pot}) taken from the literature. These may act as a guide
+to the potential parameter file format.
+
 \bibliography{abbrevjn,simulation,mypubs}
 \bibliographystyle{amsplain}
 
@@ -5790,7 +5958,7 @@ option.
 % LocalWords:  Fndescription Litdescription erf erfc subfig superfig Refson MCY
 % LocalWords:  Parrinello Rahman Lennard Buckingham Stardent Alliant cray XMP
 % LocalWords:  MFlop SGI SP Tildesley Pawley Powles Sonnenschein Rodger Nos co
-% LocalWords:  Fincham Beeman's Perram Tildesley's subcells subcell Heyes  CSSR
+% LocalWords:  Fincham Beeman's Perram Tildesley's subcells subcell Heyes CSSR
 % LocalWords:  Rahman's RDF dat const Matsuoka Clementi Yoshimine MDBACKUP KE
 % LocalWords:  Microsystems RDFs Leuuw Coulombic Leeuw unix DUSE TCGMSG BSP MPI
 % LocalWords:  SPMD SHMEM defs struct structs auxil beeman ewald eigens rdf xdr
@@ -5801,4 +5969,6 @@ option.
 % LocalWords:  aalloc alloc arralloc talloc tfree nspecies nsites nmols NPOTP
 % LocalWords:  algorith ansi pre Pappalardo mdavpos bdist Murashov mdbond
 % LocalWords:  ransub mdshak Fernandez Wentzcovitch wentzcovitch characterizing
+% LocalWords:  syswrite eledata ELEPATH POTPATH Mdxorto Busing Ida Gilbert
+% LocalWords:  Sanchez Marcos HIW
 % LocalWords:  visualization Cerius CHARMM Plotrdf gnuplot Bekker
