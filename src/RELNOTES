@@ -1,3 +1,10 @@
+RELEASE 2.15e
+-------------
+ * 2.15d introduced a major bug in the dump-file headers
+   simply because the longer cvs branch revision string
+   plus extras overflowed the16 char "vsn" header field.
+   2.15e fixes this.
+
 RELEASE 2.15d2
 -------------
  * Fixed problem in RDF output routine which generated either
