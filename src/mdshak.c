@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 2.18 1999/07/22 13:22:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 2.19 1999/10/11 14:05:19 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -57,9 +57,9 @@ void	read_restart();
 void	init_averages();
 int	getopt();
 gptr	*talloc();
+void    zero_real();
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
-static   char		*comm;
 contr_mt		control;
 
 #define SHAK   0
@@ -108,6 +108,8 @@ char	*argv[];
    pot_mt	*potpar;
    quat_mt	*qpf;
    int		av_convert;
+   int		trajsw = 0;
+   vec_mt       *prev_cofm;
    
 #define MAXTRY 100
    control.page_length=1000000;
@@ -126,7 +128,7 @@ char	*argv[];
    else
      outsw = OUTBIN;
 
-   while( (c = getopt(argc, argv, "a:do:cr:s:d:t:i:hxbvpg") ) != EOF )
+   while( (c = getopt(argc, argv, "a:d:o:cr:s:d:t:i:hxbvpyg") ) != EOF )
       switch(c)
       {
        case 'a': 
@@ -175,6 +177,9 @@ char	*argv[];
        case 'p':
          outsw = PDB;
 	 break;
+       case 'y':
+         trajsw = 1;
+	 break;
        case 'g':
 	 outsw = CSSR;
 	 break;
@@ -186,7 +191,7 @@ char	*argv[];
    if( errflg )
    {
       fprintf(stderr,
-	      "Usage: %s [-x|-v] [-h] [-c] [-s sys-spec-file|-r restart-file] ",
+	      "Usage: %s [-x|-v|-h|-p|-g] [-y] [-c] [-s sys-spec-file|-r restart-file] ",
 	      comm);
       fputs("[-d dump-files] [-t s[-f[:n]]] [-o output-file]\n", stderr);
       exit(2);
@@ -352,6 +357,16 @@ char	*argv[];
 
 	   dump_to_moldy(dump_buf, &sys);
 
+           if( trajsw )  /* Write coordinates for continuous trajectory */
+           {
+               if( irec == start )
+               {
+                   prev_cofm = aalloc(sys.nmols, vec_mt);
+                   zero_real(prev_cofm, 3*sys.nmols);
+               }
+               traj_con(&sys, prev_cofm, irec-start);
+           }
+
 	   moldy_out(iout++, irec, inc, &sys, sys.h, species, site_info, outsw, 0, insert);
 #ifdef DEBUG
 	   fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
@@ -370,7 +385,3 @@ char	*argv[];
      }
    return 0;    
 }
-      
-
-		   
-			     
