@@ -35,6 +35,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: leapfrog.c,v $
+ *       Revision 2.8  2001/02/15 17:25:21  keith
+ *       Tidied up code and corrected one error in combined barostat
+ *       and thermostat. (The combination is still not tested though).
+ *
  *       Revision 2.7  2001/02/13 17:45:08  keith
  *       Added symplectic Parrinello-Rahman constant pressure mode.
  *
@@ -70,7 +74,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.7 2001/02/13 17:45:08 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.8 2001/02/15 17:25:21 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -100,6 +104,8 @@ void	mat_sca_mul(register real s, mat_mt a, mat_mt b);
 					/* Multiply 3x3 matrix by scalar      */
 double  ke_cell(mat_mt hmom, real w);
 double  det(mat_mt );			/* Returns matrix determinant	     */
+double  trace(mat_mt);
+double  trace_sqr(mat_mt);
 void    mk_sigma(mat_mt h, mat_mt sigma);
 void	tfree(gptr *p);
 
@@ -506,39 +512,60 @@ void gleap_therm(double step, real mass, real gkt, real *s, real *smom)
  * gleap_cell. Update cell variable and momenta using generalized leapfrog    *
  ******************************************************************************/
 void gleap_cell(double step, real pmass, real s, real pressure, int strain_mask, 
-		mat_mt h, mat_mt hmom, real *smom)
+		mat_mt h, mat_mt hmom, real *smom, int uniform)
 {
   double vol;
   mat_mt sigma;
 
   vol = det(h);
-  mk_sigma(h, sigma);
-  
-  leapf_hmom(step, hmom, sigma, s, pressure, strain_mask);
+
+  if( uniform ) 
+     leapf_hmom(step, hmom, h, 3.0*vol*s/trace_sqr(h), pressure, strain_mask);
+  else
+  {
+     mk_sigma(h, sigma);
+     leapf_hmom(step, hmom, sigma, s, pressure, strain_mask);
+  }
 
   if( control.const_temp )
-     *smom -= step*(ke_cell(hmom, pmass) + pressure*vol);
+     *smom -= 0.5*step*(ke_cell(hmom, pmass) + pressure*vol);
   
   leapf_h(step, h, hmom, s, pmass);
   
-  mk_sigma(h, sigma);
-  leapf_hmom(step, hmom, sigma, s, pressure, strain_mask);
+  vol = det(h);
+  if( control.const_temp )
+     *smom -= 0.5*step*(ke_cell(hmom, pmass) + pressure*vol);
+
+  if( uniform ) 
+     leapf_hmom(step, hmom, h, 3.0*vol*s/trace_sqr(h), pressure, strain_mask);
+  else
+  {
+     mk_sigma(h, sigma);
+     leapf_hmom(step, hmom, sigma, s, pressure, strain_mask);
+  }
 }
 /******************************************************************************
  * update_hmom().  Perform "simple" update of unit cell momenta.  This is used*
  *                 to include all of the stress terms.			      *
+ * N.B. It is assumed that stress_part is assocuated with an actual parameter *
+ *      matric containing either the kinetic or virial part of the stress     *
+ *      tensor MULTIPLIED BY THE VOLUME.				      *
  ******************************************************************************/
 void update_hmom(double step, real s, mat_mt h,
-		 mat_mt stress_part, mat_mt hmom)
+		 mat_mt stress_part, mat_mt hmom, int uniform)
 {
    double vol;
    mat_mt sigma;
    mat_mt tmp_mat;
 
-   vol = det(h);
-   mk_sigma(h, sigma);
-
-   mat_mul(stress_part, sigma, tmp_mat);
-   mat_sca_mul(step*s/vol, tmp_mat, tmp_mat);
+   if( uniform ) {
+      mat_sca_mul(step*s*trace(stress_part)/trace_sqr(h), h, tmp_mat);
+   } else {
+      vol = det(h);
+      mk_sigma(h, sigma);
+      
+      mat_mul(stress_part, sigma, tmp_mat);
+      mat_sca_mul(step*s/vol, tmp_mat, tmp_mat);
+   }
    mat_add(hmom, tmp_mat, hmom);
 }

@@ -26,6 +26,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.19  2000/12/06 17:45:34  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.18  2000/11/15 17:52:00  keith
  *       Changed format of dump files.
  *       Added second struct with sufficient information
@@ -121,7 +128,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.18 2000/11/15 17:52:00 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.19 2000/12/06 17:45:34 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -151,16 +158,17 @@ bool_t xdr_contr(XDR *xdrs, contr_mt *cp)
       xdr_long(xdrs, &cp->istep) &&
       xdr_long(xdrs, &cp->nsteps) &&
       xdr_double(xdrs, &cp->step) &&
-      xdr_vector(xdrs, (gptr*)&cp->print_sysdef, 2, sizeof(boolean), (xdrproc_t)xdr_bool) &&
-      xdr_int(xdrs, &cp->const_pressure) &&
-      xdr_bool(xdrs, &cp->reset_averages) &&
+      xdr_vector(xdrs, (gptr*)&cp->print_sysdef, 4, sizeof(boolean), 
+		 (xdrproc_t)xdr_bool) &&
       xdr_int(xdrs, &cp->scale_options) &&
-      xdr_vector(xdrs, (gptr*)&cp->surface_dipole, 2, sizeof(boolean), (xdrproc_t)xdr_bool) &&
+      xdr_bool(xdrs, &cp->surface_dipole) &&
+      xdr_bool(xdrs, &cp->lattice_start) &&
       xdr_opaque(xdrs, cp->sysdef, 6*L_name) &&
-      xdr_vector(xdrs, (gptr*)cp->spare, 23, sizeof(int), (xdrproc_t)xdr_int) &&
+      xdr_vector(xdrs, (gptr*)cp->spare, 23, sizeof(int), 
+		 (xdrproc_t)xdr_int) &&
       xdr_double(xdrs, &cp->ttmass) &&
       xdr_double(xdrs, &cp->rtmass) &&
-      xdr_int(xdrs, &cp->pad) &&
+      xdr_int(xdrs, &cp->const_pressure) &&
       xdr_int(xdrs, &cp->const_temp) &&
       xdr_bool(xdrs, &cp->xdr_write) &&
       xdr_bool(xdrs, &cp->strict_cutoff) &&

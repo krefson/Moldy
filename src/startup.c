@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.25  2001/02/13 17:45:09  keith
+ *      Added symplectic Parrinello-Rahman constant pressure mode.
+ *
  *      Revision 2.24  2000/12/06 17:45:33  keith
  *      Tidied up all ANSI function prototypes.
  *      Added LINT comments and minor changes to reduce noise from lint.
@@ -295,7 +298,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.24 2000/12/06 17:45:33 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.25 2001/02/13 17:45:09 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -333,14 +336,15 @@ void		banner_page(system_mp system, spec_mt *species,
 			    restrt_mt *restart_header);
 void		zero_real(real *r, int n);
 void		eigens(real *A, real *RR, real *E, int N);
-void		transpose(real (*a)[3], real (*b)[3]);
-void		mat_mul(mat_mt a, mat_mt b, mat_mt c); /* 3 x 3 matrix multiplier */
+void		transpose(mat_mt, mat_mt);
+void		mat_mul(mat_mt a, mat_mt b, mat_mt c); 
 void		mat_sca_mul(real s, mat_mt a, mat_mt b); 
-void		mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, 
+void		mat_vec_mul(mat_mt, vec_mp in_vec, vec_mp out_vec, 
 			    int number);
-double          det(real (*a)[3]);
+double          det(mat_mt);
+double		trace_sqr(mat_mt);
 void		q_mul(quat_mp p, quat_mp q, quat_mp r, int n);
-void		rot_to_q(real (*rot)[3], real *quat);
+void		rot_to_q(mat_mt rot, real *quat);
 char		*atime(void);
 double		mdrand(void);
 double		precision(void);
@@ -369,6 +373,13 @@ static	char	afmt[] = "    %8s = %8X %8s = %8X %8s = %8X %8s = %8X\
 #ifndef TEMP_FILE
 #define TEMP_FILE	"MDTEMPX"
 #endif
+/*
+ * Tolerances for comparing stored parameters.
+ */
+#define STEP_TOL 1.0e-12
+#define TEMP_TOL 1.0e-3			/* 1mK */
+#define PRESSURE_TOL 1.0e-6		/* 1PA */
+#define FICTICIOUS_MASS_TOL 1.0e-6
 /*========================== Control file keyword template ===================*/
 /*
  * format SFORM is defined as %NAMLENs in structs.h, to avoid overflow.
@@ -813,8 +824,7 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
    system->momp   = ralloc(system->nmols);
 #ifdef	DEBUG
    printf(" *D* System Dynamic variables (all %d x 3 reals)\n",system->nmols);
-   printf(afmt,"c_of_m",system->c_of_m,"vel",system->mom,"velp",system->momp,
-          "acc",system->acc,"acco",system->acco,"accvo",system->accvo);
+   printf(afmt,"c_of_m",system->c_of_m,"mom",system->mom);
 #endif
 
    if(system->nmols_r > 0)
@@ -835,8 +845,7 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
    zero_real(system->hmomp[0],   9);
 #ifdef	DEBUG
    printf(" *D* System Dynamic variables (all 9 reals)\n");
-   printf(afmt,"h",system->h, "hdot",system->hmom, "hdotp",system->hmomp,
-       "hddot",system->hddot,"hddoto",system->hddoto,"hddotvo",system->hddotvo);
+   printf(afmt,"h",system->h, "hmom",system->hmom);
 #endif
 
    for (spec = species; spec < species+system->nspecies; spec++)
@@ -848,8 +857,7 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
 #ifdef	DEBUG
       printf(" *D* Species %d Dynamic variables (all %d x 3 reals)\n",
 	     spec-species, spec->nmols);
-      printf(afmt,"c_of_m",spec->c_of_m,"vel",spec->mom,"velp",spec->momp,
-          "acc",spec->acc,"acco",spec->acco,"accvo",spec->accvo);
+      printf(afmt,"c_of_m",spec->c_of_m,"mom",spec->mom);
 #endif
       if(spec->rdof > 0)
       {
@@ -860,8 +868,7 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
 #ifdef	DEBUG
          printf(" *D* Species %d Dynamic variables (all %d x 4 reals)\n",
 		spec-species, spec->nmols);
-         printf(afmt,"quat",spec->quat, "avel",spec->avel, "avelp",spec->avelp,
-             "qddot",spec->qddot,"qddoto",spec->qddoto,"qddotvo",spec->qddotvo);
+         printf(afmt,"quat",spec->quat, "avel",spec->avel);
 #endif
       }
       else
@@ -920,7 +927,7 @@ void	check_sysdef(FILE *restart,     /* Restart file pointer               */
 #define LOGACC   11.5 /* p =11.5 <=> acc = 10^-5 */
 #define TRoverTF 5.5  /* Ratio of indiv. interaction times - approx */
 void      init_cutoffs(double *alpha, double *cutoff, double *k_cutoff, 
-		       real (*h)[3], int nsites)
+		       mat_mt h, int nsites)
 {
    double max_cutoff = MIN3(h[0][0], h[1][1], h[2][2]);
    double vol = det(h);
@@ -1027,7 +1034,8 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
 	      site_mp *site_info, 	/* Pointer to site_info array         */
 	      pot_mp *potpar, 		/* Pointer to pot'l parameter array   */
 	      restrt_mt *restart_header,/* Pointer to restart hdr info (out)  */
-	      int *backup_restart)	/* (ptr to) flag said purpose   (out) */
+	      int *backup_restart,	/* (ptr to) flag said purpose   (out) */
+	      boolean *new_ensemble)	/* Flag to re-init ensemble.    (out) */
 {
    FILE		*contr_file,		/* File pointer for control read      */
    		*sysdef,		/* File pointer for sysdef file read  */
@@ -1042,8 +1050,14 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
    long		old_rdf_out;		/* To check if altered on restart     */
    long		old_begin_rdf;		/* To check if altered on restart     */
    int		old_const_pressure;     /* To check if altered on restart     */
+   double	old_pmass;		/* To check if altered on restart     */
+   double	old_pressure;           /* To check if altered on restart     */
+   int		old_const_temp;         /* To check if altered on restart     */
+   double	old_ttmass;		/* To check if altered on restart     */
+   double	old_temp;               /* To check if altered on restart     */
    int		old_nbins;              /* To check if altered on restart     */
    double       old_limit;              /* To check if altered on restart     */
+   real		shmom;
    boolean	flag;			/* Used to test 'fseek'		      */
    long		pos;			/* Where control info starts on input */
    restrt_mt	backup_header;		/* To read backup file header into    */
@@ -1053,6 +1067,7 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
    int		av_convert;		/* Flag for old-fmt averages in restrt*/
    int		vmajor, vminor;		/* Version numbers		      */
    mat_mt	htr, g, tmp_mat;	/* Temporary matricies.		      */
+   int		i;
 
    *backup_restart = 0;
    (void)memst(restart_header,0,sizeof(*restart_header));
@@ -1089,6 +1104,11 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
       old_begin_rdf	     = control.begin_rdf;
       old_rdf_out	     = control.rdf_out;
       old_const_pressure     = control.const_pressure;
+      old_pmass              = control.pmass;
+      old_pressure           = control.pressure;
+      old_const_temp         = control.const_temp;
+      old_ttmass             = control.ttmass;
+      old_temp               = control.temp;
       old_nbins              = control.nbins;
       old_limit              = control.limit;
       conv_control(&prog_unit, false);
@@ -1327,20 +1347,38 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
       }
 
       convert_averages(control.roll_interval, old_roll_interval, av_convert);
-      control.reset_averages = 0;                /* This flag never propagated.*/
+      control.reset_averages = 0;              /* This flag never propagated.*/
 
-      if(control.step != old_step)
+      if(fabs(control.step - old_step) > STEP_TOL)
 	 message(NULLI, NULLP, INFO, NEWTS, old_step, control.step);
-#ifdef BEEMAN
+
+      if( control.const_temp != old_const_temp || 
+	 (control.const_temp && 
+  	     (fabs(control.ttmass - old_ttmass) > FICTICIOUS_MASS_TOL ||
+	      fabs(control.temp - old_temp) > TEMP_TOL)))
+	 *new_ensemble = true;
+
+      if( control.const_pressure != old_const_pressure ||
+	 (control.const_pressure && 
+	    (fabs(control.pmass - old_pmass) > FICTICIOUS_MASS_TOL ||
+	     fabs(control.pressure - old_pressure) > PRESSURE_TOL)))
+	 *new_ensemble = true;
+
       for(i = 0; i < 9; i++)		/* Zap cell velocities if constrained */
 	 if( (control.strain_mask >> i) & 1 )
-	    system->hddot[0][i] = system->hddoto[0][i] = system->hmom[0][i] = 0;
-      if(control.const_pressure == 2 && old_const_pressure == 1) 
+	    system->hmom[0][i] = 0;
+      if(control.const_pressure == 0) 
+	 zero_real(system->hmom[0], 9); /* Zap cell velocities if const vol   */
+      else if(control.const_pressure == 2 && old_const_pressure == 1) 
       {                      /* Enforce consistency if const-p method changed */
-	 for(i = 0; i < 9; i++)		           /* Zap cell velocities etc */
-	    system->hddot[0][i] = system->hddoto[0][i] = system->hmom[0][i] = 0;
+	 shmom = sqrt(trace_sqr(system->hmom)/trace_sqr(system->h));
+	 for(i = 0; i < 9; i++)	
+	    system->hmom[0][i] = shmom*system->h[0][i];
       }
-#endif
+
+      if( control.const_temp == 0)
+	 system->tsmom = system->rsmom = 0.0;
+
       (void)fclose(restart);
       message(NULLI, NULLP, INFO, RESUCC, control.restart_file);
    }               

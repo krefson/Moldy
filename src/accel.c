@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.30  2001/02/15 19:00:37  keith
+ *       Tidied up code and corrected one error in combined barostat  and
+ *       themostat.
+ *
  *       Revision 2.29  2001/02/13 17:45:06  keith
  *       Added symplectic Parrinello-Rahman constant pressure mode.
  *
@@ -291,7 +295,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.29 2001/02/13 17:45:06 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.30 2001/02/15 19:00:37 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -324,9 +328,9 @@ void   leapf_hmom(double step, mat_mt hmom, mat_mt sigma, real s,
 void   leapf_h(double step, mat_mt h, mat_mt hmom, real s, real W);
 void   gleap_therm(double step, real mass, real gkt, real *s, real *smom);
 void   gleap_cell(double step, real pmass, real s, real pressure, int strain_mask, 
-		  mat_mt h, mat_mt hmom, real *smom);
+		  mat_mt h, mat_mt hmom, real *smom, boolean uniform);
 void   update_hmom(double step, real s, mat_mt h,
-		   mat_mt stress_part, mat_mt hmom);
+		   mat_mt stress_part, mat_mt hmom, boolean uniform);
 
 void   make_sites(mat_mt, vec_mp c_of_m_s, quat_mp quat, 
 		  vec_mp p_f_sites, real **site, int nmols, int nsites, 
@@ -897,7 +901,8 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
 	real *dip_mom, 		        /* Total system dipole moment   (out) */
 	mat_mt stress_vir,	 	/* Virial part of stress        (out) */
 	restrt_mt *restart_header,      /* What the name says.           (in) */
-	int backup_restart)	        /* Flag signalling backup restart (in)*/
+	int backup_restart,	        /* Flag signalling backup restart (in)*/
+	int init_H_0)			/* Flag re-init of H_0 required. (in) */
 {
  /*
  * The following declarations are arrays of pointers to the forces
@@ -912,18 +917,12 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
  */
    vec_mp   force_base = ralloc(sys->nmols),
             torque_base = sys->nmols_r?ralloc(sys->nmols_r):0;
-   static double   ke;		       /* (translational) kinetic energy) */
-   double          vol = det(sys->h);
-   static boolean  init = true;
    mat_mt          ke_dyad;
-   double	   tsold;
+   double	   ke;
    spec_mp         spec;
    int             ispec, imol, imol_r;
    int		   nspecies = sys->nspecies;
-   boolean	   just_rescaled      /* Is this first step after rescale? */
-                            = control.scale_interval > 0 &&
-                             (control.istep-1) <= control.scale_end &&
-                             (control.istep-1) % control.scale_interval == 0;
+   boolean	   uni = control.const_pressure> 0 && (control.const_pressure%2==0);
    /*
     * Initialize force and torque arays.
     */
@@ -937,38 +936,27 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
 	 imol_r += spec->nmols;
    }
    /*
-    * Evaluate initial KE on first step of this run or restart. 
-    */
-   if (init)
-   {
-      ke = tot_ke(sys, species);
-      init = false;
-   }
-   /*
-    * Half step for H1.  Also update the KE according to new value of s.
+    * Half step for H1. 
     */
    if( control.const_temp )
-   {
-      tsold = sys->ts;
       gleap_therm(0.5*control.step, control.ttmass, sys->d_of_f*kB*control.temp, 
 		  &sys->ts, &sys->tsmom);
-      ke *=SQR(tsold/sys->ts);
-   }
    /*
     * H2 half step
     */
    if( control.const_pressure )
       gleap_cell(0.5*control.step, control.pmass, sys->ts, control.pressure, 
-		 control.strain_mask, sys->h, sys->hmom, &sys->tsmom);
+		 control.strain_mask, sys->h, sys->hmom, &sys->tsmom, uni);
    /*
     * H3 half step
     */
+   ke = tot_ke(sys, species);
    if( control.const_temp )
       sys->tsmom += 0.5*control.step*ke;
    if( control.const_pressure )
    {
       stress_kin(ke_dyad, sys, species);
-      update_hmom(0.5*control.step, sys->ts, sys->h, ke_dyad, sys->hmom);
+      update_hmom(0.5*control.step, sys->ts, sys->h, ke_dyad, sys->hmom, uni);
    }
    leapf_all_coords(0.5*control.step, sys, species);
    /*
@@ -983,11 +971,11 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
     * due to initial inconsistency between co-ords and momentum variables.
     * N.B.  "ke" still contains old, on-step value at this point.
     */ 
-   if(control.istep == 1 || just_rescaled )
+   if(control.istep == 1 || init_H_0 )
       sys->H_0 = ke + pe[0] + pe[1] + SQR(sys->tsmom)/(2.0*control.ttmass) 
                             + sys->d_of_f*kB*control.temp * log(sys->ts)
 	                    + ke_cell(sys->hmom, control.pmass)
-                            + control.pressure*vol;
+                            + control.pressure*det(sys->h);
 
    leapf_all_momenta(control.step, sys, species, force, torque);
 
@@ -997,7 +985,7 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
       sys->tsmom -= control.step*(pe[0]+pe[1] - sys->H_0);
 
    if( control.const_pressure )
-      update_hmom(control.step, sys->ts, sys->h, stress_vir, sys->hmom);
+      update_hmom(control.step, sys->ts, sys->h, stress_vir, sys->hmom, uni);
    /*
     * Second H3 half step.
     */
@@ -1006,7 +994,7 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    if( control.const_pressure )
    {
       stress_kin(ke_dyad, sys, species);
-      update_hmom(0.5*control.step, sys->ts, sys->h, ke_dyad, sys->hmom);
+      update_hmom(0.5*control.step, sys->ts, sys->h, ke_dyad, sys->hmom, uni);
    }
 
    leapf_all_coords(0.5*control.step, sys, species);
@@ -1015,26 +1003,22 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
     */
    if( control.const_pressure )
       gleap_cell(0.5*control.step, control.pmass, sys->ts, control.pressure, 
-		 control.strain_mask, sys->h, sys->hmom, &sys->tsmom);
+		 control.strain_mask, sys->h, sys->hmom, &sys->tsmom, uni);
    /*
-    * Final half step for H1.  Also update the KE according to new value of s.
+    * Final half step for H1.
     */
    if( control.const_temp )
-   {
-      tsold = sys->ts;
       gleap_therm(0.5*control.step, control.ttmass, sys->d_of_f*kB*control.temp, 
 		  &sys->ts, &sys->tsmom);
-      ke *=SQR(tsold/sys->ts);
-   }
-
 #ifdef DEBUG_THERMOSTAT
-   if( control.istep%control.print_interval == 0)
+   if( control.istep%control.print_interval == 0 && ithread == 0 )
    {
       double H, HP, HS, HHP, HHS;
-      HP = SQR(sys->tsmom)/(2.0*control.ttmass);
       HS = sys->d_of_f*kB*control.temp * log(sys->ts);
+      HP = SQR(sys->tsmom)/(2.0*control.ttmass);
       HHP = ke_cell(sys->hmom, control.pmass);
-      HHS = control.pressure*vol;
+      HHS = control.pressure*det(sys->h);
+      ke = tot_ke(sys, species);
       H = ke + pe[0] + pe[1] + HP + HS + HHP + HHS;
       fprintf(stderr,
              "do_step:  s= %7.4g          ps= %9.5g      H= %12.7g  HK= %12.7g  HV= %12.7g  \n          HP= %12.7g    HS= %12.7g   HHP= %12.7g  HHS= %12.7g   (H-H_0)s= %12.7g\n",

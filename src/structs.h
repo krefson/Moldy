@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.15 2000/11/16 10:54:20 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.16 2001/02/13 17:45:09 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.16  2001/02/13 17:45:09  keith
+ * Added symplectic Parrinello-Rahman constant pressure mode.
+ *
  * Revision 2.15  2000/11/16 10:54:20  keith
  * Corrected bad declaration of struct mol_mt in structs.h
  * Removed obsolete "acceleration interpolation" from startup.
@@ -184,10 +187,10 @@ typedef struct                  /* Control parameters for simulation          */
    double       step;           /* Value of timestep in program units         */
    boolean      print_sysdef,   /* Flag to print out system specification file*/
                 new_sysdef,     /* Read new sysdef instead of restart file one*/
-                const_pressure, /* Flag to turn on P&R CP method              */
-                reset_averages, /* Flag to set average counters to zero       */
-                scale_options,  /* Scale each species separately              */
-                surface_dipole, /* Flag surface dipole term in Ewald sum      */
+                place1,		/* Placeholder for restart file compatibility */
+                reset_averages; /* Flag to set average counters to zero       */
+   int          scale_options;  /* Scale each species separately              */
+   boolean      surface_dipole, /* Flag surface dipole term in Ewald sum      */
                 lattice_start;  /* Flag to read starting state from sysdef    */
    char         sysdef[L_name],         /* Name of system specification file  */
                 restart_file[L_name],   /* Name of restart configuration file */
@@ -198,8 +201,8 @@ typedef struct                  /* Control parameters for simulation          */
    int          spare[23];      /* Extra space for expansion (should be ODD)  */
    double       ttmass,         /* Nose-Hoover trans temp mass parameter      */
                 rtmass;         /* Nose-Hoover rotat temp mass parameter      */
-   int		pad;		/* To keep alignment of struct.		      */
-   int          const_temp;     /* Flag to turn on N&H CT method              */
+   int		const_pressure; /* Flag to turn on P&R CP method              */
+   int          const_temp;     /* Flag to turn on NP themostat method        */
    boolean      xdr_write,      /* Write restart, dump files in portable way. */
                 strict_cutoff;  /* Perform real-space cutoff rigorously       */
    int          strain_mask;    /* Mask of constrained elements of h matrix   */

@@ -27,6 +27,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  * $Log: main.c,v $
+ * Revision 2.18  2001/02/14 14:55:02  keith
+ * Added # procs to final timing message
+ *
  * Revision 2.17  2000/12/06 17:45:31  keith
  * Tidied up all ANSI function prototypes.
  * Added LINT comments and minor changes to reduce noise from lint.
@@ -191,7 +194,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.17 2000/12/06 17:45:31 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.18 2001/02/14 14:55:02 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -206,20 +209,29 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.17 
 #include	"structs.h"
 #include	"messages.h"
 /*========================== External function declarations ==================*/
-void	start_up(char *contr_name, char *out_name, system_mp system, spec_mp *species, site_mp *site_info, pot_mp *potpar, restrt_mt *restart_header, int *backup_restart);
-void	do_step(system_mp sys, spec_mt *species, site_mt *site_info, pot_mt *potpar, vec_mt (*meansq_f_t)[2], double *pe, real *dip_mom, real (*stress)[3], restrt_mt *restart_header, int backup_restart);
-void	values(system_mp system, spec_mt *species, vec_mt (*meansq_f_t)[2], double *pe, real *dipole, real (*stress_vir)[3]);
+void	start_up(char *contr_name, char *out_name, system_mp system, 
+		 spec_mp *species, site_mp *site_info, pot_mp *potpar, 
+		 restrt_mt *restart_header, int *backup_restart, boolean *);
+void	do_step(system_mp sys, spec_mt *species, site_mt *site_info, 
+		pot_mt *potpar, vec_mt (*meansq_f_t)[2], double *pe, 
+		real *dip_mom, real (*stress)[3], restrt_mt *restart_header, 
+		int backup_restart, boolean re_init_H0);
+void	values(system_mp system, spec_mt *species, vec_mt (*meansq_f_t)[2], 
+	       double *pe, real *dipole, real (*stress_vir)[3]);
 double	value(av_n type, int comp);
 void	averages(void);
 void	output(void);
 void	rescale(system_mp system, spec_mp species);
 void	print_rdf(system_mt *system, spec_mt *species, site_mt *site_info);
-void	print_config(char *save_name, system_mp system, spec_mp species, site_mp site_info, pot_mp potpar);
+void	print_config(char *save_name, system_mp system, spec_mp species, 
+		     site_mp site_info, pot_mp potpar);
 double	cpu(void);
-void	write_restart(char *save_name, restrt_mt *header, system_mp system, spec_mp species, site_mp site_info, pot_mp potpar);
+void	write_restart(char *save_name, restrt_mt *header, system_mp system, 
+		      spec_mp species, site_mp site_info, pot_mp potpar);
 void	purge(char *file);
 double  rt_clock(void);
-gptr    *talloc(int n, size_mt size, int line, char *file);		       /* Interface to memory allocator       */
+gptr    *talloc(int n, size_mt size, int line, char *file);
+				       /* Interface to memory allocator       */
 void    tfree(gptr *p);		       /* Free allocated memory	      	      */
 #ifdef SPMD
 void    par_begin(int *argc, char ***argv, int *ithread, int *nthreads);
@@ -228,12 +240,14 @@ void    par_finish(void);
 void    par_isum(int *buf, int n);
 void    par_imax(int *idat);
 void    par_broadcast(gptr *buf, int n, size_mt size, int ifrom);
-void    replicate(contr_mt *control, system_mt *system, spec_mt **spec_ptr, site_mt **site_info, pot_mt **pot_ptr, restrt_mt *restart_header);
+void    replicate(contr_mt *control, system_mt *system, spec_mt **spec_ptr, 
+		  site_mt **site_info, pot_mt **pot_ptr, 
+		  restrt_mt *restart_header);
 #endif
 void	note(char *, ...);		/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
-void	rmlockfiles(void);			/* Delete all lock files.	      */
-gptr    *rdf_ptr(int *size);                     /* Return ptr to start of rdf data    */
+void	rmlockfiles(void);		/* Delete all lock files.	      */
+gptr    *rdf_ptr(int *size);            /* Return ptr to start of rdf data    */
 /*========================== External data definition ========================*/
 contr_mt control;                           /* Main simulation control parms. */
 int ithread=0, nthreads=1;
@@ -270,6 +284,7 @@ int main(int argc, char **argv)
    pot_mt	*potpar;
    restrt_mt	restart_header;
    int		backup_restart;
+   boolean	init_H_0 = false;
    static mat_mt	stress_vir;
    static double	pe[NPE];
 #ifdef SPMD
@@ -297,7 +312,7 @@ int main(int argc, char **argv)
 #endif
       start_up((argc>1)?argv[1]:"", (argc>2)?argv[2]:"",
 	       &system, &species, &site_info, &potpar, 
-	       &restart_header, &backup_restart);
+	       &restart_header, &backup_restart, &init_H_0);
 #if defined(SPMD) && !defined(READALL)
    replicate(&control, &system, &species, &site_info, &potpar, 
 	     &restart_header);
@@ -345,7 +360,9 @@ int main(int argc, char **argv)
 
       do_step(&system, species, site_info, potpar,
 	      meansq_f_t, pe, dip_mom, stress_vir, 
-	      &restart_header, backup_restart);
+	      &restart_header, backup_restart, init_H_0);
+
+      init_H_0 = false;
       
       values(&system, species, meansq_f_t, pe, dip_mom, stress_vir);
    
@@ -356,7 +373,10 @@ int main(int argc, char **argv)
       {
 	 if(control.istep <= control.scale_end &&
 	    control.istep % control.scale_interval == 0)
+	 {
 	    rescale(&system, species);
+	    init_H_0 = true;
+	 }
 	 if( ithread == 0 && control.istep == control.scale_end)
 	    note("Temperature scaling turned off after step %ld", control.istep);
       }
