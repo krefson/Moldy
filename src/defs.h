@@ -1,7 +1,10 @@
 /*
- * $Header: defs.h,v 1.3 89/06/09 12:17:14 keith Exp $
+ * $Header: /home/tigger/keith/md/RCS/defs.h,v 1.3 89/06/14 14:16:35 keith Stab $
  *
  * $Log:	defs.h,v $
+ * Revision 1.3  89/06/14  14:16:35  keith
+ * Added vectorisation for stellar and recognised sysV & SysV macros
+ * 
  * Revision 1.2  89/05/22  14:05:51  keith
  * Added rescale-separately option, changed 'contr_t' format.
  * 
@@ -18,8 +21,8 @@
  * Version ID strings
  */
 #define          REVISION         "$Revision: 1.3 $"
-#define		 REVISION_DATE    "$Date: 89/06/09 12:17:14 $"
-#define		 REVISION_STATE   "$State: Exp $"
+#define		 REVISION_DATE    "$Date: 89/06/14 14:16:35 $"
+#define		 REVISION_STATE   "$State: Stab $"
 
 /* Vectorisation directive translation*/
 #ifdef CRAY
@@ -94,12 +97,14 @@
 #define	CONV_F		(MUNIT*LUNIT/(TUNIT*TUNIT)*sqrt(AVOGAD))/* N/mol      */
 #define	CONV_N		(CONV_F*LUNIT)				/* Nm/mol     */
 #define	CONV_D		(QUNIT*LUNIT*4.8e10/_ELCHG)
+#define CONV_Q		(QUNIT/_ELCHG)
 #define	CONV_E_N	"kJ/mol"
 #define	CONV_T_N	"K"
 #define	CONV_P_N	"Mpa"
 #define	CONV_F_N	"N**2/mol"
 #define	CONV_N_N	"(Nm)**2/mol"
 #define	CONV_D_N	"D"
+#define CONV_Q_N	"Qe"
 
 typedef	double			real;
 typedef	int			boolean;
