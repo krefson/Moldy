@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: alloc.c,v $
+ *       Revision 2.9  1997/11/27 16:24:49  keith
+ *       Removed titan-specific THREAD_SYS stuff for cleanliness.
+ *
  *       Revision 2.8  1994/06/08 13:08:08  keith
  *       New version of array allocator which breaks up requests for DOS.
  *       Now must use specific "afree()" paired with arralloc().
@@ -145,7 +148,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/alloc.c,v 2.8 1994/06/08 13:08:08 keith stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/alloc.c,v 2.9 1997/11/27 16:24:49 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
@@ -243,7 +246,7 @@ gptr	*p;
    free((gptr*)p);
 }
 
-#ifdef __MSDOS__
+#ifdef ALLOC_SEPARATELY
 union u {struct {int ndim, noffset, len;} b; word_mt * p; wide_mt w;};
 #define bsize (sizeof(union u)/sizeof(word_mt*))
 #define bwsize (sizeof(union u)/sizeof(word_mt))
@@ -260,13 +263,13 @@ gptr *pp;
    tfree((gptr*)(p-bsize));
 }
       
-#else
+#else /* ALLOC_SEPARATELY*/
 void 	afree(p)
 gptr	*p;
 {
    tfree(p);
 }
-#endif
+#endif /* ALLOC_SEPARATELY*/
 /******************************************************************************
  *  arralloc.   Allocate a psuedo array of any dimensionality and type with   *
  *  specified lower and upper bounds for each dimension.  Each dimension is   *
@@ -277,7 +280,7 @@ gptr	*p;
  *  xfree(array);					     	      *
  *  (N.B. if lower bound of 1st dimension != 0 then free array+l.b.           *
  ******************************************************************************/
-#ifdef __MSDOS__
+#ifdef ALLOC_SEPARATELY
 
 word_mt **subarray(size, ndim, len, ap)
 size_mt	size;
@@ -362,7 +365,7 @@ va_dcl
 
    return (gptr*)p;
 }
-#else
+#else /* ALLOC_SEPARATELY*/
 #define CSA(a) ((char*)(a))
 #define ALIGN(a,base,b)	((word_mt*)(CSA(base)+((CSA(a)-CSA(base))+(b)-1)/(b)*(b) ))
 static
@@ -404,7 +407,7 @@ va_list	ap;
 gptr		*arralloc(va_alist)
 va_dcl
 {
-   va_list	ap, ap2;
+   va_list	ap;
    word_mt		**p, **start;
    int		lb, ub, idim;
    long		n_ptr = 0, n_data = 1;
@@ -427,7 +430,6 @@ va_dcl
    /*
     * Cycle over dims, checking bounds and accumulate # pointers & data items.
     */
-   ap2 = ap;			/* Save ap for later use by subarray() */
    for(idim = 0; idim < ndim; idim++)
    {
       lb = va_arg(ap, int);
@@ -455,14 +457,27 @@ va_dcl
 #endif
    start = (word_mt**)talloc(1,
 			     (size_mt)((n_data+1)*size+n_ptr*sizeof(word_mt**)),
-			     __LINE__, __FILE__);
+		
+	     __LINE__, __FILE__);
+   /*
+    * Rescan argument list to pass to subarray()
+    */
+   va_end(ap);
+#if defined(ANSI) || defined(__STDC__)
+   va_start(ap, ndim);
+#else
+   va_start(ap);
+   size = va_arg(ap, size_mt);
+   ndim = va_arg(ap, int);
+#endif
+
    /*
     * Set up pointers to form dope-vector array.
     */
-   subarray(size, ndim-1, 1L, &p, start, (word_mt*)start, ap2);
+   subarray(size, ndim-1, 1L, &p, start, (word_mt*)start, ap);
 
    va_end(ap);   
 
    return (gptr*)p;
 }
-#endif
+#endif /* ALLOC_SEPARATELY*/
