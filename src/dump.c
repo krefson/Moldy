@@ -23,6 +23,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.6  90/04/09  14:49:33  keith
+ * Now tests for failure of mutate() and gives up rather than lloping.
+ * 
  * Revision 1.5  89/10/16  15:47:37  keith
  * Fixed DUMP_SIZE macro to be correct!
  * 
@@ -43,7 +46,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/dump.c,v 1.5 89/10/16 15:47:37 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.6 90/04/09 14:49:33 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -95,7 +98,6 @@ double		pe;
    long		file_pos,		/* Offset within file of current rec. */
    		file_len;		/* Length of file		      */
    		boolean errflg = false;
-   static	boolean init = true;
 #define		NMUTATES 10   		/* Max number of mutation attempts.   */
    int		nmutates = 0;   	/* Number of mutation attempts.	      */
  
@@ -126,7 +128,7 @@ double		pe;
 
       if( !errflg )
       {
-	 if( init &&
+	 if( dump_header.timestamp < restart_header.timestamp &&
 	    dump_header.restart_timestamp != restart_header.prev_timestamp )
 	     message(NULLI, NULLP, FATAL, CONTIG, fname);
 
@@ -148,7 +150,8 @@ double		pe;
       }
       else
       {
-	 (void)fclose(dumpf);
+	 if( dumpf != NULL )
+	    (void)fclose(dumpf);
 	 if( ndumps != 0 )
 	 {
 	    ndumps = 0; filenum = 0;
@@ -160,7 +163,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 1.5 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 1.6 $"+11,
 		                     sizeof dump_header.vsn-1);
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;
@@ -216,7 +219,6 @@ double		pe;
 
    (void)fclose(dumpf);
    cfree((char*)dump_buf);
-   init = false;
 }
 /******************************************************************************
  *  mutate  Take a string defining a file name and randomly alter characters  *
