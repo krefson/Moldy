@@ -18,6 +18,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.18  92/06/26  17:02:42  keith
+ * Got rid of assumption that memory returned by talloc() or
+ * arralloc() is zeroed.  This enhances ANSI compatibility.
+ * Removed memory zeroing from alloc.c() in consequence.
+ * 
  * Revision 1.17  92/06/05  13:37:02  keith
  * Conditionally undefed va_dcl for ANSI, stdarg.h case --
  * just prevents warning from gcc.
@@ -86,7 +91,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.17 92/06/05 13:37:02 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.18 92/06/26 17:02:42 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
@@ -100,8 +105,8 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.17 92
 #else
 #   include <varargs.h>
 #endif
-#include "stddef.h"
 #include "stdlib.h"
+#include "stddef.h"
 #include "string.h"
 #ifdef PARALLEL
 # ifdef ardent
@@ -120,6 +125,7 @@ int	malloc_verify();
 int	malloc_debug();
 #endif
 /*============================================================================*/
+typedef double word_t;
 /******************************************************************************
  * talloc()	Call Calloc to allocate memory, test result and stop if failed*
  ******************************************************************************/
@@ -162,16 +168,16 @@ gptr	*p;
  *  (N.B. if lower bound of 1st dimension != 0 then free array+l.b.           *
  ******************************************************************************/
 #define CSA(a) ((char*)(a))
-#define ALIGN(a,base,b)	((int*)(CSA(base)+((CSA(a)-CSA(base))+(b)-1)/(b)*(b) ))
+#define ALIGN(a,base,b)	((word_t*)(CSA(base)+((CSA(a)-CSA(base))+(b)-1)/(b)*(b) ))
 
 void 	subarray(size, ndim, prdim, pp, qq, base, ap)
 size_t  size;
 int	ndim;
 long	prdim;
-int	***pp, **qq, *base;
+word_t	***pp, **qq, *base;
 va_list	ap;
 {
-   int	*dd = ALIGN(qq,base,size),	**dpp = (int**)pp;
+   word_t	*dd = ALIGN(qq,base,size),	**dpp = (word_t**)pp;
    int i,	lb = va_arg(ap, int),
 		dim = va_arg(ap, int) - lb + 1;
 
@@ -183,11 +189,11 @@ va_list	ap;
 	 pp[i] = qq + i*dim - lb;
       }
 
-      subarray(size, ndim-1, prdim*dim, (int***)qq, qq+prdim*dim, base, ap);
+      subarray(size, ndim-1, prdim*dim, (word_t***)qq, qq+prdim*dim, base, ap);
    }
    else			/* Last recursion - set up pointers to data   */
       for( i = 0; i < prdim; i++)
-	 dpp[i] = dd + (i*dim - lb)*size/sizeof(int);
+	 dpp[i] = dd + (i*dim - lb)*size/sizeof(word_t);
 }
             
 #if defined(ANSI) || defined(__STDC__)
@@ -203,7 +209,7 @@ gptr		*arralloc(va_alist)
 va_dcl
 {
    va_list	ap, ap2;
-   int		**p, **start;
+   word_t		**p, **start;
    int		lb, ub, idim;
    long		n_ptr = 0, n_data = 1;
 #if defined(ANSI) || defined(__STDC__)
@@ -236,12 +242,12 @@ va_dcl
    /*
     *  Allocate space  for pointers and data.
     */
-   start = (int**)talloc(1, (size_t)((n_data+1)*size+n_ptr*sizeof(void**)),
+   start = (word_t**)talloc(1, (size_t)((n_data+1)*size+n_ptr*sizeof(word_t**)),
 			  __LINE__, __FILE__);
    /*
     * Set up pointers to form dope-vector array.
     */
-   subarray(size, ndim-1, 1L, &p, start, (int*)start, ap2);
+   subarray(size, ndim-1, 1L, &p, start, (word_t*)start, ap2);
 
    va_end(ap);   
 
