@@ -10,8 +10,8 @@
  * RCS INFORMATION:
  *
  *      $RCSfile: ReadDCD.h,v $
- *      $Author: billh $        $Locker: keith $                $State: Exp $
- *      $Revision: 1.3 $      $Date: 1995/05/11 23:42:25 $
+ *      $Author: keith $        $Locker:  $                $State: Exp $
+ *      $Revision: 1.4 $      $Date: 1997/11/27 15:58:19 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -25,9 +25,9 @@
 #define READ_DCD_H
 
 #include <stdio.h>
-#include <stdlib.h>
+#include "stdlib.h"
 #include <errno.h>
-#include <time.h>
+#include "time.h"
 
 /*  DEFINE ERROR CODES THAT MAY BE RETURNED BY DCD ROUTINES		*/
 #define DCD_DNE		-2	/*  DCD file does not exist		*/
