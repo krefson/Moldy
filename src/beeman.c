@@ -38,6 +38,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: beeman.c,v $
+ *       Revision 2.8  1995/12/04 11:45:49  keith
+ *       Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
+ *       Thanks to V. Murashov.
+ *
  * Revision 2.7  1994/06/08  13:09:29  keith
  * Protected against possible bus error for systems with no
  * rotational freedom by making all references to "quat" etc conditional
@@ -96,7 +100,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/beeman.c,v 2.7 1994/06/08 13:09:29 keith stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/beeman.c,v 2.8 1995/12/04 11:45:49 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -298,7 +302,7 @@ system_mp	sys;			/* pointer to whole-system record     */
 	    sys->qddotvo[0], 4*sys->nmols_r);
       constrain(sys->quat, sys->qdot, sys->nmols_r);
 
-      if (control.const_temp)
+      if (control.const_temp == 1)
          beeman_2(sys->ra, sys->ra, sys->radot, sys->radoto,
                   sys->radotvo, sys->nspecies);
 
@@ -307,7 +311,7 @@ system_mp	sys;			/* pointer to whole-system record     */
       beeman_2(sys->hdot[0], sys->hdot[0], sys->hddot[0], sys->hddoto[0],
 	       sys->hddotvo[0], 9);
 
-   if (control.const_temp)
+   if (control.const_temp == 1)
       beeman_2(sys->ta, sys->ta, sys->tadot, sys->tadoto,
                sys->tadotvo, sys->nspecies);
 #ifdef DEBUG3

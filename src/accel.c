@@ -25,6 +25,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.14  1996/03/14 14:42:27  keith
+ *       Altered "rescale()" to suntract net velocity in case of
+ *       separate-species rescaling, since that doesn't conserve momentum.
+ *
  *       Revision 2.13  1996/01/15 15:14:00  keith
  *       De "lint"-ed the code.
  *       Removed "old" RDF code call.
@@ -207,7 +211,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.13 1996/01/15 15:14:00 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.14 1996/03/14 14:42:27 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -255,6 +259,8 @@ double		sum();		       /* Fast vector sum.		      */
 void            vscale();	       /* Vector by constant multiply	      */
 double          vec_dist();	       /* normalised vector distance	      */
 void		thermalise();	       /* Randomize velocities to given temp  */
+double		trans_ke();	       /* Compute translational kinetic en.   */
+double		rot_ke();	       /* Compute rotational kinetic en.      */
 void            hoover_tr();           /* Corrects forces due to thermostat   */
 void            hoover_rot();          /* Corrects forces due to thermostat   */
 double          gaussiant();           /* Return Force*vel                    */
@@ -456,10 +462,15 @@ spec_mp		species;
    double          rtemp_mass, ttemp_mass;
    double          ttemp = 0.0, rtemp = 0.0;
 
-   for(ispec = 0; ispec < nspecies; ispec++)
+   for(spec=species, ispec = 0; ispec < nspecies; spec++, ispec++)
    {
-      temp_value[2*ispec  ] = value(tt_n,ispec);
-      temp_value[2*ispec+1] = value(rt_n,ispec);
+      temp_value[2*ispec  ] = 
+	trans_ke(sys->h, spec->velp, spec->mass, spec->nmols)
+	   /(1.5*spec->nmols*kB);
+      if(spec->rdof > 0)			/* Only if polyatomic species */
+         temp_value[2*ispec+1] = 
+	   rot_ke(spec->quat, spec->qdotp, spec->inertia, spec->nmols)
+	   /(0.5*kB*spec->rdof*spec->nmols);
    }
    /*
     *  Get average of translational and rotational temps (per species)
@@ -653,7 +664,7 @@ int	ptype;				/* Potential type selector	      */
 {
    double pe = 0.0;
    real f,rr;
-   real **pp = aalloc(NPOTP,real*);
+   real *pp[NPOTP];
    int  i;
 
    for(i=0; i<NPOTP; i++)
@@ -1010,6 +1021,7 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
  * Correction to centre of mass accelerations for constant pressure algorithm
  * First get scaled accelerations by multiplying by the inverse h matrix and
  * add P&R term. Then calculate the 'accelerations' of the unit cell matrix
+ * and use the velocity predictor to step the cell "velocities".
  */
    invert(sys->h, hinv);
    mat_vec_mul(hinv, sys->acc, sys->acc, sys->nmols);
@@ -1020,46 +1032,102 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
 	 energy_dyad(ke_dyad, sys->h, spec->velp, spec->mass, spec->nmols);
       rahman(stress, sys->h, sys->hddot, ke_dyad,
 	     control.pressure, control.pmass, control.strain_mask);
+      beeman_2(sys->hdot[0], sys->hdotp[0], sys->hddot[0], sys->hddoto[0],
+	       sys->hddotvo[0], 9);
    }
 /*
- * Nose-Hoover thermostat added by VVMurashov , started on 20.10.95
+ * Iterate linear velocity dependant parts with beeman step 2 until convergence
  */
-   if (control.const_temp == 1)
-      nhtherm(sys, species);
+   if (control.const_pressure || control.const_temp)
+   {
+      iter = 0;
+      acc_tmp = ralloc(sys->nmols);
+      vel_tmp = ralloc(sys->nmols);
+      do
+      {
+	 iter++;
+	 if(iter > ITER_MAX)
+	    message(NULLI, NULLP, FATAL, NCNVRG, iter, 
+		    vec_dist(vel_tmp[0], sys->velp[0], 3 * sys->nmols));
+         if (control.const_pressure)
+	    parinello(sys->h, sys->hdotp, sys->velp, sys->acc, acc_tmp,
+		      sys->nmols);
+         else 
+	    memcp(acc_tmp[0], sys->acc[0], 3 * sys->nmols * sizeof(real));
 /*
+ * Nose-Hoover thermostat added by VVMurashov , started on 20.10.95
+ *
  * Gaussian thermostat added by VVM , started on 3/11/95
  * General formular alpha = alpha1/alpha2, where alpha1 = SUM force*vel
  * and alpha2 = SUM mass * vel ^ 2. Sys->tap(rap) is used to store 
  * alpha1's and temp_value is used to store alpha2's temporarily.
  */
-   if (control.const_temp == 2)
-      gtherm(sys, species, force, torque);
+ 	 if (control.const_temp == 1)
+	 {
+	    nhtherm(sys, species);
+	    beeman_2(sys->ta, sys->tap, sys->tadot, sys->tadoto,
+		     sys->tadotvo, nspecies);
+#ifdef DEBUG3
+   printf("ta %8.4f tap %8.4f tadot %8.4f tadoto %8.4f\n", sys->ta[0],
+						 sys->tap[0],
+						 sys->tadot[0],
+						 sys->tadoto[0]);
+#endif
+	 }
+	 if (control.const_temp == 2)
+	    gtherm(sys, species, force, torque);
+         if (control.const_temp)
+         {
+            for (ispec = 0, j = 0, spec = species; ispec < nspecies; ispec++,
+                 spec++)
+            {
+	       if( ! spec->framework )
+	       {
+                 hoover_tr(sys->tap[ispec], acc_tmp+j, acc_tmp+j, 
+                         sys->velp+j, spec->nmols);
+               }
+               j+=spec->nmols;
+            }
+         }
+	 memcp(vel_tmp[0], sys->velp[0], 3 * sys->nmols * sizeof(real));
+	 beeman_2(sys->vel[0], sys->velp[0], acc_tmp[0], sys->acco[0],
+		  sys->accvo[0], 3 * sys->nmols);
+      } while (vec_dist(vel_tmp[0], sys->velp[0], 3 * sys->nmols) > CONVRG);
+#ifdef DEBUG
+      printf("Velocities converged in %d iterations \n", iter);
+#endif
+      memcp(sys->acc, acc_tmp, 3*sys->nmols * sizeof(real));
+      xfree(acc_tmp);
+      xfree(vel_tmp);
+   }
 /*
- * Iterate velocity dependant parts with beeman step 2 until convergence
+ * Iterate angular velocity dependant parts with beeman step 2 until convergence
  */
    if (sys->nmols_r > 0)
    {
       iter = 0;
       qd_tmp = qalloc(sys->nmols_r);
       acc_tmp = ralloc(sys->nmols_r);
-
-      if (control.const_temp == 1)
-         beeman_2(sys->ra, sys->rap, sys->radot, sys->radoto,
-                  sys->radotvo, nspecies);
-
-#ifdef DEBUG3
-   printf("ra %8.4f rap %8.4f radot %8.4f radoto %8.4f\n", sys->ra[0],
-						 sys->rap[0],
-						 sys->radot[0],
-						 sys->radoto[0]);
-#endif
-
       do
       {
 	 iter++;
 	 if(iter > ITER_MAX)
 	    message(NULLI, NULLP, FATAL, NCNVRG, iter, 
 		    vec_dist(qd_tmp[0], sys->qdotp[0], 4 * sys->nmols_r));
+ 	 if (control.const_temp == 1)
+	 {
+	    nhtherm(sys, species);
+	    beeman_2(sys->ra, sys->rap, sys->radot, sys->radoto,
+		     sys->radotvo, nspecies);
+	 }
+	 if (control.const_temp == 2)
+	    gtherm(sys, species, force, torque);
+#ifdef DEBUG3
+   printf("ra %8.4f rap %8.4f radot %8.4f radoto %8.4f\n", sys->ra[0],
+						 sys->rap[0],
+						 sys->radot[0],
+						 sys->radoto[0]);
+#endif
          for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
 	    if (spec->rdof > 0)
             {
@@ -1089,51 +1157,6 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
 #endif
       xfree(qd_tmp);
       xfree(acc_tmp);
-   }
-   if (control.const_pressure || control.const_temp)
-   {
-      acc_tmp = ralloc(sys->nmols);
-      vel_tmp = ralloc(sys->nmols);
-      if (control.const_pressure)
-         beeman_2(sys->hdot[0], sys->hdotp[0], sys->hddot[0], sys->hddoto[0],
-	          sys->hddotvo[0], 9);
-      if (control.const_temp == 1)
-         beeman_2(sys->ta, sys->tap, sys->tadot, sys->tadoto,
-                  sys->tadotvo, nspecies);
-#ifdef DEBUG3
-   printf("ta %8.4f tap %8.4f tadot %8.4f tadoto %8.4f\n", sys->ta[0],
-						 sys->tap[0],
-						 sys->tadot[0],
-						 sys->tadoto[0]);
-#endif
-      do
-      {
-         if (control.const_pressure)
-	    parinello(sys->h, sys->hdotp, sys->velp, sys->acc, acc_tmp,
-		      sys->nmols);
-         else 
-	    memcp(acc_tmp[0], sys->acc[0], 3 * sys->nmols * sizeof(real));
-
-         if (control.const_temp)
-         {
-            for (ispec = 0, j = 0, spec = species; ispec < nspecies; ispec++,
-                 spec++)
-            {
-	       if( ! spec->framework )
-	       {
-                 hoover_tr(sys->tap[ispec], acc_tmp+j, acc_tmp+j, 
-                         sys->velp+j, spec->nmols);
-               }
-               j+=spec->nmols;
-            }
-         }
-	 memcp(vel_tmp[0], sys->velp[0], 3 * sys->nmols * sizeof(real));
-	 beeman_2(sys->vel[0], sys->velp[0], acc_tmp[0], sys->acco[0],
-		  sys->accvo[0], 3 * sys->nmols);
-      } while (vec_dist(vel_tmp[0], sys->velp[0], 3 * sys->nmols) > CONVRG);
-      memcp(sys->acc, acc_tmp, 3*sys->nmols * sizeof(real));
-      xfree(acc_tmp);
-      xfree(vel_tmp);
    }
 /*
  *  Apply constraint to any framework molecules.
