@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1.4 1999/10/29 16:44:28 keith Exp keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1.5 1999/11/01 17:24:16 keith Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,12 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.6  1999/11/12  11:15:48  craig
+ *  Fixed bug in species number iteration.
+ *
+ *  Revision 1.5  1999/11/01 17:24:16  keith
+ *  Got rid of declaration of "comm" as it's already in "utlsup.h".
+ *
  *  Revision 1.4  1999/10/29 16:44:28  keith
  *  Added function to read velocities from dump files.
  *
@@ -123,10 +129,9 @@ vec_mt		*vel;
 int		sp_range[3];
 {
    spec_mt	*spec;
-   int		i, imol, ispec, totmol=0;
+   int		i, imol, totmol=0;
  
-   for( ispec = sp_range[0], spec=species+sp_range[0]; ispec <= sp_range[1]; 
-                                              ispec+=sp_range[2], spec+=sp_range[2])
+   for( spec = species+sp_range[0]; spec <= species+sp_range[1]; spec+=sp_range[2])
      for( imol = 0; imol < spec->nmols; totmol++, imol++)
 	   for( i = 0; i < 3; i++)
 	      vel[totmol][i] = spec->vel[imol][i];
@@ -157,8 +162,8 @@ int             vstart, vfinish, vinc, max_av, it_inc;
 	 vel0 = vel[it];
 	 vel1 = vel[it+irec];
          totmol=0;
-	 for( ispec = sp_range[0], spec = species+sp_range[0]; ispec <= sp_range[1];
-	    spec += sp_range[2], ispec += sp_range[2])
+	 for( ispec = 0, spec = species+sp_range[0]; spec <= species+sp_range[1];
+	    spec += sp_range[2], ispec++)
          {
             vaftmp = 0.0;
 	    for( imol = 0; imol < spec->nmols; totmol++, imol++)
@@ -193,8 +198,8 @@ int             vstart, vfinish, vinc, max_av, it_inc;
 	 vel0 = vel[it];
 	 vel1 = vel[it+irec];
          totmol=0;
-	 for( ispec = sp_range[0], spec = species+sp_range[0]; ispec <= sp_range[1];
-	    spec += sp_range[2], ispec += sp_range[2])
+	 for( ispec = 0, spec = species+sp_range[0]; spec <= species+sp_range[1];
+	    spec += sp_range[2], ispec++ )
          {
             for( i = 0; i < 3; i++)
                vtftmp0[i] = vtftmp1[i] = 0;
@@ -218,11 +223,10 @@ real            **vaf;
 int             max_av;
 int             nvaf, sp_range[3];
 {
-   int          ispec, ivaf;
+   int          ispec=0, ivaf;
    spec_mp      spec;
 
-   for( spec = species+sp_range[0], ispec = sp_range[0]; ispec <= sp_range[1];
-                                   spec+=sp_range[2], ispec+=sp_range[2])
+   for( spec = species+sp_range[0]; spec <= species+sp_range[1]; spec += sp_range[2])
    {
        puts(spec->name);
        for( ivaf = 0; ivaf < nvaf; ivaf++)
@@ -230,6 +234,7 @@ int             nvaf, sp_range[3];
           vaf[ivaf][ispec] /= max_av;
           (void)printf("%10.7f\n",vaf[ivaf][ispec]);
        }
+       ispec++;
    }
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
@@ -582,7 +587,7 @@ char	*argv[];
      if (max_av < 1)
           max_av = 1;
 
-     vaf = (real**)arralloc(sizeof(real),2,0,nvaf-1,0,nspecies);
+     vaf = (real**)arralloc(sizeof(real),2,0,nvaf-1,0,nspecies-1);
      zero_real(vaf[0],nvaf*(nspecies+1));
 
   /* Calculate and print vaf/vtf values */

@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.21 1999/10/29 16:44:28 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.22 1999/11/01 17:25:43 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,9 +35,15 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.2
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 1.22  1999/11/12  11:37:51  craig
+ *  Fixed bug in species number iteration.
+ *
+ *  Revision 1.22  1999/11/01 17:25:43  keith
+ *  Got rid of initialization of array for pre-ANSI compilers.
+ *
  *  Revision 1.21  1999/10/29 16:44:28  keith
- *  Updated usage message
- *  Now uses mat_vec_mul() not m.._mul3().
+ *  Updated usage message.
+ *  Now uses mat_vec_mul() not mat_vec_mul3().
  *
  *  Revision 1.21  1999/10/25  15:34:32  craig
  *  Re-added zeroing of range_flag for non-ANSI machines.
@@ -77,7 +83,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.2
  *  This is for use with GNU autoconf.
  *
  *  Revision 1.14  1998/01/28 09:55:05  keith
- *  Changes HAS_POPEN to more natural HAVE_POPEN.
+ *  Changed HAS_POPEN to more natural HAVE_POPEN.
  *  Fixed minor portability problem with struct initialization.
  *
  *  Revision 1.13  1998/01/27 17:46:58  keith
@@ -263,8 +269,8 @@ int             mstart, mfinish, minc, max_av, it_inc;
 	 for(i=0; i<3; i++)
 	 {
 	    totmol=0;
-	    for( ispec = sp_range[0], spec = species+sp_range[0]; ispec <= sp_range[1];
-		 spec += sp_range[2], ispec += sp_range[2])
+            for(spec = species+sp_range[0], ispec=0; spec <= species+sp_range[1];
+                            ispec++, spec += sp_range[2])
 	    {
 	       nmols = spec->nmols;
 	       msdtmp = 0.0;
@@ -288,12 +294,11 @@ real            ***msd;
 int             max_av;
 int             nmsd, sp_range[3];
 {
-   int          ispec, imsd, i;
+   int          ispec=0, imsd, i;
    real         totmsd;
    spec_mp      spec;
 
-   for( spec = species+sp_range[0], ispec = sp_range[0]; ispec <= sp_range[1];
-                                   spec+=sp_range[2], ispec+=sp_range[2])
+   for(spec = species+sp_range[0]; spec <= species+sp_range[1]; spec += sp_range[2])
    {
        puts(spec->name);
        for( imsd = 0; imsd < nmsd; imsd++)
@@ -307,6 +312,7 @@ int             nmsd, sp_range[3];
          }
          (void)printf("%10.7f\n",totmsd);
        }
+       ispec++;
    }
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));

@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/utlsup.c,v 1.1 1999/10/11 14:02:01 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/utlsup.c,v 1.2 1999/10/29 16:44:28 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -362,10 +362,9 @@ vec_mt		*traj_cofm;
 int		sp_range[3];
 {
    spec_mt	*spec;
-   int		i, imol, ispec, totmol=0;
+   int		i, imol, totmol=0;
  
-   for( ispec = sp_range[0], spec=species+sp_range[0]; ispec <= sp_range[1]; 
-                                              ispec+=sp_range[2], spec+=sp_range[2])
+   for( spec = species+sp_range[0]; spec <= species+sp_range[1]; spec+=sp_range[2])
      for( imol = 0; imol < spec->nmols; totmol++, imol++)
 	if( prev_cofm == 0 ) 
 	   for( i = 0; i < 3; i++)

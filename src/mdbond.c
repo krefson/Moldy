@@ -28,9 +28,19 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdbond.c,v $
+ *  Revision 1.6  1999/11/12 11:05:41  craig
+ *  Tidied up usage of NULL pointers which was causing crashes on some machines.
+ *  Added error checks when inserting nodes in lists.
+ *
+ *  Revision 1.5  1999/11/01 17:23:23  keith
+ *  Corrected harmless address-of-array errors.
+ *  Corrected serious error in passing struct (mismatched args).
+ *
  *  Revision 1.4  1999/10/29 16:44:28  keith
- *  Updated usage message
- *  Corrected interface to traj_con().
+ *  Added line to convert dump data to Cartesian coords.
+ *  Moved "control" declaration to global vars section.
+ *  Added checks for when bond/angle min and max are equal.
+ *  Corrected error when releasing empty list.
  *
  *  Revision 1.4  1999/10/25 10:24:45  craig
  *  Added line to convert dump data to Cartesian coords.
@@ -62,7 +72,7 @@ what you give them.   Help stamp out software-hoarding! */
  */
 
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 1.4 1999/10/29 16:44:28 keith Exp keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 1.5 1999/11/01 17:23:23 keith Exp $";
 #endif
 #include "defs.h"
 #ifdef HAVE_STDARG_H
@@ -159,7 +169,8 @@ BOND     *data;
        while( (node != NULL) && (bd->length < data->length) )
        {
            node = node->next;
-           bd = node->data;
+           if( node != NULL )
+              bd = node->data;
        }
    }
    return (node);
@@ -182,7 +193,8 @@ ANGLE    *data;
        while((node != NULL) && (ang->value < data->value) )
        {
            node = node->next;
-           ang = node->data;
+           if( node != NULL )
+              ang = node->data;
        }
    }
    return (node);
@@ -283,10 +295,16 @@ int		sp_range[3];
                       bond->number2 = nmoli;
 	              bond->length = dist1;
 	  	      node = morethan_BOND(broot,bond);
-	              if( (NUM(broot) == 0) || (node == NULL) )
-                         insert_data(broot,bond,1);
+                      if( node == NULL )
+                      {
+                         if( insert_data(broot,bond,1) < 0 )
+                            error("Error creating first node in bond list - \n%s\n",strerror(errno));
+                      }
                       else
-                         insert_at_position(broot,node,bond,0);
+                      {
+                         if( insert_at_position(broot,node,bond,0) < 0 )
+                            error("Error inserting node in bond list - \n%s\n",strerror(errno));
+                      }
 
                       nmolk = nmolj;
 
@@ -331,10 +349,16 @@ int		sp_range[3];
 		                        angle->length2 = dist2;
 		                        angle->value = tmp_angle;
 		                        node = morethan_ANGLE(aroot,angle);
-			                if( (NUM(aroot) == 0) || (node == NULL) )
-                                           insert_data(aroot,angle,1);
+                                        if( node == NULL )
+                                        {
+                                          if( insert_data(aroot,angle,1) < 0 )
+                                             error("Error creating first node in angle list - \n%s\n",strerror(errno));
+                                        }
                                         else
-                                           insert_at_position(aroot,node,angle,0);
+                                        {
+                                          if( insert_at_position(aroot,node,angle,0) < 0 )
+                                             error("Error inserting node in angle list - \n%s\n",strerror(errno));
+                                        }
                                      }
                                   }
                                }
@@ -402,10 +426,16 @@ int		sp_range[3];
                                                 angle->length2 = dist2;
 		                                angle->value = tmp_angle;
 		                                node = morethan_ANGLE(aroot,angle);
-			                        if( (NUM(aroot) == 0) || (node == NULL) )
-                                                   insert_data(aroot,angle,1);
+                                                if( node == NULL )
+                                                {
+                                                  if( insert_data(aroot,angle,1) < 0 )
+                                                     error("Error creating first node in angle list - \n%s\n",strerror(errno));
+                                                }
                                                 else
-                                                   insert_at_position(aroot,node,angle,0);
+                                                {
+                                                  if( insert_at_position(aroot,node,angle,0) < 0 )
+                                                     error("Error inserting node in angle list - \n%s\n",strerror(errno));
+                                                }
                                             }
                                         }
                                     }
@@ -839,7 +869,6 @@ char	*argv[];
    {
 /* Convert molecule positions from frac coords to Cartesian coords */
       mat_vec_mul(sys.h, sys.c_of_m, sys.c_of_m, sys.nmols);
-fprintf(stderr, "Hello %f %f %f\n", sys.c_of_m[1][0], sys.c_of_m[1][1], sys.c_of_m[1][2]);
 
       bond_calc(&sys, species, site_info, &root_bond, &root_angle, sp_range, blim, alim); 
       data_out(&root_bond,&root_angle);
