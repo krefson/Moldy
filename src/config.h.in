@@ -120,6 +120,10 @@
 
 #undef SHMEM
 
+#undef HAVE_GLOBALEXIT
+
+#undef HAVE_SBREAK
+
 #undef TCGMSG
 
 #undef BSP0
