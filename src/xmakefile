@@ -1,6 +1,7 @@
 SHELL=/bin/sh
 #### Start of system configuration section. ####
 srcdir = .
+DISTDIR=moldy-$(RELEASE)
 CC = @CC@
 CPPFLAGS = @CPPFLAGS@
 CFLAGS = $(CPPFLAGS) @CFLAGS@
@@ -44,6 +45,7 @@ ZIP=            zip
 PFLAGS=		-P
 EPFLAGS=	-2r
 RM=             rm -f
+LN_S=		ln -s 
 A2FLAGS=
 SHFILE=		$$file
 FILES = accel algorith alloc ansi auxil convert dump ewald force input \
@@ -264,9 +266,13 @@ maintainer-clean:	distclean
 
 moldy.tar:	$(CFILES) $(HFILES) $(AHFILES) \
 		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD)
+		$(RM) $(DISTDIR)
+		$(LN_S) . $(DISTDIR)
 		$(TAR) cf moldy.tar\
-		$(CFILES)  $(HFILES) $(AHFILES) \
-		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD)
+		$(CFILES:%=$(DISTDIR)/%)  \
+		$(HFILES:%=$(DISTDIR)/%) $(AHFILES:%=$(DISTDIR)/%) \
+		$(EXTRAS:%=$(DISTDIR)/%) $(INFILES:%=$(DISTDIR)/%) \
+		$(DOC:%=$(DISTDIR)/%) $(VMSBUILD:%=$(DISTDIR)/%)
 
 moldy.tar.Z:	moldy.tar
 		compress -c moldy.tar > moldy.tar.Z
@@ -276,10 +282,14 @@ moldy.tar.gz:	moldy.tar
 
 moldy.zip:	$(CFILES) $(HFILES) $(AHFILES)  \
 		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD)
+		$(RM) $(DISTDIR)
+		$(LN_S) . $(DISTDIR)
 		$(ZIP) -l -q moldy.zip\
-		$(CFILES)  $(HFILES) $(AHFILES) \
-		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD);\
-		$(ZIP) -r -j  -q moldy.zip $(W32BIN)
+		$(CFILES:%=$(DISTDIR)/%)  \
+		$(HFILES:%=$(DISTDIR)/%) $(AHFILES:%=$(DISTDIR)/%) \
+		$(EXTRAS:%=$(DISTDIR)/%) $(INFILES:%=$(DISTDIR)/%) \
+		$(DOC:%=$(DISTDIR)/%) $(VMSBUILD:%=$(DISTDIR)/%)
+		$(ZIP) -r -j  -q moldy.zip $(W32BIN:%=$(DISTDIR)/%)
 
 compile_moldy.com:	Makefile.in
 		./make_vms_compile $(FILES) > compile_moldy.com
@@ -317,8 +327,13 @@ compile.com:
 
 moldy.com:	$(CFILES) $(HFILES) $(AHFILES) $(EXTRAS)\
 		$(INFILES) Aaaa_Read.Me $(DOC) $(VMSBUILD)
-		$(DCLAR) Aaaa_Read.Me compile.com $(CFILES) $(HFILES) $(AHFILES)\
-		$(INFILES) $(EXTRAS) $(DOC) $(VMSBUILD)\
+		$(RM) $(DISTDIR)
+		$(LN_S) . $(DISTDIR)
+		$(DCLAR) $(DISTDIR)/Aaaa_Read.Me $(DISTDIR)/compile.com \
+		$(CFILES:%=$(DISTDIR)/%)  \
+		$(HFILES:%=$(DISTDIR)/%) $(AHFILES:%=$(DISTDIR)/%) \
+		$(EXTRAS:%=$(DISTDIR)/%) $(INFILES:%=$(DISTDIR)/%) \
+		$(DOC:%=$(DISTDIR)/%) $(VMSBUILD:%=$(DISTDIR)/%) \
 			> moldy.com
 
 moldy.com.Z:	moldy.com
