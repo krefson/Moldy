@@ -33,7 +33,13 @@ what you give them.   Help stamp out software-hoarding!  */
 #include "structs.h"
 #include "messages.h"
 #ifdef USE_XDR
-#include	"xdr.h"
+#ifdef sun
+#   define free xxfree
+#   include	"xdr.h"
+#   undef free
+#else
+#   include	"xdr.h"
+#endif
 #endif
 
 void	invert();
