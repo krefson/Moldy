@@ -8,11 +8,11 @@
 #include <stdio.h>
 #include "stddef.h"
 #include "string.h"
+#include "stdlib.h"
 #define error(str, args) message(NULLI, NULLP, FATAL, str, args)
 #include "structs.h"
 #include "messages.h"
 
-char 	*malloc();
 void	invert();
 void	mat_vec_mul();
 char	*arralloc();
@@ -44,6 +44,8 @@ void	note()
 void	conv_potentials()
 {}
 void	conv_control()
+{}
+void	convert_averages()
 {}
 /******************************************************************************
  *  message.   Deliver error message to possibly exiting. 		      *
