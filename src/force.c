@@ -29,6 +29,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.27.2.1  2002/03/13 10:27:52  kr
+ *       Trial version incorporating reciprocal-space summation for r^-2 and r^-6
+ *       interactions.  This version implements a new potential "genpot46" to activate.
+ *
  *       Revision 2.27  2002/03/04 16:08:12  kr
  *       Fixed a number of bugs in dumpext and dumpconv related to reading the
  *       sysinfo section of the dump files.
@@ -244,7 +248,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/force.c,v 2.27 2002/03/04 16:08:12 kr Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/force.c,v 2.27.2.1 2002/03/13 10:27:52 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -876,9 +880,11 @@ double pe_intra(spec_mt *spec, real chg[], int ptype,
    for(jsite = 0; jsite < spec->nsites; jsite++)
    {
       for(isite = jsite+1; isite < spec->nsites; isite++)
+	{
          eintra += poteval(potpar[spec->site_id[jsite]*max_id+spec->site_id[isite]].p,
                            DISTANCE(spec->p_f_sites[isite],spec->p_f_sites[jsite]),
                            ptype,chg[isite]*chg[jsite]);
+        }
    }
    return eintra;
 }
@@ -1172,13 +1178,15 @@ void force_inner(int ithread,
 #ifdef DEBUG2
             hist(jmin, jmax, r_sqr);
 #endif
-               /*  Call the potential function kernel                            */
+	    /*  Call the potential function kernel                            */
+
             kernel(jmin, jmax, forceij, pe, r_sqr, nab_chg, chg[isite],
                    control.alpha, control.alpha46, system->ptype, nab_pot);
+
 	    mk_forces(jmin, jmax,  rx, ry, rz, forceij, forcejx, forcejy, forcejz,
 		      site_force[0]+isite, site_force[1]+isite, site_force[2]+isite);
 #ifdef DEBUG5
-               printf("PE = %f\n",pe[0]);
+	    printf("PE = %f\n",pe[0]);
 #endif
          }
       }
@@ -1384,7 +1392,7 @@ void force_calc(real **site,            /* Site co-ordinate arrays       (in) */
    }
    if( ithread == 0 )
       *pe -= eintra;
-   
+
    jsite = 0; 
    jmol = 0;
    for (spec = species; spec < species+system->nspecies; spec++)
@@ -1533,3 +1541,4 @@ NOVECTOR
    xfree(cell);        xfree(id); 
    xfree(nabor);       xfree(molmap);
 }
+

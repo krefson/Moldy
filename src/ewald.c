@@ -23,9 +23,6 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
- *       Revision 2.23.4.3  2002/04/03 08:41:42  kr
- *       Optimized forces loop.  Now only called once even if multiple potentials are used.
- *
  *       Revision 2.23.4.1  2002/03/13 10:27:52  kr
  *       Trial version incorporating reciprocal-space summation for r^-2 and r^-6
  *       interactions.  This version implements a new potential "genpot46" to activate.
@@ -258,7 +255,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/ewald.c,v 2.23.4.3 2002/04/03 08:41:42 kr Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/ewald.c,v 2.23.4.1 2002/03/13 10:27:52 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -313,6 +310,25 @@ extern int		ithread, nthreads;
 #define SIXTH(x) CUBE(SQR(x))
 #define EIGTH(x) SQR(FOURTH(x))
 #define POTZERO_TOL 1.0e-16
+
+/* Exponential integral Ei(1,t) */
+#define AL0     -0.57721566
+#define AL1      0.99999193
+#define AL2     -0.24991055
+#define AL3      0.05519968
+#define AL4     -0.00976004
+#define AL5      0.00107857
+#define AH1      8.5733287401
+#define AH2     18.0590169730
+#define AH3      8.6347608925
+#define AH4      0.2677737343
+#define BH1      9.5733223454
+#define BH2     25.6329561486
+#define BH3     21.0996530827
+#define BH4      3.9584969228
+#define POLYEIL(t) (AL0+(t)*(AL1 + (t)*(AL2+ (t)*(AL3+(t)*(AL4+(t)*AL5)))))
+#define POLYEIHN(t) (AH4+(t)*(AH3+(t)*(AH2+(t)*(AH1+(t)))))
+#define POLYEIHD(t) (BH4+(t)*(BH3+(t)*(BH2+(t)*(BH1+(t)))))
 /*========================== Cache Parameters=================================*/
 /* The default values are for the Cray T3D but are probably good enough 
  *  for most other systems too. */
@@ -872,6 +888,7 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
 		spec_mt *species,       /* Array of species records      (in) */
 		real  **pot4,           /* Potential parameters for r^-4 (in) */
 		real  **pot6,           /* Potential parameters for r^-6 (in) */
+                real  **pot7,           /* Potential parameters for r^-7 (in) */
 		double *pe, 	        /* Potential energy             (out) */
 		real (*stress)[3])      /* Stress virial                (out) */
 {
@@ -880,7 +897,7 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
    int		i, is, js, idi, idj, nid;	/* Counters.			     */
    spec_mp	spec;			/* species[ispec]		     */
    int		nsites = system->nsites;
-   double	struct_factor_4_sq, struct_factor_6_sq ;
+   double	struct_factor_4_sq, struct_factor_6_sq, struct_factor_7_sq;
    double	pe_k,			/* Pot'l energy for current K vector */
                 coeff, coeff2;		/* 2/(e0V) * A(K) & similar	     */
    double	alpha = control.alpha46;
@@ -891,10 +908,11 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
       		kover2a,
       		erfc_k2a,
       		exp_k24a2,
-      		ak4, ak6,
-      		dak4dk, dak6dk,
+                ak4, ak6, ak7,
+                dak4dk, dak6dk, dak7dk,
                 kcsq = SQR(control.k_cutoff46);
    double	kx,ky,kz,kzt;
+   double       arfac,arfacsq,rfc,t,ei1;
    vec_mt	kv;			/* (Kx,Ky,Kz)  			     */
    real		force_comp, kv0, kv1, kv2, sfx, sfy;
    struct	s_hkl *hkl, *phkl;
@@ -946,7 +964,7 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
                 *site_fz = dalloc(nsarray);
    static int	*site_idx;
    static int   *site_permute;
-   boolean	dopot4, dopot6;
+   boolean	dopot4, dopot6, dopot7;
    int	        rel;
    real		*coskr,		/* q(i) cos(K.R(i))	      */
                 *sinkr;		/* q(i) sin(K.R(i))	      */
@@ -969,7 +987,8 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
     */
    if(init)
    {
-      double	sq4 = 0, sq6 = 0, sqq4 = 0, sqq6 = 0, intra, r, alphar, expar;
+      double	sq4 = 0, sq6 = 0, sqq4 = 0, sqq6 = 0, sq7 = 0, sqq7 = 0;
+      double    intra, r, alphar, expar;
       int	js, idi, idj, ni, nj;
 
       site_idx = ialloc(system->max_id);
@@ -991,10 +1010,15 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
 	       r = DISTANCE(spec->p_f_sites[is], spec->p_f_sites[js]);
 	       alphar = alpha*r;
 	       expar=exp(-SQR(alphar));
+	       arfac=SQR(alphar);
+	       arfacsq=SQR(arfac);
 	       intra += pot4[idi][idj]
 		  *(1.0-(1.0+SQR(alphar))*expar)/FOURTH(r);
 	       intra += pot6[idi][idj]
 		  *(1.0-(1.0+SQR(alphar)+0.5*FOURTH(alphar))*expar)/SIXTH(r);
+	       rfc=erfc(alphar);
+	       intra += pot7[idi][idj]
+		  *(1.0-(rfc+alphar/ROOTPI*(2.0+1.33333333*arfac+0.53333333*arfacsq)*expar))/(SIXTH(r)*r);
 	    }
 	 }
 	 self_energy += spec->nmols * intra;
@@ -1007,18 +1031,22 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
 	 ni = site_idx[idi] - site_idx[idi-1];
          sq4 += ni*pot4[idi][idi];
          sq6 += ni*pot6[idi][idi];
+	 sq7 += ni*pot7[idi][idi];
          for(idj=1; idj < system->max_id; idj++)
          {
 	    nj = site_idx[idj] - site_idx[idj-1];
 	    sqq4 += ni*nj*pot4[idi][idj];
             sqq6 += ni*nj*pot6[idi][idj];
+            sqq7 += ni*nj*pot7[idi][idj];
          }
       }
 
-      sheet_energy += PI32*(alpha*sqq4 + CUBE(alpha)/6.0*sqq6);
-      self_energy += 0.25*FOURTH(alpha)*sq4 + SIXTH(alpha)/12.0*sq6;
-      note("Ewald-4-6 G=0 term = %f kJ/mol",sheet_energy/vol*CONV_E);
-      note("Ewald-4-6 self-energy = %f kJ/mol",self_energy*CONV_E);
+      sheet_energy += PI32*(alpha*sqq4 + CUBE(alpha)/6.0*sqq6)
+	             +2.0*PI/15.0*FOURTH(alpha)*sqq7;
+      self_energy += 0.25*FOURTH(alpha)*sq4 + SIXTH(alpha)/12.0*sq6
+	            +8.0/(105.0*ROOTPI)*SIXTH(alpha)*alpha*sq7;
+      note("Ewald-4-6-7 G=0 term = %f kJ/mol",sheet_energy/vol*CONV_E);
+      note("Ewald-4-6-7 self-energy = %f kJ/mol",self_energy*CONV_E);
    }
 
    if( ithread == 0 )
@@ -1102,16 +1130,21 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
       kmod = sqrt(ksq);
       kover2a = kmod/(2*alpha);
       erfc_k2a = erfc(kover2a);
-      exp_k24a2 = exp( - ksq/(4.0*SQR(alpha)));
-
+      t = SQR(kover2a);
+      exp_k24a2 = exp( - t);
+      if (t <= 1) 
+	 ei1 = POLYEIL(t) - log(t);
+      else
+	 ei1 = POLYEIHN(t)/(t*POLYEIHD(t)) * exp_k24a2;
       /*
        * Calculate pre-factors A(K) etc
        */
       ak4 = (-0.5*PISQ*kmod*erfc_k2a + alpha*PI32*exp_k24a2) * 2.0/vol;
       dak4dk = (-0.5*PISQ*erfc_k2a) * 2.0/vol;
       ak6 = (PISQ/24.0*kmod*ksq*erfc_k2a + PI32/6.0*alpha*(SQR(alpha)-0.5*ksq)*exp_k24a2) * 2.0/vol;
-      dak6dk = ((1.0/24.0)*PI32*(3.0*ROOTPI*erfc_k2a*ksq - 6.0*alpha*kmod*exp_k24a2)) * 2.0/vol;
-      
+      dak6dk = ((1.0/8.0)*PI32*(ROOTPI*erfc_k2a*ksq - 2.0*alpha*kmod*exp_k24a2)) * 2.0/vol;
+      ak7 = -PI/120.0*((4.0*SQR(alpha)*ksq-16.0*FOURTH(alpha))*exp_k24a2-SQR(ksq)*ei1) * 2.0/vol;
+      dak7dk = PI/30.0*kmod*(-4.0*SQR(alpha)*exp_k24a2+ksq*ei1) * 2.0/vol;
       /*
        * Set pointers to array of cos (h*astar*x) (for efficiency & vectorisation)
        */
@@ -1138,13 +1171,14 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
       /*
        * Evaluate potential energy contribution for this K and add to total.
        */
-      struct_factor_4_sq = 0.0; struct_factor_6_sq = 0.0; 
+      struct_factor_4_sq = struct_factor_6_sq = struct_factor_7_sq = 0.0;
       for(idi=1; idi < system->max_id; idi++)
       {
 	 for(idj=1; idj < system->max_id; idj++)
 	 {
 	    dopot4 = fabs(pot4[idi][idj]) > POTZERO_TOL;
 	    dopot6 = fabs(pot6[idi][idj]) > POTZERO_TOL;
+	    dopot7 = fabs(pot7[idi][idj]) > POTZERO_TOL;
 	    coeff = 0.0;
 	    if(dopot4) 
 	    {
@@ -1157,7 +1191,12 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
 	       struct_factor_6_sq += pot6[idi][idj]*(scoskr[idi]*scoskr[idj]+ssinkr[idi]*ssinkr[idj]);
 	       coeff += 2.0*pot6[idi][idj]*ak6;
 	    }
-	    if( dopot4 || dopot6 )
+	    if(dopot7) 
+	    {
+	       struct_factor_7_sq += pot7[idi][idj]*(scoskr[idi]*scoskr[idj]+ssinkr[idi]*ssinkr[idj]);
+	       coeff += 2.0*pot7[idi][idj]*ak7;
+	    }
+	    if( dopot4 || dopot6 || dopot7)
 	    {
 	       /*
 		* Evaluation of site forces. 
@@ -1175,13 +1214,12 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
 	 }
       }
 
-      pe_k = ak4*struct_factor_4_sq+ak6*struct_factor_6_sq;
+      pe_k = ak4*struct_factor_4_sq+ak6*struct_factor_6_sq+ak7*struct_factor_7_sq;
       *pe += pe_k;
-
       /*
        * Calculate contribution to stress tensor
        */
-      coeff = (dak4dk*struct_factor_4_sq+dak6dk*struct_factor_6_sq)/kmod;
+      coeff = (dak4dk*struct_factor_4_sq+dak6dk*struct_factor_6_sq+dak7dk*struct_factor_7_sq)/kmod;
       stress[0][0] += pe_k + coeff * kv[0] * kv[0];
       stress[0][1] +=        coeff * kv[0] * kv[1];
       stress[0][2] +=        coeff * kv[0] * kv[2];
