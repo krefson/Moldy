@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/md/moldy/RCS/messages.h,v 2.8 1995/01/05 09:50:57 keith stab keith $
+ * $Header: /home/eeyore_data/keith/md/moldy/RCS/messages.h,v 2.10 1995/12/04 11:51:32 keith Exp keith $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -159,3 +159,4 @@ of %2.2f.\n Maximum will be used but accuracy of Ewald sum is compromised."
 #define GANDP   "Application of Parinello-Rahman algorithm along with \
 Gaussian thermostat would interfere with each other."
 #define	NOKEY	"no keyword found on line"
+#define NOCUT   "No real-space cutoff specified or cutoff invalid"
