@@ -24,7 +24,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *           and species structs, "rescale" and "distant_const". 	      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	accel.c,v $
+ *       $Log: accel.c,v $
+ * Revision 2.5  94/01/18  13:31:46  keith
+ * Null update for XDR portability release
+ * 
  * Revision 2.4  93/12/16  18:14:11  keith
  * Fixed divide-by-zero bug when rescaling on atomic systems.
  * (Only showed up on FPE trapping architectures.)
@@ -80,11 +83,11 @@ what you give them.   Help stamp out software-hoarding!  */
  * --Moved defn of NULL to stddef.h and included that where necessary.
  * --Eliminated clashes with ANSI library names
  * --Modified defs.h to recognise CONVEX ANSI compiler
- * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ * --Modified declaration of size_mt and inclusion of sys/types.h in aux.c
  *   for GNU compiler with and without fixed includes.
  * 
  * Revision 1.8.1.15  91/03/12  15:41:07  keith
- * Tidied up typedefs size_t and include file <sys/types.h>
+ * Tidied up typedefs size_mt and include file <sys/types.h>
  * Added explicit function declarations.
  * 
  * Revision 1.8.1.14  91/02/19  14:50:13  keith
@@ -162,7 +165,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.4 93/12/16 18:14:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -210,7 +213,7 @@ double          vec_dist();	       /* normalised vector distance	      */
 void		thermalise();	       /* Randomize velocities to given temp  */
 void	inhibit_vectorization();       /* Self-explanatory dummy              */
 #if defined(ANSI) || defined(__STDC__)
-gptr		*arralloc(size_t,int,...); /* Array allocator		      */
+gptr		*arralloc(size_mt,int,...); /* Array allocator		      */
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
 #else
@@ -219,7 +222,7 @@ void		note();			/* Write a message to the output file */
 void		message();		/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
-extern contr_mt control;
+extern contr_mt control;                    /* Main simulation control parms. */
 /*========================== Macros ==========================================*/
 #define ITER_MAX 10
 #define	CONVRG	1.0e-7
@@ -367,7 +370,7 @@ double          cutoff;
 /*
  * Count the sites
  */
-   (void)memset((char*)site_count,0,system->max_id*sizeof(int));
+   memst(site_count,0,system->max_id*sizeof(int));
    for (spec = species; spec < &species[system->nspecies]; spec++)
    {
 NOVECTOR
@@ -421,7 +424,8 @@ static quat_mp  q_tmp;
  *   11) Deallocates all the dynamic arrays and returns the space to the heap *
  ******************************************************************************/
 void 
-do_step(sys, species, site_info, potpar, meansq_f_t, pe, dip_mom, stress)
+do_step(sys, species, site_info, potpar, meansq_f_t, pe, dip_mom, stress,
+	restart_header, backup_restart)
 system_mp       sys;		       /* Pointer to system info	 (in) */
 spec_mt         species[];	       /* Array of species info	 (in) */
 site_mt         site_info[];	       /* Array of site info structures (in) */
@@ -430,6 +434,8 @@ vec_mt          meansq_f_t[][2];       /* Mean square force and torque (out) */
 double          pe[];		       /* Potential energy real/Ewald  (out) */
 vec_mt          dip_mom;	       /* Total system dipole moment   (out) */
 mat_mt          stress;		       /* Virial part of stress	(out) */
+restrt_mt	*restart_header;       /* What the name says. (in)	     */
+int		backup_restart;	       /* Flag signalling backup restart (in)*/
 {
 /*
  * The following declarations are arrays of pointers to the forces
@@ -755,7 +761,8 @@ mat_mt          stress;		       /* Virial part of stress	(out) */
    if (control.dump_interval > 0 && control.dump_level != 0 &&
 	 control.istep >= control.begin_dump &&
 	 (control.istep - control.begin_dump) % control.dump_interval == 0)
-      dump(sys, force_base, torque_base, stress, pe[0] + pe[1]);
+      dump(sys, force_base, torque_base, stress, pe[0] + pe[1], restart_header,
+	   backup_restart);
 
 /*
  * Deallocate the dynamic storage before exiting

@@ -36,7 +36,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * energy_dyad()	Calculate kinetic energy part of stress tensor	      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	algorith.c,v $
+ *       $Log: algorith.c,v $
+ * Revision 2.5  1994/01/18  13:32:05  keith
+ * Null update for XDR portability release
+ *
  * Revision 2.3  93/10/28  10:27:35  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -99,7 +102,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 2.3 93/10/28 10:27:35 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 2.5 1994/01/18 13:32:05 keith Stab $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -141,6 +144,7 @@ void	message();			/* Write a warning or error message   */
  *  NB this is different to Evans' formulation.                               *
  *  Apply each rotation to nvec/nquat vectors.                                *
  ******************************************************************************/
+static
 void rotate(r_in, r_out, nvec, quat, nquat, inv_mat)
 vec_mp		r_in,		/* Co-ordinates to be rotated [n][3] (in)     */
 		r_out;		/* Resulting co-ordinates [n][3]    (out)     */
