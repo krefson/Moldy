@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.26  2002/09/19 09:26:29  kr
+ *       Tidied up header declarations.
+ *       Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *       Revision 2.25  2002/02/27 17:48:34  kr
  *       Reworked auto-setting of Ewald parameters.
  *         Added new control parameter "ewald-accuracy" to refine auto-setting.
@@ -245,7 +249,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/output.c,v 2.25 2002/02/27 17:48:34 kr Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS//moldy/src/output.c,v 2.26 2002/09/19 09:26:29 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -622,7 +626,13 @@ void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
 	 new_line();
       }
    }
-
+   if(control.alpha46 != 0.0)
+   {
+      (void)printf("\t%-32s","Ewald 4-6-(7)");
+      new_line();
+      format_dbl("Ewald 4-6-(7) Sum Alpha parameter",control.alpha46,"A(-1)");
+      format_dbl("Reciprocal space cut-off",control.k_cutoff46,"A(-1)");
+   }
    if ( rdof > 0 )
    {
      if( control.nosymmetric_rot )
