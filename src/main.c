@@ -7,6 +7,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.5  89/06/01  21:24:38  keith
+ * Control.out eliminated, use printf and freopen instead to direct output.
+ * 
  * Revision 1.4  89/05/24  11:08:19  keith
  * Fixed bug which called 'averages()' before and at begin-average.
  * Velocities are now rescaled up to and including scale_end.
@@ -23,7 +26,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: main.c,v 1.4 89/05/24 11:08:19 keith Exp $";
+static char *RCSid = "$Header: main.c,v 1.7 89/07/04 18:46:55 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -38,6 +41,7 @@ void	rescale();
 void	note();
 void	dump();
 void	print_rdf();
+void	print_config();
 void	message();
 double	cpu();
 void	write_restart();
@@ -144,19 +148,18 @@ char	*argv[];
             note("Temperature scaling turned off after step %d", control.istep);
       }
 
-      if( control.average_interval > 0 &&
-	  control.istep >= control.begin_average && 
-	 (control.istep-control.begin_average) % control.average_interval == 0)
+      if(control.average_interval > 0 && control.istep >= control.begin_average)
       {
          if( control.istep == control.begin_average )
             note("started accumulating thermodynamic averages on timestep %d", 
 		 control.istep);
-         else
+         else if ( (control.istep-control.begin_average + 1) %
+		    control.average_interval == 0)
             averages();
       }
 
       if(control.rdf_interval > 0 && control.istep > control.begin_rdf && 
-        (control.istep-control.begin_rdf) % control.rdf_out == 0)
+        (control.istep-control.begin_rdf+1) % control.rdf_out == 0)
          print_rdf(&system, site_info);
 
       if(control.backup_interval > 0 &&
@@ -174,13 +177,16 @@ char	*argv[];
    }
    else if(control.save_file[0] != '\0')
    {
-      write_restart(control.save_file, &system, species, site_info, potpar);
+      if( control.print_sysdef )
+	 print_config(control.save_file, &system, species, site_info, potpar);
+      else
+	 write_restart(control.save_file, &system, species, site_info, potpar);
       (void)remove(control.backup_file);		/* Get rid of backup */
    }
    else
       (void)remove(control.backup_file);		/* Get rid of backup */
       
-   note("Run used %fs of CPU time", cpu()-cpu_base);
+   note("Run used %.2fs of CPU time", cpu()-cpu_base);
 
    return(0);
 }
