@@ -26,6 +26,22 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.39  2001/07/31 09:40:57  keith
+ *       Merged H0halfstep branch.
+ *       Calculates H_0 at half-step, which corresponds to on-step in VTV
+ *       ordering.
+ *       Now uses Nose's splitting integrator by default.
+ *
+ *       Revision 2.38.2.2  2001/07/26 17:30:17  keith
+ *       Version using Nose's splitting with exact solution
+ *
+ *       Revision 2.38.2.1  2001/07/25 14:26:59  keith
+ *       Moved calculation of H_0 to half-step - still uses velocity verlet
+ *       momenta.
+ *
+ *       Revision 2.38  2001/07/20 11:43:24  keith
+ *       Added code to print out 1/2 step momenta-based kinetic energy
+ *
  *       Revision 2.37  2001/07/13 16:52:53  keith
  *       Fixed calculation of H_0 to use co-ords and momenta at consistent timestep.
  *
@@ -324,7 +340,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.37 2001/07/13 16:52:53 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.39 2001/07/31 09:40:57 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -355,6 +371,7 @@ void   leapf_hmom(double step, mat_mt hmom, mat_mt sigma, real s,
 		  real pressure, int mask);
 void   leapf_h(double step, mat_mt h, mat_mt hmom, real s, real W);
 void   gleap_therm(double step, real mass, real gkt, real *s, real *smom);
+void   leapf_nose_therm(double step, real mass, real *s, real *smom);
 void   gleap_cell(double step, real pmass, real s, real pressure, int strain_mask, 
 		  mat_mt h, mat_mt hmom, real *smom, boolean uniform);
 void   update_hmom(double step, real s, mat_mt h,
@@ -956,7 +973,6 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    int             ispec, imol, imol_r;
    int		   nspecies = sys->nspecies;
    boolean	   uni = control.const_pressure> 0 && (control.const_pressure%2==0);
-   static	   boolean first_call = true;
    static	   double saved_pe;
    /*
     * Initialize force and torque arays.
@@ -972,30 +988,18 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    }
 
    /*
-    * Evaluate initial Hamiltonian H_0 at start of run or after a velocity
-    * scaling step.  
-    */ 
-   if( first_call )
-   {
-      first_call = false;
-      eval_forces(sys, species, site_info, potpar,
-		  pe, dip_mom, stress_vir, force, torque);
-      saved_pe = pe[0] + pe[1];
-   }
-   if(control.istep == 1 || init_H_0 )
-   {
-      ke = tot_ke(sys, species,1);
-      sys->H_0 = ke + saved_pe + SQR(sys->tsmom)/(2.0*control.ttmass) 
-                            + sys->d_of_f*kB*control.temp * log(sys->ts)
-	                    + ke_cell(sys->hmom, control.pmass)
-                            + control.pressure*det(sys->h);
-   }
-   /*
     * Half step for H1. 
     */
    if( control.const_temp )
+   {
+#ifdef GL_THERM
       gleap_therm(0.5*control.step, control.ttmass, sys->d_of_f*kB*control.temp, 
 		  &sys->ts, &sys->tsmom);
+#else
+      leapf_nose_therm(0.5*control.step, control.ttmass, &sys->ts, &sys->tsmom);
+      sys->tsmom -= 0.5*control.step*sys->d_of_f*kB*control.temp*(1.0+log(sys->ts));
+#endif
+   }
    /*
     * H2 half step
     */
@@ -1024,8 +1028,20 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
 	       pe, dip_mom, stress_vir, force, torque);
    saved_pe = pe[0] + pe[1];
 
-#ifdef DEBUG_THERMOSTAT
    leapf_all_momenta(0.5*control.step, sys, species, force, torque);
+   /*
+    * Evaluate initial Hamiltonian H_0 at start of run or after a velocity
+    * scaling step.  In this version we evaluate it at the half-step.
+    */ 
+   if(control.istep == 1 || init_H_0 )
+   {
+      ke = tot_ke(sys, species,1);
+      sys->H_0 = ke + saved_pe + SQR(sys->tsmom)/(2.0*control.ttmass) 
+                            + sys->d_of_f*kB*control.temp * log(sys->ts)
+	                    + ke_cell(sys->hmom, control.pmass)
+                            + control.pressure*det(sys->h);
+   }
+#ifdef DEBUG_THERMOSTAT
    if( control.istep%control.print_interval == 0 && ithread == 0 )
    {
       double H, HP, HS, HHP, HHS;
@@ -1040,10 +1056,8 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
              sys->ts,sys->tsmom, H,ke, pe[0] + pe[1], HP, HS,HHP, HHS, 
 	      (H-sys->H_0)*sys->ts); 
    }
-   leapf_all_momenta(0.5*control.step, sys, species, force, torque);
-#else
-   leapf_all_momenta(control.step, sys, species, force, torque);
 #endif
+   leapf_all_momenta(0.5*control.step, sys, species, force, torque);
 
    if( control.const_temp )
       sys->tsmom -= control.step*(pe[0]+pe[1] - sys->H_0);
@@ -1072,8 +1086,13 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
     * Final half step for H1.
     */
    if( control.const_temp )
+#ifdef GL_THERM
       gleap_therm(0.5*control.step, control.ttmass, sys->d_of_f*kB*control.temp, 
 		  &sys->ts, &sys->tsmom);
+#else
+      sys->tsmom -= 0.5*control.step*sys->d_of_f*kB*control.temp*(1.0+log(sys->ts));
+      leapf_nose_therm(0.5*control.step, control.ttmass, &sys->ts, &sys->tsmom);
+#endif
 
 #ifdef DEBUG_THERMOSTAT
    if( control.istep%control.print_interval == 0 && ithread == 0 )
