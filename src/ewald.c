@@ -23,6 +23,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.8.1.4  1996/02/07 20:51:44  keith
+ *       Restructured for convergence of std and RIL versions
+ *        - Implemented pre-computed k-vector set
+ *        - Re-based trig arrays to start at zero for ANSI conformance.
+ *
  *       Revision 2.8.1.3  1996/01/25 21:01:41  keith
  *       Fixed bug in allocation of sites to processors which caused
  *       crash on large # procs.
@@ -185,7 +190,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.8.1.3 1996/01/25 21:01:41 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.8.1.4 1996/02/07 20:51:44 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -464,7 +469,6 @@ mat_mt		stress;			/* Stress virial		(out) */
       }
 
       note("Ewald self-energy = %f Kj/mol",self_energy*CONV_E);
-      init = false;
    }
 
    *pe -= self_energy;			/* Subtract self energy term	      */
@@ -499,7 +503,9 @@ mat_mt		stress;			/* Stress virial		(out) */
 	    }
 	 }
       }
-
+   if( init )
+      note("%d K-vectors included in reciprocal-space sum",nhkl);
+   init = false;
 /*
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
  */
@@ -694,5 +700,5 @@ VECTORIZE
 
    afree((gptr*)chx); afree((gptr*)cky); afree((gptr*)clz); 
    afree((gptr*)shx); afree((gptr*)sky); afree((gptr*)slz);
-   xfree(qcoskr); xfree(qsinkr);
+   xfree(qcoskr); xfree(qsinkr); xfree(hkl);
 }
