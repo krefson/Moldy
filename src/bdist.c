@@ -6,6 +6,9 @@ Copyright (C) 1999 Craig Fisher */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: bdist.c,v $
+ *  Revision 1.1  1999/07/22 14:02:26  keith
+ *  Initial revision
+ *
  *  Revision 1.0  1999/06/24 11:15:15  craig 
  *  Initial revision
  *
@@ -108,7 +111,7 @@ char    *get_str(prompt)
 char    *prompt;
 {
    char         ans_str[80];
-   char         str[80];
+   char         *str = malloc(80);
    int          ans_flag;
 
    ans_flag = 0;
