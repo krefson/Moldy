@@ -17,6 +17,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	algorith.c,v $
+ * Revision 1.1.1.4  90/04/16  18:19:29  keith
+ * Modified rahman() to arbitrarily constrain h matrix by new parameter "mask".
+ * 
  * Revision 1.1.1.3  89/12/21  16:29:43  keith
  * Reversed indices in 'site' and 'site_force' to allow stride of 1 in ewald.
  * 
@@ -32,7 +35,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/algorith.c,v 1.1.1.3 89/12/21 16:29:43 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 1.1.1.4 90/04/16 18:19:29 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include 	<math.h>
@@ -40,9 +43,8 @@ static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/algorith.c,v 1.1.
 /*========================== program include files ===========================*/
 #include 	"defs.h"
 #include 	"messages.h"
-/*========================== Library declarations ============================*/
-void	cfree();
 /*========================== External function declarations ==================*/
+void	tfree();
 void	mat_vec_mul();			/* 3 x 3 Matrix by Vector multiplier  */
 void	mat_mul();	          	/* 3 x 3 matrix multiplier	      */
 void	mat_add();			/* Add 2 3x3 matrices                 */
@@ -164,7 +166,7 @@ VECTORIZE
 	                      -site[isite][k]*princ_force[isite][j];
       }
    }
-   cfree((char *)princ_force);
+   tfree((char *)princ_force);
 }
 /******************************************************************************
  *  make_sites     Calculate the atomic site co-ordinates for nmols identical *
@@ -219,7 +221,7 @@ int		nmols,		/* Number of molecules                        */
           site[1][isite] -= lyz * t;
           site[2][isite] -= lz  * t;
       }
-   cfree((char*) ssite);
+   tfree((char*) ssite);
 }
 /******************************************************************************
  *  newton   Apply newton's equation to calculate the acceleration of a       *
@@ -286,7 +288,7 @@ int		nmols;		/* Number of molecules                   (in) */
    q_mul(quat, ang_acc, qddot, nmols);
    vscale(4 * nmols, 0.5, qddot[0], 1);
 
-   cfree((char*)ang_acc);
+   tfree((char*)ang_acc);
 }
 /******************************************************************************
  *  Parinello   Calculate the correction to the scaled centre of mass         *
@@ -326,7 +328,7 @@ int	nmols;			/* Size of vel and acc/ number molecules (in) */
       for(imol = 0; imol < nmols; imol++)       /* to accelerations           */
          acc_out[imol][i] = acc[imol][i] + acc_corr[imol][i];
 
-   cfree((char*)acc_corr);
+   tfree((char*)acc_corr);
 }
 /******************************************************************************
  *  Trans_ke  calculate and return the translational kinetic energy           *
@@ -344,7 +346,7 @@ int	nmols;			/* Number of molecules			 (in) */
 
    ke = vdot(3*nmols, vel[0], 1, vel[0], 1);
 
-   cfree((char*)vel);
+   tfree((char*)vel);
    return(0.5 * mass * ke);
 }
    
@@ -366,7 +368,7 @@ int	nmols;			/* Number of molecules			 (in) */
    for(i = 0; i < 3; i++)
       ke += inertia[i] * vdot(nmols, omega_p[0]+i+1, 4, omega_p[0]+i+1, 4);
 
-   cfree((char*)omega_p);
+   tfree((char*)omega_p);
    return(0.5 * ke);
 }
 /******************************************************************************
@@ -390,7 +392,7 @@ int	nmols;				/* Number of molecules		(in)  */
          ke_dyad[i][j] += mass * vdot(nmols, vel[0]+i, 3, vel[0]+j, 3);
       }     
 
-   cfree((char*)vel);
+   tfree((char*)vel);
 }
 /******************************************************************************
  * Rahman   Calculate the unit cell matrix accelerations                      *
