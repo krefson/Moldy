@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.21  2000/12/08 12:26:46  keith
+ *       Made banner_page more accurate and selective when announcing
+ *       that scaling and RFD calculations will be performed.
+ *
  *       Revision 2.20  2000/12/06 17:45:32  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -225,7 +229,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.20 2000/12/06 17:45:32 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.21 2000/12/08 12:26:46 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -519,7 +523,7 @@ void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
    format_long("Final step",control.nsteps);
    format_dbl("Size of step",control.step,TUNIT_N);
    format_dbl("CPU limit",control.cpu_limit,"s");
-   if(control.scale_interval > 0 && control.istep <= control.scale_end)
+   if(control.scale_interval > 0 && control.istep < control.scale_end)
    {
       if( control.scale_options & 0x8 )
       {
