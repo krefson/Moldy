@@ -11,6 +11,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 1.17  92/06/10  15:52:40  keith
+ * Added capability to read restart files where NPOTP has changed.
+ * 
  * Revision 1.16  92/06/02  10:38:27  keith
  * Added check of ferror() as well as return from fwrite().  Talk
  * about belt and braces.
@@ -71,7 +74,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.16 92/06/02 10:38:27 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.18 92/10/28 14:10:04 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -234,7 +237,7 @@ system_p system;
 void	re_re_sysdef(file, system, spec_ptr, site_info, pot_ptr)
 system_p	system;			/* Pointer to system array (in main)  */
 spec_p		*spec_ptr;		/* Pointer to be set to species array */
-site_p		*site_info;		/* To be pointed at site_info array   */
+asite_p		*site_info;		/* To be pointed at site_info array   */
 pot_p		*pot_ptr;		/* To be pointed at potpar array      */
 FILE		*file;			/* File pointer to read info from     */
 {
@@ -245,7 +248,7 @@ FILE		*file;			/* File pointer to read info from     */
 
    /* Allocate space for species, site_info and potpar arrays and set pointers*/
    *spec_ptr  = aalloc(system->nspecies,                spec_t );
-   *site_info = aalloc(system->max_id,                  site_t );
+   *site_info = aalloc(system->max_id,                  asite_t );
    *pot_ptr   = aalloc(system->max_id * system->max_id, pot_t );
    /*  read species array into allocated space				      */
    cread(file,  (gptr*)*spec_ptr, sizeof(spec_t), system->nspecies);
@@ -257,7 +260,7 @@ FILE		*file;			/* File pointer to read info from     */
       cread(file,  (gptr*)spec->p_f_sites, sizeof(vec_t), spec->nsites);
       cread(file,  (gptr*)spec->site_id, sizeof(int), spec->nsites);
    }
-   cread(file,  (gptr*)*site_info, sizeof(site_t), system->max_id);
+   cread(file,  (gptr*)*site_info, sizeof(asite_t), system->max_id);
    potsize = cnext(file);
    *pot_ptr = aalloc(MAX(potsize/sizeof(pot_t)+1,SQR(system->max_id) ), pot_t);
    cread(file,  (gptr*)*pot_ptr, potsize, 1);
@@ -316,7 +319,7 @@ void	write_restart(save_name, system, species, site_info, potpar)
 char		*save_name;		/* Name of save file to be written    */
 system_p	system;			/* Pointer to system array (in main)  */
 spec_p		species;		/* Pointer to be set to species array */
-site_p		site_info;		/* To be pointed at site_info array   */
+asite_p		site_info;		/* To be pointed at site_info array   */
 pot_p		potpar;			/* To be pointed at potpar array      */
 {
    spec_p	spec;
@@ -326,7 +329,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
    int		zero = 0, one = 1;
    restrt_t	save_header;
    FILE		*save;
-   char		*vsn = "$Revision: 1.16 $"+11;
+   char		*vsn = "$Revision: 1.18 $"+11;
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)
@@ -354,7 +357,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
       cwrite(save,  (gptr*)spec->p_f_sites, sizeof(vec_t), spec->nsites);
       cwrite(save,  (gptr*)spec->site_id, sizeof(int), spec->nsites);
    }
-   cwrite(save,  (gptr*)site_info, sizeof(site_t), system->max_id);
+   cwrite(save,  (gptr*)site_info, sizeof(asite_t), system->max_id);
    cwrite(save,  (gptr*)potpar, sizeof(pot_t), SQR(system->max_id));
 
    cwrite(save,  (gptr*)system->c_of_m, sizeof(vec_t), system->nmols);
