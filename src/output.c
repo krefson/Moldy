@@ -1,0 +1,330 @@
+/******************************************************************************
+ * output	Contains various output and error handling functions, except  *
+ *		for 'print_frame' and 'output' which, because of their	      *
+ *		intimate connection with the averages/values database are     *
+ *		located in "values.c".  Contents:			      *
+ * new_line()		Write new line & manage page length		      *
+ * new_page()		Start new output page				      *
+ * put_line()		Write a line of symbols				      *
+ * note()		Write a message to the output file		      *
+ * message()		Write an error or warning message, possibly exiting   *
+ * print_array()	\						      *
+ * format_int()		 \   Internal (static) procedures for use by	      *
+ * format_dbl()		 /		banner_page()			      *
+ * format_vec()		/						      *
+ * banner_page()	Write main startup banner and simulation parameters   *
+ ******************************************************************************
+ *      Revision Log
+ *       $Log:	output.c,v $
+ */
+#ifndef lint
+static char *RCSid = "$Header: output.c,v 1.1 89/04/27 16:29:26 keith Exp $";
+#endif
+/*========================== Library include files ===========================*/
+#ifdef ANSI
+#include <stdarg.h>
+#else
+#include <varargs.h>
+#endif
+/*========================== Program include files ===========================*/
+#include "structs.h"
+#include "messages.h"
+/*========================== External function declarations ==================*/
+char	*atime();			/* Current date and time in ASCII     */
+char	*cctime();			/* Convert long time to ASCII.	      */
+/*========================== External data references ========================*/
+extern  contr_t 	control;
+extern	restrt_t	restart_header;
+/*========================== External data definitions  ======================*/
+int	out_page = 1;			/* Which page of output we are on     */
+int	out_line = 999999;	        /* Which line of output               */
+/*========================== Macros ==========================================*/
+/******************************************************************************
+ * new_line.   print a newline and update line counter                        *
+ ******************************************************************************/
+void	new_line()
+{
+   void	new_page();
+   (void)putc('\n',control.out);
+   out_line++;
+   if(out_line > control.page_length)   new_page();
+}
+void	new_lins(n)
+int	n;
+{
+   while(n-- > 0)
+      new_line();
+}
+/******************************************************************************
+ * new_page   Take a new page on the output and print a header                * 
+ ******************************************************************************/
+void	new_page()
+{
+   (void)putc('\f',control.out);				/* Take new page
+      */
+   out_line = 0;					/* Print page header  */
+   (void)fprintf(control.out,"\t%s\t%s\tPage %d",
+		 	     atime(), control.title, out_page++);
+   new_line();
+}
+/******************************************************************************
+ *  Banner line.							      *
+ ******************************************************************************/
+void	put_line(c)
+char	c;
+{
+   int n = control.page_width;
+   while(n-- > 0)
+      (void)putc(c,control.out);
+   new_line();
+}
+/******************************************************************************
+ *  note   write a message to the output file				      *
+ ******************************************************************************/
+#ifdef ANSI
+#define	va_alist char *text, ...
+#define va_dcl /* */
+#endif
+/*VARARGS*/
+void	note(va_alist)
+va_dcl
+{
+   va_list	ap;
+#ifdef ANSI
+   va_start(ap, text);
+#else
+   char		*text;
+
+   va_start(ap);
+   text = va_arg(ap, char *);
+#endif
+
+   (void)fprintf(control.out," *I* "); 
+   (void)vfprintf(control.out, text, ap);  new_line();
+   va_end(ap);
+}
+/******************************************************************************
+ *  message.   Deliver error message to stderr, possibly exiting	      *
+ ******************************************************************************/
+#ifdef ANSI
+#undef  va_alist
+#define	va_alist int *nerrs, ...
+#define va_dcl /* */
+#endif
+/*VARARGS*/
+void	message(va_alist)
+va_dcl
+{
+   va_list	ap;
+   char		*buff;
+   int		sev;
+   char		*format;
+   static char	*sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
+#ifdef ANSI
+   va_start(ap, nerrs);
+#else
+   int		*nerrs;
+
+   va_start(ap);
+   nerrs = va_arg(ap, int *);
+#endif
+
+   buff  = va_arg(ap, char *);
+   sev   = va_arg(ap, int);
+   format= va_arg(ap, char *);
+
+   (void)fprintf(stderr,sev_txt[sev]);
+   (void)vfprintf(stderr, format, ap);
+   va_end(ap);
+   (void)fprintf(stderr,"\n");
+   if(buff != NULL)                     /* null ptr means don't print buffer  */
+      (void)fprintf(stderr,"     buffer contents=\"%s\"\n",buff);
+   if(sev >= ERROR && nerrs != NULL)
+      (*nerrs)++;
+   if(sev == FATAL)
+      exit(3);
+}
+/******************************************************************************
+ *  Print_array    Print out an array of strings in a common format 	      *
+ ******************************************************************************/
+static void	print_array(text, n)
+char	*text[];
+int	n;
+{
+   int i;
+   for(i=0; i<n; i++)
+   {
+      (void)fprintf(control.out,"\t\t%s",text[i]);
+      new_line();
+   }
+   new_line();
+}
+/******************************************************************************
+ *   Format_int     Print the name and value of some parameter in same format *
+ ******************************************************************************/
+static void	format_int(text,value)
+char	*text;
+int	value;
+{
+   (void)fprintf(control.out,"\t%-32s = %d",text,value);
+   new_line();
+}
+/******************************************************************************
+ *   Format_dbl     Print the name and value of some parameter in same format *
+ ******************************************************************************/
+static void	format_dbl(text,value,units)
+char	*text;
+double	value;
+char	*units;
+{
+   (void)fprintf(control.out,"\t%-32s = %g %s",text,value,units);
+   new_line();
+}
+/******************************************************************************
+ *   Format_vec     Print the name and value of some parameter in same format *
+ ******************************************************************************/
+static void	format_vec(text,value1,value2,value3,units)
+char	*text;
+double	value1,value2,value3;
+char	*units;
+{
+   (void)fprintf(control.out,"\t%-32s = %g %g %g %s",
+		 text,value1,value2,value3,units);
+   new_line();
+}
+/******************************************************************************
+ *   Main banner, version string, name, address and copyright notice          *
+ ******************************************************************************/
+static char	*banner[] = {
+		"#     # ####### #       ######  #     #",
+		"##   ## #     # #       #     #  #   # ",
+		"# # # # #     # #       #     #   # #  ",
+		"#  #  # #     # #       #     #    #   ",
+		"#     # #     # #       #     #    #   ",
+		"#     # #     # #       #     #    #   ",
+		"#     # ####### ####### ######     #   "};
+
+static char	*Revision	= REVISION,
+		*Revision_Date  = REVISION_DATE,
+		*Revision_State = REVISION_STATE;
+
+static char	*name_addr[] = {"Keith Refson",
+				"Department of Earth Sciences",
+				"Parks Road, Oxford OX1 3PR",
+				"REFSON@UK.AC.OX.VAX  (JANET)",
+				"REFSON@VAX.OX.AC.UK  (BITNET)"};
+static char	*copy_notice[] = {"Copyright Keith Refson 1988",
+				  ""};
+
+	
+/******************************************************************************
+ *  banner_page   Write the banner and relevant system/run information        *
+ ******************************************************************************/
+void	banner_page(system, species)
+system_p	system;
+spec_t	species[];
+{
+   int		ispec;
+   spec_p	spec;
+   mat_p	h = system->h;
+   char		version[132], *vsn=version;
+
+   new_page(); new_lins(2);
+   print_array( banner, sizeof banner / sizeof(char*));
+   (void)sprintf(version, "Version %.*s (%.*s) %.*s",
+		 	(int)strlen(Revision+11)-1,      Revision+11,
+		 	(int)strlen(Revision_State+8)-1, Revision_State+8,
+		 	(int)strlen(Revision_Date+7)-1,  Revision_Date+7);
+   print_array( &vsn, 1);
+   print_array( name_addr, sizeof name_addr / sizeof(char*));
+   print_array( copy_notice, sizeof copy_notice / sizeof(char*));
+   if(control.restart_file[0] != '\0')
+      if(control.new_sysdef)
+         (void)fprintf(control.out,
+		       " New system specification read in from file %s",
+		       control.sysdef);
+      else
+         (void)fprintf(control.out, 
+		       " System specification read in from restart file %s",
+		       control.restart_file);
+   else
+      (void)fprintf(control.out,
+		    " System specification read in from file %s",
+		    control.sysdef);
+   new_line();
+
+   for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
+   {
+      (void)fprintf(control.out," %s", spec->name); new_line();
+      format_int("Number of molecules",spec->nmols);
+      format_int("Number of sites",spec->nsites);
+      format_dbl("Mass",spec->mass,MUNIT_N);
+      if(spec->rdof == 0)
+      {
+	 (void)fprintf(control.out,
+	     "\t%s molecule has no rotational degrees of freedom", spec->name);
+	 new_line();
+      }
+      else
+      {
+	 if(spec->rdof == 2)
+	 {
+	    (void)fprintf(control.out,"\t%s molecule is linear",spec->name);
+	    new_line();
+	 }
+	 format_vec("Moments of inertia",
+		    spec->inertia[0],spec->inertia[1],spec->inertia[2],IUNIT_N);
+	 format_dbl("Dipole moment",spec->dipole*CONV_D,CONV_D_N);
+      }
+   }
+   new_line();
+   (void)fprintf(control.out," MD cell vectors"); new_line();
+   format_vec("a",h[0][0],h[1][0],h[2][0],LUNIT_N);
+   format_vec("b",h[0][1],h[1][1],h[2][1],LUNIT_N);
+   format_vec("c",h[0][2],h[1][2],h[2][2],LUNIT_N);
+   (void)fprintf(control.out," Run parameters"); new_line();
+   format_int("Number of steps",control.nsteps);
+   if(control.istep > 0)
+      format_int("Initial step",control.istep); 
+   format_dbl("Size of step",control.step,TUNIT_N);
+   format_dbl("CPU limit",control.cpu_limit,"s");
+   if(control.scale_interval > 0)
+   {
+      (void)fprintf(control.out," Velocities will be scaled"); new_line();
+      format_dbl("Applied Temperature",control.temp,"K");
+      format_int("No. steps between scalings",control.scale_interval);
+      format_int("End scaling at step",control.scale_end);
+   }
+   if(control.const_pressure)
+   {
+      (void)fprintf(control.out," Constant stress ensemble will be used");
+      new_line();
+      format_dbl("Applied pressure", CONV_P*control.pressure,CONV_P_N);
+      format_dbl("Mass parameter W",control.pmass,MUNIT_N);
+   }
+   format_dbl("Interaction cut-off",control.cutoff,LUNIT_N);
+   if(control.alpha != 0.0)
+   {
+      format_dbl("Alpha parameter for Ewald sum",control.alpha,RLUNIT_N);
+      format_dbl("Reciprocal space cut-off",control.k_cutoff,RLUNIT_N);
+   }
+   
+   if(control.restart_file[0] == '\0')
+   {
+      (void)fprintf(control.out, " New run entitled \"%s\" started %s",
+	      restart_header.title, restart_header.init_date);
+      new_line();
+   }
+   else
+   {
+      (void)fprintf(control.out,
+		    " Run initialised from restart file %s written %s",
+		    control.restart_file, cctime(&restart_header.timestamp));
+      new_line();
+      (void)fprintf(control.out,
+		    " This is restart No %d of run \"%s\" started %s",
+	    restart_header.seq, restart_header.title, restart_header.init_date);
+      new_line();
+   }
+   (void)fflush(control.out);
+}
