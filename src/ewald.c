@@ -23,6 +23,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.8.1.10  2001/02/19 12:42:24  keith
+ *       Fixed bug where qsincos  could incorrectly attempt to use
+ *       cache coshxky etc on first iteration when unassigned.
+ *
  *       Revision 2.8.1.9  2000/12/12 12:43:48  keith
  *       Updated to parallel 2.19.2.1 for 2.16 release
  *
@@ -208,7 +212,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.8.1.9 2000/12/12 12:43:48 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.8.1.10 2001/02/19 12:42:24 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -330,8 +334,6 @@ int  h, k,l,hlast,klast,nsites;
 	 qcoskr[is] = qckr;
       }
    }
-   hlast = h;
-   klast = k;
 }
 
 /******************************************************************************
@@ -718,7 +720,8 @@ mat_mt		stress;			/* Stress virial		(out) */
  * efficiency & vectorisation there is a loop for each case.
  */
       qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,
-	      qcoskr,qsinkr,coshxky, sinhxky, h, k, l, hlast,klast, nsarr0);
+	      qcoskr,qsinkr,coshxky, sinhxky, h, k, l, hlast, klast, nsarr0);
+      hlast = h; klast = k;
       ns1f = MIN(ns1, nsitesxf); ns0f = MAX(ns0, nsitesxf);
       sqexpkr[0] = sum(ns1f-ns0, qcoskr, 1);
       sqexpkr[1] = sum(ns1f-ns0, qsinkr, 1);
