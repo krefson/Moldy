@@ -4,7 +4,7 @@ HFILES= structs.h defs.h messages.h xdr.h  list.h utlsup.h ReadDCD.h defconf.h s
 
 UTILC = algorith.c alloc.c auxil.c ansi.c convert.c eigens.c kernel.c input.c list.c matrix.c quaterns.c restart.c startup.c values.c xdr.c ReadDCD.c utlsup.c molout.c
 
-UTILS =  moldyext dumpconv dumpext  manalyze bdist mdshak msd mdavpos mdbond ransub mdvaf syswrite
+UTILS =  moldyext dumpconv dumpext  manalyze bdist mdshak msd mdavpos mdbond ransub mdvaf syswrite dipole ordern sysres
 
 bin_PROGRAMS = moldy $(UTILS)
 
@@ -16,11 +16,17 @@ msd_SOURCES = msd.c $(UTILC)
 
 mdshak_SOURCES = mdshak.c  $(UTILC) 
 
+dipole_SOURCES = dipole.c  $(UTILC) 
+
 mdavpos_SOURCES = mdavpos.c  $(UTILC) 
 
 mdbond_SOURCES = mdbond.c  $(UTILC) 
 
 mdvaf_SOURCES = mdvaf.c  $(UTILC) 
+
+ordern_SOURCES = ordern.c  $(UTILC) 
+
+sysres_SOURCES = sysres.c  $(UTILC) 
 
 moldyext_SOURCES = moldyext.c utlsup.c matrix.c xdr.c
 
@@ -101,6 +107,8 @@ lint-utils:
 		$(LCHECK) $(mdavpos_SOURCES) 
 		$(LCHECK) $(ransub_SOURCES) 
 		$(LCHECK) $(mdvaf_SOURCES) 
+		$(LCHECK) $(ordern_SOURCES) 
+		$(LCHECK) $(sysres_SOURCES) 
 		$(LCHECK) $(moldyext_SOURCES) 
 		$(LCHECK) $(dumpconv_SOURCES) 
 		$(LCHECK) $(dumpext_SOURCES) 
@@ -154,7 +162,10 @@ matrix.o: matrix.c defs.h config.h messages.h
 mdavpos.o: mdavpos.c defs.h config.h structs.h messages.h utlsup.h
 mdbond.o: mdbond.c defs.h config.h structs.h messages.h list.h utlsup.h
 mdshak.o: mdshak.c defs.h config.h structs.h utlsup.h
+dipole.o: dipole.c defs.h config.h structs.h utlsup.h
 mdvaf.o: mdvaf.c defs.h config.h structs.h messages.h utlsup.h
+ordern.o: ordern.c defs.h config.h structs.h messages.h utlsup.h
+sysres.o: sysres.c defs.h config.h structs.h messages.h utlsup.h
 moldyext.o: moldyext.c defs.h config.h
 molout.o: molout.c defs.h config.h structs.h ReadDCD.h
 msd.o: msd.c defs.h config.h structs.h messages.h utlsup.h
