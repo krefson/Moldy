@@ -17,3 +17,5 @@ config.*
 *.dvi
 *.ps
 *.pdf
+configure
+*.com
