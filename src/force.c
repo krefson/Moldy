@@ -29,6 +29,11 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.29  2002/09/26 14:03:06  moldydv
+ *       Now scales RDF by data at each binning - should give correct
+ *       (or better) results for NPT/NPH ensemble.
+ *       Now stores RDF data in "float" type in restart file.
+ *
  *       Revision 2.28  2002/09/19 09:26:28  kr
  *       Tidied up header declarations.
  *       Changed old includes of string,stdlib,stddef and time to <> form
@@ -247,7 +252,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldydv/CVS/moldy/src/force.c,v 2.28 2002/09/19 09:26:28 kr Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/force.c,v 2.29 2002/09/26 14:03:06 moldydv Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -336,7 +341,7 @@ extern int              ithread, nthreads;
 
 extern int printf (const char *, ...);
 
-int cellbin(double rc, double fnc, int nc, double eps)
+int cellbin(double rc, int nc, double fnc, double eps)
 {
    int ibin;
 
@@ -384,7 +389,7 @@ void histout(void)
 /******************************************************************************
  *  Neighbour_list.  Build the list of cells within cutoff radius of cell 0   *
  ******************************************************************************/
-static int   *neighbour_list(int *nnabor, mat_mt h, double cutoff,
+static int   *neighbour_list(int *nnabor, mat_mp h, double cutoff,
 			     int nx, int ny, int nz, int icheck)
 {
    double               dist;
@@ -490,7 +495,7 @@ static int   *neighbour_list(int *nnabor, mat_mt h, double cutoff,
  *         coincide with the corner points, the edges or none of the faces.   *
  *  4) The final list is built by scanning the map.                           *
  ******************************************************************************/
-static int   *strict_neighbour_list(int *nnabor, mat_mt h, double cutoff, 
+static int   *strict_neighbour_list(int *nnabor, mat_mp h, double cutoff, 
 				    int nx, int ny, int nz, int icheck)
 {
    double               dist;
@@ -647,7 +652,7 @@ static void    fill_cells(int nmols,         /* Number of molecules      (in) */
 			  vec_mt (*c_of_m),  /* Centre of mass co-ords   (in) */
 			  real **site, 	     /* Atomic site co-ordinates (in) */
 			  spec_mp species,   /* Pointer to species array (in) */
-			  mat_mt h, 	     /* Unit cell matrix         (in) */
+			  mat_mp h, 	     /* Unit cell matrix         (in) */
                 	  int nx, int ny, int nz,                                
 			  cell_mt *lst,      /* Pile of cell structs     (in) */
 			  cell_mt **cell,    /* Array of cells           (out)*/
