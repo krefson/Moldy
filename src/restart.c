@@ -11,10 +11,13 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 1.1  89/04/27  15:16:09  keith
+ * Initial revision
+ * 
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: restart.c,v 1.2 89/04/25 16:42:37 keith Exp $";
+static char *RCSid = "$Header: restart.c,v 1.2 89/05/15 18:07:31 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -35,7 +38,7 @@ char		*cctime();
 extern  contr_t control;
 extern	int	***rdf;				/* Accumulated RDF bins       */
 /*========================== External data definitions =======================*/
-restrt_t		restart_header = {0L, 0L, "", "", "%I%", 0};
+restrt_t		restart_header = {0L, 0L, "", "", "0.0$", 0};
 /*============================================================================*/
 /******************************************************************************
  *   cread.   read a word from the binary restart file.  This should be the   *
@@ -197,6 +200,8 @@ pot_p		potpar;			/* To be pointed at potpar array      */
    }
 
    (void)memcpy((char*)&save_header, (char*)&restart_header, sizeof(restrt_t));
+   (void)strncpy(save_header.vsn, "$Revision: 1.2 $"+11,
+		                  sizeof save_header.vsn-1);
    save_header.prev_timestamp = restart_header.timestamp;
    save_header.timestamp = time((time_t*)0);		/* Update header      */
    save_header.seq++;
