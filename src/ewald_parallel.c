@@ -3,6 +3,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.9  90/09/28  13:29:19  keith
+ * Inserted braces around VECTORIZE directives and changed include files
+ * for STARDtardent 3000 series (via cond. comp symbol "ardent").
+ * 
  * Revision 1.8  90/08/29  11:00:49  keith
  * Speeded up loop at 231 to improve parallel efficiency.
  * 
@@ -58,7 +62,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /mnt/keith/moldy/RCS/ewald_parallel.c,v 1.8 90/08/29 11:00:49 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.9 90/09/28 13:29:19 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -75,7 +79,8 @@ static char *RCSid = "$Header: /mnt/keith/moldy/RCS/ewald_parallel.c,v 1.8 90/08
 #include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
-void	tfree();
+char            *talloc();	       /* Interface to memory allocator       */
+void            tfree();	       /* Free allocated memory	      	      */
 double	err_fn();			/* Error function		      */
 double	det();				/* Determinant of 3x3 matrix	      */
 void	invert();			/* Inverts a 3x3 matrix		      */
@@ -83,9 +88,6 @@ void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
 void	mat_sca_mul();			/* Multiplies a 3x3 matrix by scalar  */
 void	transpose();			/* Transposes a 3x3 matrix	      */
 double	sum();				/* Sum of elements of 'real' vector   */
-#ifdef VCALLS
-void	saxpy();			/* A*x+y, x, y are long vectors	      */
-#endif
 char	*arralloc();			/* Allocates a dope vector array      */
 void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
@@ -105,6 +107,9 @@ extern	contr_t	control;		/* Main simulation control record     */
 /******************************************************************************
  *  Ewald  Calculate reciprocal-space part of coulombic forces		      *
  ******************************************************************************/
+void ewald_inner();
+#pragma opt_level 3
+#pragma pproc ewald_inner
 void	ewald(site,site_force,system,species,chg,pe,stress)
 real		**site,			/* Site co-ordinate arrays	 (in) */
 		**site_force;		/* Site force arrays		(out) */
@@ -140,6 +145,7 @@ mat_t		stress;			/* Stress virial		(out) */
 		**sky = (real**)arralloc(sizeof(real),2, 0, kmax, 0, nsites-1),
 		**slz = (real**)arralloc(sizeof(real),2, 0, lmax, 0, nsites-1);
    real		*coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
+   real               *c1, *s1, *cm1, *sm1;
    int		nthreads = nprocessors(),
    		ithread;
    double	*pe_n = aalloc(nthreads, double);
@@ -254,10 +260,12 @@ mat_t		stress;			/* Stress virial		(out) */
 /*
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
  */
+#pragma no_parallel
 VECTORIZE
    for(is = 0; is < nsites; is++)
       chx[0][is] = cky[0][is] = clz[0][is] = 1.0;
 
+#pragma no_parallel
 VECTORIZE
    for(is = 0; is < nsites; is++)
    {
@@ -278,33 +286,42 @@ VECTORIZE
    {
       coshx = chx[h];
       sinhx = shx[h];
+      cm1 = chx[h-1]; sm1 = shx[h-1];
+      c1  = chx[1];   s1  = shx[1];
+#pragma no_parallel
 VECTORIZE
       for(is = 0; is < nsites; is++)
       {
-	 coshx[is] = chx[h-1][is]*chx[1][is] - shx[h-1][is]*shx[1][is];
-	 sinhx[is] = shx[h-1][is]*chx[1][is] + chx[h-1][is]*shx[1][is];
+	 coshx[is] = cm1[is]*c1[is] - sm1[is]*s1[is];
+	 sinhx[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
       }
    }
    for(k = 2; k <= kmax; k++)
    {
       cosky = cky[k];
       sinky = sky[k];
+      cm1 = cky[k-1]; sm1 = sky[k-1];
+      c1  = cky[1];   s1  = sky[1];
+#pragma no_parallel
 VECTORIZE
       for(is = 0; is < nsites; is++)
       {
-	 cosky[is] = cky[k-1][is]*cky[1][is] - sky[k-1][is]*sky[1][is];
-	 sinky[is] = sky[k-1][is]*cky[1][is] + cky[k-1][is]*sky[1][is];
+	 cosky[is] = cm1[is]*c1[is] - sm1[is]*s1[is];
+	 sinky[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
       }
    }
    for(l = 2; l <= lmax; l++)
    {
       coslz = clz[l];
       sinlz = slz[l];
+      cm1 = clz[l-1]; sm1 = slz[l-1];
+      c1  = clz[1];   s1  = slz[1];
+#pragma no_parallel
 VECTORIZE
       for(is = 0; is < nsites; is++)
       {
-	 coslz[is] = clz[l-1][is]*clz[1][is] - slz[l-1][is]*slz[1][is];
-	 sinlz[is] = slz[l-1][is]*clz[1][is] + clz[l-1][is]*slz[1][is];
+	 coslz[is] = cm1[is]*c1[is] - sm1[is]*s1[is];
+	 sinlz[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
       }
    }
 /*
@@ -313,9 +330,11 @@ VECTORIZE
  * Points on the axes are included once and only once. (0,0,0) is omitted.
  */
 /*$dir parallel*/
+#pragma ipdep
+#pragma pproc ewald_inner
    for(ithread = 0; ithread < nthreads; ithread++)
       ewald_inner(ithread, nthreads, nhkl, hkl, nsites, nsitesxf, 
-		  chx, cky, clz, shx, sky, slz, chg, vol, r_4_alpha,
+		  chx, cky, clz, shx, sky, slz, chg, &vol, &r_4_alpha,
 		  stress_n[ithread], pe_n+ithread,
 		  ithread ? s_f_n[ithread-1] : site_force);
 /*
@@ -324,12 +343,14 @@ VECTORIZE
    for(ithread = 0; ithread < nthreads; ithread++)
    {
       *pe += pe_n[ithread];
+#pragma asis
       for(i = 0; i < 3; i++)
 	 for(j = 0; j < 3; j++)
 	    stress[i][j] += stress_n[ithread][i][j];
    }
    for(ithread = 0; ithread < nthreads-1; ithread++)
    {
+#pragma ipdep
 VECTORIZE
       for(is = 0; is < nsites; is++)
       {
@@ -346,6 +367,7 @@ VECTORIZE
    if( nthreads > 1)
       tfree((char*)s_f_n);
 }
+#pragma opt_level 2
 /*****************************************************************************
  * qsincos().  Evaluate q sin(k.r) and q cos(k.r).  This is in a separate    *
  * function because some compilers (notably Stellar's) generate MUCH better  *
@@ -418,13 +440,13 @@ VECTORIZE
 void
 ewald_inner(ithread, nthreads, nhkl, hkl, nsites, nsitesxf, 
             chx, cky, clz, shx, sky, slz,
-	    chg, vol, r_4_alpha, stress, pe, site_force)
+	    chg, volp, r_4_alphap, stress, pe, site_force)
 int ithread, nthreads, nhkl;
 struct _hkl hkl[];
 int nsites;
 int nsitesxf;			/* N sites excluding framework sites.	      */
 real **chx, **cky, **clz, **shx, **sky, **slz;
-double vol, r_4_alpha;
+double *volp, *r_4_alphap;
 mat_t	stress;
 double *pe;
 real	chg[];
@@ -435,16 +457,8 @@ real	**site_force;
    double sqcoskr, sqsinkr, sqcoskrn, sqsinkrn, sqcoskrf, sqsinkrf;
    real *coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
    int is, i, j, h, k, l, ihkl;
-#ifdef OLDEWALD
-   real		*chxky	= dalloc(nsites),
-		*shxky	= dalloc(nsites);
-#else
-#endif
-#ifdef VCALLS
-   real		*temp	= dalloc(nsites);
-#else
+   double vol=*volp, r_4_alpha = *r_4_alphap;
    real		force_comp;
-#endif
    real *qcoskr = dalloc(nsites), *qsinkr = dalloc(nsites);
    real		*site_fx = site_force[0],
    		*site_fy = site_force[1],
@@ -472,40 +486,8 @@ real	**site_force;
  * negative k and l by using sin(-x) = -sin(x), cos(-x) = cos(x). For
  * efficiency & vectorisation there is a loop for each case.
  */
-#ifdef OLDEWALD
-      if(k >= 0)
-VECTORIZE
-	 for(is = 0; is < nsites; is++)
-	 {
-	    chxky[is] = coshx[is]*cosky[is] - sinhx[is]*sinky[is];
-	    shxky[is] = sinhx[is]*cosky[is] + coshx[is]*sinky[is];
-	 }
-      else
-VECTORIZE
-	 for(is = 0; is < nsites; is++)
-	 {
-	    chxky[is] = coshx[is]*cosky[is] + sinhx[is]*sinky[is];
-	    shxky[is] = sinhx[is]*cosky[is] - coshx[is]*sinky[is];
-	 }
-
-      if(l >= 0)
-VECTORIZE
-	 for(is = 0; is < nsites; is++)
-	 {
-	    qcoskr[is] = chg[is]*(chxky[is]*coslz[is] - shxky[is]*sinlz[is]);
-	    qsinkr[is] = chg[is]*(shxky[is]*coslz[is] + chxky[is]*sinlz[is]);
-	 }
-      else
-VECTORIZE
-	 for(is = 0; is < nsites; is++)
-	 {
-	    qcoskr[is] = chg[is]*(chxky[is]*coslz[is] + shxky[is]*sinlz[is]);
-	    qsinkr[is] = chg[is]*(shxky[is]*coslz[is] - chxky[is]*sinlz[is]);
-	 }
-#else			/* Use of scalar temps is faster if compiler up to it*/
       qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,chg,
 	      qcoskr,qsinkr,k,l,nsites);
-#endif
       sqcoskrn = sum(nsitesxf, qcoskr, 1);
       sqsinkrn = sum(nsitesxf, qsinkr, 1);
       sqcoskrf = sum(nsites-nsitesxf, qcoskr+nsitesxf, 1);
@@ -537,14 +519,6 @@ NOVECTOR
  * Old and less efficient calculation of site forces. Retained for machines
  * with poor vectorising compilers.
  */
-#ifdef VCALLS
-VECTORIZE
-      for(is = 0; is < nsites; is++)
-	 temp[is] = qsinkr[is]*sqcoskr - qcoskr[is]*sqsinkr;
-      saxpy(nsites, kv[0], temp, 1, site_force[0], 1);
-      saxpy(nsites, kv[1], temp, 1, site_force[1], 1);
-      saxpy(nsites, kv[2], temp, 1, site_force[2], 1);
-#else
 /*
  * Evaluation of site forces. Vectorises under CRAY CC 4.0 & Convex VC 2.0
  */
@@ -556,21 +530,25 @@ VECTORIZE
 	 site_fy[is] += kv[1] * force_comp;
 	 site_fz[is] += kv[2] * force_comp;
       }
-#endif
 /*
  * End of loop over K vectors.
  */
     }
 tfree((char*)qcoskr); tfree((char*)qsinkr);
-#ifdef OLDEWALD
-   tfree((char*)chxky);	 tfree((char*)shxky); 
-#endif
-#ifdef VCALLS
-   tfree((char*)temp);
-#endif
 }
 
 char *getenv();
+#ifdef titan
+int nprocessors()
+{
+   char *env;
+   int n=1000000,    nthreads = MT_NUMBER_OF_PROCS();
+
+   if( ( env = getenv("THREADS") ) != NULL)
+      n =atoi(env);
+   return MIN(nthreads,n);
+}
+#else			/* GS1000/2000 but should compile on any unix */
 int nprocessors()
 {
    char *env;
@@ -580,3 +558,4 @@ int nprocessors()
    else
       return n;
 }
+#endif

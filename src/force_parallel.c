@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.9 90/10/25 18:53:59 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.10 90/11/13 16:56:16 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -85,7 +85,8 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,
 #include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
-void    tfree();
+char            *talloc();	       /* Interface to memory allocator       */
+void            tfree();	       /* Free allocated memory	      	      */
 void    note();                         /* Make a note in output file         */
 char    *arralloc();                    /* General purpose array allocator    */
 int     search_lt();			/* Search a vector for el. < scalar   */
@@ -104,6 +105,7 @@ void    zero_real();                    /* Initialiser                        */
 void	force_inner();			/* Inner loop forward reference       */
 int	nprocessors();			/* Return no. of procs to execute on. */
 double	precision();			/* Floating pt precision.	      */
+void    kernel();                       /* Force kernel routine               */
 /*========================== External data references ========================*/
 extern  contr_t control;
 /*========================== Structs local to module =========================*/
@@ -165,19 +167,6 @@ int nc;
    return ibin;
 }
 
-/******************************************************************************
- * As of version 4.0, the CRAY C compiler can not vectorise the 'kernel'      *
- * function.  A replacement in FORTRAN is provided which will vectorise. To   *
- * use it, compile this module with -DFKERNEL to define the symbol FKERNEL.   *
- ******************************************************************************/
-#ifdef FKERNEL
-#if defined(unix) && !defined(cray)
-#define KERNEL kernel_
-#endif
-void    KERNEL();                       /* Force kernel routine               */
-#else
-void    kernel();                       /* Force kernel routine               */
-#endif
 /******************************************************************************
  ******************************************************************************/
 #ifdef DEBUG2
@@ -326,7 +315,7 @@ int	*frame_type;			/* Framework type counter	 (out)*/
  *                         from the lists of sites in cells.		      *
  ******************************************************************************/
 int	site_neighbour_list(nab, reloc_i, n_nab_sites, nfnab, n_frame_types,
-			    n_nabors, ix, iy, iz, nabor, cell, reloc )
+			    n_nabors, ix, iy, iz, nabor, cell, reloc, work )
 int	*nab;				/* Array of sites in list      (out) */
 int	*reloc_i;			/* Relocation indices for list (out) */
 int	n_nab_sites;			/* Size of above arrays		(in) */
@@ -337,13 +326,14 @@ int	ix, iy, iz;			/* Labels of current cell	(in) */
 ivec_t	*nabor;				/* List of neighbour cells	(in) */
 cell_t	**cell;				/* Head of cell list		(in) */
 reloc_t	***reloc;			/* Relocation index array	(in) */
+int   	*work;                          /* Workspace                         */
 {
    int	jx, jy, jz;			/* Labels of cell in neighbour list  */
    int	jcell, jnab, jsite, rl;		/* Counters for cells etc	     */
    int	nnab = 0;			/* Counter for size of nab	     */
    int	ftype, c, nnabf = 0;
    cell_t	*cmol;			/* Pointer to current cell element   */
-   int	*reloc_if = ialloc(4*n_nab_sites),
+   int	*reloc_if = work,
         *frame_key = reloc_if + n_nab_sites,
    	*nabf = frame_key + n_nab_sites,
         *idx = nabf + n_nab_sites;
@@ -385,8 +375,6 @@ reloc_t	***reloc;			/* Relocation index array	(in) */
       nfnab[ftype] = nnab += c;
    }
 
-   tfree((char*)reloc_if);
-   
    return nnab;
 }
 /******************************************************************************
@@ -406,39 +394,7 @@ real    reloc[][CUBE(NSHELL)];
             reloc[2][NREL(tx,ty,tz)] = tz*h[2][2];
          }
 }
-/******************************************************************************
- *  vaadd,calcdist. These are functions because of a compiler bug in cray C4.0*
- ******************************************************************************/
-#ifdef VCALLS
-static vaadd(nnab, forcej, force_comp, forceij, r)
-int nnab;
-real forcej[], force_comp[], forceij[],r[];
-{
-   int jsite;
-VECTORIZE
-   for(jsite=0; jsite < nnab; jsite++)
-      forcej[jsite] += force_comp[jsite] = forceij[jsite]*r[jsite];
-}
-#endif
-#ifdef CC40
-static void calcdist(j0, nnab, r_sqr, rx, ry, rz, nab_sx, nab_sy, nab_sz,
-		     sitex, sitey, sitez)
-int j0, nnab;
-real r_sqr[], rx[], ry[], rz[], nab_sx[], nab_sy[], nab_sz[];
-double sitex, sitey, sitez;
-{
-   int jsite;
-VECTORIZE
-            for(jsite=j0; jsite < nnab; jsite++)
-            {
-               rx[jsite] = nab_sx[jsite] - sitex;
-               ry[jsite] = nab_sy[jsite] - sitey;
-               rz[jsite] = nab_sz[jsite] - sitez;
-               r_sqr[jsite] = rx[jsite]*rx[jsite] + ry[jsite]*ry[jsite]
-                                                  + rz[jsite]*rz[jsite];
-            }
-}
-#endif
+#pragma pproc force_inner
 /******************************************************************************
  * Force_calc.   This is the main intermolecular site force calculation       *
  * routine                                                                    *
@@ -526,6 +482,7 @@ mat_t           stress;                 /* Stress virial                (out) */
                         reloc[ix+tx][iy+ty][iz+tz].ncell = NCELL(ix, iy, iz);
                         reloc[ix+tx][iy+ty][iz+tz].rel= NREL(tx/nx,ty/ny,tz/nz);
                      }
+#pragma asis
       for(spec = species; spec < species+system->nspecies; spec++)
 	 if( spec->framework )
 	    n_cell_list += spec->nmols*spec->nsites;
@@ -551,7 +508,7 @@ mat_t           stress;                 /* Stress virial                (out) */
    for(ipot = 0; ipot < n_potpar; ipot++)
       for(i_id = 1; i_id < max_id; i_id++)
       {
-VECTORIZE
+NOVECTOR
          for(isite = 0; isite < nsites; isite++)
             potp[i_id][ipot][isite] = potpar[i_id*max_id+id[isite]].p[ipot];
       }
@@ -598,6 +555,7 @@ VECTORIZE
  *   Start of main loop over processors
  */
 /*$dir parallel*/
+#pragma ipdep
    for(ithread = 0; ithread < nthreads; ithread++)
       force_inner(ithread, nthreads, site, chg, potp, id,
 		  n_nab_sites, n_nabors, nabor, cell, reloc, n_frame_types, 
@@ -610,12 +568,14 @@ VECTORIZE
    for(ithread = 0; ithread < nthreads; ithread++)
    {
       *pe += pe_n[ithread];
+#pragma asis
       for(i = 0; i < 3; i++)
 	 for(j = 0; j < 3; j++)
 	    stress[i][j] += stress_n[ithread][i][j];
    }
    for(ithread = 0; ithread < nthreads-1; ithread++)
    {
+#pragma ipdep
 VECTORIZE
       for(isite = 0; isite < nsites; isite++)
       {
@@ -658,7 +618,8 @@ real	*pe;
 mat_t	stress;
 {
    int          *nab  = ialloc(n_nab_sites),	/* Neigbour site gather vector*/
-                *reloc_i = ialloc(n_nab_sites);	/* Vector of pbc relocations  */
+                *reloc_i = ialloc(n_nab_sites),	/* Vector of pbc relocations  */
+   		*work = ialloc(4*n_nab_sites);  /* Workspace for s_n_list     */
    real         *nab_sx  = dalloc(n_nab_sites),	/* 'Gathered' list of         */
    		*nab_sy  = dalloc(n_nab_sites),	/*   neighbour site co-ords   */
                 *nab_sz  = dalloc(n_nab_sites),	/*   - x,y,z components.      */
@@ -672,9 +633,6 @@ mat_t	stress;
                 *nab_chg = dalloc(n_nab_sites),	/* Gathered neig. site charges*/
                 *forceij = dalloc(n_nab_sites),	/* -V'(r) / r		      */
                 *R = dalloc(n_nab_sites);    	/* pbc site relocation cpt    */
-#ifdef VCALLS
-   real         *force_comp = dalloc(n_nab_sites);
-#endif
    real         **nab_pot			/* Gathere'd pot par array    */
    		= (real**)arralloc(sizeof(real), 2,
 				   0, system->n_potpar-1, 0, n_nab_sites-1);
@@ -720,7 +678,7 @@ mat_t	stress;
        * Build site neighbour list 'nab' from cell list.
        */ 
       nnab = site_neighbour_list(nab, reloc_i,n_nab_sites,nfnab,n_frame_types, 
-				 n_nabors, ix, iy, iz, nabor, cell, reloc);
+				 n_nabors, ix, iy, iz, nabor, cell, reloc, work);
 #ifdef DEBUG4
       for(jsite=0; jsite<nnab; jsite++)
 	 printf("%d %d\n",nab[jsite], reloc_i[jsite]);
@@ -778,10 +736,6 @@ VECTORIZE
                printf("%4d %4d\n", jnab,nab[jnab]);
 	   }
 #endif
-#ifdef CC40
-            calcdist(jmin, jmax, r_sqr, rx, ry, rz,nab_sx,nab_sy,nab_sz,
-		     site[0][isite],site[1][isite],site[2][isite]);
-#else
 	    site0=site[0][isite]; site1=site[1][isite]; site2=site[2][isite];
 VECTORIZE
             for(jsite=jmin; jsite < jmax; jsite++)
@@ -792,7 +746,6 @@ VECTORIZE
                r_sqr[jsite] = rx[jsite]*rx[jsite] + ry[jsite]*ry[jsite]
                                                   + rz[jsite]*rz[jsite];
             }
-#endif
 #ifdef DEBUG2
 	    hist(jmin, jmax, r_sqr);
 #endif
@@ -802,29 +755,8 @@ VECTORIZE
 		       isite, nab[jsite], sqrt(TOO_CLOSE));
 
             /*  Call the potential function kernel                            */
-#ifdef FKERNEL
-            KERNEL(&jmin, &jmax, forceij, pe, r_sqr, nab_chg, chg+isite, &norm,
-		   &control.alpha, &system->ptype, &n_nab_sites, nab_pot[0]);
-#else
             kernel(jmin, jmax, forceij, pe, r_sqr, nab_chg, chg[isite],
 		   norm, control.alpha, system->ptype, nab_pot);
-#endif
-#ifdef VCALLS
-            vaadd(jmax-jmin,forcejx+jmin,force_comp+jmin,forceij+jmin,rx+jmin);
-            site_force[0][isite] -= sum(jmax-jmin, force_comp+jmin,1);
-            s00                  += vdot(jmax-jmin,force_comp+jmin,1,rx+jmin,1);
-            s01                  += vdot(jmax-jmin,force_comp+jmin,1,ry+jmin,1);
-            s02                  += vdot(jmax-jmin,force_comp+jmin,1,rz+jmin,1);
-
-            vaadd(jmax-jmin,forcejy+jmin,force_comp+jmin,forceij+jmin,ry+jmin);
-            site_force[1][isite] -= sum(jmax-jmin, force_comp+jmin,1);
-            s11                  += vdot(jmax-jmin,force_comp+jmin,1,ry+jmin,1);
-            s12                  += vdot(jmax-jmin,force_comp+jmin,1,rz+jmin,1);
-
-            vaadd(jmax-jmin,forcejz+jmin,force_comp+jmin,forceij+jmin,rz+jmin);
-            site_force[2][isite] -= sum(jmax-jmin, force_comp+jmin,1);
-            s22                  += vdot(jmax-jmin,force_comp+jmin,1,rz+jmin,1);
-#else
             site0 = site1 = site2 = 0.0;
 VECTORIZE
             for(jsite=jmin; jsite < jmax; jsite++)
@@ -856,7 +788,6 @@ VECTORIZE
             site_force[0][isite] += site0;
             site_force[1][isite] += site1;
             site_force[2][isite] += site2;
-#endif
 #ifdef DEBUG3
 	    printf("PE = %f\n",pe[0]);
 #endif
@@ -873,13 +804,10 @@ VECTORIZE
    stress[1][2]  += s12;
    stress[2][2]  += s22;
 
-   tfree((char*)nab_pot);   
+   tfree((char*)nab_pot); tfree((char*)work);  
    tfree((char*)nab);     tfree((char*)reloc_i);  tfree((char*)nab_chg);
    tfree((char*)r_sqr);   tfree((char*)R);       tfree((char*)forceij);
    tfree((char*)rx);      tfree((char*)ry);      tfree((char*)rz);
    tfree((char*)forcejx); tfree((char*)forcejy); tfree((char*)forcejz);
    tfree((char*)nab_sx);  tfree((char*)nab_sy);  tfree((char*)nab_sz);
-#ifdef VCALLS
-   tfree((char*)force_comp);
-#endif
 }
