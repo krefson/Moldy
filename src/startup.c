@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.16.2.1  2000/12/11 12:33:35  keith
+ *      Incorporated site-pbc branch "bekker" into main "Beeman" branch.
+ *
  *      Revision 2.16.4.1  2000/12/07 15:46:28  keith
  *      Changed d_of_f to be 3N-3 rather than 3N.
  *
@@ -259,7 +262,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.16.4.1 2000/12/07 15:46:28 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.16.2.1 2000/12/11 12:33:35 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -1067,7 +1070,7 @@ void validate_control()
       message(&nerrs, NULLP, ERROR, INVVLF, control.limit, "rdf-limit");
    if( control.subcell < 0.0 )
       message(&nerrs, NULLP, ERROR, INVVLF, control.subcell, "subcell");
-   if( control.const_pressure < 0 || control.const_pressure > 2 )
+   if( control.const_pressure < 0 || control.const_pressure > 4 )
       message(&nerrs, NULLP, ERROR, INVVAL, control.const_pressure, "const-pressure");
    if( control.const_temp < 0 || control.const_temp > 2 )
       message(&nerrs, NULLP, ERROR, INVVAL, control.const_temp, "const-temp");
@@ -1127,7 +1130,7 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
    contr_mt	backup_control;		/* Control struct from backup file    */
    quat_mt	*qpf=0;			/* Quat of rotation to princ. frame   */
    int		av_convert;		/* Flag for old-fmt averages in restrt*/
-   int		i;
+   int		i,j;
    *backup_restart = 0;
    (void)memst(restart_header,0,sizeof(*restart_header));
 
@@ -1390,10 +1393,13 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
       for(i = 0; i < 9; i++)		/* Zap cell velocities if constrained */
 	 if( (control.strain_mask >> i) & 1 )
 	    system->hddot[0][i] = system->hddoto[0][i] = system->hdot[0][i] = 0;
-      if(control.const_pressure == 2 && old_const_pressure == 1) 
+      if((control.const_pressure & 1) != (old_const_pressure & 1)) 
       {                      /* Enforce consistency if const-p method changed */
-	 for(i = 0; i < 9; i++)		           /* Zap cell velocities etc */
-	    system->hddot[0][i] = system->hddoto[0][i] = system->hdot[0][i] = 0;
+	 for(i = 0; i < 3; i++)		           /* Zap cell velocities etc */
+	    for(j = 0; j < 3; j++)		           /* Zap cell velocities etc */
+	       if( i != j )
+		  system->hddot[i][j] = system->hddoto[i][j] 
+			              = system->hdot[i][j] = 0;
       }
 
       (void)fclose(restart);

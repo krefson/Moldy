@@ -26,6 +26,12 @@ RELEASE_2.16
   (the reciprocal-space part of the Ewald sum has always relied on
   this cancellation).
 
+* Fixed bug in "constant-pressure" (not stress) ensemble, -- effective
+  mass W was 3 times too small.
+
+* Added Clevland/Wentzcovitch improved constant-stress  and 
+  true Andersen constant-pressure dynamics.
+
 * Two new potential types.
   1) "morse".  Really the Busing-Ida-Gilbert plus Morse-potential as
      used in the japanese MD code Mdxorto.

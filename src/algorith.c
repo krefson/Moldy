@@ -29,7 +29,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * make_sites()		Generate atomic site co-ordinates from c-of-m etc     *
  * newton()		Calculate accelerations from forces		      *
  * euler()		Calculate quaternion accelerations from torques	      *
- * parinello()          Calculate P&R c-of-m acceleration term                * 
+ * parinello()          Calculate P&R c-of-m acceleration term                *
  * rahman()		Calculate unit cell matrix accelerations from stress  *
  * trans_ke()		Return translational kinetic energy.		      *
  * rot_ke()		Return rotational kinetic energy		      *
@@ -42,6 +42,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: algorith.c,v $
+ *       Revision 2.11.2.1  2000/12/11 12:33:21  keith
+ *       Incorporated site-pbc branch "bekker" into main "Beeman" branch.
+ *
  *       Revision 2.11.4.1  2000/10/11 16:11:09  keith
  *       First working version of H. Bekker's pbc algorithm.  This computes
  *       forces and stresses correctly without computing the virial in the
@@ -152,7 +155,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/algorith.c,v 2.11.4.1 2000/10/11 16:11:09 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/algorith.c,v 2.11.2.1 2000/12/11 12:33:21 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -167,6 +170,7 @@ void            tfree();	       /* Free allocated memory	      	      */
 void	mat_vec_mul();			/* 3 x 3 Matrix by Vector multiplier  */
 void	mat_mul();	          	/* 3 x 3 matrix multiplier	      */
 void	mat_add();			/* Add 2 3x3 matrices                 */
+void	mat_sub();			/* Subtract 2 3x3 matrices            */
 void	mat_sca_mul();			/* Multiply 3x3 matrix by scalar      */
 void	transpose();			/* transpose a 3x3 matrix	      */
 void	invert();			/* invert a 3x3 matrix		      */
@@ -584,7 +588,7 @@ int	mask;				/* Mask constrained el's of h matrix  */
    if ( mask >> 9 & 1 )                         /* Uniform dilation case */
    {
      mat_mul(h_tr, h, htrh);
-     cpscale = 3.0*vol*trace(stress)/(W*trace(htrh));
+     cpscale = vol*trace(stress)/(W*trace(htrh));
      mat_sca_mul(cpscale,h, hddot);
    }
    else                                         /* Full parrinello-rahman */
@@ -605,6 +609,102 @@ int	mask;				/* Mask constrained el's of h matrix  */
      }
    }
 
+}
+/******************************************************************************
+ * Wentzcovitch.   Calculate the unit cell matrix accelerations using the     *
+ *      formulation of Wentzcovitch (Phys. Rev. B 44(5) (1991) 2358 and       *
+ *      Cleveland (J. CHem. Phys. 89(9) (1988) 4987) which has the property   *
+ *      that the EOM are modularly invariant (ie to choice of MD cell) and    *
+ *      also has the isoshape special case identical to the original Andersen *
+ *      case.  This satisfies the Virial theorem too.			      *
+ ******************************************************************************/
+void wentzcovitch(stress_vir, h, hdot, hddot, ke_dyad, press, W, mask)
+mat_mt	stress_vir,			/* Stress virial		      */
+	h,				/* Unit cell matrix		      */
+	hdot,				/* Unit cell velocities               */
+	hddot,				/* Unit cell accelerations            */
+	ke_dyad;			/* Translational kinetic energy dyad  */
+double	press,				/* Externally applied pressure	      */
+	W;				/* Piston mass parameter	      */
+int	mask;				/* Mask constrained el's of h matrix  */
+{
+   double	vol = det(h),		/* Unit cell volume		      */
+		vdot;	
+   double       and_fac;                /* Scale factor for uniform scale case*/
+   double	tmp;
+   mat_mt	stress,			/* Stress tensor		      */
+   		h_tr,			/* Transpose of h		      */
+   		h_tr_inv,		/* Inverse of transpose of h	      */
+                hdot_t,
+		e,
+		f,
+		tmp_mat,
+		tmp_mat2,
+   		sigma,			/* P & R sigma matrix 		      */
+		sigma_t;
+   int		i, j;			/* Counters			      */
+
+   for(i = 0; i < 3; i++)
+      for(j = 0; j < 3; j++)
+         stress[i][j] = (ke_dyad[i][j] + stress_vir[i][j]) / vol;
+
+   for(i = 0; i < 3; i++)
+      stress[i][i] -= press;	/* Subtract applied pressure from diagonal    */
+
+   transpose(h, h_tr);          /* Calculate sigma = vol*h transpose inverse  */
+   invert(h_tr, h_tr_inv);
+   mat_sca_mul(vol, h_tr_inv, sigma);
+   transpose(sigma, sigma_t);
+   mat_mul(sigma_t, hdot, tmp_mat);
+   vdot=trace(tmp_mat);
+
+   if ( mask >> 9 & 1 )                         /* Uniform dilation case */
+   {
+      and_fac = 1.0/(3.0*vol*W)*trace(stress) - 2.0/9.0*SQR(vdot/vol);
+      mat_sca_mul(and_fac,h, hddot);
+   }
+   else                                         /* Full parrinello-rahman */
+   {
+      mat_mul(sigma_t, sigma, f);
+      transpose(hdot, hdot_t);
+      mat_mul(hdot_t, hdot, e);
+
+      mat_sca_mul(1.0/W, stress, hddot);	/* 1/W Tr(PI-P)		  */
+      
+      mat_mul(f, e, tmp_mat);			/* 1/V Tr(fe)             */
+      tmp = 1.0/vol*trace(tmp_mat);
+      hddot[0][0] += tmp;
+      hddot[1][1] += tmp;
+      hddot[2][2] += tmp;
+
+      mat_mul(hdot, f, tmp_mat);		/* x = hdot f hdot(T)	  */
+      mat_mul(tmp_mat, hdot_t, tmp_mat);
+      mat_mul(sigma, e, tmp_mat2);		/* y = sigma e sigma(t)   */
+      mat_mul(tmp_mat2, sigma_t, tmp_mat2);
+      mat_sub(tmp_mat, tmp_mat2, tmp_mat);
+      mat_sca_mul(1.0/vol, tmp_mat, tmp_mat);   /* 1/V(x-y)               */
+      mat_add(tmp_mat, hddot, hddot);
+
+      mat_mul(hddot, h, hddot);			/* Common factor of terms */
+           
+      mat_sca_mul(-2*vdot, hdot, tmp_mat);      /* -2 V dot h dot         */
+      mat_add(tmp_mat, hddot, hddot);
+
+      mat_mul(hdot, sigma_t, tmp_mat);		/* h dot sigma h dot      */
+      mat_mul(tmp_mat, hdot, tmp_mat);
+      mat_add(tmp_mat, hddot, hddot);
+
+      mat_sca_mul(1.0/vol, hddot, hddot);       /* Final factor of 1/V    */
+      /* 
+       * Zero unwanted degrees of freedom. Refson PhD Thesis (1986)
+       */   
+      for(i = 0; i < 9; i++)
+      {
+	 if( mask & 1 )
+	    hddot[0][i] = 0.0;		/* Access as [9] rather than [3][3]   */
+	 mask  >>= 1;
+      }
+   }
 }
 /******************************************************************************
  * Hoover_tr() function corrects forces to realize thermostat                 *

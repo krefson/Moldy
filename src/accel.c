@@ -25,6 +25,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.19.2.2  2000/12/11 12:33:20  keith
+ *       Incorporated site-pbc branch "bekker" into main "Beeman" branch.
+ *
  *       Revision 2.19.2.1.2.1  2000/10/11 16:11:08  keith
  *       First working version of H. Bekker's pbc algorithm.  This computes
  *       forces and stresses correctly without computing the virial in the
@@ -248,7 +251,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.19.2.1.2.1 2000/10/11 16:11:08 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.19.2.2 2000/12/11 12:33:20 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -277,6 +280,7 @@ void            newton();	       /* Calculate accelerations from forces */
 void            euler();	       /* Get quat 2nd derivatives            */
 void            parinello();	       /* Get correction to c of m accns      */
 void            rahman();	       /* Get h 2nd derivatives	              */
+void		wentzcovitch();	       /* Cell accn using Wentzcovitch's H    */
 void            energy_dyad();	       /* Calculate mvv for stress term       */
 void            force_calc();	       /* Calculate direct-space forces       */
 double          dist_pot();	       /* Returns integrated potential fn     */
@@ -1087,11 +1091,17 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
       zero_real(ke_dyad[0], 9);
       for (spec = species; spec < &species[nspecies]; spec++)
 	 energy_dyad(ke_dyad, sys->h, spec->velp, spec->mass, spec->nmols);
-      rahman(stress, sys->h, sys->hddot, ke_dyad,
-	     control.pressure, control.pmass, 
-	     control.const_pressure==2?512:control.strain_mask);
       beeman_2(sys->hdot[0], sys->hdotp[0], sys->hddot[0], sys->hddoto[0],
 	       sys->hddotvo[0], 9);
+
+      if( control.const_pressure <= 2 )
+	 rahman(stress, sys->h, sys->hddot, ke_dyad,
+		control.pressure, control.pmass, 
+		control.const_pressure==2?512:control.strain_mask);
+      else
+	 wentzcovitch(stress, sys->h, sys->hdotp, sys->hddot, ke_dyad,
+		      control.pressure, control.pmass, 
+		      control.const_pressure==4?512:control.strain_mask);
    }
 /*
  * Iterate linear velocity dependant parts with beeman step 2 until convergence

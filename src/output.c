@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.16.2.2  2000/12/11 12:33:33  keith
+ *       Incorporated site-pbc branch "bekker" into main "Beeman" branch.
+ *
  *       Revision 2.16.2.1.2.1  2000/12/07 15:48:43  keith
  *       Banner_page() is now more selective about printing messages of intent
  *       to perform scaling and RDF computations.  Checks to see if these will
@@ -207,7 +210,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.16.2.1.2.1 2000/12/07 15:48:43 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.16.2.2 2000/12/11 12:33:33 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -612,13 +615,17 @@ restrt_mt	*restart_header;
    if(control.const_pressure)
    {
       if(control.const_pressure == 1)
-	 (void)printf(" Constant stress ensemble will be used");
+	 (void)printf(" Parrinello and Rahman constant stress ensemble will be used");
       else if(control.const_pressure == 2)
-	 (void)printf(" Constant pressure ensemble will be used");
+	 (void)printf(" Constant pressure ensemble (P&R-compatible) will be used");
+      else if(control.const_pressure == 3)
+	 (void)printf(" Wenzcovitch constant stress ensemble will be used");
+      else if(control.const_pressure == 4)
+	 (void)printf(" Andersen constant pressure ensemble will be used");
       new_line();
       format_dbl("Applied pressure", CONV_P*control.pressure,CONV_P_N);
       format_dbl("Mass parameter W",control.pmass,MUNIT_N);
-      if(control.const_pressure == 1)
+      if(control.const_pressure & 1)
 	 format_int("h-matrix constraint mask",control.strain_mask);
 
       if(control.const_temp == 2)

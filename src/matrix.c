@@ -31,6 +31,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: matrix.c,v $
+ *       Revision 2.8  1998/05/07 17:06:11  keith
+ *       Incorporated site-pbc branch "bekker" into main "Beeman" branch.
+ *
  *       Revision 2.7  1994/06/08 13:22:31  keith
  *       Null update for version compatibility
  *
@@ -103,7 +106,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/matrix.c,v 2.7 1994/06/08 13:22:31 keith stab $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/matrix.c,v 2.8 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -169,21 +172,31 @@ VECTORIZE
 #endif
 }
 /******************************************************************************
- * mat_mul   Multiply two 3 x 3 matrices. Result can NOT overwrite input.     *
+ * mat_mul   Multiply two 3 x 3 matrices.				      *
+ * Unroll loops and use temporary storage to allow input/output overlap       *
  ******************************************************************************/
 void mat_mul(a, b, c)
 mat_mt	a,					/* Input matrix 1        (in) */
 	b,					/* Input matrix 2        (in) */
 	c;					/* Result matrix        (out) */
 {
-   register int	i, j;				/* Counters		      */
+   real r00, r01, r02, r10, r11, r12, r20, r21, r22;
    
-   if(c == a || c == b)
-      message(NULLI, NULLP, FATAL, OVRLAP, "mat_mul");
+   r00 = a[0][0]*b[0][0] + a[0][1]*b[1][0] + a[0][2]*b[2][0];
+   r01 = a[0][0]*b[0][1] + a[0][1]*b[1][1] + a[0][2]*b[2][1];
+   r02 = a[0][0]*b[0][2] + a[0][1]*b[1][2] + a[0][2]*b[2][2];
 
-   for(i = 0; i < 3; i++)
-      for(j = 0; j < 3; j++)
-         c[i][j] = a[i][0]*b[0][j] + a[i][1]*b[1][j] + a[i][2]*b[2][j];
+   r10 = a[1][0]*b[0][0] + a[1][1]*b[1][0] + a[1][2]*b[2][0];
+   r11 = a[1][0]*b[0][1] + a[1][1]*b[1][1] + a[1][2]*b[2][1];
+   r12 = a[1][0]*b[0][2] + a[1][1]*b[1][2] + a[1][2]*b[2][2];
+
+   r20 = a[2][0]*b[0][0] + a[2][1]*b[1][0] + a[2][2]*b[2][0];
+   r21 = a[2][0]*b[0][1] + a[2][1]*b[1][1] + a[2][2]*b[2][1];
+   r22 = a[2][0]*b[0][2] + a[2][1]*b[1][2] + a[2][2]*b[2][2];
+
+   c[0][0] = r00; c[0][1] = r01; c[0][2] = r02;
+   c[1][0] = r10; c[1][1] = r11; c[1][2] = r12;
+   c[2][0] = r20; c[2][1] = r21; c[2][2] = r22;
 }
 /******************************************************************************
  *  mat_sca_mul.  Multiply a 3x3 matrix by a scalar                           *
@@ -213,20 +226,34 @@ mat_mt	a,					/* Input matrix 1        (in) */
          c[i][j] = a[i][j] + b[i][j];
 }
 /******************************************************************************
+ * mat_sub   Subtract two 3 x 3 matrices.                                     *
+ ******************************************************************************/
+void mat_sub(a, b, c)
+mat_mt	a,					/* Input matrix 1        (in) */
+	b,					/* Input matrix 2        (in) */
+	c;					/* Result matrix        (out) */
+{
+   register int	i, j;				/* Counters		      */
+   
+   for(i = 0; i < 3; i++)
+      for(j = 0; j < 3; j++)
+         c[i][j] = a[i][j] - b[i][j];
+}
+/******************************************************************************
  * Transpose  Transpose a 3 x 3 matrix.  Will handle case of a = b            *
  ******************************************************************************/
 void transpose(a, b)
 mat_mt	a,					/* Input matrix          (in) */
 	b;					/* Transposed matrix    (out) */
 {
-   mat_mt tmp;
+   real tmp;
 
-   memcp(tmp, a, sizeof tmp);
+   if( a != b )
+      b[0][0] = a[0][0]; b[1][1] = a[1][1]; b[2][2] = a[2][2];
+   tmp = a[0][1]; b[0][1] = a[1][0]; b[1][0] = tmp;
+   tmp = a[0][2]; b[0][2] = a[2][0]; b[2][0] = tmp;
+   tmp = a[1][2]; b[1][2] = a[2][1]; b[2][1] = tmp;
 
-   b[0][0] = tmp[0][0];	b[1][1] = tmp[1][1];	b[2][2] = tmp[2][2];
-   b[0][1] = tmp[1][0];	b[1][0] = tmp[0][1];
-   b[0][2] = tmp[2][0];	b[2][0] = tmp[0][2];
-   b[1][2] = tmp[2][1];	b[2][1] = tmp[1][2];
 }
 /******************************************************************************
  *  Det.  Determinant of a 3 x 3 matrix   				      *
