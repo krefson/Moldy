@@ -1,7 +1,10 @@
 TODO
 ====
+Use vertical slots in total energy of output to print int'l energy and
+conserved Hamiltonian separately.
 
-Unpack into own directory.
+Fix reader to handle DOS linebreaks.
+
 Port to new Autoconf.
 
 Update restart with "xdr-sizeof" -- implement a replacement.
@@ -26,6 +29,8 @@ Add molecule selection capabilities to "msd" and "mdvaf".
 
 Fix error handling in mdshak, mdavpos in case the call to "dumpext" failed.
 
+Update DCD writer to a machine-independent format?
+
 In fact rework all utilities to rationalise options and better document use.
 
 Update manual to document leapfrog algorithms and molecular-cutoff option. 
@@ -37,6 +42,9 @@ Incorporate Craig's configuration generator.
 
 DONE
 ====
+Allow ttmass and W to be changed during run somehow.
+
+Unpack into own directory.
 
 Include plotrdf in installed programs.
 
