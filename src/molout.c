@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/molout.c,v 1.12.8.5 2004/04/19 04:19:31 moldydv Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/molout.c,v 1.12.8.6 2004/05/07 07:34:32 moldydv Exp $";
 #endif
 
 #include "defs.h"
@@ -12,17 +12,12 @@ static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/molout.c,v 1.12.8.
 #include "structs.h"
 #include "ReadDCD.h"
 #include "utlsup.h"
-gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 
-void	invert(real (*a)[3], real (*b)[3]);
 void	make_sites(real (*h)[3], vec_mp c_of_m_s, 
 		   quat_mp quat, vec_mp p_f_sites, 
 		   real **site, int nmols, int nsites, int pbc);
-void    error(char *format, ...);
 void    afree(gptr *p);
-char    *atime(void);
-/*======================== Global vars =======================================*/
-extern contr_mt		control;
+
 /******************************************************************************
  ******************************************************************************/
 void 
@@ -536,7 +531,7 @@ arc_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, int i
    char         atom_name[5], name_charge[7], *elem_sym;
    double       atom_charge;
    int          imol, isite, divd;
-   int          i, is, ispec=1;
+   int          is, ispec=1;
 
    a = sqrt(SQR(h[0][0]) + SQR(h[1][0]) + SQR(h[2][0]));
    b = sqrt(SQR(h[0][1]) + SQR(h[1][1]) + SQR(h[2][1]));

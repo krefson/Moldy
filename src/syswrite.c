@@ -25,6 +25,9 @@ what you give them.   Help stamp out software-hoarding! */
  **************************************************************************************
  *  Revision Log
  *  $Log: syswrite.c,v $
+ *  Revision 2.6.10.3  2004/04/09 06:02:55  moldydv
+ *  Moved xtoupper definition to utlsup.h
+ *
  *  Revision 2.6.10.2  2004/03/01 04:54:03  moldydv
  *  Syswrite now treats non-periodic data (from XYZ and some CSSR files) as single species with initial configuration to be set using skew start.
  *  Options -n and -l added for no of particles and species label, respectively, for such systems.
@@ -65,7 +68,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/syswrite.c,v 2.6.10.2 2004/03/01 04:54:03 moldydv Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/syswrite.c,v 2.6.10.3 2004/04/09 06:02:55 moldydv Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -81,30 +84,20 @@ static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/syswrite.c,v 2.6.1
 #include "utlsup.h"
 #include "sginfo.h"
 #include "specdata.h"
-
-/*======================== Global vars =======================================*/
-int ithread=0, nthreads=1;
-contr_mt                control;
+#include "readers.h"
 
 /*========================== External data references ========================*/
 extern  const pots_mt   potspec[];           /* Potential type specification  */
 
-double  det(mat_mt a);
-char	*read_ftype(char *filename);
-int     read_ele(spec_data *element, char *filename);
-int     read_pdb(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
-int     read_cssr(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
-int     read_shak(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, double *);
-int     read_xtl(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
-int     read_xyz(char *, mat_mp, char (*)[NLEN], vec_mp, char *);
-int     sgexpand(int , int , vec_mt *, char (*)[NLEN], double *, char *);
+/*======================== Global variables ==================================*/
+int ithread=0, nthreads=1;
+
 /******************************************************************************
  * add_suffix().  Add numerical suffix to string.                             *
  ******************************************************************************/
 int     add_suffix(char *string, int number)
 {
-   char    suffix;
-   int     i, digit, n_digit;
+   int     n_digit;
    int     length = strlen(string);
 
    n_digit = floor(log10(number))+1;
@@ -384,7 +377,7 @@ main(int argc, char **argv)
         if (!nflag)                          /* If no matches, create new species type */
         {
            if( typetot > MAX_SPECIES )
-             error("Too many species found - current limit is %d (MAX_SPECIES in utlsup.h)", MAX_SPECIES);
+             error("Too many species found - current limit is %d (MAX_SPECIES in specdata.h)", MAX_SPECIES);
            for( j=0; j < n_elem; j++)        /* Search element/species data for match with site */
              if( !strcmp(st->name, element[j].symbol) )
              {
