@@ -19,11 +19,15 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 2.5 1994/01/18 16:26:29 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 2.4 94/01/21 12:35:03 keith Exp $";
 #endif
 
 /*
- * $Log: dumpconvert.c,v $
+ * $Log:	dumpconvert.c,v $
+ * Revision 2.4  94/01/21  12:35:03  keith
+ * Incorporated all portability experience to multiple platforms since 2.2.
+ * Rewrote varargs functions to use stdargs conditionally on __STDC__
+ * 
  * Revision 2.5  1994/01/18  16:26:29  keith
  * Incorporated all portability experience to multiple platforms since 2.2.
  * Rewrote varargs functions to use stdargs conditionally on __STDC__
@@ -302,7 +306,7 @@ dump_mt	*header;
 	   header->dump_init, header->dump_size); 
 }
 
-void
+int
 main(argc, argv)
 int	argc;
 char	*argv[];
