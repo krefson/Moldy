@@ -41,12 +41,6 @@ what you give them.   Help stamp out software-hoarding!  */
 #      endif
        extern time_t	time();
        extern char * ctime();
-#   else
-#      ifdef CRAY
-          typedef long	time_t;
-          extern time_t	time();
-          extern char * ctime();
-#      endif
 #   endif
 #endif
 #define __time_h

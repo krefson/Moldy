@@ -34,16 +34,6 @@ int	getopt();
 #define NSIGNAL 8
 #define buf_inc 128
 
-#if defined(CRAY) && ! defined(unix)
-int     vfprintf (file, fmt, args)
-FILE    *file;
-char    *fmt;
-va_list args;
-{
-    return(XPRINTF(&fmt, &args, &file));
-}
-#endif
-
 #if defined(ANSI) || defined(__STDC__)
 #undef  va_alist
 #define	va_alist char *format, ...

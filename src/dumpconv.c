@@ -19,11 +19,15 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconv.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/dumpconv.c,v 2.7 1994/06/08 13:12:34 keith stab keith $";
 #endif
 
 /*
  * $Log: dumpconv.c,v $
+ * Revision 2.7  1994/06/08 13:12:34  keith
+ * Changed "%g" scan format to "%f" - should be identical but
+ * some systems, particularly VAX/VMS didn't grok "%g".
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -116,16 +120,6 @@ char *cs, *ct;
       if( !strcmp(cs,ct) )
 	 return cs;
    return 0;      
-}
-#endif
-
-#if defined(CRAY) && ! defined(unix)
-int     vfprintf (file, fmt, args)
-FILE    *file;
-char    *fmt;
-va_list args;
-{
-    return(XPRINTF(&fmt, &args, &file));
 }
 #endif
 

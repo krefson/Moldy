@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.7  1994/06/08 13:09:00  keith
+ *       Added "zero_dbls()" function.
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -232,7 +235,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/auxil.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/auxil.c,v 2.7 1994/06/08 13:09:00 keith stab keith $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -282,7 +285,9 @@ void            tfree();	       /* Free allocated memory	      	      */
  *  library versions.  Other machines do it the hard way.		      *
  *  CRAY versions.							      *
  ******************************************************************************/
-#if defined(CRAY)
+#if defined(_CRAY) && ! defined(_CRAYMPP)
+#define VECTS_DEFINED
+
 double vdot(n,x,ix,y,iy)
 int	n;
 real	*x, *y;
@@ -374,6 +379,8 @@ int x[], s;
  *  Vector routines - CONVEX versions.  The calls are to VECLIB functions.    *
  ******************************************************************************/
 #if defined(__convexc__)
+#define VECTS_DEFINED
+
 #define SINGLE (sizeof(real) == sizeof(float))
 double vdot(n,x,ix,y,iy)
 int	n;
@@ -489,6 +496,8 @@ int x[], s;
  * alliant versions - with cray librarries				      *
  ******************************************************************************/
 #if defined(alliant)
+#define VECTS_DEFINED
+
 double vdot(n,x,ix,y,iy)
 int	n;
 real	*x, *y;
@@ -557,7 +566,7 @@ int	ix[];
 /******************************************************************************
  *  Vector handling functions - C versions. 		     		      *
  ******************************************************************************/
-#if !defined(CRAY) && !defined(__convexc__) && !defined(alliant)
+#ifndef VECTS_DEFINED
 double vdot(n,x,ix,y,iy)
 int	n;
 real	x[], y[];
@@ -805,9 +814,6 @@ double rt_clock()
 
 #endif			/* USG or BSG					      */
 #else			/* Not Unix					      */
-#ifdef CRAY
-#   define CLOCKS_PER_SEC 1000000
-#endif
 #if !defined(CLOCKS_PER_SEC) && defined(CLK_TCK)
 #   define  CLOCKS_PER_SEC CLK_TCK
 #endif
@@ -870,175 +876,13 @@ VECTORIZE
       r[i] = 0.0;
 }
 /******************************************************************************
- * strerror for pre-ANSI unix machines					      *
- ******************************************************************************/
-#ifndef ANSI_LIBS
-#if defined(unix) || defined(__unix__)
-char	*strerror(i)
-int i;
-{
-   extern int sys_nerr;
-   extern char *sys_errlist[];
-   if( i >= 0 && i < sys_nerr )
-      return sys_errlist[i];
-   else
-      return "invalid error code";
-}   
-#endif
-#endif
-/******************************************************************************
- * raise for pre-ANSI unix machines					      *
- ******************************************************************************/
-#ifndef ANSI_LIBS
-#if defined(unix) || defined(__unix__)
-int 	raise(sig)
-int sig;
-{
-   extern int getpid();
-   extern int kill();
-
-   return(kill(getpid(), sig));
-}   
-#endif
-#endif
-/******************************************************************************
- * raise for VMS.  Earlier VAX/VMS libs don't it have it.  Assume that any vsn*
- * late enough to have __DECC is OK. Don't believe ANSI_LIBS -- kludge.       *
- ******************************************************************************/
-#if defined(vms) && ! defined(__DECC)
-int 	raise(sig)
-int sig;
-{
-   extern int getpid();
-   extern int kill();
-
-   return(kill(getpid(), sig));
-}   
-#endif
-/******************************************************************************
- * strstr replacement for pre-ANSI machines which don't have it.              *
- ******************************************************************************/
-#ifndef ANSI_LIBS
-char *strstr(cs, ct)
-CONST char *cs, *ct;
-{
-   int  i, sl = strlen(cs)-strlen(ct);
-
-   for(i = 0; i <= sl; i++)
-      if( !strcmp(cs+i,ct) )
-	 return (char*)cs+i;
-   return 0;      
-}
-#endif
-/******************************************************************************
- * mem{cpy,set} and strchr replacement for BSD machines which don't have them.*
- ******************************************************************************/
-#ifndef ANSI_LIBS
-#ifdef BSD
-char *strchr(s, c)
-CONST char	*s;
-int	c;
-{
-   extern char	*index();
-   return index(s,c);
-}
-gptr *memcpy(s1, s2, n)
-gptr *s1, *s2;
-int n;
-{
-   int bcopy();
-   (void)bcopy((char *)s2, (char *)s1, n);
-   return(s1);
-}
-gptr *memset(s, c, n)
-gptr *s;
-int c, n;
-{
-   void bzero();
-   char	*sp;
-   if( c == 0 )
-      (void)bzero(s, n);
-   else
-   {
-      for( sp=s; sp < (char*)s+n; sp++)
-	 *sp = c;
-   }
-   return(s);
-}
-#endif
-#endif
-/******************************************************************************
  *  replace - replace file1 by file2, renaming or overwriting		      *
  ******************************************************************************/
-#if defined(CRAY) && !defined(unix) && !defined(__unix__)       /* COS only   */
-
-#define PDNLEN 16
-
-void cos_parse(name, own, id, dn)
-char	*name, *own, *id, *dn;
-{
-   char	*tok[3], *t = NULL, *name2 = strdup(name);
-   int i;
-   tok[0] = tok[1] = tok[2] = "";
-
-   while ( (t = strtok(t ? 0 : name2, "/")) != NULL )
-   {
-      tok[0] = tok[1]; tok[1] = tok[2]; tok[2] = t;
-   }
-   (void)strcpy(dn, tok[2]);
-   (void)strcpy(id, tok[1]);
-   (void)strcpy(own, tok[0]);
-   if( own[0] == '\0' )
-      strcpy(own, cuserid(0));
-   free(name2);
-}
-
-remove(file)
-char	*file;
-{
-   void ACCESS(), DELETE();
-   char pdn[PDNLEN], id[PDNLEN], own[PDNLEN], tmp[PDNLEN];
-   int flag,i;
-   for(i = 0; i < PDNLEN; i++)
-      tmp[i] = 0;
-   
-   (void)tmpnam(tmp);
-   cos_parse(file, own, id, pdn);
-   ACCESS(&flag,"DN",tmp,"PDN",pdn,"ID", id, "UQ", "MSG");
-   if( ! flag )
-      DELETE(&flag,"DN",tmp, "MSG"); 
-   return(flag);
-}
-
-int     replace(file1, file2)   /* Actually saves a DN as a PDN.	      */
-char    *file1, *file2;
-{
-   void SAVE(), RELEASE(), ACCESS(), DELETE();
-   char from[PDNLEN], to[PDNLEN], id[PDNLEN], own[PDNLEN];
-   int flag; int i;
-   /*
-    * The CRAY JCL routines expect nulls up to the end of each word (8 bytes)
-    */
-   for( i = 0; i < PDNLEN; i++ )
-      from[i] = to[i] = id[i] = '\0';
-
-   strncpy(from, file1, 7); 
-   cos_parse(file2, own, id, to);
-
-   SAVE(&flag,"DN",from,"PDN",to, "ID", id, "MSG");
-   if( flag )     return(flag);
-   RELEASE(&flag,"DN",from);
-   return(flag);
-}
-#else
-#   if defined(unix) || defined(__unix__)
+#if defined(unix) || defined(__unix__)
 int	replace(file1, file2)
 char	*file1, *file2;
 {
    int f;
-#ifndef ANSI_LIBS
-   int rename();
-#endif
    char *backup = aalloc(strlen(file2)+2, char);
    (void)strcat(strcpy(backup, file2), "%");
 
@@ -1058,20 +902,6 @@ char	*file1, *file2;
       f = rename(file1, file2);
    return(f);
 }
-#   endif
-#endif
-/******************************************************************************
- * remove.  delete (unlink) a file.   (ANSI replacement)		      *
- ******************************************************************************/
-#ifndef ANSI_LIBS
-#if defined(unix) || defined(__unix__)
-int remove(file)
-CONST char	*file;
-{
-   int unlink();
-   return (unlink(file));
-}
-#endif
 #endif
 /******************************************************************************
  *  Purge Remove 1 old version of a file.  (Do nothing if O/S has no versions)*
@@ -1087,36 +917,7 @@ char	*file;
    tfree(name);
 }
 #else				/*  VMS				*/
-#  if defined (CRAY) && !defined(unix)  && !defined(__unix__) 
-void purge(file)
-char	*file;
-{
-   void ACCESS(), DELETE();
-   char pdn[PDNLEN], id[PDNLEN], own[PDNLEN], tmp[PDNLEN], ed[PDNLEN];
-   char mess[L_name];
-   int flag,i;
-   for(i = 0; i < PDNLEN; i++)
-      tmp[i] = ed[i] = 0;
-   
-   (void)tmpnam(tmp);
-   cos_parse(file, own, id, pdn);
-   ACCESS(&flag,"DN",tmp,"PDN",pdn,"ID", id, "MSG");
-   if( flag == 0 )
-   {
-      i = NACSED();
-      if( itostr(i-1, ed, 10, 0) == 0 )
-      {
-         remark("NACSED() gave invalid integer ");
-         remark(strcat(strcpy(mess,"New edition number = "), ed));
-      }
-      RELEASE(&flag, "DN", tmp);
-      ACCESS(&flag,"DN",tmp,"PDN",pdn,"ID", id, "ED", ed, "UQ", "MSG");
-      if( ! flag )
-         DELETE(&flag,"DN",tmp, "MSG"); 
-   }
-}
-#   else			/* Cray && ! unix		*/
-#      if defined(unix) || defined(__unix__)
+#   if defined(unix) || defined(__unix__)
 void	purge(file)
 char	*file;
 {
@@ -1133,8 +934,7 @@ void	purge(file)
 char	*file;
 {
 }
-#      endif
-#   endif			/* Cray && ! unix		*/
+#   endif			
 #endif				/*  VMS				*/
 /******************************************************************************
  * err_fn  error function. See Abramowitz & Stegun p299.		      *
@@ -1163,125 +963,3 @@ double	x;
 void inhibit_vectorization()
 {
 }
-/******************************************************************************
- *  vprintf for those machines which don't have it			      *
- ******************************************************************************/
-#ifndef HAVE_VPRINTF
-
-#if defined(CRAY)&& ! defined(unix) && ! defined(__unix__)
-
-int	vprintf (fmt, args)
-char   	*fmt;
-va_list args;
-{
-   FILE *out = stdout;
-   return(XPRINTF(&fmt, &args, &out));
-}
-
-#else
-#ifdef	HAVE_DOPRNT
-
-int	vprintf (fmt, args)
-char	*fmt;
-va_list	args;
-{
-   return(_doprnt(fmt, args, stdout));
-}
-
-
-#else		/* No _doprnt or equivalent */
-
-#include <ctype.h>
-int	vprintf (format, ap)
-CONST char	*format;
-va_list	ap;
-{
-    int     pos, charsout, fpos, error, modflag;
-    char    fmt[1024], temps[1024];
-    char    ch;
-
-    pos = charsout = error = 0;
-    while (format[pos] != 0)
-    {
-        modflag = 0;
-        if (format[pos] != '%')
-        {
-            putchar (format[pos++]);
-        }
-        else
-        {
-            fmt[0] = '%';
-            pos++;
-            fpos = 1;
-            while (format[pos] != 0 && !islower (format[pos]) &&
-                format[pos] != '%')
-                fmt[fpos++] = format[pos++];
-	    if( format[pos] == 'l' || format[pos] == 'L' || format[pos] == 'h')
-	    {
-	       modflag = format[pos];
-	       fmt[fpos++] = format[pos++];
-	    }
-            if (format[pos] == 0)
-            {
-            /* error in format string */
-                error++;
-            }
-            ch = fmt[fpos++] = format[pos++];
-            fmt[fpos] = 0;
-#ifdef DEBUG
-            printf ("Format is \"%s\"\n", fmt);
-#endif
-        /* Now fmt contains the format for this part of the output and ch
-           contains the conversion code. */
-            temps[0] = 0;
-            switch (ch)
-            {
-              case 'n':
-                *va_arg (ap, int *) = charsout;
-                break;
-              case 's':
-                sprintf (temps, fmt, va_arg (ap, char *));
-                break;
-              case 'p':
-                sprintf (temps, fmt, va_arg (ap, void *));
-                break;
-              case 'c':
-              case 'd':
-              case 'i':
-              case 'o':
-              case 'u':
-              case 'x':
-              case 'X':
-		if( modflag == 'l')
-		   sprintf (temps, fmt, va_arg (ap, long));
-		else
-		   sprintf (temps, fmt, va_arg (ap, int));
-                break;
-              case 'e':
-              case 'E':
-              case 'f':
-              case 'g':
-              case 'G':
-                sprintf (temps, fmt, va_arg (ap, double));
-                break;
-              default:
-                (void)strcpy (temps, fmt);
-                error++;
-            }
-#ifdef DEBUG
-            printf ("temps is \"%s\"\n", temps);
-#endif
-            fputs (temps, stdout);
-            charsout += strlen (temps);
-#ifdef DEBUG
-            printf ("still to interpret \"%s\"\n", (char *) &format[pos]);
-#endif
-        }
-    }
-    if (error)
-        return (-1);
-    return (charsout);
-}
-#endif		/* HAVE_DOPRNT       */
-#endif		/* Cray		     */
-#endif		/* Vprintf needed    */
