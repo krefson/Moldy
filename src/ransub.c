@@ -27,6 +27,12 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.6  2000/02/16 11:46:09  craig
+ *  Corrected memory leak when performing strcmp of NULL value.
+ *
+ *  Revision 1.5  1999/10/29 16:44:28  keith
+ *  Bugfixes.
+ *
  *  Revision 1.5  1999/10/25 10:41:46  craig
  *  Corrected memory leak when performing strcmp of NULL value.
  *  Added check for correct entry of substituting species' name.
@@ -88,6 +94,9 @@ what you give them.   Help stamp out software-hoarding! */
 #include "messages.h"
 #include "utlsup.h"
 
+#ifndef lint
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/ransub.c,v 1.6 2000/02/16 11:46:09 craig Exp $";
+#endif  
 char	*strlower();
 void	read_sysdef();
 void	initialise_sysdef();
@@ -193,10 +202,10 @@ int             intyp;
 /* Write site data for each molecule */
    for(spec = species; spec < species+system->nspecies; spec++)
    {
-      if( strcmp(strlower(spec->name), molname) )
-             specmol = spec->nmols;
+      if( (molname != NULL) && !strcmp(strlower(spec->name), molname) )
+         specmol = spec->nmols - dop->mols; /* Subtract number of substituting species */
       else
-             specmol = spec->nmols - dop->mols; /* Subtract number of substituting species */
+         specmol = spec->nmols;
 
       (void)printf("%s  %d  %s\n", spec->name, specmol,
                     spec->framework ? "framework" : "");
@@ -210,11 +219,12 @@ int             intyp;
                         site_info[spec->site_id[isite]].charge,
                         site_info[spec->site_id[isite]].name);
 
-      if( !strcmp(strlower(spec->name), molname) && dop->name != NULL && dop->mols > 0 )
-      {
-         (void)printf("%s  %d  %s\n", dop->name, dop->mols,
+      if( (molname != NULL) && (dop->name != NULL) )
+        if( !strcmp(strlower(spec->name), molname) && dop->mols > 0 )
+        {
+           (void)printf("%s  %d  %s\n", dop->name, dop->mols,
                     spec->framework ? "framework" : "");
-         (void)printf("%d %9g %9g %9g %9g %9g %s\n",
+           (void)printf("%d %9g %9g %9g %9g %9g %s\n",
                         system->max_id,
                         spec->p_f_sites[0][0],
                         spec->p_f_sites[0][1],
@@ -222,7 +232,7 @@ int             intyp;
              dop->mass < 0 ? site_info[spec->site_id[0]].mass:dop->mass,
              dop->charge == NULL ? site_info[spec->site_id[0]].charge:atof(dop->charge),
              dop->sym == NULL ? site_info[spec->site_id[0]].name:dop->sym);
-      }
+        }
    }
    (void)printf("end\n");
 
@@ -501,7 +511,7 @@ char	*argv[];
 	dop.mols = get_int("? ",1,maxmol);
    }
 
-   if( dop.mols < 0 )
+   if( dop.mols <= 0 )
         dop.mols = 0;
 
    if( dop.mols > maxmol )
