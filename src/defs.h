@@ -1,7 +1,10 @@
 /*
- * $Header: defs.h,v 1.1 89/05/02 10:51:58 keith Exp $
+ * $Header: defs.h,v 1.3 89/06/09 12:17:14 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.2  89/05/22  14:05:51  keith
+ * Added rescale-separately option, changed 'contr_t' format.
+ * 
  * Revision 1.1  89/05/02  10:51:58  keith
  * Initial revision
  * 
@@ -14,8 +17,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.1 $"
-#define		 REVISION_DATE    "$Date: 89/05/02 10:51:58 $"
+#define          REVISION         "$Revision: 1.3 $"
+#define		 REVISION_DATE    "$Date: 89/06/09 12:17:14 $"
 #define		 REVISION_STATE   "$State: Exp $"
 
 /* Vectorisation directive translation*/
@@ -24,11 +27,16 @@
 #define NOVECTOR  ## novector
 #else
 #ifdef convexvc
-#define VECTORIZE /*$dir no_recurrence*/
-#define NOVECTOR  /*$dir scalar*/
+#define VECTORIZE __dir no_recurrence :
+#define NOVECTOR  __dir scalar :
+#else
+#ifdef stellar
+#define VECTORIZE __dir NO_RECURRENCE :
+#define NOVECTOR  __dir SCALAR :
 #else
 #define VECTORIZE /* Canny  vectorise on this machine!*/
 #define NOVECTOR  /* */
+#endif
 #endif
 #endif
 
@@ -116,6 +124,10 @@ typedef	unsigned	size_t;
 #else
 #include		<stddef.h>
 #include		<time.h>
+#endif
+
+#if unix && ( sysV || SysV)
+# define USG
 #endif
 
 #define		cfree	xfree
