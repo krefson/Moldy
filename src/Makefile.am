@@ -22,7 +22,7 @@ mdbond_SOURCES = mdbond.c  $(UTILC)
 
 mdvaf_SOURCES = mdvaf.c  $(UTILC) 
 
-moldyext_SOURCES = moldyext.c utlsup.c matrix.c
+moldyext_SOURCES = moldyext.c utlsup.c matrix.c xdr.c
 
 dumpconv_SOURCES = dumpconv.c xdr.c 
 
@@ -30,7 +30,7 @@ dumpext_SOURCES = dumpext.c xdr.c utlsup.c matrix.c
 
 manalyze_SOURCES = manalyze.c 
 
-bdist_SOURCES = bdist.c list.c utlsup.c matrix.c
+bdist_SOURCES = bdist.c list.c utlsup.c matrix.c xdr.c
 
 ransub_SOURCES = ransub.c sgclib.c sginfo.h sgio.c spgrexp.c transparse.c readers.c $(UTILC) 
 

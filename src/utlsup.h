@@ -45,6 +45,7 @@ extern int close_dump(FILE *dumpf);
 extern int rewind_dump(FILE *dumpf, int xdr);
 extern int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_write,
 		     size_mt sysinfo_size, dump_sysinfo_mt *dump_sysinfo);
+int     tokenise(char *fields, char *mask, int len);
 /*
  * Moldy functions
  */

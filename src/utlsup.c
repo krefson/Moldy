@@ -1,7 +1,6 @@
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/utlsup.c,v 1.15.8.1 2003/07/29 09:45:21 moldydv Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/utlsup.c,v 1.15.8.2 2003/07/30 09:31:30 moldydv Exp $";
 #endif
-
 #include "defs.h"
 #include <stdarg.h>
 #include <errno.h>
