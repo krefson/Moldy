@@ -172,31 +172,6 @@ int	*start, *finish, *inc;
    return -1;
 }
 /******************************************************************************
- * Seq gen  Generate a sequence of file names from a "printf" style spec and  *
- * range of filenames.							      *
- ******************************************************************************/
-char **seqgen(fmt, range)
-char	*fmt, *range;
-{
-   int	start, finish, inc;
-   int  i, iseq = 0;
-   char **seq;
-   char	buf[256];
-
-   if( forstr(range, &start, &finish, &inc) != 0 )
-      return NULL;
-
-   if( (seq=(char**)calloc(1+(finish-start+1)/inc,sizeof(char*))) == NULL)
-      return NULL;
-
-   for(i = start; i <= finish; i++)
-   {
-      seq[iseq++] = mystrdup((sprintf(buf,fmt,i),buf));
-   }
-   seq[iseq] = NULL;
-   return seq;
-}
-/******************************************************************************
  * Put.  Write data in text or binary form.				      *
  ******************************************************************************/
 void
@@ -232,7 +207,7 @@ int	bflg, nmols, xdr;
    dump_mt	header;
    float	*buf = (float*)calloc(4*nmols,sizeof(float));/* nmols > nmols_r */
    long		dump_base;
-   int		icpt;
+   int		icpt, nitems;
    list_mt	*mol;
    int		errflg = 0;
 #ifdef USE_XDR
@@ -300,7 +275,12 @@ int	bflg, nmols, xdr;
 	    }
 	    if( cpt[icpt].mols )
 	       for(mol = molecules; mol != 0; mol = mol->next)
-		  put(buf+mol->i*cpt[icpt].ncpt, mol->num*cpt[icpt].ncpt, bflg);
+	       {
+		  nitems = (mol->i + mol->num) * cpt[icpt].ncpt;
+		  if( nitems > cpt[icpt].size )
+		     nitems = cpt[icpt].size;
+		  put(buf+mol->i*cpt[icpt].ncpt, nitems, bflg);
+	       }
 	    else
 	       put(buf, cpt[icpt].size, bflg);
 	 }
@@ -333,15 +313,16 @@ char	*argv[];
    extern char	*optarg;
    int		errflg = 0, genflg = 0, tsflg = 0, bflg = 0;
    int          nmols=0, nmols_r=0;
-   int		xcpt=0;
-   char		*dump_name=0, *out_name=0;
-   char		*tsrange, *filerange;
-   char		**filelist;
+   int		xcpt= -1;
+   char		*dump_name=0, *dump_base=0, *out_name=0;
+   char		cur_dump[256];
+   char		*tsrange;
    FILE		*dump_file;
    int		nfiles = 0;
    int		start,finish,inc;
    int		tslice, numslice, maxslice;
-   int		find, offset, icpt;
+   int		offset, icpt;
+   int		idump0;
    int		xdr = 0;
 #ifdef USE_XDR
    XDR          xdrs;
@@ -376,7 +357,7 @@ char	*argv[];
    mol_head.next = NULL;
    f_head.next = NULL;
 
-   while( (c = getopt(argc, argv, "c:bR:Q:n:t:m:o:") ) != EOF )
+   while( (c = getopt(argc, argv, "c:br:R:q:Q:t:m:o:") ) != EOF )
       switch(c)
       {
        case 'c':
@@ -385,15 +366,13 @@ char	*argv[];
        case 'b':
 	 bflg++;
 	 break;
+       case 'r':
        case 'R':
 	 nmols = strtol(optarg,(char**)0,0);
 	 break;
+       case 'q':
        case 'Q':
 	 nmols_r = strtol(optarg,(char**)0,0);
-	 break;
-       case 'n':
-	 filerange = optarg;
-	 genflg++;
 	 break;
        case 'o':
 	 out_name = optarg;
@@ -428,7 +407,7 @@ char	*argv[];
    if( errflg )
    {
       fprintf(stderr,
-	   "Usage: dumpextract [-Rn] [-Qn] [-b] [-n dumpfile-range] [-c cpt]\
+	   "Usage: dumpext [-Rn] [-Qn] [-b] [-c cpt]\
  [-t timeslices] [-m molecules] [-o output-file] dumpfiles\n");
       exit(2);
    }
@@ -439,12 +418,13 @@ char	*argv[];
       nmols = get_int("Number of molecules? ",1,1000000);
    if( ! nmols_r )
       nmols_r = get_int("Number of polyatomic molecules? ",0,1000000);
-   if( ! xcpt )
+   if( xcpt < 0 )
    {
       fprintf(stderr,"Which quantity do you require?\n");
+      fprintf(stderr,"\t%-32s %d\n","All data components",0);
       for(icpt = 0; icpt < NCPT; icpt++)
 	 fprintf(stderr,"\t%-32s %d\n",cpt[icpt].name,icpt+1);
-      xcpt=get_int("Quantity index (1-13)? ",1,NCPT);
+      xcpt=get_int("Quantity index (0-13)? ",0,NCPT);
    }
 
    /*
@@ -461,26 +441,46 @@ char	*argv[];
    /*
     *  Generate list of dump files if required
     */
-   if(genflg)
+   if( strchr(argv[optind],'%') )
    {
-      if( (filelist = seqgen(argv[optind], filerange)) == NULL)
+      genflg++;
+#define MAXTRY 500
+      dump_base = argv[optind];
+      idump0 = -1;
+      do                      /* Search for a dump file matching pattern */
+	 sprintf(cur_dump, dump_base, ++idump0);
+      while( (dump_file = fopen(cur_dump, "rb")) == NULL && idump0 < MAXTRY);
+      if( dump_file == NULL )        /* If we didn't find one . .               */
       {
-	 fprintf(stderr,"%s: invalid dump range \"%s\"\n", 
-		 argv[0],argv[optind]);
-	 errflg++;
+	 fprintf(stderr,"I can't find any dump files to match \"%s\".\n",dump_base);
+	 exit(2);
       }
+      (void)fclose(dump_file);
    }
    else
-      filelist = argv+optind;
+      idump0 = optind;
    
    /*
     *  Check all dump files for correctness and build ordered list
     */
-   for(find = 0; filelist[find] != NULL; find++)
+   while(1)
    {
-      dump_name = filelist[find];
+      if( genflg )
+      {
+	 sprintf(cur_dump, dump_base, idump0++);
+	 dump_name = cur_dump;
+      }
+      else
+      {
+	 dump_name = argv[idump0++];
+	 if( dump_name == 0 )
+	    break;
+      }
+
       if( (dump_file = fopen(dump_name, "rb")) == NULL)
       {
+	 if( genflg )
+	    break;		/* Exit loop if at end of sequence */
 	 fprintf(stderr, "Failed to open dump file \"%s\"\n", dump_name);
 	 exit(2);
       }
@@ -535,7 +535,7 @@ char	*argv[];
 #endif
       (void)fclose(dump_file);
       cur = (list_mt *)calloc(1, sizeof(list_mt));
-      cur->p = dump_name;
+      cur->p = mystrdup(dump_name);
       cur->i = header.istep/header.dump_interval;
       cur->num = header.ndumps;
       insert(cur, &f_head);
@@ -545,7 +545,7 @@ char	*argv[];
 #endif
    }
 
-   if( ! (1 << (xcpt-1) & level_mask[proto_header.dump_level]) )
+   if( xcpt > 0 && ! (1 << (xcpt-1) & level_mask[proto_header.dump_level]) )
    {
       fprintf(stderr,"Sorry the component requested (%s)",cpt[xcpt-1].name);
       fprintf(stderr," is not contained in a dump of level %d\n",
@@ -637,7 +637,6 @@ char	*argv[];
       if( ! freopen(out_name, bflg?"wb":"w", stdout) )
       {
 	 fprintf(stderr,"Failed to open file \"%s\" for output - ",out_name);
-	 perror("");
 	 exit(4);
       }
    /*
@@ -647,7 +646,8 @@ char	*argv[];
    {
       if( cur->i <= tslice && tslice < MIN(cur->i + cur->num, numslice) )
       {
-	 extract(cur->p, 1<<(xcpt-1), mol_head.next, cpt, NCPT, tslice-cur->i,
+	 extract(cur->p, xcpt?1<<(xcpt-1):~0, mol_head.next, cpt, NCPT, 
+		 tslice-cur->i,
 		 MIN(cur->num,numslice-cur->i), inc, bflg, nmols, xdr);
 	 tslice += (cur->i + cur->num - tslice - 1) / inc * inc + inc;
       }
