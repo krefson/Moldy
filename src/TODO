@@ -2,7 +2,9 @@ TODO
 ====
 
 Unpack into own directory.
-Update restart with "xdr-xizeof" -- implement a replacement.
+Port to new Autoconf.
+
+Update restart with "xdr-sizeof" -- implement a replacement.
 Eliminate extra args for kernel.
 Take DEBUG_THERMOSTAT out of accel.c
 Get rid of system header -subst files?
@@ -19,8 +21,30 @@ restart-file and save-file being identical and handle?
 Get Configure to select options better, eg mpicc where underlying
 compiler is Portland.
 
+RRP's suggestion for the dump header is to include the masses and charges.
+
+Ceed to document the -c option if msd and  delete the last sentence
+in the explanation of mdvaf.
+
+Add molecule selection capabilities to "msd" and "mdvaf".
+
+Fix error handling in mdshak, mdavpos in case the call to "dumpext" failed.
+
+In fact rework all utilities to rationalise options and better document use.
+
+Update manual to document leapfrog algorithms and molecular-cutoff option. 
+
+  "On another note, the user manual states that when you decompress the 
+   moldy.zip file you'll have two directories called "cygwin" and "mingw"
+
+Incorporate Craig's configuration generator.
+
 DONE
 ====
+
+Include plotrdf in installed programs.
+
+Incorporate RRP's perl moldyext using IntScan and include perl module in distro.
 
 Ensure that "will be scaled" message in banner page printed only if
    istep <= scale-end.
