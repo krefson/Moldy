@@ -54,7 +54,7 @@ UTILS = moldyextract dumpanalyze dumpconvert dumpextract  moldyanalyze
 
 EXTRAS = $(UTILS:%=%.c) mdshak.c
 
-HFILES=		structs.h defs.h string.h time.h messages.h
+HFILES=		structs.h defs.h string.h time.h stddef.h messages.h
 
 moldy:		$(OFILES) $(EXTRA_OBJ)
 		$(CC)  $(OFILES) $(EXTRA_OBJ) $(LDFLAGS) -lm -o moldy
@@ -159,4 +159,3 @@ force.o:	force.c
 
 .c.ln:
 	$(LINT) $(LFLAGS) -i $<
-	
