@@ -1,0 +1,245 @@
+Release 2.12f
+-------------
+* Bugfixes and portability enhancements to utilities, msd, mdavpos, mdtraj.
+
+Release 2.12c
+-------------
+
+* Bugfix to mdshak, which had a BAD memory leak.  Should run much faster
+  now and not run out of memory.
+
+* A writer for CHARMM/X-Plor DCD trajectory files added to mdshak.  This
+  allows easy import of trajectories into other visualization programs,
+  notable the excellent VMD (see http://www.ks.uiuc.edu/Research/vmd/)
+  Use "mdshak -v" or link the executable to and invoke as "mddcd" or
+  "mdvmd" to use.
+
+* A few bugfixes to mdavpos and msd.
+
+* Minor  corrections to the manual.
+
+Release 2.12
+------------
+
+* New utilities msd and mdavpos.  Many thanks to Dr Craig Fisher for
+  doing the work and adding these worthwhile utilites. 
+
+  "msd" computes mean-square displacements from dump files, eg for
+        calculation of diffusion constants.  It can also output
+        "joined-up" trajectories for molecules to eliminate the
+        discontinuities caused by the periodic boundary conditions.
+
+  "mdavpos" computes the average co-ordinates of a molecule throughout
+            the run.
+    
+* Minor bug fixes:
+
+  - mdshak had an initialization problem which meant it couldn't read
+           certain restart files.
+ 
+  - makefile updated to work with GNU make (Linux users should be happy!)
+
+
+Release 2.11
+------------
+
+* The manual is finished!  There is a new chapter on the organization and
+  internals plus other minor rewrites and clarifications.  All the
+  LaTeX sources are supplied. You need a modern LaTeX2e installation
+  to format and print it.  A preformatted postscript version is also
+  available but not included in the distribution file.
+
+* Tuning and optimization for various architectures.  
+  - Tuned ewald sum to avoid cache conflicts. Gains of 10-20%
+    on T3D, Sun, DEC, 400% on IBM RS6000 for systems with
+    powers-of-2 numbers of sites.
+  - Tuned compiler options. Gain of 80% on SGI R8000 and
+    Sun SPARC under Solaris 2.
+  - Tuned kernel.c to improve pipelining on DEC Alpha.
+
+* Rewrote parts of link-cell short-ranged force in force.c
+  - eliminated huge tables of PBC relocation vectors.
+    got rid of NSH macro and arbitrary limit to cutoff and
+    RDF limit.  These are unlimited now.  The code is more
+    transparent and easier to understand too.   It's also
+    a little bit faster.
+
+* Fixed bug in restart file format in 2.10 which meant that
+  thermostat parameters were not stored retrievably.  2.11 can read
+  2.10 XDR restart files, though you have to reset the thermostat
+  mass parameters and turn thermostatting back on by hand in the
+  control file.  For non XDR files there's nothing that can be done.
+
+* Fixed initialization problem which caused FP error on Cray T3D (non-ieee)
+
+* Corrected error in implementation of integration of thermostat
+  equations of motion. This seems to make no practical diff at all.
+
+* Included workaround for bug in Cray T3D compiler version 4.0.5 which
+  caused crash.
+
+* Added test for divergent trajectories when running in parallel.
+
+* New back-end to "mdshak" program writes "XYZ" format files that
+  can be read by RasMol, XMol, etc.  If mdshak is renamed to
+  "mdxyz" this is invoked automatically.
+
+Release 2.10
+------------
+* Added Nose-Hoover and Hoover (Gaussian) thermostats. (V. Murachov)
+
+* Fixed bug in calculation of long-range-correction to pressure.
+
+* Fixed bug whereby large rc used with strict-cutoff overran tables
+  and caused crash.  Simply tighten up test to abort gracefully.
+
+* Fixed bug in reciprocal-space sum where v. small k_cutoff caused
+  crash.
+
+* Fixed bug in input parser whereby faulty control file with
+  missing "=" would apparently succeed but in fact return junk.
+
+* Many updates an improvements to manual.
+
+* Manual now requires LaTeX2e to process the source.
+
+* IMPORTANT: Updated fundamental constants to more accurate values
+  from CODATA 1986.  This will produce changes of order 1e-5 in
+  some results.  If you want to continue using the old values
+  compile with -DOLDCONSTS.
+
+* RDF calculation parallelised. Now uses pair distances from link-cell
+  force calculation, and is therefore limited only by "rdf-limit".
+
+* Fixed problem whereby rescaling species separately led to net
+  velocities of whole system.
+
+* Added SHMEM library interface for Cray T3D.
+
+Release 2.9
+-----------
+* Ewald sum parameter and cutoffs now automatically chosen from
+  Fincham's formulae if no value specified in control file.
+
+* Various minor bugs fixed.
+
+NOTE 2.8c  24/11/94: The init code for the TCGMSG version of par_begin
+got the arguments wrong. Now fixed.  Also fixed problem with dump
+sequence continuity.
+
+NOTE 2.8b 14/9/94:  The definition of bspstart in the bsp lib CHANGED
+to include argc and argv as params.  New version of parallel.c incorporates
+modified arg list.
+
+Release 2.8
+-----------
+* Port to distributed-memory MIMD parallel machines.
+
+  - This port is based on a message-passing paradigm, and contains
+    interfaces to three different message-passing systems - the
+    Oxford BSP library, MPI (the new standardised message-passing
+    library interface) and TCGMSG (the Theoretical Chamistry
+    message-passing system).  The parallel interface is contained
+    within a single file "parallel.c" and versions for other MP
+    libraries should be relatively easy to add.
+
+  - To use, define the macro PARLIBC in the Makefile
+    to contain the "include" path, -DSPMD and one of -DMPI, -DBSP
+    and -DTCGMSG.  The macro PARLIBL should be defined to link
+    with the appropriate libraries.
+
+* Performance optimizations for IBM RS6000.  The 4-way associative
+  cache on the high-end machines in the IBM RS6000 line leads to
+  a severe inefficiency when the number of sites is a power of 2.
+  This version declares the arrays larger than the system size to 
+  avoid the problem.
+
+Release 2.7
+-----------
+* Added casts for size_mt in arralloc() calls - for K&R/ANSI compat.
+
+* New version of array allocator which breaks up requests for DOS.
+
+* Changed all timestep-related parameters to type "long". This means
+  that 16-bit DOS compilers can do more than 32767 timesteps.
+
+  NOTE: This changes the size of "native" format dump and restart
+        files on a machine where sizeof(long) > sizeof(int), in
+        particular DEC Alpha machines and possibly SGI R4000 based
+	ones.  Version 2.7 will not be able to read these "native"
+	format files written by earlier versions, though the recommended
+	XDR format will work.  Versions 2.6 of "dumpconv -x" should be  
+	used to convert dump files to XDR format and moldy itself to
+	convert restart files.
+
+* Utilities renamed for systems with short filenames.
+  dumpextract  ==> dumpext
+  dumpconvert  ==> dumpconv
+  dumpanalyze  ==> dumpanal
+  moldyextract ==> moldyext
+  moldyanalyze ==> manalyze
+
+* Strengthened error checking in "mdshak" which previously just gave
+  ridiculous answers if you specified wrong arguments.  It now calls
+  "dumpext" via a pipe if it needs to read dump files.
+
+* Arguments of "dumpext" simplified.  You can now specify the dump
+  files as EITHER the complete set in any order (eg by unix shell
+  wildcard expansion OR as a proforma exactly as in the control file.
+  "dumpext" just tries plugging in numbers with "sprintf" to locate
+  files. This eliminates the need for the "-n" option.  (However if
+  you start your run with an index > 500 it will not find them.)
+
+Release 2.6
+-----------
+* Port to PCs running MS-DOS
+ 
+* Significant internal restructuring.  
+  This consists of eliminating global data and improving data locality
+  throughout the code.  No external impact, but a gain in code quality
+  which should make improvements and porting, esp to parallel machines
+  much easier.
+
+* Yet more portability improvements
+
+* Bugs corrected
+
+- Fixed serious bug whereby linear molecules weren't recognised.
+  Caused failure on RS6000 and possibly others, but not Sun or DEC
+  Alpha.
+
+
+Release 2.5
+-----------
+This is to announce the release of version 2.5 of Moldy.  This is mainly 
+a bugfix and portability release with no major changes in functionality.
+It incorporates all the experience gained from the "beta-test" releases of
+2.2 and 2.3.
+
+Major points are:
+
+* Greatly improved portability.  Tested on Sun, SGI, HP, DEC, Convex
+  IBM and Cray systems and should compile without problems on many more.
+
+* VMS support consolidated.  Now compiles on VAX/VMS and OpenVMS/AXP
+  systems without problems.  Distribution comes in form of "moldy.com"
+  script for ftping and contains "compile.com" to compile everything.
+
+* Better and more comprehensive install notes in READ.ME file.
+
+* Bugs corrected/mods since 2.2.
+
+- "Divide-by-zero" error on velocity rescale of atomic systems fixed.
+
+- Relaxed "dump"s checks to allow dump run to continue after backup 
+  restart without changing dump file names.
+
+- Minor optimization in real-space force calculation.  A few percent faster.
+
+- Added distant-correction for "generic" potential type GENPOT
+
+- XDR mode for dump/restart files is now active by default.
+
+- Various minor portability bugs in utility programs corrected.
+
+
