@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdshak.c,v 2.15 1998/01/28 09:55:37 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 2.16 1998/05/07 17:06:11 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -67,6 +67,7 @@ contr_mt		control;
 #define SHAK   0
 #define XYZ 1
 #define DCD 3
+#define PDB 4
 /******************************************************************************
  * Dummies of 'moldy' routines so that mdshak may be linked with moldy library*
  ******************************************************************************/
@@ -421,6 +422,63 @@ char		*insert;
    afree((gptr*) site);
 }
 /******************************************************************************
+ * pdb_out().  Write a system configuration to stdout in the form of a        *
+ * Brookhaven Protein Data Bank (pdb) file                                    *
+ ******************************************************************************/
+void
+pdb_out(n, system, species, site_info, insert)
+int	n;
+system_mt	*system;
+spec_mt		species[];
+site_mt		site_info[];
+char		*insert;
+{
+   double	**site = (double**)arralloc(sizeof(double),2,
+                                            0,2,0,system->nsites-1);
+   mat_mp       h = system->h;
+   spec_mt	*spec;
+   double	a,b,c, alpha, beta, gamma;
+   int		imol, isite, itot=1, ispec=1;
+   int		is;
+   
+   a = sqrt(SQR(h[0][0]) + SQR(h[1][0]) + SQR(h[2][0]));
+   b = sqrt(SQR(h[0][1]) + SQR(h[1][1]) + SQR(h[2][1]));
+   c = sqrt(SQR(h[0][2]) + SQR(h[1][2]) + SQR(h[2][2]));
+   alpha = 180/PI*acos((h[0][1]*h[0][2]+h[1][1]*h[1][2]+h[2][1]*h[2][2])/b/c);
+   beta  = 180/PI*acos((h[0][0]*h[0][2]+h[1][0]*h[1][2]+h[2][0]*h[2][2])/a/c);
+   gamma = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/a/b);
+
+/* Write the pdb header */
+   (void)printf("CRYST1 %8.3f %8.3f %8.3f %6.2f %6.2f %6.2f P 1\n",
+          a,b,c,alpha,beta,gamma);
+   for(spec = species; spec < species+system->nspecies; ispec++, spec++)
+   {
+     make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
+           spec->framework, site, spec->nmols, spec->nsites);
+
+     isite = 0;
+     for(imol = 0; imol < spec->nmols; imol++)
+     {
+       for(is = 0; is < spec->nsites; is++)
+       {
+         if(fabs(site_info[spec->site_id[is]].mass) != 0)
+            (void)printf("HETATM%5d %2s%d  NONE    1     %7.3f %7.3f %7.3f  1.00  0.00\n",
+               itot, site_info[spec->site_id[is]].name, ispec,
+                  site[0][isite], site[1][isite], site[2][isite]);
+         isite++;
+         itot++;
+       }
+     }
+   }
+   (void)printf("TER              %d     NONE    1\n",itot);
+   (void)printf("END\n");
+   if( insert != NULL)
+      (void)printf("%s\n", insert);
+
+   if( ferror(stdout) )
+      error("Error writing output - \n%s\n", strerror(errno));
+}
+/******************************************************************************
  * xyz_out().  Write a system configuration to stdout in the form of an    *
  * input data file for the graphics program XYZ (rasmol -xyz file)	      *
  ******************************************************************************/
@@ -663,6 +721,9 @@ char		*insert;
     case SHAK:
       schakal_out(n, system, species, site_info, insert);
       break;
+    case PDB:
+      pdb_out(n, system, species, site_info, insert);
+      break;
     case XYZ:
       xyz_out(n, system, species, site_info, insert);
       break;
@@ -715,6 +776,8 @@ char	*argv[];
    comm = argv[0];
    if( strstr(comm, "mdshak") )
      outsw = SHAK;
+   else if (strstr(comm, "mdpdb") )
+     outsw = PDB;
    else if (strstr(comm, "mdxyz") )
      outsw = XYZ;
    else if (strstr(comm, "mddcd") || strstr(comm, "mdvmd") )
@@ -722,7 +785,7 @@ char	*argv[];
    else
      outsw = OUTBIN;
 
-   while( (c = getopt(argc, argv, "a:bo:cr:s:d:t:i:xhv") ) != EOF )
+   while( (c = getopt(argc, argv, "a:bo:cr:s:d:t:i:xhvp") ) != EOF )
       switch(c)
       {
        case 'a': 
@@ -764,6 +827,9 @@ char	*argv[];
 	 break;
        case 'h':
 	 outsw = SHAK;
+	 break;
+       case 'p':
+	 outsw = PDB;
 	 break;
        case 'v':
 	 outsw = DCD;
