@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.7  89/12/21  16:29:47  keith
+ * Reversed indices in 'site' and 'site_force' to allow stride of 1 in ewald.
+ * 
  * Revision 1.6  89/12/15  12:56:26  keith
  * Added conditional ionclusion of <fastmath.h> for stellar
  * 
@@ -32,7 +35,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore1/keith/md/moldy/RCS/ewald.c,v 1.6 89/12/15 12:56:26 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/ewald.c,v 1.7 89/12/21 16:29:47 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -381,8 +384,8 @@ VECTORIZE
  */
    *pe += pe_local;
    
-   cfree((char*)chx[0]); cfree((char*)cky[0]); cfree((char*)clz[0]); 
-   cfree((char*)shx[0]); cfree((char*)sky[0]); cfree((char*)slz[0]);
+   cfree((char*)chx); cfree((char*)cky); cfree((char*)clz); 
+   cfree((char*)shx); cfree((char*)sky); cfree((char*)slz);
    cfree((char*)qcoskr); cfree((char*)qsinkr);
 #ifdef OLDEWALD
    cfree((char*)chxky);	 cfree((char*)shxky); 
