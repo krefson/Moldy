@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdavpos.c,v 2.10 1999/10/08 10:55:40 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdavpos.c,v 2.11 1999/10/11 14:05:19 keith Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *
@@ -28,6 +28,13 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdavpos.c,v
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.12  1999/10/25 10:07:55  craig
+ *  Updated usage message for new output formats.
+ *  Modified routine (in utlsup.c) for connecting trajectories.
+ *
+ *  Revision 2.11  1999/10/11 14:05:19  keith
+ *  Removed common functions to "utlsup.c".
+ *
  *  Revision 2.10  1999/10/08 10:55:40  keith
  *  Minor corrections to PDB format
  *
@@ -140,6 +147,7 @@ void	read_restart();
 void	init_averages();
 int	getopt();
 gptr	*talloc();
+void	zero_real();
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 contr_mt                control;
@@ -301,7 +309,7 @@ char	*argv[];
    restrt_mt	restart_header;
    system_mt	sys;
    spec_mt	*species;
-   spec_mt	*prev_slice;
+   vec_mt	*prev_cofm;
    site_mt	*site_info;
    pot_mt	*potpar;
    quat_mt	*qpf;
@@ -311,6 +319,8 @@ char	*argv[];
 
 #define MAXTRY 100
    control.page_length=1000000;
+
+   comm = argv[0];
 
    while( (c = getopt(argc, argv, "cr:s:d:t:o:hxbvpg") ) != EOF )
       switch(c)
@@ -366,7 +376,7 @@ char	*argv[];
    if( errflg )
    {
       fputs("Usage: mdavpos [-r restart-file | -s sys-spec-file] ",stderr);
-      fputs("[-c] [-h] [-p] [-x] [-v] -d dump-files ",stderr);
+      fputs("[-c] [-h|-p|-x|-v|-g] -d dump-files ",stderr);
       fputs("[-t s[-f[:n]]] [-o output-file]\n",stderr);
       exit(2);
    }
@@ -461,7 +471,8 @@ char	*argv[];
      dump_size = DUMP_SIZE(~0)*sizeof(float);
 
   /* create arrays for previous c_of_m`s for each species */
-     prev_slice = aalloc(sys.nspecies, spec_mt);
+     prev_cofm = aalloc(sys.nmols, vec_mt);
+     zero_real(prev_cofm,3*sys.nmols);
      avpos = aalloc(sys.nspecies, spec_mt);
   
      if( (dump_buf = (float*)malloc(dump_size)) == 0)
@@ -494,20 +505,17 @@ char	*argv[];
               irec, strerror(errno));
         dump_to_moldy(dump_buf, &sys);  /*read dump data */
 
+        traj_con(&sys, prev_cofm, irec-start);
+
         if( irec == start) /* Set up species arrays and h matrix */
         {
- 	   init_species(&sys, species, prev_slice); 
  	   init_species(&sys, species, avpos);
  	   copy_spec(&sys, species, avpos);
 	   memcpy(avh, sys.h, sizeof(mat_mt));
         }       
         else
-        {
-           traj_con(&sys, species, prev_slice);
            summate(&sys, species, avpos, avh);
-        }
-   /*   Make copy of c_of_m`s for joining trajectory of next time slice */
-        copy_spec(&sys, species, prev_slice); 
+
 #ifdef DEBUG
         fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
 	   irec, dump_name);

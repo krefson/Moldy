@@ -28,6 +28,15 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdbond.c,v $
+ *  Revision 1.4  1999/10/25 10:24:45  craig
+ *  Added line to convert dump data to Cartesian coords.
+ *  Moved "control" declaration to global vars section.
+ *  Added checks for when bond/angle min and max are equal.
+ *  Corrected error when releasing empty list.
+ *
+ *  Revision 1.3  1999/10/11 14:05:19  keith
+ *  Removed common functions to "utlsup.c".
+ *
  *  Revision 1.2  1999/09/23 07:31:40  keith
  *  Removed unnecessary references to bond and angle increments.
  *  Minor changes to usage message.
@@ -49,7 +58,7 @@ what you give them.   Help stamp out software-hoarding! */
  */
 
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 1.2 1999/09/23 07:31:40 keith Exp keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 1.3 1999/10/11 14:05:19 keith Exp $";
 #endif
 #include "defs.h"
 #ifdef HAVE_STDARG_H
@@ -126,6 +135,8 @@ int	getopt();
 gptr	*talloc();
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
+contr_mt	control;
+
 /******************************************************************************
  * morethan_BOND(). Compare distances stored in BOND structure types          *
  ******************************************************************************/
@@ -453,8 +464,6 @@ ROOT    **aroot;
  * Call: mdbond [-s sys-spec-file] [-r restart-file] [-d dump-file].	      *
  * If neither specified on command line, user is interrogated.		      *
  ******************************************************************************/
-contr_mt		control;
-
 int
 main(argc, argv)
 int	argc;
@@ -493,6 +502,8 @@ char	*argv[];
 
 #define MAXTRY 100
    control.page_length=1000000;
+
+   comm = argv[0];
 
    while( (c = getopt(argc, argv, "r:s:d:t:g:o:b:a:") ) != EOF )
       switch(c)
@@ -641,16 +652,24 @@ char	*argv[];
    {
       if( forstr(bondlims, &(blim[0]), &(blim[1]), &(blim[2])) )
       {
-          fputs("Invalid range for bond lengths \"", stderr);
-          fputs(bondlims, stderr);
-          fputs("\"\n", stderr);
+         fputs("Invalid range for bond lengths \"", stderr);
+         fputs(bondlims, stderr);
+         fputs("\"\n", stderr);
       }
       else
+      {
          bflag++;
+         if( blim[0] == blim[1] )
+         {
+            if( BOND_MIN < blim[1] )
+               blim[0] = BOND_MIN;
+            else
+               blim[0] = 0.0;
+         }
+      }
       if( blim[0] > blim[1] || blim[0] < 0 )
       {
-         fputs("Bond length limits must satisfy", stderr);
-         fputs(" finish >= start and start >= 0\n", stderr);
+         fputs("Bond length limits must satisfy max >= min and min >= 0\n", stderr);
          bflag = 0;
       }
       if( !bflag)
@@ -659,9 +678,8 @@ char	*argv[];
          blim[1] = BOND_MAX;
          (void)free(bondlims);
          bondlims = NULL;
-         fputs("Please specify range of bond limits in form", stderr);
-         fputs(" start-finish\n", stderr);
-         bondlims = get_str("s-f? ");
+         fputs("Please specify range of bond limits in form min-max\n", stderr);
+         bondlims = get_str("min-max? ");
       }
    }
 
@@ -682,11 +700,19 @@ char	*argv[];
          fputs("\"\n", stderr);
       }
       else
+      {
          aflag++;
+         if( alim[0] == alim[1] )
+         {
+            if( ANGLE_MIN < alim[1] )
+               alim[0] = ANGLE_MIN;
+            else
+               alim[0] = 0.0;
+         }
+      }
       if( alim[0] > alim[1] || alim[0] < 0 )
       {
-         fputs("Angle limits must satisfy", stderr);
-         fputs(" finish >= start and start >= 0\n", stderr);
+         fputs("Angle limits must satisfy max >= min and min >= 0\n", stderr);
          aflag=0;
       }
       if( !aflag)
@@ -695,9 +721,8 @@ char	*argv[];
          alim[1] = ANGLE_MAX;
          (void)free(anglims);
          anglims = NULL;
-         fputs("Please specify range of angle limits in form", stderr);
-         fputs(" start-finish\n", stderr);
-         anglims = get_str("s-f? ");
+         fputs("Please specify range of angle limits in form min-max\n", stderr);
+         anglims = get_str("min-max? ");
       }
    }
 
@@ -777,7 +802,8 @@ char	*argv[];
             error("Error reading record %d in dump file - \n%s\n",
                irec, strerror(errno));
 
-         dump_to_moldy(dump_buf, &sys);  /*read dump data */
+         dump_to_moldy(dump_buf, &sys);  /* read dump data */
+         mat_vec_mul(sys.h, sys.c_of_m, sys.c_of_m, sys.nmols);
 
 #ifdef DEBUG
       fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
@@ -788,10 +814,10 @@ char	*argv[];
          printf("- Time slice %d -\n",irec);
          data_out(&root_bond, &root_angle);
          putchar('\n');
-         if( delete_list(&root_bond))
+         if( root_bond != NULL && delete_list(&root_bond))
             error("Error releasing bond list data for slice %d - \n%s\n",
                irec, strerror(errno));
-         if( delete_list(&root_angle))
+         if( root_angle != NULL && delete_list(&root_angle))
             error("Error releasing angle list data for slice %d - \n%s\n",
                irec, strerror(errno));
       } 
@@ -809,6 +835,7 @@ char	*argv[];
    {
 /* Convert molecule positions from frac coords to Cartesian coords */
       mat_vec_mul(sys.h, sys.c_of_m, sys.c_of_m, sys.nmols);
+fprintf(stderr, "Hello %f %f %f\n", sys.c_of_m[1][0], sys.c_of_m[1][1], sys.c_of_m[1][2]);
 
       bond_calc(sys, species, site_info, &root_bond, &root_angle, sp_range, blim, alim); 
       data_out(&root_bond,&root_angle);
