@@ -19,21 +19,25 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /******************************************************************************
- * kernel	Functions to calculate the forces, potential and distant pot'l*
- *		correction for various potentials.  ALL POTENTIAL-DEPENDANT   *
- *		CODE is in this module.					      *
- * dist_pot()		Return distant-potential correction		      *
- * kernel()		Calculate pe and forces				      *
- * types[]		Array of names of potential function types.	      *
- * npotp[]		Array containing number of parameters for each type.  *
- * npott		size of above two arrays.			      *
- *		Since CRAY CC 4.0 won't vectorise library function calls, a   *
- *		FORTRAN equivalent to kernel() is provided in kernel.f. To    *
- *		use it, compile force.c with macro FKERNEL defined and link   *
- *		with it AND THIS MODULE.				      *
+ * kernel        Functions to calculate the forces, potential and distant pot'l*
+ *                correction for various potentials.  ALL POTENTIAL-DEPENDANT   *
+ *                CODE is in this module.                                              *
+ * dist_pot()                Return distant-potential correction                      *
+ * kernel()                Calculate pe and forces                                      *
+ * types[]                Array of names of potential function types.              *
+ * npotp[]                Array containing number of parameters for each type.  *
+ * npott                size of above two arrays.                              *
+ *                Since CRAY CC 4.0 won't vectorise library function calls, a   *
+ *                FORTRAN equivalent to kernel() is provided in kernel.f. To    *
+ *                use it, compile force.c with macro FKERNEL defined and link   *
+ *                with it AND THIS MODULE.                                      *
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.15  2002/02/14 17:22:31  kr
+ *       Fixed dist-pot term to include all terms for Generic and Buckingham potentials.
+ *       This makes a difference for pathalogical cases like Floris ion-water potentials.
+ *
  *       Revision 2.14  2000/12/08 15:22:07  keith
  *       Reorganized order of potentials to maintain existing numberinf of HIW
  *       etc -- for restart file compatibility.
@@ -68,7 +72,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * This potential is compatibel with the Mxdorto progarm written by Kawabata Tokyo
  * Remark: Colomb Term A/r is already includued in Moldy. 
  * Phi(r_ij) =         B * exp ((C-R)*D)   - E/r^6 +
- *		    +  F * exp (-2*G(r-H)) - 2F*exp (-G(r-H))
+ *                    +  F * exp (-2*G(r-H)) - 2F*exp (-G(r-H))
  *
  *       Revision 2.8  1996/10/04 17:27:24  keith
  *       Rescheduled line order to overlap divide/computation on DEC Alpha/T3D.
@@ -178,41 +182,41 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/kernel.c,v 2.14 2000/12/08 15:22:07 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/kernel.c,v 2.15 2002/02/14 17:22:31 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
-#include	"defs.h"
+#include        "defs.h"
 /*========================== Library include files ===========================*/
 #include <math.h>
 /*========================== Program include files ===========================*/
 #include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
-void	message(int *,...);		/* Write a warning or error message   */
+void        message(int *,...);                /* Write a warning or error message   */
 /*========================== Potential type specification ====================*/
-#define LJPOT 0		/* Lennard Jones.   U=p0*((p1/r)^6 - (p1/r)^12)       */
-#define E6POT 1		/* 6-exp potential  U=-p0/r^6 + p1*exp(-p2*r)          */
-#define MCYPOT 2	/* MCY water pot.  J.Chem.Phys 64,1351(1976)    */
-			/*		    U= p0*exp(-p1*r) - p2*exp(-p3*r)  */
-#define GENPOT 3	/* "generic" potential for multipurpose use.          */
-			/* U= p0*exp(-p1*r) + p2/r^12 - p3/r^4 -p4/r^6 -p5/r^8 */
-#define HIWPOT 4	/* HIW pot. R.R.Pappalardo, J.Phys.Chem 97,4500(1993) */
-			/*		    U= p0/r^4 + p1/r^6 + p2/r^12      */
-#define RSRVD  5	/* Reserved					      */
-#define MORPOT 6	/* Busing-Ida-Gilbert plus Morse-potential of Mdxorto */
-			/* Material Design using Personal computer, Ed        */
+#define LJPOT 0                /* Lennard Jones.   U=p0*((p1/r)^6 - (p1/r)^12)       */
+#define E6POT 1                /* 6-exp potential  U=-p0/r^6 + p1*exp(-p2*r)          */
+#define MCYPOT 2        /* MCY water pot.  J.Chem.Phys 64,1351(1976)    */
+                        /*                    U= p0*exp(-p1*r) - p2*exp(-p3*r)  */
+#define GENPOT 3        /* "generic" potential for multipurpose use.          */
+                        /* U= p0*exp(-p1*r) + p2/r^12 - p3/r^4 -p4/r^6 -p5/r^8 */
+#define HIWPOT 4        /* HIW pot. R.R.Pappalardo, J.Phys.Chem 97,4500(1993) */
+                        /*                    U= p0/r^4 + p1/r^6 + p2/r^12      */
+#define RSRVD  5        /* Reserved                                              */
+#define MORPOT 6        /* Busing-Ida-Gilbert plus Morse-potential of Mdxorto */
+                        /* Material Design using Personal computer, Ed        */
                         /* Kazuyuki Hirao,  (1994) ISBN 4-7853-6803-9         */
-			/*     U=    B * exp ((C-R)*D)   - E/r^6 +            */
-			/*           F * exp (-2*G(r-H)) - 2F*exp (-G(r-H))   */
+                        /*     U=    B * exp ((C-R)*D)   - E/r^6 +            */
+                        /*           F * exp (-2*G(r-H)) - 2F*exp (-G(r-H))   */
 
-const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
-		              {"buckingham",3},
+const pots_mt        potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
+                              {"buckingham",3},
                               {"mcy",4},
-		              {"generic",6},
-			      {"hiw",3},
-		              {"reserved for developer",1},
-		              {"morse",7},
-		              {0,0}};	            /* MUST be null-terminated*/
+                              {"generic",6},
+                              {"hiw",3},
+                              {"reserved for developer",1},
+                              {"morse",7},
+                              {0,0}};                    /* MUST be null-terminated*/
 /*
  *  Array of dimensions of pot'l parameters.  Triplets contain powers
  *  of {m,l,t} for each parameter and are used to convert from input
@@ -220,25 +224,25 @@ const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
  *  sigma ls a length => {0,1,0}.
  */
 const dim_mt   pot_dim[][NPOTP]= {
-   /* Lennard-Jones */	{{1,2,-2},{0,1,0}},
+   /* Lennard-Jones */        {{1,2,-2},{0,1,0}},
    /* Buckingham    */  {{1,8,-2},{1,2,-2},{0,-1,0}},
    /* MCY           */  {{1,2,-2},{0,-1,0},{1,2,-2},{0,-1,0}},
    /* Generic       */  {{1,2,-2},{0,-1,0},{1,14,-2},{1,6,-2},{1,8,-2},{1,10,-2}}, 
    /* HIW           */  {{1,6,-2},{1,8,-2},{1,14,-2}},
    /* Reserved      */  {{0,0,0}},
    /* Morse         */  {{1,2,-2},{0, 1,0},{0,-1, 0},
-			          {1,8,-2},{1,2,-2},{0,-1,0},{0, 1, 0}}
+                                  {1,8,-2},{1,2,-2},{0,-1,0},{0, 1, 0}}
                                   };
 
 /*========================== Macros ==========================================*/
 
-#define E1	 0.254829592		/* Polynomial Constants used in	      */
-#define E2	-0.284496736		/* Evaluation of the complementary    */
-#define E3	 1.421413741		/* Error function.  		      */
-#define E4	-1.453152027		/* Approximation used is that of      */
-#define E5	 1.061405429		/* Abramowitz & Stegun p299.	      */
+#define E1         0.254829592                /* Polynomial Constants used in              */
+#define E2        -0.284496736                /* Evaluation of the complementary    */
+#define E3         1.421413741                /* Error function.                        */
+#define E4        -1.453152027                /* Approximation used is that of      */
+#define E5         1.061405429                /* Abramowitz & Stegun p299.              */
 
-#define PP	 0.3275911
+#define PP         0.3275911
 
 #define POLY5(t)   ((t)*(E1 + (t)*(E2 + (t)*(E3 + (t)*(E4 + (t)*E5)))))
 #define BPAR_TOL 1.0e-7
@@ -247,12 +251,12 @@ const dim_mt   pot_dim[][NPOTP]= {
  *  dist_pot   return attractive part of potential integrated outside cutoff. *
  *  dist_pot = - int_{r_c}^{infty} r^2 U(r) dr                                *
  ******************************************************************************/
-double	dist_pot(real *potpar,          /* Array of potential parameters      */
-		 double cutoff,         /* Cutoff distance                    */ 
-		 int ptype)             /* Potential type selector            */
-    	         		
-      	       			
-   	      			
+double        dist_pot(real *potpar,          /* Array of potential parameters      */
+                 double cutoff,         /* Cutoff distance                    */ 
+                 int ptype)             /* Potential type selector            */
+                                     
+                                             
+                                         
 {
    switch(ptype)
    {
@@ -263,34 +267,32 @@ double	dist_pot(real *potpar,          /* Array of potential parameters      */
       return(potpar[0]*CUBE(SQR(potpar[1])/cutoff) / 3.0);
     case E6POT:
        if( potpar[2] > BPAR_TOL ) 
-	  return( potpar[0] / ( 3.0*CUBE(cutoff))
-		  - potpar[1] * exp(-potpar[2]*cutoff)
-		  * (SQR(cutoff)/potpar[2] + 2*cutoff/SQR(potpar[2]) + 2.0 / CUBE(potpar[2])));
+          return( potpar[0] / ( 3.0*CUBE(cutoff))
+                  - potpar[1] * exp(-potpar[2]*cutoff)
+                  * (SQR(cutoff)/potpar[2] + 2*cutoff/SQR(potpar[2]) + 2.0 / CUBE(potpar[2])));
        else
-	  return( potpar[0] / ( 3.0*CUBE(cutoff))
-		  - potpar[1] * exp(-potpar[2]*cutoff)
-		  * (SQR(cutoff)/potpar[2] + 2*cutoff/SQR(potpar[2]) + 2.0 / CUBE(potpar[2])));
+          return( potpar[0] / ( 3.0*CUBE(cutoff)));
     case MCYPOT:
       if( potpar[3]  > BPAR_TOL )
          return( potpar[2] * (SQR(cutoff)/potpar[3] + 2*cutoff/SQR(potpar[3])
-	   		   + 2.0 / CUBE(potpar[3])) * exp(-potpar[3]*cutoff));
+                              + 2.0 / CUBE(potpar[3])) * exp(-potpar[3]*cutoff));
       else
          return( 0.0 );
     case GENPOT:
        if( potpar[1] > BPAR_TOL ) 
-	  return ( - potpar[0] * exp(-potpar[1]*cutoff) *
-		   (SQR(cutoff)/potpar[1] + 2*cutoff/SQR(potpar[1]) + 2.0 / CUBE(potpar[1])) 
-		   -potpar[2] / ( 9.0*CUBE(CUBE(cutoff))) + potpar[3] / cutoff 
-		   + potpar[4] / ( 3.0*CUBE(cutoff)) + potpar[5] / ( 5.0*SQR(cutoff)*CUBE(cutoff)));
+          return ( - potpar[0] * exp(-potpar[1]*cutoff) *
+                   (SQR(cutoff)/potpar[1] + 2*cutoff/SQR(potpar[1]) + 2.0 / CUBE(potpar[1])) 
+                   -potpar[2] / ( 9.0*CUBE(CUBE(cutoff))) + potpar[3] / cutoff 
+                   + potpar[4] / ( 3.0*CUBE(cutoff)) + potpar[5] / ( 5.0*SQR(cutoff)*CUBE(cutoff)));
        else
-	  return ( -potpar[2] / ( 9.0*CUBE(CUBE(cutoff))) + potpar[3] / cutoff 
-		   + potpar[4] / ( 3.0*CUBE(cutoff)) + potpar[5] / ( 5.0*SQR(cutoff)*CUBE(cutoff)));
-	  
+          return ( -potpar[2] / ( 9.0*CUBE(CUBE(cutoff))) + potpar[3] / cutoff 
+                   + potpar[4] / ( 3.0*CUBE(cutoff)) + potpar[5] / ( 5.0*SQR(cutoff)*CUBE(cutoff)));
+          
     case MORPOT:
       if( potpar[5] != 0.0 )
          return( potpar[3] / ( 3.0*CUBE(cutoff))
             +2.0*potpar[4] * (SQR(cutoff)/potpar[5] + 2*cutoff/SQR(potpar[5])
-	    +2.0 / CUBE(potpar[5])) * exp(-potpar[5]*(cutoff-potpar[6])));
+            +2.0 / CUBE(potpar[5])) * exp(-potpar[5]*(cutoff-potpar[6])));
       else
          return( potpar[3] / ( 3.0*CUBE(cutoff)) );
     case HIWPOT:
@@ -303,28 +305,28 @@ double	dist_pot(real *potpar,          /* Array of potential parameters      */
  *  atomic distances (r_sqr), charges (chg) , pot'l parameters (pot[which]),  *
  *  and returns a vector of forces (forceij) and the potential energy (pe)    *
  ******************************************************************************/
-void	kernel(int jmin,     
-	       int nnab,        /* Lower and upper limits for vectors.   (in) */
-	       real *forceij,   /* Vector of dU(r)/dr for each in r_sqr.(out) */
-	       double *pe,      /* Potential energy accumulator.     (in/out) */
-	       real *r_sqr,     /* Vector of site-site distances (**2).  (in) */
-	       real *nab_chg,   /* Vector of charges of neighbour sites. (in) */
-	       double chg,      /* Electric charge of reference site.    (in) */
-	       double norm,     
-	       double alpha,    /* Ewald parameter and 2*alpha/sqrt(pi). (in) */
-	       int ptype,       /* Index of potential type in potspec[]. (in) */ 
-	       real **pot)      /* Vectors of potential parameters.      (in) */
+void        kernel(int jmin,     
+               int nnab,        /* Lower and upper limits for vectors.   (in) */
+               real *forceij,   /* Vector of dU(r)/dr for each in r_sqr.(out) */
+               double *pe,      /* Potential energy accumulator.     (in/out) */
+               real *r_sqr,     /* Vector of site-site distances (**2).  (in) */
+               real *nab_chg,   /* Vector of charges of neighbour sites. (in) */
+               double chg,      /* Electric charge of reference site.    (in) */
+               double norm,     
+               double alpha,    /* Ewald parameter and 2*alpha/sqrt(pi). (in) */
+               int ptype,       /* Index of potential type in potspec[]. (in) */ 
+               real **pot)      /* Vectors of potential parameters.      (in) */
 {
-   register real t, ar;			/* Argument of erfc() polynomial.     */
-   register real r;			/* Site-site distance.		      */
-   register real r_r, r_6_r, r_sqr_r, r_12_r,	/* Reciprocal powers of r.    */
+   register real t, ar;                        /* Argument of erfc() polynomial.     */
+   register real r;                        /* Site-site distance.                      */
+   register real r_r, r_6_r, r_sqr_r, r_12_r,        /* Reciprocal powers of r.    */
                  r_4_r, r_8_r;
-   register real erfc_term;		/* Intermediates in erfc calculation. */
-   	    real ppe = 0.0;		/* Local accumulator of pot. energy.  */
-   	    real exp_f1, exp_f2, exp_f3; /* Temporary for b*exp(-cr) etc      */
-   register int	jsite;			/* Loop counter for vectors.	      */
+   register real erfc_term;                /* Intermediates in erfc calculation. */
+               real ppe = 0.0;                /* Local accumulator of pot. energy.  */
+               real exp_f1, exp_f2, exp_f3; /* Temporary for b*exp(-cr) etc      */
+   register int        jsite;                        /* Loop counter for vectors.              */
    real *p0 = pot[0], *p1 = pot[1],     /* Local bases for arrays of pot'l    */
-        *p2 = pot[2], *p3 = pot[3],     /* parameters.			      */
+        *p2 = pot[2], *p3 = pot[3],     /* parameters.                              */
         *p4 = pot[4], *p5 = pot[5],
         *p6 = pot[6];
 
@@ -332,145 +334,145 @@ void	kernel(int jmin,
       switch(ptype)
       {
        default:
-	 message(NULLI, NULLP, FATAL, UNKPTY, ptype);
-	 /*FALLTHRU*/
+         message(NULLI, NULLP, FATAL, UNKPTY, ptype);
+         /*FALLTHRU*/
        case LJPOT:
 VECTORIZE
          for(jsite=jmin; jsite < nnab; jsite++)
-	 {
-	    /*
-	     * Calculate r and coulombic part
-	     */
-	    r       = sqrt(r_sqr[jsite]);
-	    ar	    = alpha*r;
-	    t = 1.0/(1.0+PP*ar);
-	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
-	    r_r	 = 1.0 / r;
-	    t = POLY5(t) * erfc_term * r_r;
-	    erfc_term = t + norm * erfc_term;
-	    r_sqr_r = SQR(r_r);
-	    /*
-	     * Non-coulombic ie potential-specific part
-	     */
-	    r_6_r = SQR(p1[jsite])* r_sqr_r;
-	    r_6_r   = CUBE(r_6_r);
-	    r_12_r  = SQR(r_6_r);
-	    ppe += t + p0[jsite]*(r_12_r - r_6_r);
-	    forceij[jsite] = r_sqr_r*(6.0*p0[jsite]*(2*r_12_r - r_6_r)
-				      + erfc_term);
-	 }
-	 break;
+         {
+            /*
+             * Calculate r and coulombic part
+             */
+            r       = sqrt(r_sqr[jsite]);
+            ar            = alpha*r;
+            t = 1.0/(1.0+PP*ar);
+            erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+            r_r         = 1.0 / r;
+            t = POLY5(t) * erfc_term * r_r;
+            erfc_term = t + norm * erfc_term;
+            r_sqr_r = SQR(r_r);
+            /*
+             * Non-coulombic ie potential-specific part
+             */
+            r_6_r = SQR(p1[jsite])* r_sqr_r;
+            r_6_r   = CUBE(r_6_r);
+            r_12_r  = SQR(r_6_r);
+            ppe += t + p0[jsite]*(r_12_r - r_6_r);
+            forceij[jsite] = r_sqr_r*(6.0*p0[jsite]*(2*r_12_r - r_6_r)
+                                      + erfc_term);
+         }
+         break;
        case E6POT:
 VECTORIZE
          for(jsite=jmin; jsite < nnab; jsite++)
-	 {
-	    /*
-	     * Calculate r and coulombic part
-	     */
-	    r       = sqrt(r_sqr[jsite]);
-	    ar	    = alpha*r;
-	    t = 1.0/(1.0+PP*ar);
-	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
-	    r_r	 = 1.0 / r;
-	    t = POLY5(t) * erfc_term * r_r;
-	    erfc_term = t + norm * erfc_term;
-	    r_sqr_r = SQR(r_r);
-	    /*
-	     * Non-coulombic ie potential-specific part
-	     */
-	    exp_f1 = p1[jsite] * exp(-p2[jsite] * r);
-	    r_6_r   = p0[jsite] * CUBE(r_sqr_r);
-	    ppe += t - r_6_r + exp_f1;
-	    forceij[jsite] = r_sqr_r*(-6.0* r_6_r+ erfc_term)
-	                             + p2[jsite]*exp_f1 * r_r;
-	 }
-	 break;
+         {
+            /*
+             * Calculate r and coulombic part
+             */
+            r       = sqrt(r_sqr[jsite]);
+            ar            = alpha*r;
+            t = 1.0/(1.0+PP*ar);
+            erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+            r_r         = 1.0 / r;
+            t = POLY5(t) * erfc_term * r_r;
+            erfc_term = t + norm * erfc_term;
+            r_sqr_r = SQR(r_r);
+            /*
+             * Non-coulombic ie potential-specific part
+             */
+            exp_f1 = p1[jsite] * exp(-p2[jsite] * r);
+            r_6_r   = p0[jsite] * CUBE(r_sqr_r);
+            ppe += t - r_6_r + exp_f1;
+            forceij[jsite] = r_sqr_r*(-6.0* r_6_r+ erfc_term)
+                                     + p2[jsite]*exp_f1 * r_r;
+         }
+         break;
        case MCYPOT:
 VECTORIZE
          for(jsite=jmin; jsite < nnab; jsite++)
-	 {
-	    /*
-	     * Calculate r and coulombic part
-	     */
-	    r       = sqrt(r_sqr[jsite]);
-	    ar	    = alpha*r;
-	    t = 1.0/(1.0+PP*ar);
-	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
-	    r_r	 = 1.0 / r;
-	    t = POLY5(t) * erfc_term * r_r;
-	    erfc_term = t + norm * erfc_term;
-	    r_sqr_r = SQR(r_r);
+         {
             /*
-	     * Non-coulombic ie potential-specific part
-	     */
-	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
-	    exp_f2 = -p2[jsite] * exp(-p3[jsite]*r);
-	    ppe +=t + exp_f1 + exp_f2;
-	    forceij[jsite] = (p1[jsite]*exp_f1 + p3[jsite]*exp_f2) * r_r
-	    + erfc_term * r_sqr_r;
-	 }
-	 break;      
+             * Calculate r and coulombic part
+             */
+            r       = sqrt(r_sqr[jsite]);
+            ar            = alpha*r;
+            t = 1.0/(1.0+PP*ar);
+            erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+            r_r         = 1.0 / r;
+            t = POLY5(t) * erfc_term * r_r;
+            erfc_term = t + norm * erfc_term;
+            r_sqr_r = SQR(r_r);
+            /*
+             * Non-coulombic ie potential-specific part
+             */
+            exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
+            exp_f2 = -p2[jsite] * exp(-p3[jsite]*r);
+            ppe +=t + exp_f1 + exp_f2;
+            forceij[jsite] = (p1[jsite]*exp_f1 + p3[jsite]*exp_f2) * r_r
+            + erfc_term * r_sqr_r;
+         }
+         break;      
        case GENPOT:
 VECTORIZE
          for(jsite=jmin; jsite < nnab; jsite++)
-	 {
-	    /*
-	     * Calculate r and coulombic part
-	     */
-	    r       = sqrt(r_sqr[jsite]);
-	    ar	    = alpha*r;
-	    t = 1.0/(1.0+PP*ar);
-	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
-	    r_r	 = 1.0 / r;
-	    t = POLY5(t) * erfc_term * r_r;
-	    erfc_term = t + norm * erfc_term;
-	    r_sqr_r = SQR(r_r);
+         {
             /*
-	     * Non-coulombic ie potential-specific part
-	     */
-	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
-	    r_4_r = SQR(r_sqr_r);
-	    r_6_r = r_sqr_r * r_4_r;
-	    r_8_r = p5[jsite] * SQR(r_4_r);
-	    r_12_r = p2[jsite] * SQR(r_6_r);
-	    r_4_r *= p3[jsite];
-	    r_6_r *= p4[jsite];
+             * Calculate r and coulombic part
+             */
+            r       = sqrt(r_sqr[jsite]);
+            ar            = alpha*r;
+            t = 1.0/(1.0+PP*ar);
+            erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+            r_r         = 1.0 / r;
+            t = POLY5(t) * erfc_term * r_r;
+            erfc_term = t + norm * erfc_term;
+            r_sqr_r = SQR(r_r);
+            /*
+             * Non-coulombic ie potential-specific part
+             */
+            exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
+            r_4_r = SQR(r_sqr_r);
+            r_6_r = r_sqr_r * r_4_r;
+            r_8_r = p5[jsite] * SQR(r_4_r);
+            r_12_r = p2[jsite] * SQR(r_6_r);
+            r_4_r *= p3[jsite];
+            r_6_r *= p4[jsite];
 
-	    ppe += t + exp_f1 + r_12_r -r_4_r - r_6_r - r_8_r;
-	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r - 4.0*r_4_r - 6.0*r_6_r 
-				      - 8.0*r_8_r + erfc_term)
-	                   + p1[jsite]*exp_f1 * r_r;
-	 }
-	 break;      
+            ppe += t + exp_f1 + r_12_r -r_4_r - r_6_r - r_8_r;
+            forceij[jsite] = r_sqr_r*( 12.0*r_12_r - 4.0*r_4_r - 6.0*r_6_r 
+                                      - 8.0*r_8_r + erfc_term)
+                           + p1[jsite]*exp_f1 * r_r;
+         }
+         break;      
        case MORPOT:
 VECTORIZE
          for(jsite=jmin; jsite < nnab; jsite++)
-	 {
-	    /*
-	     * Calculate r and coulombic part
-	     */
-	    r         = sqrt(r_sqr[jsite]);
-	    ar	      = alpha*r;
-	    t         = 1.0/(1.0+PP*ar);
-	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
-	    r_r	      = 1.0 / r;
-	    t         = POLY5(t) * erfc_term * r_r;
-	    erfc_term = t + norm * erfc_term;
-	    r_sqr_r   = SQR(r_r);
+         {
             /*
-	     * Non-coulombic ie potential-specific part
-	     */
-	    exp_f1 = p0[jsite] * exp(( p1[jsite] - r)*p2[jsite]);
-	    r_6_r  = p3[jsite] * CUBE(r_sqr_r);
-	    exp_f2 = p4[jsite] * exp(-2.0 * p5[jsite] * ( r - p6[jsite]));
-	    exp_f3 =-p4[jsite] * 2.0 * exp(-p5[jsite] * ( r - p6[jsite]));
-	    ppe += t + exp_f1 - r_6_r + exp_f2  + exp_f3;
-	    forceij[jsite] = r_sqr_r*( -6.0*r_6_r + erfc_term) 
-	                   + r_r    *(p2[jsite] *exp_f1    
-	                   +(2.0    * p5[jsite])*exp_f2 
-	                   +          p5[jsite] *exp_f3 );
-	 }
-	 break;      
+             * Calculate r and coulombic part
+             */
+            r         = sqrt(r_sqr[jsite]);
+            ar              = alpha*r;
+            t         = 1.0/(1.0+PP*ar);
+            erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+            r_r              = 1.0 / r;
+            t         = POLY5(t) * erfc_term * r_r;
+            erfc_term = t + norm * erfc_term;
+            r_sqr_r   = SQR(r_r);
+            /*
+             * Non-coulombic ie potential-specific part
+             */
+            exp_f1 = p0[jsite] * exp(( p1[jsite] - r)*p2[jsite]);
+            r_6_r  = p3[jsite] * CUBE(r_sqr_r);
+            exp_f2 = p4[jsite] * exp(-2.0 * p5[jsite] * ( r - p6[jsite]));
+            exp_f3 =-p4[jsite] * 2.0 * exp(-p5[jsite] * ( r - p6[jsite]));
+            ppe += t + exp_f1 - r_6_r + exp_f2  + exp_f3;
+            forceij[jsite] = r_sqr_r*( -6.0*r_6_r + erfc_term) 
+                           + r_r    *(p2[jsite] *exp_f1    
+                           +(2.0    * p5[jsite])*exp_f2 
+                           +          p5[jsite] *exp_f3 );
+         }
+         break;      
        case HIWPOT:
 VECTORIZE
          for(jsite=jmin; jsite < nnab; jsite++)
@@ -506,88 +508,88 @@ VECTORIZE
       switch(ptype)
       {
        default:
-	 message(NULLI, NULLP, FATAL, UNKPTY, ptype);
-	 /*FALLTHRU*/
+         message(NULLI, NULLP, FATAL, UNKPTY, ptype);
+         /*FALLTHRU*/
        case LJPOT:
 VECTORIZE
          for(jsite=jmin; jsite < nnab; jsite++)
-	 {
-	    r_sqr_r = 1.0 / r_sqr[jsite];
-	    r_6_r = SQR(p1[jsite])* r_sqr_r;
-	    r_6_r   = CUBE(r_6_r);
-	    r_12_r  = SQR(r_6_r);
-	    ppe += p0[jsite]*(r_12_r - r_6_r);
-	    forceij[jsite] = r_sqr_r*6.0*p0[jsite]*(2*r_12_r - r_6_r);
-	 }
-	 break;
+         {
+            r_sqr_r = 1.0 / r_sqr[jsite];
+            r_6_r = SQR(p1[jsite])* r_sqr_r;
+            r_6_r   = CUBE(r_6_r);
+            r_12_r  = SQR(r_6_r);
+            ppe += p0[jsite]*(r_12_r - r_6_r);
+            forceij[jsite] = r_sqr_r*6.0*p0[jsite]*(2*r_12_r - r_6_r);
+         }
+         break;
        case E6POT:
 VECTORIZE
          for(jsite=jmin; jsite < nnab; jsite++)
-	 {
-	    r       = sqrt(r_sqr[jsite]);
-	    r_r	 = 1.0 / r;
-	    exp_f1 = p1[jsite] * exp(-p2[jsite] * r);
-	    r_sqr_r = SQR(r_r);
-	    r_6_r   = p0[jsite] * r_sqr_r * r_sqr_r * r_sqr_r;
-	    ppe +=  - r_6_r + exp_f1;
-	    forceij[jsite] = -r_sqr_r * 6.0 * r_6_r
-	                     + p2[jsite]*exp_f1 * r_r;
-	 }
-	 break;
+         {
+            r       = sqrt(r_sqr[jsite]);
+            r_r         = 1.0 / r;
+            exp_f1 = p1[jsite] * exp(-p2[jsite] * r);
+            r_sqr_r = SQR(r_r);
+            r_6_r   = p0[jsite] * r_sqr_r * r_sqr_r * r_sqr_r;
+            ppe +=  - r_6_r + exp_f1;
+            forceij[jsite] = -r_sqr_r * 6.0 * r_6_r
+                             + p2[jsite]*exp_f1 * r_r;
+         }
+         break;
        case MCYPOT:
 VECTORIZE
          for(jsite=jmin; jsite < nnab; jsite++)
-	 {
-	    r       = sqrt(r_sqr[jsite]);
-	    r_r	 = 1.0 / r;
-	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
-	    exp_f2 = -p2[jsite] * exp(-p3[jsite]*r);
-	    ppe += exp_f1 + exp_f2;
-	    forceij[jsite] = (p1[jsite]*exp_f1 + p3[jsite]*exp_f2) *r_r;
-	 }
-	 break; 
+         {
+            r       = sqrt(r_sqr[jsite]);
+            r_r         = 1.0 / r;
+            exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
+            exp_f2 = -p2[jsite] * exp(-p3[jsite]*r);
+            ppe += exp_f1 + exp_f2;
+            forceij[jsite] = (p1[jsite]*exp_f1 + p3[jsite]*exp_f2) *r_r;
+         }
+         break; 
        case GENPOT:
 VECTORIZE
          for(jsite=jmin; jsite < nnab; jsite++)
-	 {
-	    r       = sqrt(r_sqr[jsite]);
-	    r_r	 = 1.0 / r;
-	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
-	    r_sqr_r = SQR(r_r);
-	    r_4_r = SQR(r_sqr_r);
-	    r_6_r = r_sqr_r * r_4_r;
-	    r_8_r = p5[jsite] * SQR(r_4_r);
-	    r_12_r = p2[jsite] * SQR(r_6_r);
-	    r_4_r *= p3[jsite];
-	    r_6_r *= p4[jsite];
+         {
+            r       = sqrt(r_sqr[jsite]);
+            r_r         = 1.0 / r;
+            exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
+            r_sqr_r = SQR(r_r);
+            r_4_r = SQR(r_sqr_r);
+            r_6_r = r_sqr_r * r_4_r;
+            r_8_r = p5[jsite] * SQR(r_4_r);
+            r_12_r = p2[jsite] * SQR(r_6_r);
+            r_4_r *= p3[jsite];
+            r_6_r *= p4[jsite];
 
-	    ppe += exp_f1 + r_12_r -r_4_r - r_6_r - r_8_r;
-	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r - 4.0*r_4_r - 6.0*r_6_r 
-				      - 8.0*r_8_r)
-	                   + p1[jsite]*exp_f1 * r_r;
-	 }
-	 break;      
+            ppe += exp_f1 + r_12_r -r_4_r - r_6_r - r_8_r;
+            forceij[jsite] = r_sqr_r*( 12.0*r_12_r - 4.0*r_4_r - 6.0*r_6_r 
+                                      - 8.0*r_8_r)
+                           + p1[jsite]*exp_f1 * r_r;
+         }
+         break;      
        case MORPOT:
 VECTORIZE
          for(jsite=jmin; jsite < nnab; jsite++)
-	 {
-	    /*
-	     * Calculate r and coulombic part
-	     */
-	    r       = sqrt(r_sqr[jsite]);
-	    r_r	    = 1.0 / r;
-	    r_sqr_r = SQR(r_r);
-	    exp_f1  = p0[jsite] * exp(( p1[jsite] - r)*p2[jsite]);
-	    r_6_r   = p3[jsite] * CUBE(r_sqr_r);
-	    exp_f2  = p4[jsite] * exp(-2.0 * p5[jsite] * ( r - p6[jsite]));
-	    exp_f3  =-p4[jsite] * 2.0 * exp(-p5[jsite] * ( r - p6[jsite]));
-	    ppe    +=     exp_f1 - r_6_r + exp_f2  + exp_f3;
-	    forceij[jsite] = r_sqr_r*( -6.0*r_6_r            ) 
-	                   + r_r    *(p2[jsite] *exp_f1    
-	                   +(2.0    * p5[jsite])*exp_f2 
-	                   +          p5[jsite] *exp_f3 );
-	 }
-	 break;      
+         {
+            /*
+             * Calculate r and coulombic part
+             */
+            r       = sqrt(r_sqr[jsite]);
+            r_r            = 1.0 / r;
+            r_sqr_r = SQR(r_r);
+            exp_f1  = p0[jsite] * exp(( p1[jsite] - r)*p2[jsite]);
+            r_6_r   = p3[jsite] * CUBE(r_sqr_r);
+            exp_f2  = p4[jsite] * exp(-2.0 * p5[jsite] * ( r - p6[jsite]));
+            exp_f3  =-p4[jsite] * 2.0 * exp(-p5[jsite] * ( r - p6[jsite]));
+            ppe    +=     exp_f1 - r_6_r + exp_f2  + exp_f3;
+            forceij[jsite] = r_sqr_r*( -6.0*r_6_r            ) 
+                           + r_r    *(p2[jsite] *exp_f1    
+                           +(2.0    * p5[jsite])*exp_f2 
+                           +          p5[jsite] *exp_f3 );
+         }
+         break;      
        case HIWPOT:
 VECTORIZE
          for(jsite=jmin; jsite < nnab; jsite++)
@@ -605,7 +607,7 @@ VECTORIZE
 
             forceij[jsite] = r_sqr_r * ( 4.0 * r_4_r + 6.0 * r_6_r  
                                + 12.0 * r_12_r);  
-	 }  
+         }  
          break;      
       }     
    *pe += ppe;
