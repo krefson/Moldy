@@ -25,7 +25,42 @@ what you give them.   Help stamp out software-hoarding!  */
  *		is missing something an ANSI interface routine is supplied.   *
  ******************************************************************************
  *      Revision Log
- *       $Log: aux.c,v $
+ *       $Log: auxil.c,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
+ * Got rid of all global (external) data items except for
+ * "control" struct and constant data objects.  The latter
+ * (pot_dim, potspec, prog_unit) are declared with CONST
+ * qualifier macro which evaluates to "const" or nil
+ * depending on ANSI/K&R environment.
+ * Also moved as many "write" instantiations of "control"
+ * members as possible to "startup", "main" leaving just
+ * "dump".
+ *
+ * Moved declaration of "match" structure from input.c
+ * Moved a few sanity tests & modifications of "control"
+ * members to here from other modules.
+ *
+ * Changed size_t to own typedef size_mt == ulong.
+ *
+ * Declared as "static"  all functions which should be.
+ *
+ * Added CONST qualifier to (re-)declarations of ANSI library
+ * emulation routines to give reliable compilation even
+ * without ANSI_LIBS macro. (#define's away for K&R
+ * compilers)
+ *
+ * Renamed Aux.c to Auxil.c for DOS (ugh).
+ * Revamped cpu time interface to use POSIX "times()" whenever
+ * available - including for BSD systems - and got rid of
+ * "getrusage()" version entirely.
+ * Thus eliminating various marginally portable header
+ * kludges.
+ *
+ * Added memset() emulation for *really* old BSD systems.
+ *
  * Revision 2.5  94/01/29  11:09:53  keith
  * Fixed bug in "strstr()" replacement for non-ANSI libraries
  * 
@@ -197,7 +232,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/aux.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/auxil.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -821,6 +856,15 @@ double	r[];
 int	n;
 {
    int i;
+VECTORIZE
+   for(i = 0; i < n; i++)
+      r[i] = 0.0;
+}
+void	zero_dbls(r,n)
+double	r[];
+size_mt	n;
+{
+   long i;
 VECTORIZE
    for(i = 0; i < n; i++)
       r[i] = 0.0;
