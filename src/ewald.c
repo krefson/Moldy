@@ -3,6 +3,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.15  90/09/28  13:29:15  keith
+ * Inserted braces around VECTORIZE directives and changed include files
+ * for STARDtardent 3000 series (via cond. comp symbol "ardent").
+ * 
  * Revision 1.14  90/08/29  11:01:19  keith
  * Modified to keep consistency with ewald_parallel.c r1.8
  * 
@@ -60,7 +64,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /mnt/keith/moldy/RCS/ewald.c,v 1.14 90/08/29 11:01:19 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.16 91/02/07 15:41:52 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -84,9 +88,6 @@ void	invert();			/* Inverts a 3x3 matrix		      */
 void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
 void	mat_sca_mul();			/* Multiplies a 3x3 matrix by scalar  */
 double	sum();				/* Sum of elements of 'real' vector   */
-#ifdef VCALLS
-void	saxpy();			/* A*x+y, x, y are long vectors	      */
-#endif
 char	*arralloc();			/* Allocates a dope vector array      */
 void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
@@ -186,10 +187,6 @@ mat_t		stress;			/* Stress virial		(out) */
 		double	ksq;		/* Squared magnitude of K vector     */
    		double	kx,ky,kz;
    		vec_t	kv;		/* (Kx,Ky,Kz)  			     */
-#ifdef OLDEWALD
-   real		*chxky	= dalloc(nsites),
-		*shxky	= dalloc(nsites);
-#endif
    real		*site_fx = site_force[0],
    		*site_fy = site_force[1],
    		*site_fz = site_force[2];
@@ -210,13 +207,10 @@ mat_t		stress;			/* Stress virial		(out) */
 		**sky = (real**)arralloc(sizeof(real),2, 0, kmax, 0, nsites-1),
 		**slz = (real**)arralloc(sizeof(real),2, 0, lmax, 0, nsites-1);
    real		*coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
+   real		*c1, *s1, *cm1, *sm1;
    real		*qcoskr = dalloc(nsites),	/* q(i) cos(K.R(i))	      */
 		*qsinkr = dalloc(nsites);	/* q(i) sin(K.R(i))	      */
-#ifdef VCALLS
-   real		*temp	= dalloc(nsites);
-#else
    real		force_comp;
-#endif
    double	r_4_alpha = -1.0/(4.0 * control.alpha * control.alpha);
    double	vol = det(system->h);	/* Volume of MD cell		      */
    static	double	self_energy,	/* Constant self energy term	      */
@@ -297,6 +291,7 @@ mat_t		stress;			/* Stress virial		(out) */
 /*
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
  */
+VECTORIZE
    for(is = 0; is < nsites; is++)
       chx[0][is] = cky[0][is] = clz[0][is] = 1.0;
 
@@ -320,30 +315,39 @@ VECTORIZE
    {
       coshx = chx[h];
       sinhx = shx[h];
+      cm1 = chx[h-1]; sm1 = shx[h-1];
+      c1  = chx[1];   s1  = shx[1];
+VECTORIZE
       for(is = 0; is < nsites; is++)
       {
-	 coshx[is] = chx[h-1][is]*chx[1][is] - shx[h-1][is]*shx[1][is];
-	 sinhx[is] = shx[h-1][is]*chx[1][is] + chx[h-1][is]*shx[1][is];
+	 coshx[is] = cm1[is]*c1[is] - sm1[is]*s1[is];
+	 sinhx[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
       }
    }
    for(k = 2; k <= kmax; k++)
    {
       cosky = cky[k];
       sinky = sky[k];
+      cm1 = cky[k-1]; sm1 = sky[k-1];
+      c1  = cky[1];   s1  = sky[1];
+VECTORIZE
       for(is = 0; is < nsites; is++)
       {
-	 cosky[is] = cky[k-1][is]*cky[1][is] - sky[k-1][is]*sky[1][is];
-	 sinky[is] = sky[k-1][is]*cky[1][is] + cky[k-1][is]*sky[1][is];
+	 cosky[is] = cm1[is]*c1[is] - sm1[is]*s1[is];
+	 sinky[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
       }
    }
    for(l = 2; l <= lmax; l++)
    {
       coslz = clz[l];
       sinlz = slz[l];
+      cm1 = clz[l-1]; sm1 = slz[l-1];
+      c1  = clz[1];   s1  = slz[1];
+VECTORIZE
       for(is = 0; is < nsites; is++)
       {
-	 coslz[is] = clz[l-1][is]*clz[1][is] - slz[l-1][is]*slz[1][is];
-	 sinlz[is] = slz[l-1][is]*clz[1][is] + clz[l-1][is]*slz[1][is];
+	 coslz[is] = cm1[is]*c1[is] - sm1[is]*s1[is];
+	 sinlz[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
       }
    }
 /*
@@ -386,40 +390,8 @@ VECTORIZE
  * negative k and l by using sin(-x) = -sin(x), cos(-x) = cos(x). For
  * efficiency & vectorisation there is a loop for each case.
  */
-#ifdef OLDEWALD
-      if(k >= 0)
-VECTORIZE
-	 for(is = 0; is < nsites; is++)
-	 {
-	    chxky[is] = coshx[is]*cosky[is] - sinhx[is]*sinky[is];
-	    shxky[is] = sinhx[is]*cosky[is] + coshx[is]*sinky[is];
-	 }
-      else
-VECTORIZE
-	 for(is = 0; is < nsites; is++)
-	 {
-	    chxky[is] = coshx[is]*cosky[is] + sinhx[is]*sinky[is];
-	    shxky[is] = sinhx[is]*cosky[is] - coshx[is]*sinky[is];
-	 }
-
-      if(l >= 0)
-VECTORIZE
-	 for(is = 0; is < nsites; is++)
-	 {
-	    qcoskr[is] = chg[is]*(chxky[is]*coslz[is] - shxky[is]*sinlz[is]);
-	    qsinkr[is] = chg[is]*(shxky[is]*coslz[is] + chxky[is]*sinlz[is]);
-	 }
-      else
-VECTORIZE
-	 for(is = 0; is < nsites; is++)
-	 {
-	    qcoskr[is] = chg[is]*(chxky[is]*coslz[is] + shxky[is]*sinlz[is]);
-	    qsinkr[is] = chg[is]*(shxky[is]*coslz[is] - chxky[is]*sinlz[is]);
-	 }
-#else			/* Use of scalar temps is faster if compiler up to it*/
       qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,chg,
 	      qcoskr,qsinkr,k,l,nsites);
-#endif
       sqcoskrn = sum(nsitesxf, qcoskr, 1);
       sqsinkrn = sum(nsitesxf, qsinkr, 1);
       sqcoskrf = sum(nsites-nsitesxf, qcoskr+nsitesxf, 1);
@@ -451,14 +423,6 @@ NOVECTOR
  * Old and less efficient calculation of site forces. Retained for machines
  * with poor vectorising compilers.
  */
-#ifdef VCALLS
-VECTORIZE
-      for(is = 0; is < nsites; is++)
-	 temp[is] = qsinkr[is]*sqcoskr - qcoskr[is]*sqsinkr;
-      saxpy(nsites, kv[0], temp, 1, site_force[0], 1);
-      saxpy(nsites, kv[1], temp, 1, site_force[1], 1);
-      saxpy(nsites, kv[2], temp, 1, site_force[2], 1);
-#else
 /*
  * Evaluation of site forces. Vectorises under CRAY CC 4.0 & Convex VC 2.0
  */
@@ -470,7 +434,6 @@ VECTORIZE
 	 site_fy[is] += kv[1] * force_comp;
 	 site_fz[is] += kv[2] * force_comp;
       }
-#endif
    }
 
 /*
@@ -479,10 +442,4 @@ VECTORIZE
    tfree((char*)chx); tfree((char*)cky); tfree((char*)clz); 
    tfree((char*)shx); tfree((char*)sky); tfree((char*)slz);
    tfree((char*)qcoskr); tfree((char*)qsinkr);
-#ifdef OLDEWALD
-   tfree((char*)chxky);	 tfree((char*)shxky); 
-#endif
-#ifdef VCALLS
-   tfree((char*)temp);
-#endif
 }
