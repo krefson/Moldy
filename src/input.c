@@ -28,7 +28,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * Read_control()       Read control file				      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	input.c,v $
+ *       $Log: input.c,v $
+ * Revision 2.5  94/01/25  10:57:11  keith
+ * Null update for XDR portability release
+ * 
  * Revision 2.4  94/01/25  10:56:58  keith
  * Changed default for "xdr" parameter to "on".
  * 
@@ -156,7 +159,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/input.c,v 2.4 94/01/25 10:56:58 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/input.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -180,10 +183,8 @@ void		message(int *, ...);	/* Write a warning or error message   */
 void		message();		/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
-extern	contr_mt	control;		/* Main simulation control record     */
-extern	unit_mt	input_unit;		/* Unit specification (see Convert.c) */
-extern	pots_mt	potspec[];		/* Potential type specification       */
-extern	int	npott;			/* Dimensions of above arrays	      */
+extern	      contr_mt	control;	/* Main simulation control record     */
+extern	CONST pots_mt	potspec[];	/* Potential type specification       */
 /*========================== Macros ==========================================*/
 #define		LLEN		132
 		/* Flags to indicate status of potpar and site_info records   */
@@ -191,79 +192,13 @@ extern	int	npott;			/* Dimensions of above arrays	      */
 #define		S_MASS		0x02
 #define		S_CHARGE	0x04
 #define		S_NAME		0x08
-/*========================== Control file keyword template ===================*/
-					/* format SFORM is defined as %NAMLENs*/
-					/* in structs.h, to avoid overflow */
-/*
- *  Default backup and temporary file names if not set in "defs.h"
- */
-#ifndef BACKUP_FILE
-#define BACKUP_FILE	"MDBACKUP"
-#endif
-#ifndef TEMP_FILE
-#define TEMP_FILE	"MDTEMPX"
-#endif
-
-match_mt	match[] = {
-{"title",            SFORM,  "Test Simulation",(gptr*) control.title},
-{"nsteps",           "%d",   "0",            (gptr*)&control.nsteps},
-{"step",             "%lf",  "0.005",        (gptr*)&control.step},
-{"text-mode-save",   "%d",   "0",            (gptr*)&control.print_sysdef},
-{"new-sys-spec",     "%d",   "0",            (gptr*)&control.new_sysdef},
-{"scale-options"   , "%d",   "0",            (gptr*)&control.scale_options},
-{"surface-dipole",   "%d",   "0",            (gptr*)&control.surface_dipole},
-{"lattice-start",    "%d",   "0",            (gptr*)&control.lattice_start},
-{"sys-spec-file",    SFORM,  "",             (gptr*)control.sysdef},
-{"restart-file",     SFORM,  "",             (gptr*)control.restart_file},
-{"save-file",        SFORM,  "",             (gptr*)control.save_file},
-{"dump-file",        SFORM,  "",             (gptr*)control.dump_file},
-{"backup-file",      SFORM,  BACKUP_FILE,    (gptr*)control.backup_file},
-{"temp-file",        SFORM,  TEMP_FILE,      (gptr*)control.temp_file},
-{"strict-cutoff",    "%d",   "0",            (gptr*)&control.strict_cutoff},
-{"xdr",    	     "%d",   "1",            (gptr*)&control.xdr_write},
-{"strain-mask",	     "%d",   "200",	     (gptr*)&control.strain_mask},
-{"nbins",            "%d",   "100",          (gptr*)&control.nbins},
-{"seed",             "%d",   "1234567",      (gptr*)&control.seed},
-{"page-width",       "%d",   "132",          (gptr*)&control.page_width},
-{"page-length",      "%d",   "44",           (gptr*)&control.page_length},
-{"scale-interval",   "%d",   "10",           (gptr*)&control.scale_interval},
-{"const-pressure",   "%d",   "0",            (gptr*)&control.const_pressure},
-{"reset-averages",   "%d",   "0",            (gptr*)&control.reset_averages},
-{"scale-end",        "%d",   "1000000",      (gptr*)&control.scale_end},
-{"begin-average",    "%d",   "1001",         (gptr*)&control.begin_average},
-{"average-interval", "%d",   "5000",         (gptr*)&control.average_interval},
-{"begin-dump",       "%d",   "1",            (gptr*)&control.begin_dump},
-{"dump-interval",    "%d",   "20",           (gptr*)&control.dump_interval},
-{"dump-level",       "%d",   "0",            (gptr*)&control.dump_level},
-{"ndumps",           "%d",   "250",          (gptr*)&control.maxdumps},
-{"backup-interval",  "%d",   "500",          (gptr*)&control.backup_interval},
-{"roll-interval",    "%d",   "10",           (gptr*)&control.roll_interval},
-{"print-interval",   "%d",   "10",           (gptr*)&control.print_interval},
-{"begin-rdf",        "%d",   "1000000",      (gptr*)&control.begin_rdf},
-{"rdf-interval",     "%d",   "20",           (gptr*)&control.rdf_interval},
-{"rdf-out",          "%d",   "5000",         (gptr*)&control.rdf_out},
-{"temperature",      "%lf",  "0.0",          (gptr*)&control.temp},
-{"pressure",         "%lf",  "0.0",          (gptr*)&control.pressure},
-{"w",                "%lf",  "100.0",        (gptr*)&control.pmass},
-{"cutoff",           "%lf",  "10.0",         (gptr*)&control.cutoff},
-{"subcell",          "%lf",  "0.0",          (gptr*)&control.subcell},
-{"density",          "%lf",  "1.0",          (gptr*)&control.density},
-{"alpha",            "%lf",  "0.3",          (gptr*)&control.alpha},
-{"k-cutoff",         "%lf",  "2.0",          (gptr*)&control.k_cutoff},
-{"rdf-limit",        "%lf",  "10.0",         (gptr*)&control.limit},
-{"cpu-limit",        "%lf",  "1.0e20",       (gptr*)&control.cpu_limit},
-{"mass-unit",        "%lf",  "1.6605655e-27",(gptr*)&input_unit.m},
-{"length-unit",      "%lf",  "1.0e-10",      (gptr*)&input_unit.l},
-{"time-unit",        "%lf",  "1.0e-13",      (gptr*)&input_unit.t},
-{"charge-unit",      "%lf",  "1.6021892e-19",(gptr*)&input_unit.q}
-	     };
-int	nmatch=(sizeof match / sizeof(match_mt));
 /*=============================================================================
  |   Start of functions							      |
  =============================================================================*/
 /******************************************************************************
  *  get_line  read an input line skipping blank and comment lines	      *
  ******************************************************************************/
+static
 char	*get_line(line, len, file)
 char	*line;
 int	len;
@@ -297,6 +232,7 @@ char	*s;
 /******************************************************************************
  *  Sort array of species structs so frameworks are at end.		      *
 ******************************************************************************/
+static
 void sort_species(species, nspecies)
 spec_mt	*species;
 int	nspecies;
@@ -388,7 +324,7 @@ pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
    system->max_id = max_id;
    *spec_pp    = aalloc(nspecies, spec_mt );
    *site_info  = aalloc(max_id, site_mt );
-   (void)memset((char*)(*site_info), 0, max_id*sizeof(site_mt));
+   memst(*site_info, 0, max_id*sizeof(site_mt));
    *pot_ptr    = aalloc(SQR(max_id), pot_mt );
    for( i = 0; i < SQR(max_id); i++)
    {
@@ -511,13 +447,15 @@ pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
 
    /* Next line is keyword indicating type of potentials to be used	      */
    n_items = sscanf(get_line(line,LLEN,file), "%s", name);
-   for(i = 0; i < npott; i++)			/* Is 'name' a known type?    */
+   if( n_items <= 0 )
+      message(NULLI,NULLP,FATAL,SYSEOF,"potential type specification");
+   for(i = 0; potspec[i].name; i++)		/* Is 'name' a known type?    */
       if(strcmp(strlower(name), potspec[i].name) == 0)
          break;
-   if(i == npott)				/* Did the loop find 'name'?  */
+   if(! potspec[i].name)	       		/* Did the loop find 'name'?  */
       message(&nerrs,line,FATAL,UNKPOT,name);	/* no			      */
    system->ptype = i;				/* yes		              */
-   n_potpar = system->n_potpar = potspec[i].npar;
+   n_potpar = system->n_potpar = potspec[system->ptype].npar;
    						/* Now read in parameters     */
    while(sscanf(get_line(line,LLEN,file),"%s",name) > 0
                     && strcmp(strlower(name), "end") != 0)
@@ -592,9 +530,11 @@ quat_mt	qpf[];				/* Princ frame rotation quaternion    */
    real		ca, cb, cg, sg;
    quat_mt	q;
 
-   (void)memset((char*)nmols,0,system->nspecies*sizeof(int));
+   memst(nmols,0,system->nspecies*sizeof(int));
    n_items = sscanf(get_line(line,LLEN,file),"%lf%lf%lf%lf%lf%lf%d%d%d",
 		    &a, &b, &c, &calpha, &cbeta, &cgamma, &nx, &ny, &nz);
+   if(n_items <= 0 )
+      message(NULLI, NULLP, FATAL, SYSEOF, "lattice start file");
    if(n_items < 9)
       message(&nerrs, line, ERROR, NOCELL);
    if( ! (a > 0 && b > 0 && c > 0 && nx > 0 && ny > 0 && nz > 0 &&
@@ -687,13 +627,14 @@ quat_mt	qpf[];				/* Princ frame rotation quaternion    */
 /*******************************************************************************
  * assign()  Convert string value by format and assign to pointer location.    *
  ******************************************************************************/
+static
 int assign(strval, fmt, ptr)
 char	*strval, *fmt;
 gptr	*ptr;
 {
    int len = strlen(fmt);
    int code = fmt[MAX(0,len-1)];
-   if( len > 3 && fmt[len-2] == 'l' ) code = toupper(code);
+   if( len > 2 && fmt[len-2] == 'l' ) code = toupper(code);
 
    switch(code)
    {
@@ -721,14 +662,16 @@ gptr	*ptr;
  *  according to the format string and stores it at the value of the pointer  *
  *  in 'match'.	"name=" with no value means assign a null string. 	      *
  ******************************************************************************/
-void	read_control(file)
-FILE	*file;
+void	read_control(file,match)
+FILE	 *file;
+CONST match_mt *match;
 {
    char		line[LLEN],
    		name[LLEN],
    		value[LLEN];
-   int		i, n_items;
+   int		n_items;
    int		nerrs = 0;
+   CONST match_mt	*match_p;
 
    while( *get_line(line,LLEN,file) != '\0' )
    {
@@ -739,18 +682,18 @@ FILE	*file;
          message(&nerrs,line,ERROR,NOVAL,name);
       else
       {
-         for( i = 0; i < nmatch; i++ )		/* Search table for key	      */
-            if( !strcmp(strlower(name), match[i].key) )
-               break;				/* Found it          	      */
-	 if( i == nmatch )			/* Reached end without success*/
+	 for( match_p = match; match_p->key; match_p++ )
+	    if(! strcmp(strlower(name), match_p->key))
+	       break;
+	 if( ! match_p->key )			/* Reached end without success*/
             message(&nerrs,line,ERROR,NOTFND,name);
          else					/* Found it, so convert value */
          {
-            if( n_items == 1 && strcmp(match[i].format,SFORM) == 0 )
-                *(char*)match[i].ptr = '\0';	/* name=<empty> - assign null */
+            if( n_items == 1 && strcmp(match_p->format,SFORM) == 0 )
+                *(char*)match_p->ptr = '\0';	/* name=<empty> - assign null */
 	    else
 	    {
-               n_items = assign(value, match[i].format, match[i].ptr);
+               n_items = assign(value, match_p->format, match_p->ptr);
                if( n_items < 1 )
                   message(&nerrs,NULLP,ERROR,BADVAL,value,name);
 	    }
