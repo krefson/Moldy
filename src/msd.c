@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.16 1998/05/07 17:06:11 keith stable $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.18 1999/07/22 13:35:59 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,13 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.1
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 1.19  1999/10/01  10:59:09  craig
+ *  Corrected it_inc limits for when only one or two time slices are selected.
+ *  Reduced memory alloc to msd to account for selected species.
+ *
+ *  Revision 1.18  1999/07/22 13:35:59  keith
+ *  Various fixes from Craig Fisher.
+ *
  *  Revision 1.18  1999/06/03  18:00:09  craig
  *  Corrected memory freeing of dump, msd and species limits.
  *  Corrected for case when only one time slice selected.
@@ -721,7 +728,7 @@ char	*argv[];
    pot_mt	*potpar;
    quat_mt	*qpf;
    contr_mt	control_junk;
-   int          nmsd, max_av;
+   int          nmsd, max_av, nspecies;
    real         ***msd;
    int		it;
 
@@ -891,7 +898,7 @@ char	*argv[];
    do
    {
       iflag = 0;
-      if( (it_inc <= 0) || it_inc > nslices-2 )
+      if( (it_inc <= 0) || it_inc > (nslices>2?nslices-2:1) )
       {
          fputs("Invalid initial time slice increment\n",stderr);
          fputs("Please specify initial time slice increment between",stderr);
@@ -979,6 +986,7 @@ char	*argv[];
        sp_range[1] = sys.nspecies-1;
        sp_range[2] = 1;
    } 
+   nspecies = floor((sp_range[1]-sp_range[0])/sp_range[2]+1.0); /* No of species selected */
 
   /*
    * Allocate buffer for data
@@ -1060,8 +1068,8 @@ char	*argv[];
           max_av = 1;
 
   /* Allocate memory for msd array and zero */
-         msd = (real***)arralloc(sizeof(real),3,0,nmsd-1,0,sys.nspecies-1,0,2);
-         zero_real(msd[0][0],nmsd*sys.nspecies*3);
+         msd = (real***)arralloc(sizeof(real),3,0,nmsd-1,0,nspecies-1,0,2);
+         zero_real(msd[0][0],nmsd*nspecies*3);
 
   /* Calculate and print msd values */
      msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, traj_cofm, msd);
