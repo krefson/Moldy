@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.18 2005/01/13 11:30:15 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.19 2005/01/13 11:53:42 cf Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,9 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.18 2005/01/
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.19  2005/01/13 11:53:42  cf
+ *  Removed unused -3 and -c options.
+ *
  *  Revision 1.18  2005/01/13 11:30:15  cf
  *  Fixed formatting error in dumpext command line.
  *
@@ -126,10 +129,6 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.18 2005/01/
 #include "structs.h"
 #include "messages.h"
 #include "utlsup.h"
-#ifdef USE_XDR
-#   include     "xdr.h"
-   XDR          xdrs;
-#endif
 
 /*======================== Global variables ==================================*/
 extern int optind;
@@ -164,110 +163,62 @@ double vdotf(int n, float *x, int ix, float *y, int iy)
    return(dot);
 }
 /******************************************************************************
- *  read_dump_header. Read the header of a moldy dump file.                   *
+ *  header_to_moldy. Extract data from header info file created by dumpext.   *
  ******************************************************************************/
 static
-int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_write,
-                size_mt sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
+void header_to_moldy(FILE *Fp, system_mt *sys, spec_mp *spec_pp,
+                     double *delta_t, int *nslices, int *level)
 {
-   int      errflg = true;      /* Provisionally !!   */
-   char     vbuf[sizeof hdr_p->vsn + 1];
-   int      vmajor,vminor;
+   int      n=0, nspec=-1;
+   int      idata;
+   char     line[132], sdata[64];
+   double   ddata;
+   spec_mt  *species=NULL;
 
-   *xdr_write = false;
-#ifdef USE_XDR
-   /*
-    * Attempt to read dump header in XDR format
-    */
-   if( xdr_dump(&xdrs, hdr_p) )
-   {
-      strncpy(vbuf,hdr_p->vsn,sizeof hdr_p->vsn);
-      vbuf[sizeof hdr_p->vsn] = '\0';
-      if( strstr(vbuf,"(XDR)") )
-      {
-         errflg = false;
-         *xdr_write = true;
-      }
-   }
-#endif
-   /*
-    * If we failed, try to read header as native struct image.
-    */
-   if( ! *xdr_write )
-   {
-      if( fseek(dumpf, 0L, 0) )
-         message(NULLI, NULLP, WARNING, SEFAIL, fname, strerror(errno));
-      else if( fread((gptr*)&*hdr_p, sizeof(dump_mt), 1, dumpf) == 0 )
-         message(NULLI, NULLP, WARNING, DRERR, fname, strerror(errno));
-      else
-         errflg = false;
-   }
-   if( ! errflg )
-   {
-      /*
-       * Parse header version
-       */
-      errflg = true;
-      if( sscanf(hdr_p->vsn, "%d.%d", &vmajor, &vminor) < 2 )
-         message(NULLI, NULLP, WARNING, INDVSN, hdr_p->vsn);
-      if( vmajor < 2 || vminor <= 17)
-         message(NULLI, NULLP, WARNING, OLDVSN, hdr_p->vsn);
-      else
-         errflg = false;
-   }
-   if( errflg ) return errflg;
+   *nslices = 0;
 
-   if( dump_sysinfo == 0)
-      return errflg;
-   else if ( sysinfo_size == sizeof(dump_sysinfo_mt) )
+   while( !feof(Fp) )
    {
-      /*
-       * Now check for sysinfo and read fixed part of it.  This is needed to
-       * determine species count to read the whole thing.
-       */
-#ifdef USE_XDR
-      if( *xdr_write ) {
-         if( ! xdr_dump_sysinfo_hdr(&xdrs, dump_sysinfo) )
-            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
-         errflg = false;
-      } else
-#endif
-      {
-         if( fread((gptr*)dump_sysinfo,sizeof(dump_sysinfo_mt), 1, dumpf) == 0)
-            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
-         errflg = false;
-      }
+     get_line(line,132,Fp,1);
+
+     if( sscanf(line, "File name\t\t\t= %s", sdata) > 0)
+       n++;
+     if( sscanf(line, "Time between dumps\t\t= %lf %s", &ddata, sdata) > 1)
+         *delta_t = ddata;
+     if( n == 1)
+     {
+       if( sscanf(line, "Dump level\t\t\t= %d", &idata) > 0)
+         *level = idata;
+       if( sscanf(line, "Number of particles\t\t= %d\n", &idata) > 0)
+         sys->nmols = idata;
+       if( sscanf(line, "Number of polyatomics\t\t= %d\n", &idata) > 0)
+         sys->nmols_r = idata;
+       if( sscanf(line, "Number of species\t\t= %d", &idata) > 0)
+       {
+         sys->nspecies = idata;
+         *spec_pp = aalloc(sys->nspecies, spec_mt );
+       }
+
+       if( sscanf(line, "Species %d name\t\t\t= %s\n", &idata, sdata) > 1)
+       {
+         nspec++;
+         species = *spec_pp+nspec;
+         strncpy(species->name, sdata, L_spec);
+       }
+       if( sscanf(line, "  Number of ions\t\t= %d\n", &idata) > 0 ||
+           sscanf(line, "  Number of molecules\t\t= %d\n", &idata) > 0)
+             species->nmols = idata;
+
+       if( sscanf(line, "  Ion is a framework\n") ||
+           sscanf(line, "  Molecule is a framework\n"))
+             species->framework = true;
+       if( sscanf(line, "  Rotational deg. of freedom\t= %d", &idata) > 0)
+          species->rdof = idata;
+     }
+     if( sscanf(line, "Number of dumps\t\t\t= %d", &idata) > 0)
+       *nslices += idata;
    }
-   else
-   {
-      /*
-       * Now check for sysinfo and read it all.  N.B.  Buffer must be
-       * allocated to full expected size by prior call to read_dump_header.
-       */
-#ifdef USE_XDR
-      if( *xdr_write ) {
-         if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo, vmajor, vminor) )
-            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
-      if (sizeof(dump_sysinfo_mt)
-          + sizeof(mol_mt) * (dump_sysinfo->nspecies-1) > sysinfo_size)
-      {
-         /*
-          * We have already overrun the end of the "dump_sysinfo" buffer.
-          * Perhaps we can exit gracefully before crashing?
-          */
-         message(NULLI, NULLP, FATAL, RDHERR,  sizeof(dump_sysinfo_mt)
-                 + sizeof(mol_mt) * (dump_sysinfo->nspecies-1), sysinfo_size);
-      }
-         errflg = false;
-      } else
-#endif
-      {
-         if( fread((gptr*)dump_sysinfo, sysinfo_size, 1, dumpf) == 0)
-            message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
-         errflg = false;
-      }
-   }
-   return errflg;
+   *nslices-=1;
 }
 /***********************************************************************
  * vaf_calc. Calculate vaf from velocity array		               *
@@ -401,35 +352,32 @@ main(int argc, char **argv)
    int	aflg = 0,c;
    extern char	*optarg;
    int		errflg = 0;
-   int		start, finish, inc;
+   int		start = 0, finish = 0, inc = 1;
    int		vstart, vfinish, vinc;
    int		nslices;
-   int		dflag, iflag, vflag;
+   int		iflag, vflag, tflag = 0;
    int		outsw;
-   int		verbose = 0;
-   int		irec, ispec, it_inc = 1;
+   int		irec, it_inc = 1;
    char         *dump_base = NULL;
-   char         *dump_name = NULL, *dump_names = NULL;
+   char		*dump_names = NULL;
    char         *dumplims = NULL;
-   char		*tempname;
+   char		*tempname = NULL;
    char		*vaflims = NULL;
    char		*dumpcommand;
    int		dump_size;
    float	*dump_buf;
-   FILE         *Dp, *dump_file;
-   dump_mt      dump_header;
-   dump_sysinfo_mt *dump_sysinfo;
-   size_mt      sysinfo_size;
+   FILE         *Dp, *Hp;
    system_mt    sys;
-   spec_mt      *species, *spec;
+   spec_mt      *species;
    float        (**vel)[3];
    int          nvaf, max_av, nspecies;
    float        **vaf;
    char         *spec_list = NULL;
    char         *spec_mask = NULL;
-   int          arglen, ind, genflg;
-   int          xdr = 0;
+   int          arglen, ind, genflg=0;
    float	vaf_step = 0.0;
+   double	delta_t;
+   int          dump_level = 1;
 
 #define MAXTRY 100
 
@@ -441,17 +389,17 @@ main(int argc, char **argv)
 
    verbose = 0;
 
-   while( (c = getopt(argc, argv, "ad:t:l:i:g:o:qv") ) != EOF )
+   while( (c = getopt(argc, argv, "at:l:i:g:o:qv") ) != EOF )
       switch(c)
       {
        case 'a':  /* Calculate angular velocity function */
 	 aflg++;
 	 break;
-       case 'd':  /* Name of dump file */
-	 dump_base = optarg;
-	 break;
        case 't':  /* Dump file limits */
-	 dumplims = mystrdup(optarg);
+         if( tflag++ == 0) 
+	   dumplims = mystrdup(optarg);
+         else
+           errflg++;
          break;
        case 'l':  /* Limits for vtf/vaf calculation */
 	 vaflims = mystrdup(optarg);
@@ -470,7 +418,7 @@ main(int argc, char **argv)
 	 break;
        case 'o':  /* Name of output file */
 	 if( freopen(optarg, "w", stdout) == NULL )
-	    error("failed to open file \"%s\" for output", optarg);
+            error(NOOUTF, optarg);
 	 break;
        case 'v':
 	 verbose++;
@@ -482,15 +430,26 @@ main(int argc, char **argv)
 
    if( errflg )
    {
-      fprintf(stderr,"Usage: %s [-a] [-q] ",comm);
-      fputs("-d dump-files -t s[-f[:n]] [-l s[-f[:n]]] ",stderr);
-      fputs("[-g s[-f[:n]]] [-i init-inc] [-v] [-o output-file]\n",stderr);
+      fprintf(stderr,"Usage: %s [-a] [-q] [-t s[-f[:n]]] ",comm);
+      fputs("[-l s[-f[:n]]] [-g s[-f[:n]] [-i init-inc] ",stderr);
+      fputs("[-v] [-o output-file] dump-files\n",stderr);
       exit(2);
    }
 
+   if( optind <= argc)
+      dump_base = argv[optind];
+
+   /* Dump dataset                            */
+   if( dump_base == 0 && dump_names == 0)
+   {
+        fputs("Enter canonical name of dump files (as in control)\n",stderr);
+        if( (dump_base = get_str("Dump file name? ")) == NULL)
+           exit(2);
+   }
+
    /* Prepare dump file name for reading */
-   genflg = 0;
-   if( dump_base != 0 ) genflg++;
+   if( strstr(dump_base,"%d") )
+      genflg++;
 
    if( genflg == 0 && optind < argc ) {
       arglen = 0;
@@ -504,87 +463,41 @@ main(int argc, char **argv)
          if(ind < argc-1) strcat(dump_names," ");
       }
    }
-
-   /* Dump dataset                            */
-   if( dump_base == 0 && dump_names == 0)
-   {
-        fputs("Enter canonical name of dump files (as in control)\n",stderr);
-        if( (dump_base = get_str("Dump file name? ")) == NULL) exit(2);
-        genflg++;
-   }
-
-   if( dump_names == 0 ) dump_names = dump_base;
-
-   /* Prepare to read header info */
-   if( genflg )
-   {
-      dump_name = malloc(strlen(dump_base) + 2);
-      sprintf(dump_name, dump_base, 0);
-   }
    else
-   {
-      dump_name = argv[optind];
-   }
-   if( (dump_file = open_dump(dump_name, "rb")) == NULL)
-   {
-      fprintf(stderr, "Failed to open dump file \"%s\"\n", dump_name);
-      exit(2);
-   }
+      dump_names = dump_base;
 
-   /*
-    * Read dump header. On first call we need to read only the first
-    * part of sysinfo to determine nspecies and consequently the size
-    * of the buffer needed to hold all of it.
-    */
-   sysinfo_size = sizeof(dump_sysinfo_mt);
-   dump_sysinfo = (dump_sysinfo_mt*)malloc(sysinfo_size);
-   if( read_dump_header(dump_name, dump_file, &dump_header, &xdr,
-                        sysinfo_size, dump_sysinfo)
-       || ferror(dump_file) || feof(dump_file) )
-   {
-      fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
-      exit(2);
-   }
-   sysinfo_size = sizeof(dump_sysinfo_mt)
-      + sizeof(mol_mt) * (dump_sysinfo->nspecies-1);
-   (void)free(dump_sysinfo);
+   if( (dumpcommand = malloc(256+strlen(dump_names))) == 0)
+      error(COMMEM, 256+strlen(dump_names));
+
+#if defined (HAVE_POPEN)
+   sprintf(dumpcommand,"dumpext -c -1 %s%s", verbose?"-v ":"", dump_names);
+   if( verbose ) message(NULLI, NULLP, INFO, EXEC, dumpcommand);
+   if( (Hp = popen(dumpcommand,"r")) == 0)
+      error(DUMPCOMM, dumpcommand);
+#else
+   tempname = tmpnam((char*)0);
+   sprintf(dumpcommand,"dumpext -c -1 -o %s %s%s", tempname, verbose?"-v ":"", dump_names);
+   if( verbose ) message(NULLI, NULLP, INFO, EXEC, dumpcommand);
+   system(dumpcommand);
+   if( (Hp = fopen(tempname,"rb")) == 0)
+      error(FILEOPEN,tempname);
+#endif
+   header_to_moldy(Hp, &sys, &species, &delta_t, &finish, &dump_level);
+
+   (void)free(dumpcommand);
+
+   if( verbose ) message(NULLI, NULLP, INFO, HEADER);
+
+#if defined (HAS_POPEN)
+   pclose(Hp);
+#else
+   fclose(Hp);
+   remove(tempname);
+#endif
 
    /* Check dump file contains necessary data */
-   if( !(dump_header.dump_level & 2) )
-     {
-     printf("Velocities not contained in a dump of level %d\n", dump_header.dump_level);
-     exit(2);
-     }
-
-   /*
-    * Allocate space for and read dump sysinfo.
-    */
-   dump_sysinfo = (dump_sysinfo_mt*)malloc(sysinfo_size);
-   /*
-    * Rewind and reread header, this time including sysinfo.
-    */
-   (void)rewind_dump(dump_file, xdr);
-   if( read_dump_header(dump_name, dump_file, &dump_header, &xdr,
-                        sysinfo_size, dump_sysinfo)
-       || ferror(dump_file) || feof(dump_file) )
-   {
-      fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
-      exit(2);
-   }
-
-   sys.nspecies = dump_sysinfo->nspecies;
-
-   sys.nmols    = dump_sysinfo->nmols;
-   sys.nmols_r  = dump_sysinfo->nmols_r;
-
-   species = aalloc(dump_sysinfo->nspecies, spec_mt );
-   for( ispec = 0, spec = species; ispec < dump_sysinfo->nspecies; ispec++, spec++)
-   {
-      spec->nmols = dump_sysinfo->mol[ispec].nmols;
-      spec->rdof = dump_sysinfo->mol[ispec].rdof;
-      spec->framework = dump_sysinfo->mol[ispec].framework;
-      strncpy(spec->name, dump_sysinfo->mol[ispec].name, L_spec);
-   }
+   if( !(dump_level & 2) )
+     error(NOCOMP, "C of M velocities", dump_level);
 
    allocate_dynamics(&sys, species);
 
@@ -592,37 +505,20 @@ main(int argc, char **argv)
    spec_mask = (char*)calloc(sys.nspecies+1,sizeof(char));
 
    if( spec_list == NULL)
+     {
+     spec_list = malloc((int)log10(sys.nspecies) + 4);
      sprintf(spec_list,"1-%d",sys.nspecies);
+     }
 
    if( tokenise(mystrdup(spec_list), spec_mask, sys.nspecies) == 0 )
-      error("invalid species specification \"%s\" - choose from species 1 to %d",spec_list,sys.nspecies);
+      error(INVSPECIES, spec_list, sys.nspecies);
 
   /*
-   *  Ensure that the dump limits start, finish, inc are set up,
-   *  either on command line or by user interaction.
+   *  Ensure that the dump limits start, finish, inc are set up.
    */
-   do
-   {
-      dflag = 0;
-      if( dumplims == NULL )
-      {
-          fputs("Please specify range of dump records in form", stderr);
-          fputs(" start-finish:increment\n", stderr);
-          dumplims = get_str("s-f:n? ");
-      }
-      if( forstr(dumplims, &start, &finish, &inc) )
-      {
-          dflag++;
-          fputs("Invalid range for dump records \"", stderr);
-          fputs(dumplims, stderr);
-          fputs("\"\n", stderr);
-      }
-      if( dflag)
-      {
-          (void)free(dumplims);
-          dumplims = NULL;
-      } 
-   } while(dflag);
+   if( tflag )
+     if( forstr(dumplims, &start, &finish, &inc) )
+        error(INVSLICES, dumplims);
 
    nslices = (finish-start)/inc+1;  /* no. of time slices in vel */
 
@@ -692,25 +588,22 @@ main(int argc, char **argv)
    zero_float(vel[0][0], nslices*(aflg?sys.nmols_r:sys.nmols)*3);
 
    if( (dump_buf = (float*)malloc(dump_size)) == 0)
-      error("malloc failed to allocate dump record buffer (%d bytes)",
-          dump_size);
+      error(BUFFMEM, dump_size);
    if( (dumpcommand = malloc(256+strlen(dump_names))) == 0)
-      error("malloc failed to allocate dumpext command string buffer (%d bytes)",
-          256+strlen(dump_names));
+      error(COMMEM, 256+strlen(dump_names));
 
 #if defined (HAVE_POPEN) 
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d %s%s",
-        sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, verbose?"-v ":" ", dump_names);
-   if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
+      sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, verbose?"-v ":"", dump_names);
+   if( verbose ) message(NULLI, NULLP, INFO, EXEC, dumpcommand);
    
    if( (Dp = popen(dumpcommand,"r")) == 0)
-        error("Failed to execute \'dumpext\" command - \n%s",
-            strerror(errno));
+     error(DUMPCOMM, dumpcommand);
 #else
    tempname = tmpnam((char*)0);
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d -o %s %s%s",
-         sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, tempname, verbose?"-v ":" ", dump_names);
-   if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
+       sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, tempname, verbose?"-v ":"", dump_names);
+   if( verbose ) message(NULLI, NULLP, INFO, EXEC, dumpcommand);
    system(dumpcommand);
    if( (Dp = fopen(tempname,"rb")) == 0)
         error("Failed to open \"%s\"",tempname);
@@ -720,16 +613,17 @@ main(int argc, char **argv)
    for(irec = 0; irec <= finish-start; irec+=inc)
    {
      if( verbose ) fprintf(stderr,"Reading dump record %d from dumpext output\n",irec);
-        if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
-           if( !strcmp(strerror(errno),"Success") )
-              error("Error reading record %d in dump file \"%s\"\n",irec, dump_name);
-           else
-              error("Error reading record %d in dump file \"%s\" - \n%s\n",
-                 irec, dump_name, strerror(errno));
-	memcpy(vel[irec/inc], dump_buf, dump_size);
+     if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
+     {
+        if( !strcmp(strerror(errno),"Success") )
+           error(DUMPREC, irec, dump_base, strerror(errno));
+        else
+           error(DUMPREC0, irec, dump_base, strerror(errno));
+     }
+     memcpy(vel[irec/inc], dump_buf, dump_size);
 #ifdef DEBUG
-        fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
-	   irec, dump_name);
+     fprintf(stderr,"Sucessfully read dump record %d from file \"%s\"\n",
+         irec, dump_base);
 #endif
    }
    xfree(dump_buf);
@@ -744,7 +638,7 @@ main(int argc, char **argv)
   /* Calculate vaf parameters */
      nvaf = (vfinish-vstart)/vinc+1; /* No of vaf time intervals */
      max_av = (nslices - vfinish)/it_inc; /* Max no of vaf calcs to average over */
-     vaf_step = dump_sysinfo->deltat*inc*it_inc;
+     vaf_step = delta_t*inc*it_inc;
 
      if (max_av < 1)
         max_av = 1;
@@ -759,5 +653,6 @@ main(int argc, char **argv)
      else
         vaf_calc(species, spec_mask, nspecies, vstart, vfinish, vinc, max_av, it_inc, vel, vaf, aflg);
      vaf_out(species, vaf, max_av, nvaf, spec_mask, nspecies, aflg, vaf_step, outsw);
+   if( verbose ) message(NULLI, NULLP, INFO, COMPLETE);
    return 0;    
 }
