@@ -1,3 +1,23 @@
+/* MOLecular DYnamics simulation code, Moldy.
+Copyright (C) 1988, 1992, 1993 Keith Refson
+ 
+This program is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation; either version 2, or (at your option) any
+later version.
+ 
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+ 
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ 
+In other words, you are welcome to use, share and improve this program.
+You are forbidden to forbid anyone else to use, share and improve
+what you give them.   Help stamp out software-hoarding!  */
 /******************************************************************************
  * kernel	Functions to calculate the forces, potential and distant pot'l*
  *		correction for various potentials.  ALL POTENTIAL-DEPENDANT   *
@@ -393,7 +413,7 @@ VECTORIZE
             /*
 	     * Non-coulombic ie potential-specific part
 	     */
-	    exp_f1 = p0[jsite] * exp((-p1[jsite] - r)*p2[jsite]);
+	    exp_f1 = p0[jsite] * exp(( p1[jsite] - r)*p2[jsite]);
 	    r_6_r  = p3[jsite] * CUBE(r_sqr_r);
 	    exp_f2 = p4[jsite] * exp(-2.0 * p5[jsite] * ( r - p6[jsite]));
 	    exp_f3 =-p4[jsite] * 2.0 * exp(-p5[jsite] * ( r - p6[jsite]));
@@ -479,7 +499,7 @@ VECTORIZE
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	    = 1.0 / r;
 	    r_sqr_r = SQR(r_r);
-	    exp_f1  = p0[jsite] * exp((-p1[jsite] - r)*p2[jsite]);
+	    exp_f1  = p0[jsite] * exp(( p1[jsite] - r)*p2[jsite]);
 	    r_6_r   = p3[jsite] * CUBE(r_sqr_r);
 	    exp_f2  = p4[jsite] * exp(-2.0 * p5[jsite] * ( r - p6[jsite]));
 	    exp_f3  =-p4[jsite] * 2.0 * exp(-p5[jsite] * ( r - p6[jsite]));
