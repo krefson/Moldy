@@ -35,6 +35,15 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: leapfrog.c,v $
+ *       Revision 2.15  2001/07/26 17:30:17  keith
+ *       Now prints both conserved hamiltonian and total system energy
+ *       (T+V) in the same vertical column.
+ *
+ *       Got rid of old code to read old restart files from moldy 2.
+ *       Added code to convert V2.19 and below restart files.
+ *
+ *       Corrected minor mistake in initialization of NPPR unit cell variables.
+ *
  *       Revision 2.14  2001/07/02 11:30:32  keith
  *       Fixed error in leapf_quat_b which broke symmetry, symplecticity etc.
  *
@@ -98,7 +107,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.14 2001/07/02 11:30:32 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.15 2001/07/26 17:30:17 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -526,8 +535,9 @@ void gleap_therm(double step, real mass, real gkt, real *s, real *smom)
 /******************************************************************************
  * gleap_therm.  Update thermostat variable and momenta using Nose's exact    *
  *    solution for H=s*pi^2/2*Q.					      *
+ *    N.B. this is not the same Hamiltonian as gleap_therm integrates.        *
  ******************************************************************************/
-void gleap_therm_n(double step, real mass, real *s, real *smom)
+void leapf_nose_therm(double step, real mass, real *s, real *smom)
 {
    double scale= (1.0+*smom*step/(2.0*mass));
 
