@@ -23,6 +23,17 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.8.1.2  1994/12/30 11:53:51  keith
+ *       Finxed bug which caused core dump for small k-cutoff (hmax=0)
+ *
+ * Revision 2.8.1.1  1994/07/19  10:40:57  keith
+ * Implementation of W. Smith's RIL parallelization strategy
+ * (Comp Phys Commun, 67, (1992) 293-406
+ * This involves distributing memory better but does communication
+ * in the inner k-vector loop.  On most machines this seems to
+ * defeat the parallelization altogether - it runs more slowly
+ * in parallel on the Titan than in serial mode even for 32772 sites.
+ *
  * Revision 2.8  1994/06/22  09:37:02  keith
  * Performance optimization of "trig rules" loops.
  *
@@ -167,7 +178,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 2.8 1994/06/22 09:37:02 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.8.1.2 1994/12/30 11:53:51 keith Exp keith $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -455,21 +466,36 @@ VECTORIZE
       sinhx[is] = sinky[is] = sinlz[is] = 0.0;
    }      
 
-   coshx = chx[1]; cosky = cky[1]; coslz = clz[1];
-   sinhx = shx[1]; sinky = sky[1]; sinlz = slz[1];
    site0 = site[0]; site1 = site[1]; site2 = site[2];
-VECTORIZE
-   for(is = ns0; is < ns1; is++)
+   if( hmax >= 1 )
    {
-      kx = astar[0]*site0[is]+astar[1]*site1[is]+astar[2]*site2[is];
-      ky = bstar[0]*site0[is]+bstar[1]*site1[is]+bstar[2]*site2[is];
-      kz = cstar[0]*site0[is]+cstar[1]*site1[is]+cstar[2]*site2[is];
-      coshx[is] = cos(kx);
-      sinhx[is] = sin(kx);
-      cosky[is] = cos(ky);
-      sinky[is] = sin(ky);
-      coslz[is] = cos(kz);
-      sinlz[is] = sin(kz);
+      coshx = chx[1]; sinhx = shx[1];
+VECTORIZE
+      for(is = ns0; is < ns1; is++)
+      {
+	 kx = astar[0]*site0[is]+astar[1]*site1[is]+astar[2]*site2[is];
+	 coshx[is] = cos(kx); sinhx[is] = sin(kx);
+      }
+   }
+   if( kmax >= 1 )
+   {
+      cosky = cky[1]; sinky = sky[1];
+VECTORIZE
+      for(is = ns0; is < ns1; is++)
+      {
+	 ky = bstar[0]*site0[is]+bstar[1]*site1[is]+bstar[2]*site2[is];
+	 cosky[is] = cos(ky); sinky[is] = sin(ky);
+      }
+   }
+   if( lmax >= 1 )
+   {
+      coslz = clz[1]; sinlz = slz[1];
+VECTORIZE
+      for(is = ns0; is < ns1; is++)
+      {
+	 kz = cstar[0]*site0[is]+cstar[1]*site1[is]+cstar[2]*site2[is];
+	 coslz[is] = cos(kz); sinlz[is] = sin(kz);
+      }
    }
 /*
  * Use addition formulae to get sin(h*astar*x)=sin(Kx*x) etc for each site
