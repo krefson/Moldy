@@ -130,9 +130,11 @@ extern	contr_t	control;		/* Main simulation control record     */
  *  Ewald  Calculate reciprocal-space part of coulombic forces		      *
  ******************************************************************************/
 void ewald_inner();
+#ifdef ardent
 #ifdef PARALLEL
 #pragma opt_level 3
 #pragma pproc ewald_inner
+#endif
 #endif
 void	ewald(site,site_force,system,species,chg,pe,stress)
 real		**site,			/* Site co-ordinate arrays	 (in) */
@@ -220,7 +222,9 @@ mat_t		stress;			/* Stress virial		(out) */
       nsitesxf = ssite;
       frame_flag = (spec != species+system->nspecies);
 
+#ifdef ardent
 #pragma no_parallel
+#endif
       for(is = 0; is < nsitesxf; is++)
       {
 	 sq += chg[is];
@@ -231,7 +235,9 @@ mat_t		stress;			/* Stress virial		(out) */
        * Sqxf is total non-framework charge.  Calculate grand total in sq.
        */
       sqxf = sq;
+#ifdef ardent
 #pragma no_parallel
+#endif
       for(; is < nsites; is++)
 	 sq += chg[is];
       /*
@@ -291,7 +297,9 @@ mat_t		stress;			/* Stress virial		(out) */
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
  */
    coshx = chx[0]; cosky = cky[0]; coslz = clz[0];
+#ifdef ardent
 #pragma no_parallel
+#endif
 VECTORIZE
    for(is = 0; is < nsites; is++)
    {
@@ -303,7 +311,9 @@ VECTORIZE
    coshx = chx[1]; cosky = cky[1]; coslz = clz[1];
    sinhx = shx[1]; sinky = sky[1]; sinlz = slz[1];
    site0 = site[0]; site1 = site[1]; site2 = site[2];
+#ifdef ardent
 #pragma no_parallel
+#endif
 VECTORIZE
    for(is = 0; is < nsites; is++)
    {
@@ -326,7 +336,9 @@ VECTORIZE
       sinhx = shx[h];
       cm1 = chx[h-1]; sm1 = shx[h-1];
       c1  = chx[1];   s1  = shx[1];
+#ifdef ardent
 #pragma no_parallel
+#endif
 VECTORIZE
       for(is = 0; is < nsites; is++)
       {
@@ -340,7 +352,9 @@ VECTORIZE
       sinky = sky[k];
       cm1 = cky[k-1]; sm1 = sky[k-1];
       c1  = cky[1];   s1  = sky[1];
+#ifdef ardent
 #pragma no_parallel
+#endif
 VECTORIZE
       for(is = 0; is < nsites; is++)
       {
@@ -354,7 +368,9 @@ VECTORIZE
       sinlz = slz[l];
       cm1 = clz[l-1]; sm1 = slz[l-1];
       c1  = clz[1];   s1  = slz[1];
+#ifdef ardent
 #pragma no_parallel
+#endif
 VECTORIZE
       for(is = 0; is < nsites; is++)
       {
@@ -367,11 +383,17 @@ VECTORIZE
  * To avoid calculating K and -K, only half of the K-space box is covered. 
  * Points on the axes are included once and only once. (0,0,0) is omitted.
  */
+#ifdef stellar
 /*$dir parallel*/
+#endif
+#ifdef ardent
 #pragma ipdep
+#pragma pproc ewald_inner
+#endif
+#ifdef __convexc__
 #pragma _CNX pstrip (1)
 #pragma _CNX force_parallel
-#pragma pproc ewald_inner
+#endif
    for(ithread = 0; ithread < nthreads; ithread++)
       ewald_inner(ithread, nthreads, nhkl, hkl, nsites, nsitesxf, 
 		  chx, cky, clz, shx, sky, slz, chg, &vol, &r_4_alpha,
@@ -382,7 +404,9 @@ VECTORIZE
    for(ithread = 0; ithread < nthreads; ithread++)
    {
       *pe += pe_n[ithread];
+#ifdef ardent
 #pragma asis
+#endif
       for(i = 0; i < 3; i++)
 	 for(j = 0; j < 3; j++)
 	    stress[i][j] += stress_n[ithread][i][j];
@@ -393,9 +417,14 @@ VECTORIZE
       ssf0 = s_f_n[ithread][0];
       ssf1 = s_f_n[ithread][1];
       ssf2 = s_f_n[ithread][2];
-#pragma _CNX force_parallel
-#pragma _CNX pstrip (1)
+#ifdef ardent
 #pragma ipdep
+#endif
+#ifdef __convexc__
+#pragma _CNX vstrip (64)
+#pragma _CNX force_vector
+#pragma _CNX force_parallel_ext
+#endif
 VECTORIZE
       for(is = 0; is < nsites; is++)
       {
@@ -413,8 +442,10 @@ VECTORIZE
       xfree(s_f_n[ithread]);
    xfree(s_f_n);
 }
+#ifdef ardent
 #ifdef PARALLEL
 #pragma opt_level 2
+#endif
 #endif
 /*****************************************************************************
  * qsincos().  Evaluate q sin(k.r) and q cos(k.r).  This is in a separate    *
@@ -432,6 +463,9 @@ int  k,l,nsites;
    if( k >= 0 )
       if( l >= 0 )
       {
+#ifdef __convexc__
+#pragma _CNX no_parallel
+#endif
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
@@ -445,6 +479,9 @@ VECTORIZE
       }
       else
       {
+#ifdef __convexc__
+#pragma _CNX no_parallel
+#endif
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
@@ -459,6 +496,9 @@ VECTORIZE
    else
       if( l >= 0 )
       {
+#ifdef __convexc__
+#pragma _CNX no_parallel
+#endif
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
@@ -472,6 +512,9 @@ VECTORIZE
       }
       else
       {
+#ifdef __convexc__
+#pragma _CNX no_parallel
+#endif
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
@@ -562,6 +605,7 @@ real	**site_force;
 /*
  * Calculate long-range coulombic contribution to stress tensor
  */
+NOVECTOR
       for(i = 0; i < 3; i++)
       {
 	 stress[i][i] += pe_k;
