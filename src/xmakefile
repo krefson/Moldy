@@ -6,22 +6,27 @@
 #CFLAGS=	-O  $(CFLAGS0)
 #CFLAGS=	-O4 $(CFLAGS0)
 #LDFLAGS= $(LDFLAGS0)
+#INLINE=
 #  **** Scalar machines using gcc - can compile with -g ****
 CC=	gcc
 CFLAGS= -g -O -fstrength-reduce $(CFLAGS0)
 LDFLAGS= $(LDFLAGS0) -g
+#INLINE=
 #  **** Stellar ****
 #CFLAGS= -g -O2 -va -na  $(CFLAGS0)
 #CFLAGS2= +CaliasFreePointers
 #LDFLAGS= $(LDFLAGS0) -g -z 
+#INLINE=
 #  **** Titan ****
 #CFLAGS= -O2 -vector_c -vreport -fast $(CFLAGS0)
 #CFLAGS2=  -safe=ptrs
 #LDFLAGS= $(LDFLAGS0) 
+#INLINE= -inline -Npaths=aux.in
 #  **** convex ****
 #CC=	vc
 #CFLAGS= -g -O2 -va -na  $(CFLAGS0)
 #LDFLAGS= $(LDFLAGS0) -lveclib 
+#INLINE=
 #  **** Cray **** (CC 4.n) - Link in FORTRAN kernel
 #CFLAGS= -h vector,olevel_3,vmesg_1,ivdep  $(CFLAGS0)
 #CFLAGSF= -DFKERNEL
@@ -29,13 +34,16 @@ LDFLAGS= $(LDFLAGS0) -g
 #LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" \
 #	-lf -lio -lbsd -lsci
 #FC=	cf77
+#INLINE=
 #  **** Cray **** (CC 5.n) - At last can compile C kernel
 #CFLAGS= -h vector,olevel_3,vmesg_1,ivdep  $(CFLAGS0)
 #LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" -lbsd -lsci
+#INLINE=
 #  **** Cray **** (SCC )
 #CC=scc
 #CFLAGS= -h vector,olevel_3,vreport,ivdep,fastaddr $(CFLAGS0)
 #LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" -lsci
+#INLINE=
 #  ***** End *****
 LINT=		lint
 PFLAGS=		-p
@@ -180,17 +188,26 @@ $(LFILES):	$(HFILES)
 
 $(OFILES):	structs.h defs.h
 
+aux.o:	aux.c 
+	$(CC) $(CFLAGS) $(CFLAGS2) -catalog=aux.in $(TARGET_ARCH) -c  $<
+
+convert.o:	convert.c
+	$(CC) $(CFLAGS0) -O1 -c $<
+
 kernelf.o:	kernel.f
 		$(FC) -a stack -b kernelf.o kernel.f
 
 ewald.o:	ewald.c 
-	$(CC) $(CFLAGS) $(CFLAGS2) $(TARGET_ARCH) -c  $<
+	$(CC) $(CFLAGS) $(CFLAGS2) $(TARGET_ARCH) -c  $(INLINE) $<
 
 rdf.o:	rdf.c 
 	$(CC) $(CFLAGS) $(CFLAGS2) $(TARGET_ARCH) -c  $<
 
+kernel.o:	kernel.c 
+	$(CC) $(CFLAGS) $(CFLAGS2) $(TARGET_ARCH) -c  $<
+
 force.o:	force.c 
-	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSF) $(TARGET_ARCH) -c $<
+	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSF) $(TARGET_ARCH) $(INLINE) -c $<
 
 %.c:		RCS/%.c,v
 		co $@
@@ -198,9 +215,10 @@ force.o:	force.c
 %.h:		RCS/%.h,v
 		co $@
 
-.SUFFIXES:	.c .ln
+.SUFFIXES:	.c .ln .0
 
 .c.ln:
 	$(LINT) $(LFLAGS) -i $<
 
-
+.c.o:
+	$(CC) $(CFLAGS0) $(CFLAGS) -c $<
