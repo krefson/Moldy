@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.37  2001/07/13 16:52:53  keith
+ *       Fixed calculation of H_0 to use co-ords and momenta at consistent timestep.
+ *
  *       Revision 2.36  2001/07/13 14:54:17  keith
  *       Fixed bug in DEBUG_THERMOSTAT code which calculayed KE and PE
  *       at different half-steps.
@@ -321,7 +324,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.36 2001/07/13 14:54:17 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.37 2001/07/13 16:52:53 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -1072,6 +1075,13 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
       gleap_therm(0.5*control.step, control.ttmass, sys->d_of_f*kB*control.temp, 
 		  &sys->ts, &sys->tsmom);
 
+#ifdef DEBUG_THERMOSTAT
+   if( control.istep%control.print_interval == 0 && ithread == 0 )
+   {
+      ke = tot_ke(sys, species,1);
+      fprintf(stderr, "do_step2:  HK2= %12.7g\n", ke);
+   }
+#endif
 /*
  *  Apply constraint to any framework molecules.
  */
