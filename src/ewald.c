@@ -22,7 +22,12 @@ what you give them.   Help stamp out software-hoarding!  */
  * Ewald	The reciprocal-space part of the standard Ewald sum technique *
  ******************************************************************************
  *      Revision Log
- *       $Log: ewald-RIL.c,v $
+ *       $Log: ewald.c,v $
+ *       Revision 2.8.1.8  1998/05/07 17:13:23  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 1.1  1998/05/07 17:06:11  keith
  *       Initial revision
  *
@@ -200,7 +205,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/ewald-RIL.c,v 1.1 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.8.1.8 1998/05/07 17:13:23 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -267,75 +272,63 @@ extern int		ithread, nthreads;
  * qsincos().  Evaluate q sin(k.r) and q cos(k.r).  This is in a separate    *
  * function because some compilers (notably Stellar's) generate MUCH better  *
  * vector code this way. 						     *
+ * It is designed to be called with an arbitrary combination h,k,l, so can   *
+ * not rely on the order of the h,k,l loops.  Instead it caches the partial  *
+ * result for sin and cos(hx+ky) and reuses it if appropriate.  In practice  *
+ * hit/miss rates vary from 6:1 to 12:1 on a uniprocessor.  To take          *
+ * advantage in  parallel the k-vector loop should be blocked  not sliced.   *
  *****************************************************************************/
+/*   static int hits=0, misses=0;*/
 static
-void      qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,chg,
-		  qcoskr,qsinkr,k,l,nsites)
+void      qsincos(coshx, sinhx, cosky, sinky, coslz, sinlz,
+		  qcoskr, qsinkr, coshxky, sinhxky, h, k,l, nsites)
 real coshx[], sinhx[], cosky[], sinky[], coslz[], sinlz[],
-     chg[], qcoskr[], qsinkr[];
-int  k,l,nsites;
+     qcoskr[], qsinkr[], coshxky[], sinhxky[];
+int  h, k,l,nsites;
 {
    int is;
-   real qckr;
+   real qckr, chxky;
+   static int hlast=-1000000,klast=-1000000;
    
-   if( k >= 0 )
-      if( l >= 0 )
-      {
-VECTORIZE
+   if( h != hlast || k != klast ) 
+   {
+      /*      misses++;*/
+      if( k >= 0 )
 	 for(is = 0; is < nsites; is++)
-	 {
-	    qckr = chg[is]*(
-		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
-                - (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
-	    qsinkr[is] = chg[is]*(
-                  (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
-		+ (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
-	    qcoskr[is] = qckr;
+	 {	
+	    chxky       = coshx[is]*cosky[is] - sinhx[is]*sinky[is];
+	    sinhxky[is] = sinhx[is]*cosky[is] + coshx[is]*sinky[is];
+	    coshxky[is] = chxky;
 	 }
-      }
       else
-      {
-VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    qckr = chg[is]*(
-		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
-                + (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
-	    qsinkr[is] = chg[is]*(
-                  (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
-		- (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
-	    qcoskr[is] = qckr;
+	    chxky       = coshx[is]*cosky[is] + sinhx[is]*sinky[is];
+	    sinhxky[is] = sinhx[is]*cosky[is] - coshx[is]*sinky[is];
+	    coshxky[is] = chxky;
 	 }
+   }
+   /*hits++;*/
+   if( l >= 0 )
+   {
+      for(is = 0; is < nsites; is++)
+      {	
+	 qckr =       (coshxky[is]*coslz[is] - sinhxky[is]*sinlz[is]);
+	 qsinkr[is] = (sinhxky[is]*coslz[is] + coshxky[is]*sinlz[is]);
+	 qcoskr[is] = qckr;
       }
+   }
    else
-      if( l >= 0 )
+   {
+      for(is = 0; is < nsites; is++)
       {
-VECTORIZE
-	 for(is = 0; is < nsites; is++)
-	 {
-	    qckr = chg[is]*(
-		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
-                - (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
-	    qsinkr[is] = chg[is]*(
-                  (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
-		+ (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
-	    qcoskr[is] = qckr;
-	 }
+	 qckr =       (coshxky[is]*coslz[is] + sinhxky[is]*sinlz[is]);
+	 qsinkr[is] = (sinhxky[is]*coslz[is] - coshxky[is]*sinlz[is]);
+	 qcoskr[is] = qckr;
       }
-      else
-      {
-VECTORIZE
-	 for(is = 0; is < nsites; is++)
-	 {
-	    qckr = chg[is]*(
-		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
-                + (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
-	    qsinkr[is] = chg[is]*(
-                  (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
-		- (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
-	    qcoskr[is] = qckr;
-	 }
-     }
+   }
+   hlast = h;
+   klast = k;
 }
 
 /******************************************************************************
@@ -352,22 +345,22 @@ int ns0, ns1, hmax;
    real ksx = kstar[0], ksy = kstar[1], ksz = kstar[2];
 
    sinhx = shx[0];    coshx = chx[0]; 
-VECTORIZE
-   for(is = ns0; is < ns1; is++)
-   {
-      coshx[is] = 1.0;
-      sinhx[is] = 0.0;
-   }      
+   VECTORIZE
+      for(is = ns0; is < ns1; is++)
+      {
+	 coshx[is] = 1.0;
+	 sinhx[is] = 0.0;
+      }      
 
    if( hmax >= 1 )
    {
       coshx = chx[1]; sinhx = shx[1];
-VECTORIZE
-      for(is = ns0; is < ns1; is++)
-      {
-	 kr = ksx*site0[is]+ksy*site1[is]+ksz*site2[is];
-	 coshx[is] = cos(kr); sinhx[is] = sin(kr);
-      }
+      VECTORIZE
+	 for(is = ns0; is < ns1; is++)
+	 {
+	    kr = ksx*site0[is]+ksy*site1[is]+ksz*site2[is];
+	    coshx[is] = cos(kr); sinhx[is] = sin(kr);
+	 }
 
       memcp(cos1x+ns0, coshx+ns0, (ns1-ns0)*sizeof(real));
       memcp(sin1x+ns0, sinhx+ns0, (ns1-ns0)*sizeof(real));
@@ -376,13 +369,13 @@ VECTORIZE
       {
          coshx = chx[h]; sinhx = shx[h];
          cm1 = chx[h-1]; sm1 = shx[h-1];
-VECTORIZE
-         for(is = ns0; is < ns1; is++)
-      	 {
-      	    coss      = cm1[is]*cos1x[is] - sm1[is]*sin1x[is];
-      	    sinhx[is] = sm1[is]*cos1x[is] + cm1[is]*sin1x[is];
-      	    coshx[is] = coss;
-      	 }
+	 VECTORIZE
+	    for(is = ns0; is < ns1; is++)
+	    {
+	       coss      = cm1[is]*cos1x[is] - sm1[is]*sin1x[is];
+	       sinhx[is] = sm1[is]*cos1x[is] + cm1[is]*sin1x[is];
+	       coshx[is] = coss;
+	    }
       }
    }
 }
@@ -396,11 +389,11 @@ VECTORIZE
 static real*  allocate_arrays(nsarray, hmax, kmax, lmax,
 			      chx, cky, clz, shx, sky, slz, chg,
 			      cos1x, cos1y, cos1z, sin1x, sin1y, sin1z, 
-			      qcoskr, qsinkr)
+			      qcoskr, qsinkr, coshxky, sinhxky)
 int	nsarray, hmax, kmax, lmax;
 real	***chx, ***cky, ***clz, ***shx, ***sky, ***slz;
 real	**cos1x, **cos1y, **cos1z, **sin1x, **sin1y, **sin1z;
-real	**chg, **qcoskr, **qsinkr;
+real	**chg, **qcoskr, **qsinkr, **coshxky, **sinhxky;
 {
    int h, k,l; 
    real *csp, *base;
@@ -411,7 +404,7 @@ real	**chg, **qcoskr, **qsinkr;
     * This requires NON-ANSI pointer conversion and arithmetic.
     * It should work with any UNIX address space, so make it conditional.
     */
-   base = dalloc((2*(hmax+kmax+lmax)+15)*nsarray+10*NLINE+NCACHE);
+   base = dalloc((2*(hmax+kmax+lmax)+17)*nsarray+12*NLINE+NCACHE);
 #if defined(ALLOC_ALIGN) && !defined(__BOUNDS_CHECKING_ON)
    csp = (real*)0 + (((base - (real*)0) - 1 | NCACHE-1) + 1);
 #else
@@ -427,24 +420,26 @@ real	**chg, **qcoskr, **qsinkr;
  
    *qcoskr = csp; csp += nsarray + NLINE;
    *qsinkr = csp; csp += nsarray + NLINE;
-   *chg = csp;    csp += nsarray + NLINE;
+   *coshxky = csp; csp += nsarray + NLINE;
+   *sinhxky = csp; csp += nsarray + NLINE;
+   *chg = csp;    csp += nsarray + NLINE; 
    for(h = 0; h <= hmax; h++, csp += nsarray)
-     (*chx)[h] = csp;
+      (*chx)[h] = csp;
    csp += NLINE;
    for(h = 0; h <= hmax; h++, csp += nsarray)
-     (*shx)[h] = csp;
+      (*shx)[h] = csp;
    csp += NLINE;
    for(k = 0; k <= kmax; k++, csp += nsarray)
-     (*cky)[k] = csp;
+      (*cky)[k] = csp;
    csp += NLINE;
    for(k = 0; k <= kmax; k++, csp += nsarray)
-     (*sky)[k] = csp;
+      (*sky)[k] = csp;
    csp += NLINE;
    for(l = 0; l <= lmax; l++, csp += nsarray)
-     (*clz)[l] = csp;
+      (*clz)[l] = csp;
    csp += NLINE;
    for(l = 0; l <= lmax; l++, csp += nsarray)
-     (*slz)[l] = csp;
+      (*slz)[l] = csp;
    csp += NLINE;
    *cos1x = csp;  csp += nsarray;
    *cos1y = csp;  csp += nsarray;
@@ -463,7 +458,7 @@ real	**chg, **qcoskr, **qsinkr;
    *sin1x = (*shx)[1]; *sin1y = (*sky)[1]; *sin1z = (*slz)[1];
 
    csp = base = dalloc(3*nsarray);
-   *chg = csp;    csp += nsarray;
+   *chg = csp;    csp += nsarray;  
    *qcoskr = csp; csp += nsarray;
    *qsinkr = csp; csp += nsarray;
 #endif
@@ -475,7 +470,7 @@ real	**chg, **qcoskr, **qsinkr;
  ******************************************************************************/
 void	ewald(site,site_force,system,species,chgx,pe,stress)
 real		**site,			/* Site co-ordinate arrays	 (in) */
-		**site_force;		/* Site force arrays		(out) */
+   **site_force;		/* Site force arrays		(out) */
 system_mp	system;			/* System record		 (in) */
 spec_mt	species[];			/* Array of species records	 (in) */
 real		chgx[];			/* Array of site charges	 (in) */
@@ -488,21 +483,21 @@ mat_mt		stress;			/* Stress virial		(out) */
    spec_mp	spec;			/* species[ispec]		     */
    int		nsites = system->nsites;
    double	pe_k,			/* Pot'l energy for current K vector */
-		coeff, coeff2;		/* 2/(e0V) * A(K) & similar	     */
+                coeff, coeff2;		/* 2/(e0V) * A(K) & similar	     */
    double	r_4_alpha = -1.0/(4.0 * control.alpha * control.alpha);
    double	sqcoskr,sqsinkr,	/* Sum q(i) sin/cos(K.r(i))          */
-		sqcoskrn, sqsinkrn,
-		sqcoskrf, sqsinkrf;
+                sqcoskrn, sqsinkrn,
+                sqcoskrf, sqsinkrf;
    double	ksq,			/* Squared magnitude of K vector     */
-		kcsq = SQR(control.k_cutoff);
+                kcsq = SQR(control.k_cutoff);
    double	kx,ky,kz,kzt;
    vec_mt	kv;			/* (Kx,Ky,Kz)  			     */
    real		force_comp, kv0, kv1, kv2, sfx, sfy;
    struct	s_hkl *hkl, *phkl;
    int		nhkl = 0;
-/*
- * Maximum values of h, k, l  s.t. |k| < k_cutoff
- */
+   /*
+    * Maximum values of h, k, l  s.t. |k| < k_cutoff
+    */
    int		hmax = floor(control.k_cutoff/(2*PI)*moda(system->h)),
 		kmax = floor(control.k_cutoff/(2*PI)*modb(system->h)),
 		lmax = floor(control.k_cutoff/(2*PI)*modc(system->h));
@@ -529,37 +524,39 @@ mat_mt		stress;			/* Stress virial		(out) */
 #else
    int		nsarray = nsarr0;
 #endif
-/*
- * Arrays for cos & sin (h x(i)), (k y(i)) and (l z(i)) eg chx[h][isite]
- * and pointers to a particular h,k or l eg coshx[is] = chh[2][is]
- */
+   /*
+    * Arrays for cos & sin (h x(i)), (k y(i)) and (l z(i)) eg chx[h][isite]
+    * and pointers to a particular h,k or l eg coshx[is] = chh[2][is]
+    */
    real		**chx, **cky, **clz, **shx, **sky, **slz;
    real		*cshkl;
    real		*coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
    real		*cos1x, *cos1y, *cos1z, *sin1x, *sin1y, *sin1z;
+   real		q;
    real		*chg;
    real		*site_fx = site_force[0]+ns0,
    		*site_fy = site_force[1]+ns0,
    		*site_fz = site_force[2]+ns0;
    real		*qcoskr,		/* q(i) cos(K.R(i))	      */
-		*qsinkr;		/* q(i) sin(K.R(i))	      */
+                *qsinkr;		/* q(i) sin(K.R(i))	      */
+   real		*sinhxky, *coshxky;
    double	vol = det(system->h);	/* Volume of MD cell		      */
    static	double	self_energy,	/* Constant self energy term	      */
-   			sheet_energy;	/* Correction for non-neutral system. */
+                sheet_energy;	        /* Correction for non-neutral system. */
    static	boolean init = true;	/* Flag for the first call of function*/
    static	int	nsitesxf;	/* Number of non-framework sites.     */
 /*
  * Trig array set-up.  The precise storage layout is to avoid cache conflicts.
  */
    cshkl = allocate_arrays(nsarray, hmax, kmax, lmax,
-			   &chx, &cky, &clz, &shx, &sky, &slz, &chg,
+			   &chx, &cky, &clz, &shx, &sky, &slz, &chg, 
 			   &cos1x, &cos1y, &cos1z, &sin1x, &sin1y, &sin1z, 
-			   &qcoskr, &qsinkr);
-   memcp(chg, chgx+ns0, nsarr0*lsizeof(real));
-/*
- * First call only - evaluate self energy term and store for subsequent calls
- * Self energy includes terms for non-framework sites only.
- */
+			   &qcoskr, &qsinkr,&sinhxky,&coshxky);
+    memcp(chg, chgx+ns0, nsarr0*lsizeof(real));    
+   /*
+    * First call only - evaluate self energy term and store for subsequent calls
+    * Self energy includes terms for non-framework sites only.
+    */
    if(init)
    {
       double	sqsq = 0, sq = 0, sqxf, intra, r;
@@ -620,9 +617,13 @@ mat_mt		stress;			/* Stress virial		(out) */
       note("Ewald self-energy = %f Kj/mol",self_energy*CONV_E);
    }
 
+   /*
+    * The PE and stress are calculated redundandtly on all threads
+    * and divided by the number of threads to sum correctly.
+    */
    *pe -= self_energy;			/* Subtract self energy term	      */
    *pe += sheet_energy/vol;		/* Uniform charge correction	      */
-   zero_real(stress_ew, 9);
+   zero_real(stress_ew[0], 9);
    for(i=0; i<3; i++)
       stress_ew[i][i] += sheet_energy/vol;
 
@@ -665,16 +666,26 @@ mat_mt		stress;			/* Stress virial		(out) */
 	      site[0]+ns0,site[1]+ns0,site[2]+ns0,bstar,kmax,0,nsarr0);
    trig_recur(clz,slz,sin1z,cos1z,
 	      site[0]+ns0,site[1]+ns0,site[2]+ns0,cstar,lmax,0,nsarr0);
-/*
- * Start of main loops over K vector indices h, k, l between -*max, *max etc.
- * To avoid calculating K and -K, only half of the K-space box is covered. 
- * Points on the axes are included once and only once. (0,0,0) is omitted.
- */
+   /*
+    * Pre-multiply cos(lz) and sin(lz) by q to avoid doing it in the inner loop
+    */
+   for(l=0; l <= lmax; l++)
+      for(is=0; is < nsarr0; is++)
+      {
+	 q = chg[is];
+	 clz[l][is] *= q;
+	 slz[l][is] *= q;
+      }          
+   /*
+    * Start of main loops over K vector indices h, k, l between -*max, *max etc.
+    * To avoid calculating K and -K, only half of the K-space box is covered. 
+    * Points on the axes are included once and only once. (0,0,0) is omitted.
+    */
    for(phkl = hkl; phkl < hkl+nhkl; phkl++)
    {
-/*
- * Calculate actual K vector and its squared magnitude.
- */
+      /*
+       * Calculate actual K vector and its squared magnitude.
+       */
       h  = phkl->h;	    k     = phkl->k;  l     = phkl->l;
       kv0 = kv[0] = phkl->kx; 
       kv1 = kv[1] = phkl->ky; 
@@ -682,15 +693,15 @@ mat_mt		stress;			/* Stress virial		(out) */
 
       ksq = SUMSQ(kv);
 
-/*
- * Calculate pre-factors A(K) etc
- */
+      /*
+       * Calculate pre-factors A(K) etc
+       */
       coeff  = 2.0 / (EPS0 * vol) * exp(ksq * r_4_alpha) / ksq;
       coeff2 = 2.0 * (1.0 - ksq * r_4_alpha) / ksq;
       
-/*
- * Set pointers to array of cos (h*astar*x) (for efficiency & vectorisation)
- */
+      /*
+       * Set pointers to array of cos (h*astar*x) (for efficiency & vectorisation)
+       */
       coshx = chx[h];  cosky = cky[abs(k)]; coslz = clz[abs(l)];
       sinhx = shx[h];  sinky = sky[abs(k)]; sinlz = slz[abs(l)];
 
@@ -699,8 +710,8 @@ mat_mt		stress;			/* Stress virial		(out) */
  * negative k and l by using sin(-x) = -sin(x), cos(-x) = cos(x). For
  * efficiency & vectorisation there is a loop for each case.
  */
-      qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,chg, 
-	      qcoskr,qsinkr,k,l,nsarr0);
+      qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,
+	      qcoskr,qsinkr,coshxky, sinhxky, h, k, l,nsarr0);
       ns1f = MIN(ns1, nsitesxf); ns0f = MAX(ns0, nsitesxf);
       sqexpkr[0] = sum(ns1f-ns0, qcoskr, 1);
       sqexpkr[1] = sum(ns1f-ns0, qsinkr, 1);
@@ -716,30 +727,28 @@ mat_mt		stress;			/* Stress virial		(out) */
       sqcoskr = sqcoskrn + sqcoskrf;
       sqsinkr = sqsinkrn + sqsinkrf;
       
-/*
- * Evaluate potential energy contribution for this K and add to total.
- * Exclude frame-frame interaction terms.
- */
+      /*
+       * Evaluate potential energy contribution for this K and add to total.
+       * Exclude frame-frame interaction terms.
+       */
       pe_k = 0.5 * coeff * (sqcoskrn*(sqcoskrn+sqcoskrf+sqcoskrf) +
 			    sqsinkrn*(sqsinkrn+sqsinkrf+sqsinkrf));
       *pe += pe_k;
 
       sqsinkr *= coeff; sqcoskr *= coeff;
       sqsinkrn *= coeff; sqcoskrn *= coeff;
-/*
- * Calculate long-range coulombic contribution to stress tensor
- */
-NOVECTOR
-      for(i = 0; i < 3; i++)
-      {
-	 stress_ew[i][i] += pe_k;
-NOVECTOR
-	 for(j = i; j < 3; j++)
-	    stress_ew[i][j] -= pe_k * coeff2 * kv[i] * kv[j];
-      }
-/*
- * Evaluation of site forces.   Non-framework sites interact with all others
- */
+      /*
+       * Calculate long-range coulombic contribution to stress tensor
+       */
+      stress_ew[0][0] += pe_k - pe_k * coeff2 * kv[0] * kv[0];
+      stress_ew[0][1] -=        pe_k * coeff2 * kv[0] * kv[1];
+      stress_ew[0][2] -=        pe_k * coeff2 * kv[0] * kv[2];
+      stress_ew[1][1] += pe_k - pe_k * coeff2 * kv[1] * kv[1];
+      stress_ew[1][2] -=        pe_k * coeff2 * kv[1] * kv[2];
+      stress_ew[2][2] += pe_k - pe_k * coeff2 * kv[2] * kv[2];
+      /*
+       * Evaluation of site forces.   Non-framework sites interact with all others
+       */
 VECTORIZE
       for(is = 0; is < ns1f-ns0; is++)
       {
@@ -750,9 +759,9 @@ VECTORIZE
 	 site_fx[is] = sfx;
 	 site_fy[is] = sfy;
       }
-/*
- *  Framework sites -- only interact with non-framework sites
- */
+      /*
+       *  Framework sites -- only interact with non-framework sites
+       */   
 VECTORIZE
       for(is = ns0f-ns0; is < ns1-ns0; is++)
       {
@@ -763,9 +772,9 @@ VECTORIZE
 	 site_fx[is] = sfx;
 	 site_fy[is] = sfy;
       }
-/*
- * End of loop over K vectors.
- */
+   /*
+    * End of loop over K vectors.
+    */
    }
    *pe /= nthreads;
    for(i=0; i<3; i++)
@@ -776,4 +785,5 @@ VECTORIZE
    afree((gptr*)shx); afree((gptr*)sky); afree((gptr*)slz);
    xfree(cshkl);
    xfree(hkl);
+   /*   message(NULLI, NULLP, INFO, "Trig Caching: %d hits and %d misses", hits, misses);*/
 }
