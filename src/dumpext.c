@@ -277,6 +277,7 @@ char	*argv[];
    list_t	*cur;
 
    mol_head.next = NULL;
+   f_head.next = NULL;
 
    while( (c = getopt(argc, argv, "c:bR:Q:n:t:m:o:") ) != EOF )
       switch(c)
