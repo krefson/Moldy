@@ -9,7 +9,7 @@
 #INLINE=
 #  **** Scalar machines using gcc - can compile with -g ****
 CC=	gcc
-CFLAGS= -g -O -fstrength-reduce $(CFLAGS0)
+CFLAGS= -g -O2 $(CFLAGS0)
 LDFLAGS= $(LDFLAGS0) -g
 #INLINE=
 #  **** Stellar ****
@@ -23,8 +23,9 @@ LDFLAGS= $(LDFLAGS0) -g
 #LDFLAGS= $(LDFLAGS0) 
 #INLINE= -inline -Npaths=aux.in
 #  **** convex ****
-#CC=	vc
-#CFLAGS= -g -O2 -va -na -nv -fi $(CFLAGS0)
+#CFLAGS= -O2 -va -na -nv -fi $(CFLAGS0)
+#CFLAGS2= -alias standard -alias ptr_args
+#CFLAGSP= -O3 -re
 #LDFLAGS= $(LDFLAGS0) -fi -lveclib 
 #INLINE=
 #  **** Cray **** (CC 4.n) - Link in FORTRAN kernel
@@ -63,7 +64,7 @@ LFILES = $(FILES:%=%.ln)
 INFILES = control.water control.100 tips2.in\
 		control.tip4p tip4p.in\
 		methane.in mcy.in\
-		control.mgclh2o mgclh2o.in
+		control.mgclh2o mgclh2o.in control.clay
 
 SHAKS=	algorith alloc aux jacobi kernel input matrix\
 		quaterns restart startup
@@ -111,11 +112,11 @@ proto-mdshak:	mdshak.c $(SHAKC)
 
 install:	moldy $(UTILS) mdshak
 		cp  $? $(HOME)/bin
-		chmod 755 $?
+		(cd $(HOME)/bin; chmod 755 $?)
 
 install2:	moldy $(UTILS) mdshak
 		cp  $? $(HOME)/bin.$(HOSTTYPE)
-		chmod 755 $?
+		(cd $(HOME)/bin.$(HOSTTYPE); chmod 755 $?)
 
 Makefile:	xmakefile
 		@PATH=/usr/5bin:${PATH};\
@@ -213,21 +214,17 @@ $(OFILES):	structs.h defs.h
 aux.o:	aux.c 
 	$(CC) $(CFLAGS) $(CFLAGS2) -c $<
 
-#  Workaround for Stardent Titan compiler bug
-#convert.o:	convert.c
-#	$(CC) -O $(CFLAGS0) -c $<
-
 ewald.o:	ewald.c 
-	$(CC) $(CFLAGS) $(CFLAGS2) -c $(INLINE) $<
+	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSP) -c $(INLINE) $<
 
 rdf.o:	rdf.c 
 	$(CC) $(CFLAGS) $(CFLAGS2) -c $<
 
 kernel.o:	kernel.c 
-	$(CC) $(CFLAGS) $(CFLAGS2) -c $<
+	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSP) -c $<
 
 force.o:	force.c 
-	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSF) $(INLINE) -c $<
+	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSP) $(INLINE) -c $<
 
 %.c:		RCS/%.c,v
 		co $@
