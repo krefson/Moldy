@@ -258,18 +258,20 @@ double  cutoff;
  *  Fill_cells.  Allocate all the sites to cells depending on their centre of *
  *  mass co-ordinate by binning.                                              *
  ******************************************************************************/
-static void    fill_cells(c_of_m, nmols, site, spec, h, list, cell, frame_type)
+static void    fill_cells(c_of_m, nmols, site, species, h, lst, cell, frame_type)
 vec_t   c_of_m[];                       /* Centre of mass co-ords        (in) */
 int     nmols;                          /* Number of molecules           (in) */
 real	**site;				/* Atomic site co-ordinates      (in) */
-spec_p  spec;                           /* Pointer to species array      (in) */
+spec_p  species;                        /* Pointer to species array      (in) */
 mat_t	h;				/* Unit cell matrix              (in) */
-cell_t  *list;				/* Pile of cell structs          (in) */
+cell_t  *lst;				/* Pile of cell structs          (in) */
 cell_t  *cell[];                        /* Array of cells (assume zeroed)(out)*/
 int	*frame_type;			/* Framework type counter	 (out)*/
 {
    int icell, imol, im=0, is, isite = 0;
    double eps = 8.0*precision();
+   spec_p spec = species;
+   cell_t *list = lst;
    vec_t ssite;
    mat_t hinv;
 
@@ -397,9 +399,11 @@ real    reloc[][CUBE(NSHELL)];
             reloc[2][NREL(tx,ty,tz)] = tz*h[2][2];
          }
 }
+#ifdef titan
 #ifdef PARALLEL
 #pragma opt_level 3
 #pragma pproc force_inner
+#endif
 #endif
 /******************************************************************************
  * Force_calc.   This is the main intermolecular site force calculation       *
@@ -490,7 +494,9 @@ mat_t           stress;                 /* Stress virial                (out) */
                         reloc[ix+tx][iy+ty][iz+tz].ncell = NCELL(ix, iy, iz);
                         reloc[ix+tx][iy+ty][iz+tz].rel= NREL(tx/nx,ty/ny,tz/nz);
                      }
+#ifdef titan
 #pragma asis
+#endif
       for(spec = species; spec < species+system->nspecies; spec++)
 	 if( spec->framework )
 	    n_cell_list += spec->nmols*spec->nsites;
@@ -515,7 +521,9 @@ mat_t           stress;                 /* Stress virial                (out) */
    for(ipot = 0; ipot < n_potpar; ipot++)
       for(i_id = 1; i_id < max_id; i_id++)
       {
+#ifdef titan
 NOVECTOR
+#endif
          for(isite = 0; isite < nsites; isite++)
             potp[i_id][ipot][isite] = potpar[i_id*max_id+id[isite]].p[ipot];
       }
@@ -561,10 +569,16 @@ NOVECTOR
 /*
  *   Start of main loop over processors
  */
+#ifdef stellar
 /*$dir parallel*/
+#endif
+#ifdef titan
+#pragma ipdep
+#endif
+#ifdef __convexc__
 #pragma _CNX pstrip (1)
 #pragma _CNX force_parallel
-#pragma ipdep
+#endif
    for(ithread = 0; ithread < nthreads; ithread++)
       force_inner(ithread, nthreads, site, chg, potp, id,
 		  n_nab_sites, n_nabors, nabor, cell, reloc, n_frame_types, 
@@ -576,7 +590,7 @@ NOVECTOR
    for(ithread = 0; ithread < nthreads; ithread++)
    {
       *pe += pe_n[ithread];
-#pragma asis
+NOVECTOR
       for(i = 0; i < 3; i++)
 	 for(j = 0; j < 3; j++)
 	    stress[i][j] += stress_n[ithread][i][j];
@@ -592,10 +606,15 @@ NOVECTOR
       ssf0 = s_f_n[ithread][0];
       ssf1 = s_f_n[ithread][1];
       ssf2 = s_f_n[ithread][2];
-#pragma _CNX pstrip (1)
-#pragma _CNX force_parallel
-#pragma ipdep
 VECTORIZE
+#ifdef titan
+#pragma ipdep
+#endif
+#ifdef __convexc__
+#pragma _CNX vstrip (32)
+#pragma _CNX force_vector
+#pragma _CNX force_parallel_ext
+#endif
       for(isite = 0; isite < nsites; isite++)
       {
 	 sf0[isite] += ssf0[isite];
@@ -613,8 +632,10 @@ VECTORIZE
    for( ithread = 1; ithread < nthreads; ithread++)
       xfree(s_f_n[ithread]);
 }
+#ifdef titan
 #ifdef PARALLEL
 #pragma opt_level 2
+#endif
 #endif
 /******************************************************************************
  *  Force_inner() Paralellised inner loops of force_calc.  Loops over cells   *
