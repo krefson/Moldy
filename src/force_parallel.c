@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.18 91/10/17 14:19:56 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.19 91/11/26 10:29:10 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -99,6 +99,7 @@ void    	gather();               /* Interface to CRAY gather routine   */
 void    	gatheri();              /* Integer gather                     */
 int     	wheneq();               /* Array indexer                      */
 void    	mat_mul();              /* Matrix multiplier                  */
+double		det(); 			/* Determinant of 3x3 matrix	      */
 void    	message();              /* Send message to stderr             */
 void    	invert();               /* 3x3 matrix inverter                */
 void    	mat_vec_mul();          /* Matrix by vector multiplier        */
@@ -131,7 +132,16 @@ typedef struct				/* Prototype for a 3Nx x 3Ny x 3Nz    */
 static          int nx = 0, ny = 0, nz = 0;
 /*========================== Macros ==========================================*/
 #define         NCELL(ix,iy,iz) ((iz)+nz*((iy)+ny*(ix)))
+/*
+ * Maximum cutoff radius relative to MD cell dimension.
+ */
 #define		NSH 1
+/*
+ * Multiplication factor for size of neighbour list arrays.  If you need
+ * to increase this from 1, your system must be *highly* inhomogeneous
+ * and may not make sense!
+ */
+#define         NMULT 1.0
 #define		NSHELL (2*NSH+1)
 #define         NREL(ix,iy,iz) ((iz)+NSH+NSHELL*((iy)+NSH+NSHELL*((ix)+NSH)))
 #define         CELLMAX 5
@@ -366,7 +376,8 @@ int   	*work;                          /* Workspace                         */
 	       frame_key[nnabf] = cmol->frame_type;
 	       nnabf++;
 	    }
-	 if(nnabf > n_nab_sites) message(NULLI,NULLP,FATAL,TONAB,nnabf);
+	 if(nnabf > n_nab_sites) 
+ 	    message(NULLI,NULLP,FATAL,TONAB,nnabf,n_nab_sites);
       }
    }
 
@@ -428,18 +439,21 @@ mat_t           stress;                 /* Stress virial                (out) */
    int          ncells = nx*ny*nz;	/* Total number of cells	      */
    int          tx, ty, tz;             /* Temporaries for # unit cell shifts */
    int		ix, iy, iz;
-   int          *id_ptr;                /* Pointer to 'id' array              */
-   		/*
-		 * The following arrays are for 'neighbour site list'
-		 * quantities and should be dimensioned to the max value of
-		 * 'nnab'. Nsites is certainly too big, but as 'ewald' uses
-		 * more store, it shouldn't increase total program use.
-		 */
-   int		n_nab_sites = nsites*3/2;	/* Max # sites in n'bor list  */
-   int		*id = ialloc(n_nab_sites);   	/* Array of site_id[nsites]   */
+   int		*id      = ialloc(nsites),   	/* Array of site_id[nsites]   */
+   		*id_ptr;                /* Pointer to 'id' array              */
    real         ***potp				/* Expanded pot'l parameters  */
    		= (real***)arralloc(sizeof(real), 3,
                                     1, max_id-1, 0, n_potpar-1, 0, nsites-1);
+   		/*
+		 * The following arrays are for 'neighbour site list'
+		 * quantities and should be dimensioned to the max value of
+		 * 'nnab'.  A rough approx is the ratio of the volume of
+		 * the "cutoff sphere" to that of the MD cell times nsites.
+		 * This may be too small for inhomogeneous systems, but at
+		 * least it scales with the cutoff radius.
+		 */
+   int		n_nab_sites = nsites*		/* Max # sites in n'bor list  */
+                    NMULT*4.19*CUBE(control.cutoff)/det(system->h);
    static	int n_cell_list = 1;
    cell_t       *c_ptr = aalloc(n_cell_list, cell_t );
    spec_p       spec;
@@ -477,8 +491,7 @@ mat_t           stress;                 /* Stress virial                (out) */
       note("MD cell divided into %d subcells (%dx%dx%d)",ncells,nx,ny,nz);
 
       if(control.cutoff > NSH*MIN3(system->h[0][0],system->h[1][1],system->h[2][2]))
-	 message(NULLI, NULLP, FATAL,
-		 "Cutoff radius > cell dimension not supported at present");
+	 message(NULLI, NULLP, FATAL, CUTOFF, NSH);
       nabor = neighbour_list(&n_nabors, system->h, control.cutoff);
    
       reloc = (reloc_t***)arralloc(sizeof(reloc_t),3,
