@@ -29,6 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.26  2001/02/22 10:30:16  keith
+ *       Reinstated capability of "molecular" cutoffs.
+ *
  *       Revision 2.25  2001/02/19 12:22:25  keith
  *       Fixed serious bug in allocation of "pbclookup" array which will
  *       cause heap corruption and SEGVs on constant-pressure runs.
@@ -237,7 +240,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.25 2001/02/19 12:22:25 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/force.c,v 2.26 2001/02/22 10:30:16 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -302,9 +305,9 @@ extern int              ithread, nthreads;
 #define         NIMCELLS (IMCELL_L*IMCELL_L*IMCELL_L)
 #define         NCELL(ix,iy,iz) ((iz)+(nz)*((iy)+(ny)*(ix)))
 #define		NCELL_IDX(ix,iy,iz) ((iz)+IMCELL_L*(nz)*((iy)+IMCELL_L*(ny)*(ix)))
-#define         LOCATE(r,eps)   NCELL(cellbin(r[0], nx, eps), \
-                                      cellbin(r[1], ny, eps), \
-                                      cellbin(r[2], nz, eps))
+#define         LOCATE(r,eps)   NCELL(cellbin(r[0], nx, fnx, eps), \
+                                      cellbin(r[1], ny, fny, eps), \
+                                      cellbin(r[2], nz, fnz, eps))
 #define         BIGINT 32768
 #define         IFLOOR(i,n)     ((i+BIGINT*n)/n-BIGINT)
 #define moda(hmat) sqrt(SQR(hmat[0][0]) + SQR(hmat[1][0]) + SQR(hmat[2][0]))
@@ -326,7 +329,7 @@ extern int              ithread, nthreads;
 
 extern int printf (const char *, ...);
 
-int cellbin(double rc, int nc, double eps)
+int cellbin(double rc, double fnc, int nc, double eps)
 {
    int ibin;
 
@@ -340,7 +343,7 @@ int cellbin(double rc, int nc, double eps)
          message(NULLI, NULLP, ERROR, 
                  "Co-ordinate out of range in BIN (fill_cells) %.17g\n",rc);
    }
-   if( (ibin = ((rc+0.5)*nc)) >= nc || ibin < 0)
+   if( (ibin = floor((rc+0.5)*fnc)) >= nc || ibin < 0)
          message(NULLI, NULLP, ERROR, 
                  "Rounding problem in BIN (fill_cells) %.17g\n",rc);
    return ibin;
@@ -645,6 +648,8 @@ static void    fill_cells(int nmols,         /* Number of molecules      (in) */
 {
    int icell, imol, im, is, isite = 0;
    double eps = 8.0*precision();
+   double	fnx = nx, fny = ny, fnz = nz;
+
    spec_mp spec = species;
    cell_mt *list = lst;
    vec_mt ssite;
