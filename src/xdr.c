@@ -26,13 +26,17 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	xdr.c,v $
+ * Revision 2.1  93/07/19  13:29:08  keith
+ * Support for XDR backup/dump routines.
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/xdr.c,v 2.0 93/03/15 14:49:20 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/xdr.c,v 2.1 93/07/19 13:29:08 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
 /*========================== Library include files ===========================*/
+#include	"stddef.h"
 #include 	"xdr.h"
 /*============================================================================*/
 

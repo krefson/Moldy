@@ -25,7 +25,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *      formats, strings are stored as fixed-length opaque data.	      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	xdr.c,v $
+ *       $Log:	xdr.h,v $
+ * Revision 2.1  93/07/19  13:29:47  keith
+ * Support for XDR backup/dump routines.
+ * 
  */
 /*========================== Library include files ===========================*/
 #ifdef USE_XDR
@@ -33,13 +36,14 @@ what you give them.   Help stamp out software-hoarding!  */
 #include	"rpc_types.h"
 #include	"rpc_xdr.h"
 #else
+#include	"time.h"
 #include	<rpc/types.h>
 #include	<rpc/xdr.h>
 #endif
 #else
 typedef	char XDR;
 typedef int bool_t;
-typedef bool_t *xdrproc_t();
+typedef bool_t (*xdrproc_t)();
 #endif
 /*============================================================================*/
 

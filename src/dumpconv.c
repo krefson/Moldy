@@ -19,11 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 2.0 93/03/15 14:49:44 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 2.1 93/08/18 20:52:05 keith Exp $";
 #endif
 
 /*
  * $Log:	dumpconvert.c,v $
+ * Revision 2.1  93/08/18  20:52:05  keith
+ * Added support for dumps in XDR format.
+ * 
  * Revision 2.0  93/03/15  14:49:44  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
@@ -62,6 +65,21 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 2
 #include "xdr.h"
 XDR	 xdrsr;
 XDR	 xdrsw;
+#endif
+
+/******************************************************************************
+ * strstr replacement for pre-ANSI machines which don't have it.              *
+ ******************************************************************************/
+#ifndef ANSI_LIBS
+char *strstr(cs, ct)
+char *cs, *ct;
+{
+   char *end = cs+strlen(cs)-strlen(ct);
+   for(; cs < end; cs++)
+      if( !strcmp(cs,ct) )
+	 return cs;
+   return 0;      
+}
 #endif
 
 int av_convert;

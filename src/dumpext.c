@@ -25,7 +25,28 @@ what you give them.   Help stamp out software-hoarding!  */
 #include 	<stdio.h>
 #include	"structs.h"
 #ifdef USE_XDR
-#include	"xdr.h"
+#ifdef sun
+#   define free xxfree
+#   include	"xdr.h"
+#   undef free
+#else
+#   include	"xdr.h"
+#endif
+#endif
+
+/******************************************************************************
+ * strstr replacement for pre-ANSI machines which don't have it.              *
+ ******************************************************************************/
+#ifndef ANSI_LIBS
+char *strstr(cs, ct)
+char *cs, *ct;
+{
+   char *end = cs+strlen(cs)-strlen(ct);
+   for(; cs < end; cs++)
+      if( !strcmp(cs,ct) )
+	 return cs;
+   return 0;      
+}
 #endif
 
 int av_convert;

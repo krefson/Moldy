@@ -26,6 +26,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	aux.c,v $
+ * Revision 2.0  93/03/15  14:48:56  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.7.1.32  93/03/15  14:41:33  keith
  * Added GPL copyleft notice to permit release and distribution.
  * N.B.  Previous versions were copyright (C) by author and 
@@ -179,7 +184,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/aux.c,v 1.7.1.32 93/03/15 14:41:33 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/aux.c,v 2.0 93/03/15 14:48:56 keith Rel $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -874,6 +879,20 @@ int sig;
 
    return(kill(getpid(), sig));
 }   
+#endif
+/******************************************************************************
+ * strstr replacement for pre-ANSI machines which don't have it.              *
+ ******************************************************************************/
+#ifndef ANSI_LIBS
+char *strstr(cs, ct)
+char *cs, *ct;
+{
+   char *end = cs+strlen(cs)-strlen(ct);
+   for(; cs < end; cs++)
+      if( !strcmp(cs,ct) )
+	 return cs;
+   return 0;      
+}
 #endif
 /******************************************************************************
  * memcpy  and strchr replacement for BSD machines which don't have them.     *
