@@ -66,7 +66,7 @@
 \usepackage{longtable}
 \usepackage{afterpage}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%% For \textdegree etc.                                %%%%%%%%
+%%%%%%%%%%% For {\textdegree} etc.                                %%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usepackage{textcomp}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -127,11 +127,11 @@
 %
 % Uncomment this for LaTeX2html translation
 %
-%\usepackage{html}
+\usepackage{html}
 %
 % Comment this out for LaTeX2html translation
 %
-\usepackage[breaklinks]{hyperref}
+%\usepackage[breaklinks]{hyperref}
 %begin{latexonly}
 \providecommand{\htmladdnormallink}[2]{#1}
 %end{latexonly}
@@ -156,7 +156,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.21 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.22 $ $}
 \newcommand{\moldyversion}{2.14}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -231,7 +231,7 @@ polyatomic molecules, atoms or ions and any mixture thereof. It uses
 the `link cell' method to calculate short-range forces and the Ewald
 sum technique to handle long-range electrostatic forces.  Simulations
 may be performed either in the usual $NVE$ ensemble or in $NVT$,
-$N\sigma H$ or $N\sigma T$ ensembles using Nos\'e-Hoover thermostat and
+$N\sigma H$ or $N\sigma T$ ensembles using Nos{\'e}-Hoover thermostat and
 Parrinello and Rahman constant-stress methods. As the MD cell need not
 be cubic, the program is equally suitable for simulations of solids
 and liquids.
@@ -511,7 +511,7 @@ constant-pressure and constant-temperature methods where the
 
 Velocity-dependent forces occur in equations~\ref{eqn:euler}
 and~\ref{eqn:qddot}, in the Parrinello-Rahman constant-pressure
-equations (section~\ref{sec:const-stress}) and in the Nos\'e-Hoover
+equations (section~\ref{sec:const-stress}) and in the Nos{\'e}-Hoover
 heat bath algorithms (section~\ref{sec:const-temp}). These usually
 present a problem to non ``predictor-corrector'' algorithms which are
 based on the assumption that the forces depend only on the
@@ -1088,7 +1088,7 @@ the run progresses.
 \moldy\ offers several mechanisms to control the temperature. The
 common technique of \emph{velocity scaling} is suitable for use
 during the equilibration period but does not generate meaningful
-particle trajectories. The Nos\'e-Hoover method couples the system to
+particle trajectories. The Nos{\'e}-Hoover method couples the system to
 a heat bath using a fictional dynamical variable and the Gaussian
 thermostat replaces the Newton-Euler equations by variants of which
 the kinetic energy is a conserved quantity.
@@ -1169,10 +1169,10 @@ case the velocities can all be re-initialized randomly from the
 Maxwell-Boltzmann distribution periodically.  This provides a kind of
 pseudo Monte-Carlo equilibration for difficult cases.
 
-\subsection{Nos\'e-Hoover Thermostat}
+\subsection{Nos{\'e}-Hoover Thermostat}
 \label{sec:const-temp}
 A more sophisticated approach than rescaling is to couple the system
-to a heat bath.  Nos\'e\cite{nose:84} proposed an extended-system
+to a heat bath.  Nos{\'e}\cite{nose:84} proposed an extended-system
 Hamiltonian to represent the degrees of freedom of the thermal
 reservoir: \moldy\ uses the simpler but equivalent formulation by
 Hoover\cite{hoover:85,allen:87}.  The equations of
@@ -1263,14 +1263,16 @@ ensemble, but this does \emph{not} hold true for the momenta and
 therefore dynamics nor for fluctuations. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Constant Stress}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Constant Stress/pressure}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \label{sec:const-stress}
 It is frequently desirable to conduct simulations under conditions of
 constant pressure or stress, rather than constant volume.  For
 example, this allows the simulation of a solid-state phase transition
 with a change of symmetry or unit cell size.  \moldy\ incorporates the
-constant pressure method of Parrinello and Rahman\cite{parrinello:81}.
+constant pressure method of Parrinello and Rahman\cite{parrinello:81}
+and a variant which constrains the MD cell to uniform dilation to give 
+an isobaric ensemble.
 
 In a constant-stress simulation the MD cell changes in size and shape
 in response to the imbalance between the internal and externally
@@ -1910,19 +1912,19 @@ Number of steps between velocity scalings. \\
 \Lit{scale-end} &              integer &               1000000 &
 When to stop scaling. \\
 \Lit{const-temp} &             integer &               0 &
-1 for Nos\'e-Hoover, 2 for Gaussian thermostat. \\
+1 for Nos{\'e}-Hoover, 2 for Gaussian thermostat. \\
 \Lit{ttmass} &                 real &                  100 &
-Translational inertia parameter for Nos\'e-Hoover thermostat 
+Translational inertia parameter for Nos{\'e}-Hoover thermostat 
 (kJ\,mol$^{-1}$\,ps$^2$).\\
 \Lit{rtmass} &                 real &                  100 &
-Rotational inertia parameter for Nos\'e-Hoover thermostat 
+Rotational inertia parameter for Nos{\'e}-Hoover thermostat 
 (kJ\,mol$^{-1}$\,ps$^2$).\\
 \Lit{scale-options} &           integer &              0  &
 Select variations on scaling or thermostat. \\
 \Lit{temperature} &            real &                  0 &
 Temperature of initial configuration for scaling and thermostat (K). \\ \hline
 \Lit{const-pressure} &         boolean &               false  &
-Whether to use Parrinello and Rahman constant stress. \\
+1 for Parrinello and Rahman constant stress or 2 for constant pressure ensemble. \\
 \Lit{w} &                      real &                  100.0 &
 Value of P \& R mass parameter (amu). \\
 \Lit{pressure} &               real &                  0 &
@@ -1932,9 +1934,9 @@ Bitmask controlling $\bm{h}$ matrix constraint. \\ \hline
 \Lit{alpha} &                  real &                  \emph{auto} &
 $\alpha$ parameter for Ewald sum. Set any negative value to disable Ewald sum.\\
 \Lit{k-cutoff} &               real &                  \emph{auto} &
-Reciprocal space cut off distance in \AA$^{-1}$. \\
+Reciprocal space cut off distance in {\AA}$^{-1}$. \\
 \Lit{cutoff} &                 real &                  \emph{auto} &
-Direct space cutoff distance in \AA. \\
+Direct space cutoff distance in {\AA}. \\
 \Lit{strict-cutoff} &          boolean &               false &
 Flag to select rigorous or cheap but approximate cutoff algorithm. \\
 \Lit{surface-dipole} & boolean &               false  &
@@ -1956,7 +1958,7 @@ How frequently binning calculation is performed. \\
 \Lit{rdf-out} &                integer &               5000 &
 How frequently to calculate and print RDFs. \\
 \Lit{rdf-limit} &              real &                  10 &
-Calculate RDFs up to what distance? (\AA) \\
+Calculate RDFs up to what distance? ({\AA}) \\
 \Lit{nbins} &                  integer &               100 &
 Number of binning intervals between 0 and rdf-limit. \\ \hline
 \Lit{xdr} &                    boolean &               true &
@@ -1979,7 +1981,7 @@ Name of backup file. \\ \hline
 \Lit{temp-file} &              character  &    \Fname{MDTEMPX} &
 Name of temporary file used for writing restart configurations. \\ \hline
 \Lit{subcell} &                real &                  0 &
-Size of sub-cell (in \AA) to divide MD cell into for link cell force
+Size of sub-cell (in {\AA}) to divide MD cell into for link cell force
 calculation. \\ \hline
 \Lit{seed} &                   integer &               1234567 &
 Seed for random number generator. \\ \hline
@@ -2106,14 +2108,14 @@ by means of the control file parameters \Lit{mass-unit},
 \Lit{length-unit}, \Lit{time-unit} and \Lit{charge-unit} 
 (which are themselves specified in SI units). All quantities read from
 the system specification file (dimensions as well as potentials) are
-taken to be in those units. Their default values are amu, \AA, 0.1ps
+taken to be in those units. Their default values are amu, {\AA}, 0.1ps
 and $q_{e}$, which means that the unit of energy is kJ\,mol$^{-1}$.  So
-to read in \AA, amu and kcal mol$^{-1}$, specify
+to read in {\AA}, amu and kcal mol$^{-1}$, specify
 \Lit{time-unit=4.8888213e-14}.
 
 Once the system specification has been read in, all quantities are
-converted to `internal' units: a.m.u., \AA, ps, and $\insqrt (
-\textnormal{a.m.u. \AA}^{3} \textnormal{ps}^{-2}/(4 \pi \epsilon_{0}) )$.
+converted to `internal' units: a.m.u., {\AA}, ps, and $\insqrt (
+\textnormal{a.m.u. {\AA}}^{3} \textnormal{ps}^{-2}/(4 \pi \epsilon_{0}) )$.
 The prototype molecule for each species is then shifted so that its
 zero of coordinates lies on its centre of mass, and rotated into the
 principal frame (polyatomics only).
@@ -2317,13 +2319,13 @@ of the value of \Lit{xdr}.
 
 \moldy\ implements three different methods to control the temperature
 of the simulated system. These are the velocity rescaling technique
-described in section~\ref{sec:rescaling}, the Nos\'e-Hoover thermostat
+described in section~\ref{sec:rescaling}, the Nos{\'e}-Hoover thermostat
 and constrained equations of motion (section~\ref{sec:const-temp}).
 Scaling is selected by the parameters \Lit{scale-interval} \etc\ %
 Every \Lit{scale-interval} timesteps until \Lit{scale-end}, the
 velocities are adjusted so that the kinetic energy corresponds exactly
 to the desired temperature (the value of control parameter
-\Lit{temperature}).  The Nos\'e-Hoover and constrained thermostat
+\Lit{temperature}).  The Nos{\'e}-Hoover and constrained thermostat
 are selected by setting \Lit{const-temp} equal to \Lit{1} or
 \Lit{2} respectively.
 
@@ -2471,7 +2473,7 @@ square torques and total dipole moments are calculated.
 \subsection{Output units}
 All of the various forms of output use the same units, though for
 brevity they are not explicitly mentioned on the periodic output.
-Lengths are measured in \AA, energies are all expressed in
+Lengths are measured in {\AA}, energies are all expressed in
 kJ\,mol$^{-1}$, temperatures in Kelvin, pressure and stress in MPa,
 mean square forces and torques in N$^2$ mol$^{-1}$ and Nm$^2$
 mol$^{-1}$, charge in electron charges and dipole moments in Debye.
@@ -2788,9 +2790,9 @@ equations~\ref{eqn:ewald-cut} to give a default accuracy of $\epsilon
 evaluation.  An empirically determined value of $t_R/t_F = 5.5$ is
 used.  If a different accuracy is desired the cutoffs may be adjusted
 using equations~\ref{eqn:ewald-cut}.  The $\alpha$ parameter is
-specified by \Lit{alpha} in units of \AA$^{-1}$ and the direct and
+specified by \Lit{alpha} in units of {\AA}$^{-1}$ and the direct and
 reciprocal space cutoff distances $r_{c}$ and $k_{c}$ by
-\Lit{cutoff} and \Lit{k-cutoff} in units of \AA\ and \AA$^{-1}$
+\Lit{cutoff} and \Lit{k-cutoff} in units of {\AA}\ and {\AA}$^{-1}$
 respectively.  The value of $\alpha$ should only be changed after
 careful timing tests if the system size is large.  The power-law given
 in equation~\ref{eqn:ewald-alpha} gives a theoretical scaling of
@@ -2810,11 +2812,11 @@ issued.
 
 As an example of manual determination of the parameters, for a
 simulation of 512 MCY water molecules the values $\alpha =
-0.3$\AA$^{-1}$, $r_{c} = 9$\AA\ and $k_{c} = 1.9$\AA$^{-1}$ give
+0.3${\AA}$^{-1}$, $r_{c} = 9${\AA}\ and $k_{c} = 1.9${\AA}$^{-1}$ give
 potential energies correct to approximately 1 part in $10^{5}$.  For a
 simulation including ions - 1.1 Molal Magnesium Chloride solution -
-the same accuracy is attained with $\alpha = 0.45$\AA$^{-1}$, $r_{c} =
-9$\AA\ and $k_{c} = 3$\AA$^{-1}$.
+the same accuracy is attained with $\alpha = 0.45${\AA}$^{-1}$, $r_{c} =
+9${\AA}\ and $k_{c} = 3${\AA}$^{-1}$.
 
 The Ewald sum may be disabled by setting specific values for
 \Lit{control.alpha}.  The exact behaviour is
@@ -2841,7 +2843,7 @@ explanation of why this term should \emph{not} be used for an ionic
 
 The two adjustable parameters which control the link cell force
 calculation (see section~\ref{sec:link-cell}) are \Lit{subcell} and
-\Lit{strict-cutoff}. The former specifies the length (in \AA) of the side of
+\Lit{strict-cutoff}. The former specifies the length (in {\AA}) of the side of
 a link cell and determines the number of cells the MD cell is divided
 into. In fact the MD cell is divided into a whole number of subcells
 whose side in each of the three directions is nearest to the value of
@@ -4837,7 +4839,7 @@ Lennard-Jones
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 This is the four-site water model of Jorgensen\cite{jorgensen:82}.  
 Only the oxygen site interacts via the Lennard-Jones
-potential, and the charge site, M, is displaced 0.15\AA\ from the Oxygen.
+potential, and the charge site, M, is displaced 0.15{\AA}\ from the Oxygen.
 \begin{verbatim}
 # Modified TIPS2 water
 Water 64
@@ -5344,10 +5346,10 @@ where the arguments have the following meanings:
   format, to average positions over.
 \item[-b] bond limits in tenths of Angstroms entered in form
   ``minimum-maximum''. Limits may be entered as integers only, so
-  smallest difference is 0.1\AA. Defaults to 0.2 to 2\AA.
+  smallest difference is 0.1{\AA}. Defaults to 0.2 to 2{\AA}.
 \item[-a] angle limits in degrees entered in form ``minimum-maximum''.
   Limits may be entered as integers only, so smallest difference is
-  1\textdegree. Defaults to 0 to 180\textdegree.
+  1{\textdegree}. Defaults to 0 to 180{\textdegree}.
 \item[-g] range of species to be included, given in selector format
   where 0 represents the first species. Defaults to all species.
 \item[-c] if reading system specification file, skip any preceding
@@ -5384,12 +5386,12 @@ where the options are:
 \item[-i] name of the input file.
 \item[-b] bond interval limits in tenths of Angstroms entered in form
   ``minimum-maximum:increment''. Limits may be entered as integers
-  only, so smallest increment is 0.1\AA. Defaults to 0.2 to 2\AA with
-  a 0.5\AA increment.
+  only, so smallest increment is 0.1{\AA}. Defaults to 0.2 to 2{\AA} with
+  a 0.5{\AA} increment.
 \item[-a] angle interval limits in degrees entered in form
   ``minimum-maximum:increment''. Limits may be entered as integers only,
-  so smallest increment is 1\textdegree. Defaults to 0 to
-  180\textdegree\ with a 1\textdegree\ increment.
+  so smallest increment is 1{\textdegree}. Defaults to 0 to
+  180{\textdegree}\ with a 1{\textdegree}\ increment.
 \end{Argdescription}
 
 Note that if the mdbond output file to be analyzed contains
