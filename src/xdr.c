@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.10  1996/03/06 18:20:45  keith
+ *       Added cast in xdr_vector() call to supress spurious warning message.
+ *
  *       Revision 2.9  1994/10/17 10:54:06  keith
  *       Got rid of dummy xdr_array which really screwed things up!
  *
@@ -77,7 +80,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/xdr.c,v 2.9 1994/10/17 10:54:06 keith stab $";
+static char *RCSid = "$Header: /home/users/keith/data/md/moldy/RCS/xdr.c,v 2.11 1996/10/19 11:53:43 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -111,7 +114,11 @@ contr_mt *cp;
       xdr_double(xdrs, &cp->step) &&
       xdr_vector(xdrs, (gptr*)&cp->print_sysdef, 7, sizeof(boolean), (xdrproc_t)xdr_bool) &&
       xdr_opaque(xdrs, cp->sysdef, 6*L_name) &&
-      xdr_vector(xdrs, (gptr*)cp->spare, 29, sizeof(int), (xdrproc_t)xdr_int) &&
+      xdr_vector(xdrs, (gptr*)cp->spare, 23, sizeof(int), (xdrproc_t)xdr_int) &&
+      xdr_double(xdrs, &cp->ttmass) &&
+      xdr_double(xdrs, &cp->rtmass) &&
+      xdr_int(xdrs, &cp->pad) &&
+      xdr_int(xdrs, &cp->const_temp) &&
       xdr_bool(xdrs, &cp->xdr_write) &&
       xdr_bool(xdrs, &cp->strict_cutoff) &&
       xdr_int(xdrs, &cp->strain_mask) &&
@@ -131,13 +138,25 @@ system_mt *sp;
    return
       xdr_vector(xdrs, (gptr*)&sp->nsites, 8, sizeof(int), (xdrproc_t)xdr_int) &&
       /*
-       * This is an awful hack.  There are 18 real[3]* pointers
+       * This is an awful hack.  There are 28 real[3]* pointers
        * next.  Their stored values are NEVER re-used so we just
        * output a placeholder.  For compatibility of XDR/non-XDR
        * files on 4 byte big-endian ieee architectures we emit
        * 4 bytes each.  DON'T use sizeof as that would make XDR
        * file M/C dependent.
        */
+      xdr_opaque(xdrs, (gptr*)&sp->c_of_m, 28*XDR_4PTR_SIZE);
+}
+
+/*
+ * This version for reading restart files written by 2.10 or before.
+ */
+bool_t xdr_system_2(xdrs, sp)
+XDR      *xdrs;
+system_mt *sp;
+{
+   return
+      xdr_vector(xdrs, (gptr*)&sp->nsites, 8, sizeof(int), (xdrproc_t)xdr_int) &&
       xdr_opaque(xdrs, (gptr*)&sp->c_of_m, 18*XDR_4PTR_SIZE);
 }
 
@@ -320,6 +339,7 @@ bool_t	xdr_averages () {return 0;}
 bool_t	xdr_real () {return 0;}
 bool_t	xdr_contr () {return 0;}
 bool_t	xdr_system () {return 0;}
+bool_t	xdr_system_2 () {return 0;}
 bool_t	xdr_species () {return 0;}
 bool_t	xdr_pot () {return 0;}
 bool_t	xdr_int () {return 0;}
