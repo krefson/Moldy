@@ -22,6 +22,9 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ * Revision 2.10  1994/10/17  10:49:41  keith
+ * Changed arg list of bspstart to match changed library version.
+ *
  * Revision 2.9  1994/07/11  11:15:30  keith
  * Tidied up startup routine with par_broadcast() function.
  * Documented parallel routine interface calls for porting.
@@ -317,9 +320,13 @@ int	*nthreads;
    PBEGIN_(*argc, *argv);
    *nthreads = NNODES_();
    *ithread  = NODEID_();
-   for(i = 1; i < *argc && strcmp((*argv)[i],"-master"); i++)
-      ;
-   *argc = i;
+   for(i = 1; i < *argc; i++ )
+      if( !strcmp((*argv)[i],"-master"))
+      {
+	 *argc = i-1;
+	 (*argv)++;
+	 break;
+      }
 }
 #endif
 #ifdef BSP
