@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.42  2004/11/23 13:15:39  kr
+ *       Fixed some real/double type errors
+ *
  *       Revision 2.41  2002/09/19 09:26:27  kr
  *       Tidied up header declarations.
  *       Changed old includes of string,stdlib,stddef and time to <> form
@@ -353,7 +356,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/accel.c,v 2.41 2002/09/19 09:26:27 kr Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/accel.c,v 2.42 2004/11/23 13:15:39 kr Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include        "defs.h"
@@ -1076,6 +1079,14 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    }
 #endif
    leapf_all_momenta(0.5*control.step, sys, species, force, torque);
+   /*
+    *  Apply constraint to any framework molecules.
+    */
+   for (spec = species; spec < &species[nspecies]; spec++)
+      if( spec->framework )
+      {
+         zero_real(spec->mom[0], 3*spec->nmols);
+      }
 
    if( control.const_temp )
       sys->tsmom -= control.step*(pe[0]+pe[1] - sys->H_0);
@@ -1119,14 +1130,6 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
       fprintf(stderr, "do_step2:  HK2= %12.7g\n", ke);
    }
 #endif
-/*
- *  Apply constraint to any framework molecules.
- */
-   for (spec = species; spec < &species[nspecies]; spec++)
-      if( spec->framework )
-      {
-         zero_real(spec->mom[0], 3*spec->nmols);
-      }
 /*
  * Calculate mean-square forces and torques
  */
