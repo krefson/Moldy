@@ -25,6 +25,10 @@ what you give them.   Help stamp out software-hoarding! */
  **************************************************************************************
  *  Revision Log
  *  $Log: syswrite.c,v $
+ *  Revision 2.6  2002/09/19 09:26:30  kr
+ *  Tidied up header declarations.
+ *  Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *  Revision 2.5  2002/09/18 09:59:19  kr
  *  Rolled in several changes by Craig Fisher:
  *  Ransub can now read polyatomic species
@@ -50,7 +54,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/syswrite.c,v 2.5 2002/09/18 09:59:19 kr Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/syswrite.c,v 2.6 2002/09/19 09:26:30 kr Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -79,9 +83,11 @@ extern  const pots_mt   potspec[];           /* Potential type specification  */
 double  det(mat_mt a);
 char	*read_ftype(char *filename);
 int     read_ele(spec_data *element, char *filename);
-int     read_pdb(char *, mat_mp, char (*)[32], vec_mp, double *, char *, char *);
-int     read_cssr(char *, mat_mp, char (*)[32], vec_mp, double *, char *, char *);
-int     read_shak(char *, mat_mp, char (*)[32], vec_mp, double *, char *, double *);
+int     read_pdb(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
+int     read_cssr(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
+int     read_shak(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, double *);
+int     read_xtl(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);
+int     read_xyz(char *, mat_mp, char (*)[NLEN], vec_mp, char *);
 int     sgexpand(int , int , vec_mt *, char (*)[NLEN], double *, char *);
 /******************************************************************************
  * add_suffix().  Add numerical suffix to string.                             *
@@ -218,8 +224,8 @@ main(int argc, char **argv)
    int		nflag;                        /* Flag for site type matching */
    int          n_elem;                       /* No of records read from element data file */
    spec_data    element[NELEM];               /* Element info */
-   spec_mt 	spec[NSPEC];                  /* Species info */
-   site_mt      *site, *st, specsite[NSPEC];  /* Site info */ 
+   spec_mt 	spec[MAX_SPECIES];            /* Species info */
+   site_mt      *site, *st, specsite[MAX_SPECIES];  /* Site info */ 
    pot_mt       *pot_par;                     /* Potential parameters */
    int		ptype = -1, n_potpar=NPOTP;
    char         spgr[16];                     /* Space Group in Herman Maugain form */
@@ -230,26 +236,12 @@ main(int argc, char **argv)
 
    comm = argv[0];
 
-   while( (u = getopt(argc, argv, "o:y:p:g:h:e:") ) != EOF )
+   while( (u = getopt(argc, argv, "i:o:y:e:") ) != EOF )
       switch(u)
       {
-       case 'g':
-         if( insw > -1)
-            errflg++;
+       case 'i':
 	 filename = optarg;
-	 insw = CSSR;
-	 break;
-       case 'p':
-         if( insw > -1 )
-            errflg++;
-	 filename = optarg;
-	 insw = PDB;
-	 break;
-       case 'h':
-         if( insw > -1 )
-            errflg++;
-	 filename = optarg;
-	 insw = SHAK;
+         filetype = strlower(read_ftype(filename));
 	 break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
@@ -270,26 +262,32 @@ main(int argc, char **argv)
 
    if( errflg )
    {
-      fputs("Usage: syswrite [-p pdb-input-file | -g cssr-input-file | -h schakal-input-file ] ",stderr);
+      fputs("Usage: syswrite [-i input-file] ",stderr);
       fputs("[-o output-file] [-y potential-parameter-file]\n",stderr);
 
       exit(2);
    }
 
    /* If no filename given on command line, request from user */
-   if( insw < 0)
+   while( insw < 0)
    {
-      if( (filename = get_str("Structure file name? (PDB, CSSR or SCHAKAL)")) == NULL )
-         exit(2);
-
-      filetype = strlower(read_ftype(filename));
-
-      if( !strcmp(filetype, "cssr") )
+      if( !strncmp(filetype, "cssr",4) )
            insw = CSSR;
-      if( !strcmp(filetype, "pdb") )
+      else if( !strncmp(filetype, "pdb",3) )
            insw = PDB;
-      if( !strcmp(filetype, "shak") )
+      else if( !strncmp(filetype, "shak",4) )
            insw = SHAK;
+      else if( !strncmp(filetype, "xtl",3) )
+           insw = XTL;
+      else if( !strncmp(filetype, "xyz",3) )
+           insw = XYZ;
+
+      if( insw < 0)
+      {
+         if( (filename = get_str("Structure file name? (PDB, CSSR, SCHAKAL, XTL, XYZ)")) == NULL )
+            exit(2);
+         filetype = strlower(read_ftype(filename));
+      }
    }
 
    zero_real(h[0],9);
@@ -306,6 +304,12 @@ main(int argc, char **argv)
 	 break;
       case SHAK:
          atomtot = read_shak(filename, h, label, x, charge, title, simbox);
+	 break;
+      case XTL:
+         atomtot = read_xtl(filename, h, label, x, charge, title, spgr);
+	 break;
+      case XYZ:
+         atomtot = read_xyz(filename, h, label, x, title);
 	 break;
       default:
          error("Structure file \"%s\" of unknown format", filename);
@@ -334,23 +338,26 @@ main(int argc, char **argv)
       strlower(st->name+1);   /* Remainder of symbol lowercase */
 
       nflag = 0;    /*  Flag for whether site (1) assigned or (0) not assigned to species */
-      for( i = 0; i < spectot; i++)
-         if( !strcmp(st->name,specsite[i].name)          /* Does site match any species identified so far? */
-                 && (st->charge == specsite[i].charge ))
-         {
-              st->pad = i;                 /* Assign this site to species i */
-              spec[i].nmols++;
-              nflag++;
-         }
+      if( spectot > 0 )
+         for( i = 0; i < spectot; i++)
+            if( !strcmp(st->name,specsite[i].name) )         /* Does site match any species identified so far? */
+               if( insw == SHAK || insw == XYZ || (st->charge == specsite[i].charge ) )
+            {
+                 st->pad = i;                 /* Assign this site to species i */
+                 spec[i].nmols++;
+                 nflag++;
+            }
       if (!nflag)                          /* If no matches, create new species type */
       {
-         if( spectot > NSPEC )
-            error("Too many species found - current limit is %d (NSPEC in specdata.h)", NSPEC);
+         if( spectot > MAX_SPECIES )
+            error("Too many species found - current limit is %d (MAX_SPECIES in utlsup.h)", MAX_SPECIES);
          for( j=0; j < n_elem; j++)        /* Search element/species data for match with site */
            if( !strcmp(st->name,element[j].symbol) )
            {
               strncpy(spec[spectot].name,element[j].name,NLEN);
               st->mass = element[j].mass;
+              if( insw == SHAK || insw == XYZ)
+                 st->charge = element[j].charge;
               nflag++;
               break;
            }
