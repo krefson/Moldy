@@ -173,7 +173,7 @@ done:	;
 L=0;
 for( J=1; J<=N; J++ )
 	{
-	L=L+J;
+	L += J;
 	E[J-1]=A[L-1];
 	}
 }
@@ -185,15 +185,18 @@ void eigensort(real *ev, real *e, int n)
    int i, j, min;
    real swap;
   
-   for(i=0; i<n-1; i++)
+   for(i=0; i<n; i++)
    {
       min = i;
+      swap = e[min];
       for(j = i+1; j < n; j++)
-	 if(e[j] < e[min])
-	    min = j;
-      if( min != i)
+	 if(e[j] > swap )
+           {
+	   min = j;
+           swap = e[min];
+           }
+      if( min > i)
       {
-	 swap = e[min];
 	 e[min] = e[i];
 	 e[i] = swap;
 	 for(j=0; j<n; j++)
