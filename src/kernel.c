@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.14.2.1  2000/12/08 17:11:22  keith
+ *       Added Window potential back onto HIW
+ *
  *       Revision 2.14  2000/12/08 15:22:07  keith
  *       Reorganized order of potentials to maintain existing numberinf of HIW
  *       etc -- for restart file compatibility.
@@ -178,7 +181,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/kernel.c,v 2.14 2000/12/08 15:22:07 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/kernel.c,v 2.14.2.1 2000/12/08 17:11:22 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -204,6 +207,7 @@ void	message(int *,...);		/* Write a warning or error message   */
                         /* Kazuyuki Hirao,  (1994) ISBN 4-7853-6803-9         */
 			/*     U=    B * exp ((C-R)*D)   - E/r^6 +            */
 			/*           F * exp (-2*G(r-H)) - 2F*exp (-G(r-H))   */
+#define GENWIN 7	/* "generic" potential for multipurpose use. +        */                        /* harmonic window potential                          */
 
 const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 		              {"buckingham",3},
@@ -212,6 +216,7 @@ const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 			      {"hiw",3},
 		              {"hiw+win",5},
 		              {"morse",7},
+		              {"generic+win",8},
 		              {0,0}};	            /* MUST be null-terminated*/
 /*
  *  Array of dimensions of pot'l parameters.  Triplets contain powers
@@ -227,7 +232,9 @@ const dim_mt   pot_dim[][NPOTP]= {
    /* HIW           */  {{1,6,-2},{1,8,-2},{1,14,-2}},
    /* HIW+Win       */  {{1,6,-2},{1,8,-2},{1,14,-2},{1,0,-2},{0,1,0}},
    /* Morse         */  {{1,2,-2},{0, 1,0},{0,-1, 0},
-			          {1,8,-2},{1,2,-2},{0,-1,0},{0, 1, 0}}
+			          {1,8,-2},{1,2,-2},{0,-1,0},{0, 1, 0}},
+   /* Generic+Win   */  {{1,2,-2},{0,-1,0},{1,14,-2},{1,6,-2},
+                         {1,8,-2},{1,10,-2},{1,0,-2},{0,1,0}}, 
                                   };
 
 /*========================== Macros ==========================================*/
@@ -266,6 +273,8 @@ double	dist_pot(real *potpar,          /* Array of potential parameters      */
 	   		   + 2.0 / CUBE(potpar[3])) * exp(-potpar[3]*cutoff));
       else
          return( 0.0 );
+    case GENWIN:
+       /*FALLTHRU*/
     case GENPOT:
       return ( potpar[4] / ( 3.0*CUBE(cutoff)) + potpar[3] / cutoff);
     case MORPOT:
@@ -311,7 +320,7 @@ void	kernel(int jmin,
    real *p0 = pot[0], *p1 = pot[1],     /* Local bases for arrays of pot'l    */
         *p2 = pot[2], *p3 = pot[3],     /* parameters.			      */
         *p4 = pot[4], *p5 = pot[5],
-        *p6 = pot[6];
+        *p6 = pot[6], *p7 = pot[7];
 
    if(alpha > 0.0)
       switch(ptype)
@@ -424,6 +433,40 @@ VECTORIZE
 	    ppe += t + exp_f1 + r_12_r -r_4_r - r_6_r - r_8_r;
 	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r - 4.0*r_4_r - 6.0*r_6_r 
 				      - 8.0*r_8_r + erfc_term)
+	                   + p1[jsite]*exp_f1 * r_r;
+	 }
+	 break;      
+       case GENWIN:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+	 {
+	    /*
+	     * Calculate r and coulombic part
+	     */
+	    r       = sqrt(r_sqr[jsite]);
+	    ar	    = alpha*r;
+	    t = 1.0/(1.0+PP*ar);
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+	    r_r	 = 1.0 / r;
+	    t = POLY5(t) * erfc_term * r_r;
+	    erfc_term = t + norm * erfc_term;
+	    r_sqr_r = SQR(r_r);
+            /*
+	     * Non-coulombic ie potential-specific part
+	     */
+	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
+	    r_4_r = SQR(r_sqr_r);
+	    r_6_r = r_sqr_r * r_4_r;
+	    r_8_r = p5[jsite] * SQR(r_4_r);
+	    r_12_r = p2[jsite] * SQR(r_6_r);
+	    r_4_r *= p3[jsite];
+	    r_6_r *= p4[jsite];
+	    rmr0 = (r - p7[jsite]);
+	    fwin = p6[jsite]*rmr0;
+
+	    ppe += t + exp_f1 + r_12_r -r_4_r - r_6_r - r_8_r + 0.5*fwin*rmr0;
+	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r - 4.0*r_4_r - 6.0*r_6_r 
+				      - 8.0*r_8_r + erfc_term - r*fwin)
 	                   + p1[jsite]*exp_f1 * r_r;
 	 }
 	 break;      
@@ -582,6 +625,30 @@ VECTORIZE
 	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r - 4.0*r_4_r - 6.0*r_6_r 
 				      - 8.0*r_8_r)
 	                   + p1[jsite]*exp_f1 * r_r;
+	 }
+	 break;      
+       case GENWIN:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+	 {
+	    r       = sqrt(r_sqr[jsite]);
+	    r_r	 = 1.0 / r;
+	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
+	    r_sqr_r = SQR(r_r);
+	    r_4_r = SQR(r_sqr_r);
+	    r_6_r = r_sqr_r * r_4_r;
+	    r_8_r = p5[jsite] * SQR(r_4_r);
+	    r_12_r = p2[jsite] * SQR(r_6_r);
+	    r_4_r *= p3[jsite];
+	    r_6_r *= p4[jsite];
+	    rmr0 = (r - p7[jsite]);
+	    fwin = p6[jsite]*rmr0;
+
+	    ppe += exp_f1 + r_12_r -r_4_r - r_6_r - r_8_r + 0.5*fwin*rmr0;
+	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r - 4.0*r_4_r - 6.0*r_6_r 
+				      - 8.0*r_8_r - r*fwin)
+	                   + p1[jsite]*exp_f1 * r_r;
+
 	 }
 	 break;      
        case MORPOT:
