@@ -30,6 +30,23 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	force.c,v $
+ * Revision 2.3  93/10/28  15:22:53  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
+ * Revision 2.3  93/10/28  12:27:22  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
+ * Revision 2.3  93/10/28  12:25:05  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
+ * Revision 2.3  93/10/28  10:27:49  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
+ * Revision 2.0  93/03/15  14:49:05  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.8.1.37  93/03/12  12:21:06  keith
  * Reorganized defines to recognise all ANSI (__type__) forms.
  * Moved spxpy() from aux.c to force.c and force_parallel.c
@@ -199,7 +216,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force.c,v 1.8.1.37 93/03/12 12:21:06 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force.c,v 2.3 93/10/28 15:22:53 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -217,8 +234,6 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force.c,v 1.8.1.3
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
-void    note();                         /* Make a note in output file         */
-gptr    *arralloc();                    /* General purpose array allocator    */
 int     search_lt();			/* Search a vector for el. < scalar   */
 double  vdot();                         /* Vector dot product                 */
 double  sum();                          /* Sum a vector                       */
@@ -227,7 +242,6 @@ void	gatheri();			/* Integer gather		      */
 int	wheneq();			/* Array indexer		      */
 void    mat_mul();                      /* Matrix multiplier                  */
 double	det();				/* Determinant of 3x3 matrix	      */
-void    message();                      /* Send message to stderr             */
 void	invert();			/* 3x3 matrix inverter		      */
 void	mat_vec_mul();			/* Matrix by vector multiplier        */
 void	transpose();			/* Generate 3x3 matrix transpose      */
@@ -235,6 +249,15 @@ void    zero_real();                    /* Initialiser                        */
 double	precision();			/* Floating pt precision.	      */
 void    kernel();                       /* Force kernel routine               */
 double  mol_radius();			/* Radius of largest molecule.        */
+#if defined(ANSI) || defined(__STDC__)
+gptr	*arralloc(size_t,int,...); 	/* Array allocator		      */
+void	note(char *, ...);		/* Write a message to the output file */
+void	message(int *, ...);		/* Write a warning or error message   */
+#else
+gptr	*arralloc();	        	/* Array allocator		      */
+void	note();				/* Write a message to the output file */
+void	message();			/* Write a warning or error message   */
+#endif
 /*========================== External data references ========================*/
 extern  contr_mt control;
 /*========================== Structs local to module =========================*/
@@ -486,7 +509,7 @@ double  cutoff;
     */
    nnab = 4*(mx+1)*(my+1)*(mz+1);
    cellmap = (int***)arralloc(sizeof ***cellmap, 3, 0, mx, -my-1, my, -mz-1, mz);
-   (void)memset(cellmap[0][-my-1]-mz-1,0, nnab*sizeof ***cellmap);
+   (void)memset((gptr*)(cellmap[0][-my-1]-mz-1),0, nnab*sizeof ***cellmap);
 
    /*
     * Add cells with corner-pair distances < cutoff
