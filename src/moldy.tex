@@ -157,7 +157,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.29.4.1 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.29.4.2 $ $}
 \newcommand{\moldyversion}{2.16}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -2249,7 +2249,7 @@ and the four parameters appear on the line in the order $A, B, C, D$.
   D_{ij}/r_{ij}^4 -E_{ij}/r_{ij}^6 -F_{ij}/r_{ij}^8\]
 with the six parameters $A_{ij}$ -- $F_{ij}$.
 \item[morse] This is the Busing-Ida-Gilbert plus Morse-potential as
-  used in the Japanese MD program Mdxorto.  It has the form
+  used in the Japanese MD program Mxdorto.  It has the form
 \[\phi(r_{ij}) = B_{ij}  exp ((C_{ij}-r_{ij})D_{ij})   - E_{ij}/r_{ij}^6 + F_{ij} \exp (-2G_{ij}(r_{ij}-H_{ij})) - 2F_{ij}\exp (-G_{ij}(r_{ij}-H_{ij}))\]
 with seven parameters $B_{ij}$ -- $H_{ij}$.
 \item[HIW]  This is a Lennard-Jones potential with an extra
@@ -2265,7 +2265,7 @@ It is possible to specify the units in which these quantities are
 given by means of the control file parameters \Lit{mass-unit},
 \Lit{length-unit}, \Lit{time-unit} and \Lit{charge-unit} (which are
 themselves specified in SI units). All potential parameters, site
-masses and charges, but not co-ordinates are taken to be in those
+masses and charges, but not co-ordinates, are taken to be in those
 units. Their default values are amu, {\AA}, 0.1ps and $q_{e}$, which means
 that the unit of energy is kJ\,mol$^{-1}$.  So to read in {\AA}, amu and
 kcal mol$^{-1}$, specify \Lit{time-unit=4.8888213e-14}, for  {\AA}, amu
@@ -6022,6 +6022,6 @@ to the potential parameter file format.
 % LocalWords:  aalloc alloc arralloc talloc tfree nspecies nsites nmols NPOTP
 % LocalWords:  algorith ansi pre Pappalardo mdavpos bdist Murashov mdbond
 % LocalWords:  ransub mdshak Fernandez Wentzcovitch wentzcovitch characterizing
-% LocalWords:  syswrite eledata ELEPATH POTPATH Mdxorto Busing Ida Gilbert
+% LocalWords:  syswrite eledata ELEPATH POTPATH Mxdorto Busing Ida Gilbert
 % LocalWords:  Sanchez Marcos HIW
 % LocalWords:  visualization Cerius CHARMM Plotrdf gnuplot Bekker
