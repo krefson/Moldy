@@ -14,6 +14,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 1.3  89/07/04  18:42:07  keith
+ * Fixed error in kernel and force which led to sites being allocated the
+ * wrong potential parameters.  Needed extra parameter to kernel.
+ * 
  * Revision 1.2  89/06/20  18:22:31  keith
  * Moved pot. par defs arrays 'types', 'npotp' and npott from input.c to kernel.c
  * 
@@ -22,7 +26,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: kernel.c,v 1.2 89/06/20 18:22:31 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/kernel.c,v 1.3 89/07/04 18:42:07 keith Stab $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -126,9 +130,7 @@ VECTORIZE
 VECTORIZE
          for(jsite=j0; jsite < nnab; jsite++)
 	 {
-	    r       = sqrt(r_sqr[jsite]);
-	    r_r	 = 1.0 / r;
-	    r_sqr_r = SQR(r_r);
+	    r_sqr_r = 1.0 / r_sqr[jsite];
 	    r_6_r = SQR(pot[1][jsite])* r_sqr_r;
 	    r_6_r   = CUBE(r_6_r);
 	    r_12_r  = SQR(r_6_r);
@@ -191,7 +193,6 @@ VECTORIZE
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = 1.0 / r;
-	    r_sqr_r = SQR(r_r);
 	    exp_f1 =  pot[0][jsite] * exp(-pot[1][jsite]*r);
 	    exp_f2 = -pot[2][jsite] * exp(-pot[3][jsite]*r);
 	    ppe += exp_f1 + exp_f2;
