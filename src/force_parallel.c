@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.17 91/10/02 13:56:56 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.18 91/10/17 14:19:56 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -842,9 +842,9 @@ VECTORIZE
 #endif
          }
       }
-      spaxpy(nnab, 1.0, forcejx, site_force[0], nab);
-      spaxpy(nnab, 1.0, forcejy, site_force[1], nab);
-      spaxpy(nnab, 1.0, forcejz, site_force[2], nab);
+      spxpy(nnab, forcejx, site_force[0], nab);
+      spxpy(nnab, forcejy, site_force[1], nab);
+      spxpy(nnab, forcejz, site_force[2], nab);
    }
    stress[0][0]  += s00;
    stress[0][1]  += s01;
