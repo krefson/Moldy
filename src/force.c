@@ -10,6 +10,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	force.c,v $
+ * Revision 1.7  89/08/22  14:48:39  keith
+ * Created new variable 'n_nab_sites' for max size of vector arrays.
+ * 
  * Revision 1.6  89/07/04  18:43:14  keith
  * Fixed error in kernel and force which led to sites being allocated the
  * wrong potential parameters.  Needed extra parameter to kernel.
@@ -34,7 +37,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: force.c,v 1.6 89/07/04 18:43:14 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/force.c,v 1.7 89/08/22 14:48:39 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -152,14 +155,18 @@ spec_p  spec;                           /* Pointer to species array      (in) */
 cell_t  *cell[];                        /* Array of cells (assume zeroed)(out)*/
 cell_t  mol[];                          /* What 'cell' points to         (out)*/
 {
-   int ix, iy, iz, icell, imol, isite = 0;
+   int ix, iy, iz, icell, imol, im=0, isite = 0;
 #ifdef DEBUG
    printf("  ix    iy    iz  icell isite\n");
 #endif
    for(imol = 0; imol < nmols; imol++)
    {
-      if(imol == spec->nmols) spec++;
-
+      if(im++ == spec->nmols)
+      {
+	 im = 0;
+	 spec++;
+      }
+	    
       mol[imol].isite = isite;
       mol[imol].num  = spec->nsites;
 
@@ -378,7 +385,7 @@ mat_t           stress;                 /* Stress virial                (out) */
 
 /*  Construct and fill expanded site-identifier array, id                     */
    id_ptr = id;
-   for (spec = species; spec < &species[system->nspecies]; spec++)
+   for (spec = species; spec < species+system->nspecies; spec++)
       for(imol = 0; imol < spec->nmols; imol++)
       {
          (void)memcpy((char*)id_ptr, (char*)spec->site_id, 
