@@ -81,11 +81,12 @@ dnl AC_PATH_CPP
 dnl Extra compiler options.  We know whether we are using gcc at this point.
 if test "x$ac_cv_prog_gcc" = xyes; then
    case "${target}" in
-        i586*|i686*)  : ${OPT=-O2\ -mcpu=pentium\ -malign-double} ;;
-                  *)  : ${OPT=-O2}
+        i586*|i686*)  OPT=-O2\ -mcpu=pentium\ -malign-double; OPT2=$OPT;;
+                  *)  OPT=-O2 ; OPT2=$OPT
    esac
    OPT=${OPT}\ -ffast-math
-   OPTAUX=${OPT}\ -funroll-loops
+   OPT2=${OPT2}\ -ffast-math
+   OPTAUX=${OPT2}\ -funroll-loops
 fi
 AC_PROG_CPP2
 
