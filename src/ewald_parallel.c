@@ -3,6 +3,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.2  90/04/25  10:37:06  keith
+ * Fixed bug which led to ihkl[] accessing outside bounds of chx[] etc arrays
+ * when in const-pressure mode and MD cell expanded between steps.
+ * 
  * Revision 1.1  90/01/31  13:18:59  keith
  * Initial revision
  * 
@@ -35,7 +39,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.2 90/04/24 18:38:48 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.2 90/04/25 10:37:06 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -59,7 +63,7 @@ void	transpose();			/* Transposes a 3x3 matrix	      */
 void	mat_sca_mul();			/* Multiplies 3x3 matrix by scalar    */
 double	sum();				/* Sum of elements of 'real' vector   */
 void	saxpy();			/* A*x+y, x, y are long vectors	      */
-void	*arralloc();			/* Allocates a dope vector array      */
+char	*arralloc();			/* Allocates a dope vector array      */
 void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 /*========================== External data references ========================*/
