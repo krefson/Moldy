@@ -28,6 +28,10 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdbond.c,v $
+ *  Revision 1.4  1999/10/29 16:44:28  keith
+ *  Updated usage message
+ *  Corrected interface to traj_con().
+ *
  *  Revision 1.4  1999/10/25 10:24:45  craig
  *  Added line to convert dump data to Cartesian coords.
  *  Moved "control" declaration to global vars section.
@@ -58,7 +62,7 @@ what you give them.   Help stamp out software-hoarding! */
  */
 
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 1.3 1999/10/11 14:05:19 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 1.4 1999/10/29 16:44:28 keith Exp keith $";
 #endif
 #include "defs.h"
 #ifdef HAVE_STDARG_H
@@ -262,7 +266,7 @@ int		sp_range[3];
               for( frac[1] = min[1]; frac[1] <= max[1]; frac[1]++) 
               for( frac[2] = min[2]; frac[2] <= max[2]; frac[2]++) 
               {
-                  mat_vec_mul(h, frac, shift, 1);
+                  mat_vec_mul(h, &frac, &shift, 1);
 
                   for( u = 0; u < 3; u++)
                      point2[u] = spec2->c_of_m[j][u] + shift[u]; 
@@ -298,7 +302,7 @@ int		sp_range[3];
                                for( frac2[1] = min[1]; frac2[1] <= max[1]; frac2[1]++) 
                                for( frac2[2] = min[2]; frac2[2] <= max[2]; frac2[2]++) 
                                {
-                                  mat_vec_mul(h, frac2, shift2, 1);
+                                  mat_vec_mul(h, &frac2, &shift2, 1);
 
                                   for( u = 0; u < 3; u++)
                                      point3[u] = spec3->c_of_m[k][u] + shift2[u]; 
@@ -355,7 +359,7 @@ int		sp_range[3];
                             for( frac[1] = min[1]; frac[1] <= max[1]; frac[1]++) 
                             for( frac[2] = min[2]; frac[2] <= max[2]; frac[2]++) 
                             {
-                                mat_vec_mul(h, frac, shift, 1);
+                                mat_vec_mul(h, &frac, &shift, 1);
  
                                 for( u = 0; u < 3; u++)
                                    point1[u] = spec1->c_of_m[i][u] + shift[u]; 
@@ -368,7 +372,7 @@ int		sp_range[3];
                                     for( frac2[1] = min[1]; frac2[1] <= max[1]; frac2[1]++) 
                                     for( frac2[2] = min[2]; frac2[2] <= max[2]; frac2[2]++) 
                                     {
-                                        mat_vec_mul(h, frac2, shift2, 1);
+                                        mat_vec_mul(h, &frac2, &shift2, 1);
 
                                         for( u = 0; u < 3; u++)
                                            point3[u] = spec3->c_of_m[k][u] + shift2[u]; 
@@ -810,7 +814,7 @@ char	*argv[];
           %header.maxdumps, dump_name);
 #endif
          /* Perform bond/angle calculations for each slice of dump file */
-         bond_calc(sys, species, site_info, &root_bond, &root_angle, sp_range, blim, alim); 
+         bond_calc(&sys, species, site_info, &root_bond, &root_angle, sp_range, blim, alim); 
          printf("- Time slice %d -\n",irec);
          data_out(&root_bond, &root_angle);
          putchar('\n');
@@ -837,7 +841,7 @@ char	*argv[];
       mat_vec_mul(sys.h, sys.c_of_m, sys.c_of_m, sys.nmols);
 fprintf(stderr, "Hello %f %f %f\n", sys.c_of_m[1][0], sys.c_of_m[1][1], sys.c_of_m[1][2]);
 
-      bond_calc(sys, species, site_info, &root_bond, &root_angle, sp_range, blim, alim); 
+      bond_calc(&sys, species, site_info, &root_bond, &root_angle, sp_range, blim, alim); 
       data_out(&root_bond,&root_angle);
    }
    return 0;    
