@@ -1,0 +1,210 @@
+         
+		#     # ####### #       ######  #     #
+		##   ## #     # #       #     #  #   # 
+		# # # # #     # #       #     #   # #  
+		#  #  # #     # #       #     #    #   
+		#     # #     # #       #     #    #   
+		#     # #     # #       #     #    #   
+		#     # ####### ####### ######     #   
+
+                Copyright Keith Refson January 1990
+		All rights reserved
+
+Contents:
+
+accel.c
+algorith.c
+alloc.c
+aux.c
+beeman.c		These files are the source code for Moldy.
+convert.c
+dump.c
+ewald.c
+force.c
+input.c
+eigens.c
+kernel.c
+main.c
+matrix.c
+output.c
+quaterns.c
+rdf.c
+restart.c
+startup.c
+values.c
+xdr.c
+   
+defs.h
+messages.h		'Include' files for above files
+structs.h
+xdr.h
+
+stddef.h
+time.h			replacement ANSI C include files for non-ANSI systems.
+stdlib.h
+string.h
+
+
+dumpanalyze.c
+dumpconvert.c
+dumpextract.c		Source code for 'utility' programs.
+mdshak.c
+moldyextract.c
+
+getopt.c		Support routine for utility progs.
+
+Makefile		Make file for Moldy.
+
+compile.com		Master compile file for VMS.  Calls all the others.
+compile_moldy.com	Compile file for "moldy" itself.
+compile_utils.com	Link file for "moldy" itself.       
+link_moldy.com		Compile file for utilities.
+link_utils.com		Link file for utilities.
+defcomm.com		Defines comands - execute from your LOGIN.COM
+
+moldy.tex		LaTeX source for manual
+moldy.bbl
+
+mcy.in
+methane.in
+mgclh2o.in		Example system specification files
+tip4p.in
+tips2.in
+
+control.mgclh2o
+control.tip4p		Example control files
+control.water
+control.100
+
+UNPACKING
+---------
+A. Unix distribution
+
+This distribution of Moldy takes the form of a bourne shell (shar)
+archive, or a compressed tar archive.  To unpack the former, cd to the
+directory where you wish the files to go and type /bin/sh moldy.shar
+(or whatever the name of this file is).  The tar archive is unpacked
+with
+% uncompress moldy.tar
+% tar xvf moldy.tar
+
+B. VMS 
+
+The VMS version of Moldy comes as a DCL archive, moldy.com. To unpack:
+$ @moldy
+This creates all the files needed in the current directory.
+
+Alternatively, versions of "uncompress" and "tar" are available for
+VMS, though they are not standard.  If you have them then you can
+unpack the "moldy.tar.Z" archive (suitably renamed) in the same way.
+
+COMPILING
+---------
+
+A. UNIX
+
+Stage 1.
+You ought to be able to type "make moldy utilities" on just about any
+flavour of unix and build a working version.  However if you want to
+get the best performance you will have to work a bit harder with
+compiler options.  You may also find that the compile fails for
+obscure reasons.  Don't worry, some compile options will probably sort
+that out too.
+
+Stage 2.  
+Edit "Makefile", choose a suitable set of compiler options for your
+machine and uncomment them. Moldy has been test compiled on most
+modern workstations as well as vector super and minisuper-computers,
+so you only have to select the preset options.
+
+N.B. IBM RS6000 This compiler does not supply any "identification"
+macro so you MUST have -DRS6000 in the c89 command line.  Otherwise
+the XDR stuff won't work.
+
+Stage 3.  
+This section describes how to "hand-tune" compiler options.
+If you get this far you have probably got a different machine or
+compiler system from any of the tested ones.  Moldy recognises a
+number of C preprocessor macros which adjust its expectations of the
+compiler and operating system.  These are best defined using the
+"-DMACRO-NAME" option of most unix C compilers.
+
+MACRO		Purpose
+-----           -------
+	The following two macros are used to select the ANSI C
+	"stdarg" mechanism. Default is older "varargs" mechanism. 
+
+__STDC__	Automatically defined by ANSI compilers in strict mode.
+ANSI		Alternative for ANSI compiler in non-strict mode which
+		does not define __STDC__.
+
+ANSI_LIBS	Set this if your libraries and header files conform
+		to those expected in the ANSI 89 Standard.  Otherwise
+		extra replacement routines and header files to
+		remedy the deficiencies of older systems are included.
+
+		Set this if at all possible.  Only in an ANSI
+		environment can you be sure that all needed headers and
+		library routines will be present.  The alternative is
+		a kludge which works most of the time on most machines.
+
+		This is automatically set in "defs.h" for some
+		machines/compilers vhich are known to have ANSI libraries.
+
+USE_XDR		Turn on support for the portable binary dump and
+		restart files using the XDR mechanism.  This is the
+		only area where Moldy departs substantially from the
+		ANSI C standard so it is optional.  Nevertheless it
+		is so massively useful that it is on by default.
+
+		As this is not part of the standard it may not compile
+		correctly on some systems if the compiler is in
+		"strict ANSI" mode.  Use the default  or the "relaxed"
+		or "extended" ansi mode often provided. 
+
+		You may well need to add a library to the link using
+		the LDFLAGS variable in the Makefile.  For
+		example, solaris 2 on Suns needs the "-lnsl"
+		option and SGI's need the "-lsun" option.
+
+		You may also need to define some other macro to get
+		the headers correctly included viz:
+
+_ALL_SOURCE 	(IBM RS6000)
+_HPUX_SOURCE	(HPUX)
+		These are needed to enable stuff needed for the XDR
+		routines and headers on IBM and HP machines.  
+		N.B. These are actually set automatically in the Moldy
+		header "defs.h" (but see note about need for -DRS6000
+		on IBM).  However other systems may require something
+		similar .
+
+B. VMS (VAX/VMS and OpenVMS/AXP)
+
+Just execute the "compile.com" DCL command file which will build Moldy
+and the utilities.  All the required macros are set in "defs.h".  It
+also executes the command file "defcomm.com" which defines the command
+symbols to execute the programs.  It is a good idea to execute this
+file from your LOGIN.COM to make them available every time you log in.
+
+
+	RUNNING
+	-------
+
+Try it out by typing
+
+	moldy control.water
+
+to do a 10 timestep simulation of water.
+
+PRINTING THE MANUAL
+-------------------
+
+The LaTeX source, "moldy.tex" and bibliography file, "moldy.bbl"
+are supplied. If you have LaTeX, "latex moldy" a couple of times
+to get the cross-references correct and print the dvi file using
+dvips or dvi2ps, or whatever dvi output you normally use.
+
+There is a "moldy.dvi" target in the make file so just "make
+moldy.dvi" ought to do the trick.
+
