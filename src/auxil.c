@@ -6,6 +6,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	aux.c,v $
+ * Revision 1.6  89/08/10  17:29:42  keith
+ * Fixed search_lt() to return correct result for non-unit stride.
+ * 
  * Revision 1.5  89/06/14  14:14:44  keith
  * Fixed ifdef's for CRAY to handle case of unicos.
  * Fixed mistake in #define's for typedef clash in sysV CPU().
@@ -30,7 +33,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: aux.c,v 1.5 89/06/14 14:14:44 keith Exp $";
+static char *RCSid = "$Header: aux.c,v 1.6 89/08/10 17:29:42 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -401,9 +404,9 @@ char	*atime()
 #ifdef unix
 #ifdef USG
 
-#define TICK 60.0
 #define size_t NOTHING
 #define time_t NOTHING2
+#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/times.h>
 #undef size_t
@@ -415,7 +418,7 @@ double        cpu()
  
    (void)times(&buf);
 
-   return((buf.tms_utime + buf.tms_stime)/TICK);
+   return((buf.tms_utime + buf.tms_stime)/(double)HZ);
 }
 #else			/* Not USG ie BSD varitety of unix		      */
 
