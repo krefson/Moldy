@@ -1,3 +1,8 @@
+RELEASE 2.15d2
+-------------
+ * Fixed problem in RDF output routine which generated either
+ * NaN or divide-by-zero if set of site-id's not contiguous
+
 RELEASE 2.15d
 -------------
  * Added support for Portland group C compiler on Linux x86
