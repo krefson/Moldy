@@ -44,3 +44,11 @@
 #   define LOCKEX		".lck"
 #   define ALLOC_ALIGN
 #endif
+
+#ifndef SIZEOF_INT
+#define SIZEOF_INT 4
+#endif
+
+#ifndef SIZEOF_FLOAT
+#define SIZEOF_FLOAT 4
+#endif

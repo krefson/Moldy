@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: alloc.c,v $
+ *       Revision 2.11.2.1  2000/08/11 17:40:03  keith
+ *       Incorporated site-pbc branch "bekker" into main "Beeman" branch.
+ *
  *       Revision 2.11  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -159,7 +162,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/alloc.c,v 2.11 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/alloc.c,v 2.11.2.1 2000/08/11 17:40:03 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
@@ -211,7 +214,11 @@ void	message();			/* Write a warning or error message   */
  *									      *
  * Wide_mt is the widest type for alignment purposes.  Try double.	      *
  ******************************************************************************/
+#if SIZEOF_FLOAT < SIZEOF_INT
+typedef float word_mt;
+#else
 typedef int word_mt;
+#endif
 typedef double wide_mt;
 /******************************************************************************
  * talloc()	Call Calloc to allocate memory, test result and stop if failed*
