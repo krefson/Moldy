@@ -22,8 +22,8 @@ Moldy is available by anonymous file transfer from Oxford.  Connect to
 your email address as password.  The relevant files are all in the
 "/pub" directory and are
 
-* moldy-2.yy.tar.Z     - The Unix distribution (also for MSDOS)
-* moldy-2.yy.com       - The VMS distribution
+* moldy-2.yy.tar.gz   - The Unix distribution (also for MSDOS/Windoze)
+* moldy-2.yy.com      - The VMS distribution
 * moldy-manual.ps.Z   - The Manual in PostScript form.  Note that
                         the distribution files already contain 
                         the LaTeX source.
@@ -99,14 +99,16 @@ defcomm.com		Defines comands - execute from your LOGIN.COM
 
 moldy.tex		LaTeX source for manual
 moldy.bbl
+fig_*.ps		Encapsulated Postscript versions of figures.
+fig_*.tex		LaTeX annotation for figures.
+fig_*-eepic.tex		Alternative version of figures in eepic form.
 
 
 tips2.in
 tip4p.in
 methane.in
 mcy.in
-water-big.in		Example system specification files
-mgclh2o.in
+mgclh2o.in		Example system specification files
 control.clay
 argon.in
 quartz-vbst.in
@@ -114,30 +116,27 @@ quartz-vbst.in
 control.mgclh2o
 control.tip4p		Example control files
 control.water
-control.100
 control.clay
 control.argon
 control.tips2
 control.quartz
-control.big
 control.mgclh2o
 
-water-canon.out
+water-example.out
 argon-example.out	Output from example runs in manual
 tips2-example.out
+tip4p-example.out
 mgclh2o-example.out
 quartz-example.out
+clay-example.out 
 
 UNPACKING
 ---------
 A. Unix distribution
 
-This distribution of Moldy takes the form of a bourne shell (shar)
-archive, or a compressed tar archive.  To unpack the former, cd to the
-directory where you wish the files to go and type /bin/sh moldy.shar
-(or whatever the name of this file is).  The tar archive is unpacked
-with
-% uncompress moldy.tar
+This distribution of Moldy takes the form of a compressed tar archive.
+The archive is unpacked with 
+% gunzip moldy.tar (.gz)    or    % uncompress moldy.tar (.Z)
 % tar xvf moldy.tar
 
 B. VMS 
