@@ -17,6 +17,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	output.c,v $
+ * Revision 1.4  89/06/20  18:30:36  keith
+ * moved print_sysdef() from input.c to output.c
+ * made definitions of 'types[]' and 'npotp[]' external (in kernel).
+ * Updated banner_page() to provide more info
+ * 
  * Revision 1.3  89/06/01  21:25:07  keith
  * Control.out eliminated, use printf and freopen instead to direct output.
  * 
@@ -29,7 +34,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: output.c,v 1.3 89/06/01 21:25:07 keith Exp $";
+static char *RCSid = "$Header: output.c,v 1.4 89/06/20 18:30:36 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
@@ -37,6 +42,7 @@ static char *RCSid = "$Header: output.c,v 1.3 89/06/01 21:25:07 keith Exp $";
 #else
 #include <varargs.h>
 #endif
+#include <math.h>
 /*========================== Program include files ===========================*/
 #include "structs.h"
 #include "messages.h"
@@ -48,11 +54,26 @@ extern  contr_t 	control;
 extern	restrt_t	restart_header;
 extern	char		*types[];
 extern	int		npotp[];
+extern	match_t		match[];
+extern	int		nmatch;
 /*========================== External data definitions  ======================*/
 int	out_page = 1;			/* Which page of output we are on     */
 int	out_line = 999999;	        /* Which line of output               */
 /*========================== Macros ==========================================*/
 #define		S_USED		0x01
+/*========================== Special Control output cases ====================*/
+static  int	one=1;
+static	unit_t	prog_unit = {MUNIT, LUNIT, TUNIT, QUNIT};
+static	match_t	special[] = {
+                         {"lattice-start",	"%d", (char*)&one},
+			 {"restart-file",	"%s", ""},
+			 {"sys-spec-file",	"%s", ""},
+			 {"mass-unit",		"%lf", (char*)&prog_unit.m},
+			 {"length-unit",	"%lf", (char*)&prog_unit.l},
+			 {"time-unit",		"%lf", (char*)&prog_unit.t},
+			 {"charge-unit",	"%lf", (char*)&prog_unit.q}
+		      };
+static	int	nspecial = sizeof(special) / sizeof(match_t);
 /******************************************************************************
  * new_line.   print a newline and update line counter                        *
  ******************************************************************************/
@@ -367,7 +388,8 @@ spec_t	species[];
  *  print sysdef   Print out the definition of the system, in the format that *
  *  read_sysdef can interpret.                                                *
  ******************************************************************************/
-void    print_sysdef(system, species, site_info, potpar)
+void    print_sysdef(file, system, species, site_info, potpar)
+FILE		*file;
 system_p        system;                 /* Pointer to system array (in main)  */
 spec_t          species[];              /* Pointer to species array           */
 site_p          site_info;              /* pointer to site_info array         */
@@ -378,9 +400,9 @@ pot_t           potpar[];               /* Potential parameter array          */
    int  n_potpar = npotp[system->ptype];
    for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
    {
-      (void)printf(" %-16s  %d\n", spec->name, spec->nmols);
+      (void)fprintf(file, " %-16s  %d\n", spec->name, spec->nmols);
       for(isite=0; isite < spec->nsites; isite++)
-         (void)printf(" %6d %9g %9g %9g %9g %9g %s\n",
+         (void)fprintf(file, " %6d %9g %9g %9g %9g %9g %s\n",
                         spec->site_id[isite],
                         spec->p_f_sites[isite][0],
                         spec->p_f_sites[isite][1],
@@ -389,20 +411,106 @@ pot_t           potpar[];               /* Potential parameter array          */
                         site_info[spec->site_id[isite]].charge,
                         site_info[spec->site_id[isite]].name);
    }
-   (void)printf(" end\n");
-   (void)printf(" %s potential parameters\n",types[system->ptype]);
+   (void)fprintf(file, " end\n");
+   (void)fprintf(file, " %s potential parameters\n",types[system->ptype]);
    for(idi = 1; idi < system->max_id; idi++)
       for(idj = idi; idj < system->max_id; idj++)
       {
          idij = idj + idi * system->max_id;
          if(potpar[idij].flag & S_USED)
          {
-            (void)printf(" %6d %6d", idi, idj);
+            (void)fprintf(file, " %6d %6d", idi, idj);
             for(ip = 0; ip < n_potpar; ip++)
-               (void)printf("%9g",potpar[idij].p[ip]);
-            (void)printf("\n");
+               (void)fprintf(file, "%9g",potpar[idij].p[ip]);
+            (void)fputc('\n',file);
          }
       }
-   (void)printf(" end\n");
+   (void)fprintf(file, " end\n");
 }
- 
+/******************************************************************************
+ * Print_config()	Print out the configuration of the system in a text   *
+ * format.  Control parameters system definition and 'lattice start' are      *
+ * output allowing a portable restart.					      *
+ ******************************************************************************/
+void	print_config(save_name, system, species, site_info, potpar)
+char		*save_name;		/* Name of save file to be written    */
+system_p	system;			/* Pointer to system array (in main)  */
+spec_p		species;		/* Pointer to be set to species array */
+site_p		site_info;		/* To be pointed at site_info array   */
+pot_p		potpar;			/* To be pointed at potpar array      */
+{
+   FILE 	*out;
+   match_t	*match_p, *cur, *special_p;
+   spec_p	spec;
+   int		imol, code, i, j, k;
+   double	cell_length[3], cell_angle[3];
+   mat_p	h = system->h;
+
+   if( (out = fopen(save_name, "w")) == NULL )
+      message(NULLI, NULLP, FATAL, OSFAIL, save_name);
+
+   for( match_p = match; match_p < &match[nmatch]; match_p++)
+   {
+      for( special_p = special; special_p < &special[nspecial]; special_p++)
+	 if( ! strcmp(match_p->key, special_p->key) )
+	    break;
+
+      if( special_p < &special[nspecial] )
+	 cur = special_p;
+      else
+	 cur = match_p;
+
+      code = cur->format[MAX(0, strlen(cur->format)-1)];
+      switch(code)
+      {
+       case 's':
+       case ']':
+	 (void)fprintf(out, "%s = %s\n", cur->key, cur->ptr);
+	 break;
+       case 'd':
+	 (void)fprintf(out, "%s = %d\n", cur->key, *(int*)cur->ptr);
+	 break;
+       case 'f':
+	 (void)fprintf(out, "%s = %.7g\n", cur->key, *(double*)cur->ptr);
+	 break;
+       default:
+	 message(NULLI, NULLP, FATAL,
+		 "Printf code \"%s\" not catered for", cur->format);
+      }
+   }
+   (void)fprintf(out, "end\n");
+
+   for( i = 0; i < 3; i++)
+      cell_length[i] = sqrt(SQR(h[0][i]) + SQR(h[1][i]) + SQR(h[2][i]));
+   for( i=0, j=1, k=2; i < 3; i++, j=(i+1)%3, k=(j+1)%3)
+      cell_angle[i] = acos(
+			 (h[0][j]*h[0][k] + h[1][j]*h[1][k] + h[2][j]*h[2][k])/
+			 (cell_length[j]*cell_length[k])) / DTOR;
+   
+   print_sysdef(out, system, species, site_info, potpar);
+
+   (void)fprintf(out, "%g %g %g %g %g %g 1 1 1\n",
+		 cell_length[0], cell_length[1], cell_length[2],
+		 cell_angle[0], cell_angle[1], cell_angle[2]);
+   for( spec = species; spec < &species[system->nspecies]; spec++ )
+      for( imol = 0; imol < spec->nmols; imol++ )
+      {
+	 (void)fprintf(out, "%s %g %g %g",
+		       spec->name,                spec->c_of_m[imol][0]+0.5,
+		       spec->c_of_m[imol][1]+0.5, spec->c_of_m[imol][2]+0.5);
+	 if( spec->rdof > 0 )
+	    (void)fprintf(out, " %g %g %g %g\n",
+			  spec->quat[imol][0], spec->quat[imol][1],
+			  spec->quat[imol][2], spec->quat[imol][3]);
+	 else
+	    fputc('\n', out);
+      }
+   (void)fprintf(out, "end\n");
+   
+   if( ferror(out) )
+      message(NULLI,NULLP,FATAL,REWRT,ferror(out));
+
+   (void)fclose(out);
+}
+
+	 
