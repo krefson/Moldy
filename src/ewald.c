@@ -23,6 +23,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.12  1996/03/19 12:27:48  keith
+ *       Parallelized trig function generation loops.  This is conditional
+ *       on macro MPPMANY and is only a gain on the T3D. Requires
+ *       par_collect_all() in parallel.c.
+ *
  *       Revision 2.11  1996/02/07 18:26:58  keith
  *       Restructured for convergence of std and RIL versions
  *        - eliminated ewald-inner.
@@ -188,7 +193,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.11 1996/02/07 18:26:58 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.13 1996/11/05 09:45:30 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -204,6 +209,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.
 #endif
 #include	"stddef.h"
 #include 	"stdlib.h"
+#include        "string.h"
 /*========================== Program include files ===========================*/
 #include 	"structs.h"
 #include 	"messages.h"
@@ -239,6 +245,15 @@ extern int		ithread, nthreads;
 #define moda(hmat) (hmat[0][0])
 #define modb(hmat) sqrt(SQR(hmat[0][1]) + SQR(hmat[1][1]))
 #define modc(hmat) sqrt(SQR(hmat[0][2]) + SQR(hmat[1][2]) + SQR(hmat[2][2]))
+/*========================== Cache Parameters=================================*/
+/* The default values are for the Cray T3D but are probably good enough 
+ *  for most other systems too. */
+#ifndef NCACHE
+#   define NCACHE (256*sizeof(double)/sizeof(real))
+#endif
+#ifndef NLINE
+#   define NLINE  (4*sizeof(double)/sizeof(real))
+#endif
 /*============================================================================*/
    struct s_hkl {double kx, ky, kz; int h,k,l;};
 /*****************************************************************************
@@ -315,15 +330,148 @@ VECTORIZE
 	 }
      }
 }
+
+/******************************************************************************
+ * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site  *
+ * Use addition formulae to get sin(h*astar*x)=sin(Kx*x) etc for each site    *
+ ******************************************************************************/
+static
+void trig_recur(chx,shx,sin1x,cos1x,site0,site1,site2,kstar,hmax,ns0,ns1)
+real **chx, **shx, sin1x[],cos1x[], *site0, *site1, *site2, *kstar;
+int ns0, ns1, hmax;
+{
+   int h, is;
+   real *coshx, *sinhx, *cm1, *sm1, coss, kr;
+   real ksx = kstar[0], ksy = kstar[1], ksz = kstar[2];
+
+   sinhx = shx[0];    coshx = chx[0]; 
+VECTORIZE
+   for(is = ns0; is < ns1; is++)
+   {
+      coshx[is] = 1.0;
+      sinhx[is] = 0.0;
+   }      
+
+   if( hmax >= 1 )
+   {
+      coshx = chx[1]; sinhx = shx[1];
+VECTORIZE
+      for(is = ns0; is < ns1; is++)
+      {
+	 kr = ksx*site0[is]+ksy*site1[is]+ksz*site2[is];
+	 coshx[is] = cos(kr); sinhx[is] = sin(kr);
+      }
+
+      memcp(cos1x+ns0, coshx+ns0, (ns1-ns0)*sizeof(real));
+      memcp(sin1x+ns0, sinhx+ns0, (ns1-ns0)*sizeof(real));
+
+      for(h = 2; h <= hmax; h++)
+      {
+         coshx = chx[h]; sinhx = shx[h];
+         cm1 = chx[h-1]; sm1 = shx[h-1];
+VECTORIZE
+         for(is = ns0; is < ns1; is++)
+      	 {
+      	    coss      = cm1[is]*cos1x[is] - sm1[is]*sin1x[is];
+      	    sinhx[is] = sm1[is]*cos1x[is] + cm1[is]*sin1x[is];
+      	    coshx[is] = coss;
+      	 }
+      }
+   }
+}
+
+/******************************************************************************
+ * allocate_arrays(). Memory allocation for Ewald's arrays.  We malloc one    *
+ * large block and divide it out so as to precisely control the relative      *
+ * offsets of the arrays.  This is to avoid cache conflicts.                  *
+ * Revert to bog-standard method for MSDOS				      *
+ ******************************************************************************/
+static real*  allocate_arrays(nsarray, hmax, kmax, lmax,
+			      chx, cky, clz, shx, sky, slz, chg,
+			      cos1x, cos1y, cos1z, sin1x, sin1y, sin1z, 
+			      qcoskr, qsinkr)
+int	nsarray, hmax, kmax, lmax;
+real	***chx, ***cky, ***clz, ***shx, ***sky, ***slz;
+real	**cos1x, **cos1y, **cos1z, **sin1x, **sin1y, **sin1z;
+real	**chg, **qcoskr, **qsinkr;
+{
+   int h, k,l; 
+   real *csp, *base;
+
+#ifndef __MSDOS__
+   /*
+    * Attempt to cache-align these arrays for optimum performance.
+    * This requires NON-ANSI pointer conversion and arithmetic.
+    * It should work with any UNIX address space, so make it conditional.
+    */
+   base = dalloc((2*(hmax+kmax+lmax)+15)*nsarray+10*NLINE+NCACHE);
+#if defined(unix) && !defined(__BOUNDS_CHECKING_ON)
+   csp = (real*)0 + (((base - (real*)0) - 1 | NCACHE-1) + 1);
+#else
+   csp = base;
+#endif
+
+   *chx = (real**)arralloc(sizeof(real*),1,0,hmax);
+   *cky = (real**)arralloc(sizeof(real*),1,0,kmax);
+   *clz = (real**)arralloc(sizeof(real*),1,0,lmax);
+   *shx = (real**)arralloc(sizeof(real*),1,0,hmax);
+   *sky = (real**)arralloc(sizeof(real*),1,0,kmax);
+   *slz = (real**)arralloc(sizeof(real*),1,0,lmax);
+ 
+   *qcoskr = csp; csp += nsarray + NLINE;
+   *qsinkr = csp; csp += nsarray + NLINE;
+   *chg = csp;    csp += nsarray + NLINE;
+   for(h = 0; h <= hmax; h++, csp += nsarray)
+     (*chx)[h] = csp;
+   csp += NLINE;
+   for(h = 0; h <= hmax; h++, csp += nsarray)
+     (*shx)[h] = csp;
+   csp += NLINE;
+   for(k = 0; k <= kmax; k++, csp += nsarray)
+     (*cky)[k] = csp;
+   csp += NLINE;
+   for(k = 0; k <= kmax; k++, csp += nsarray)
+     (*sky)[k] = csp;
+   csp += NLINE;
+   for(l = 0; l <= lmax; l++, csp += nsarray)
+     (*clz)[l] = csp;
+   csp += NLINE;
+   for(l = 0; l <= lmax; l++, csp += nsarray)
+     (*slz)[l] = csp;
+   csp += NLINE;
+   *cos1x = csp;  csp += nsarray;
+   *cos1y = csp;  csp += nsarray;
+   *cos1z = csp;  csp += nsarray + NLINE;
+   *sin1x = csp;  csp += nsarray;
+   *sin1y = csp;  csp += nsarray;
+   *sin1z = csp;  csp += nsarray;
+#else
+   *chx = (real**)arralloc((size_mt)sizeof(real),2, 0, hmax, 0, nsarray-1);
+   *cky = (real**)arralloc((size_mt)sizeof(real),2, 0, kmax, 0, nsarray-1);
+   *clz = (real**)arralloc((size_mt)sizeof(real),2, 0, lmax, 0, nsarray-1);
+   *shx = (real**)arralloc((size_mt)sizeof(real),2, 0, hmax, 0, nsarray-1);
+   *sky = (real**)arralloc((size_mt)sizeof(real),2, 0, kmax, 0, nsarray-1);
+   *slz = (real**)arralloc((size_mt)sizeof(real),2, 0, lmax, 0, nsarray-1);
+   *cos1x = (*chx)[1]; *cos1y = (*cky)[1]; *cos1z = (*clz)[1];
+   *sin1x = (*shx)[1]; *sin1y = (*sky)[1]; *sin1z = (*slz)[1];
+
+   csp = base = dalloc(3*nsarray);
+   *chg = csp;    csp += nsarray;
+   *qcoskr = csp; csp += nsarray;
+   *qsinkr = csp; csp += nsarray;
+#endif
+
+   return base;
+}
 /******************************************************************************
  *  Ewald  Calculate reciprocal-space part of coulombic forces		      *
  ******************************************************************************/
-void	ewald(site,site_force,system,species,chg,pe,stress)
+void	ewald(site,site_force,system,species,chgx,pe,stress)
 real		**site,			/* Site co-ordinate arrays	 (in) */
 		**site_force;		/* Site force arrays		(out) */
 system_mp	system;			/* System record		 (in) */
 spec_mt	species[];			/* Array of species records	 (in) */
-real		chg[];			/* Array of site charges	 (in) */
+real		chgx[];			/* Array of site charges	 (in) */
 double		*pe;			/* Potential energy		(out) */
 mat_mt		stress;			/* Stress virial		(out) */
 {
@@ -338,12 +486,11 @@ mat_mt		stress;			/* Stress virial		(out) */
    double	sqcoskr,sqsinkr,	/* Sum q(i) sin/cos(K.r(i))          */
 		sqcoskrn, sqsinkrn,
 		sqcoskrf, sqsinkrf;
-   real		coss;
    double	ksq,			/* Squared magnitude of K vector     */
 		kcsq = SQR(control.k_cutoff);
    double	kx,ky,kz,kzt;
    vec_mt	kv;			/* (Kx,Ky,Kz)  			     */
-   real		force_comp, kv0, kv1, kv2;
+   real		force_comp, kv0, kv1, kv2, sfx, sfy;
    struct	s_hkl *hkl, *phkl;
    int		nhkl = 0;
 /*
@@ -365,10 +512,10 @@ mat_mt		stress;			/* Stress virial		(out) */
    int		nsarr0 = nsites;
 #endif
 /*
- * Kludge to optimize performance on RS6000s with 4-way assoc. cache.
+ * Round up size of arrays to cache sub-multiple size.
  */
-#ifdef RS6000
-   int		nsarray = (nsarr0+64)/512*512 + MAX((nsarr0+64)%512-64,64);
+#if 1
+   int		nsarray = (nsarr0 - 1 | NCACHE - 1) + 1;
 #else
    int		nsarray = nsarr0;
 #endif
@@ -376,31 +523,29 @@ mat_mt		stress;			/* Stress virial		(out) */
  * Arrays for cos & sin (h x(i)), (k y(i)) and (l z(i)) eg chx[h][isite]
  * and pointers to a particular h,k or l eg coshx[is] = chh[2][is]
  */
-   real		**chx = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, hmax, 0, nsarray-1),
-		**cky = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, kmax, 0, nsarray-1),
-		**clz = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, lmax, 0, nsarray-1),
-		**shx = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, hmax, 0, nsarray-1),
-		**sky = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, kmax, 0, nsarray-1),
-		**slz = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, lmax, 0, nsarray-1);
+   real		**chx, **cky, **clz, **shx, **sky, **slz;
+   real		*cshkl;
    real		*coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
-   real		*c1, *s1, *cm1, *sm1;
-   real		*site0, *site1, *site2;
+   real		*cos1x, *cos1y, *cos1z, *sin1x, *sin1y, *sin1z;
+   real		*chg;
    real		*site_fx = site_force[0],
    		*site_fy = site_force[1],
    		*site_fz = site_force[2];
-   real		*qcoskr = dalloc(nsarray),	/* q(i) cos(K.R(i))	      */
-		*qsinkr = dalloc(nsarray);	/* q(i) sin(K.R(i))	      */
+   real		*qcoskr,		/* q(i) cos(K.R(i))	      */
+		*qsinkr;		/* q(i) sin(K.R(i))	      */
    double	vol = det(system->h);	/* Volume of MD cell		      */
    static	double	self_energy,	/* Constant self energy term	      */
    			sheet_energy;	/* Correction for non-neutral system. */
    static	boolean init = true;	/* Flag for the first call of function*/
    static       int     nsitesxf;       /* Number of non-framework sites.     */
+/*
+ * Trig array set-up.  The precise storage layout is to avoid cache conflicts.
+ */
+   cshkl = allocate_arrays(nsarray, hmax, kmax, lmax,
+			   &chx, &cky, &clz, &shx, &sky, &slz, &chg,
+			   &cos1x, &cos1y, &cos1z, &sin1x, &sin1y, &sin1z, 
+			   &qcoskr, &qsinkr);
+   memcp(chg, chgx, nsites*lsizeof(real));
 /*
  * First call only - evaluate self energy term and store for subsequent calls
  * Self energy includes terms for non-framework sites only.
@@ -505,92 +650,12 @@ mat_mt		stress;			/* Stress virial		(out) */
    init = false;
 /*
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
- */
-   sinhx = shx[0]; sinky = sky[0]; sinlz = slz[0];
-   coshx = chx[0]; cosky = cky[0]; coslz = clz[0];
-VECTORIZE
-   for(is = ns0; is < ns1; is++)
-   {
-      coshx[is] = cosky[is] = coslz[is] = 1.0;
-      sinhx[is] = sinky[is] = sinlz[is] = 0.0;
-   }      
-
-   site0 = site[0]; site1 = site[1]; site2 = site[2];
-   if( hmax >= 1 )
-   {
-      coshx = chx[1]; sinhx = shx[1];
-VECTORIZE
-      for(is = ns0; is < ns1; is++)
-      {
-	 kx = astar[0]*site0[is]+astar[1]*site1[is]+astar[2]*site2[is];
-	 coshx[is] = cos(kx); sinhx[is] = sin(kx);
-      }
-   }
-   if( kmax >= 1 )
-   {
-      cosky = cky[1]; sinky = sky[1];
-VECTORIZE
-      for(is = ns0; is < ns1; is++)
-      {
-	 ky = bstar[0]*site0[is]+bstar[1]*site1[is]+bstar[2]*site2[is];
-	 cosky[is] = cos(ky); sinky[is] = sin(ky);
-      }
-   }
-   if( lmax >= 1 )
-   {
-      coslz = clz[1]; sinlz = slz[1];
-VECTORIZE
-      for(is = ns0; is < ns1; is++)
-      {
-	 kz = cstar[0]*site0[is]+cstar[1]*site1[is]+cstar[2]*site2[is];
-	 coslz[is] = cos(kz); sinlz[is] = sin(kz);
-      }
-   }
-/*
  * Use addition formulae to get sin(h*astar*x)=sin(Kx*x) etc for each site
  */
-   for(h = 2; h <= hmax; h++)
-   {
-      coshx = chx[h];
-      sinhx = shx[h];
-      cm1 = chx[h-1]; sm1 = shx[h-1];
-      c1  = chx[1];   s1  = shx[1];
-VECTORIZE
-      for(is = ns0; is < ns1; is++)
-      {
-	 coss      = cm1[is]*c1[is] - sm1[is]*s1[is];
-	 sinhx[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
-	 coshx[is] = coss;
-      }
-   }
-   for(k = 2; k <= kmax; k++)
-   {
-      cosky = cky[k];
-      sinky = sky[k];
-      cm1 = cky[k-1]; sm1 = sky[k-1];
-      c1  = cky[1];   s1  = sky[1];
-VECTORIZE
-      for(is = ns0; is < ns1; is++)
-      {
-	 coss      = cm1[is]*c1[is] - sm1[is]*s1[is];
-	 sinky[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
-	 cosky[is] = coss;
-      }
-   }
-   for(l = 2; l <= lmax; l++)
-   {
-      coslz = clz[l];
-      sinlz = slz[l];
-      cm1 = clz[l-1]; sm1 = slz[l-1];
-      c1  = clz[1];   s1  = slz[1];
-VECTORIZE
-      for(is = ns0; is < ns1; is++)
-      {
-	 coss      = cm1[is]*c1[is] - sm1[is]*s1[is];
-	 sinlz[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
-	 coslz[is] = coss;
-      }
-   }
+   trig_recur(chx,shx,sin1x,cos1x,site[0],site[1],site[2],astar,hmax,ns0,ns1);
+   trig_recur(cky,sky,sin1y,cos1y,site[0],site[1],site[2],bstar,kmax,ns0,ns1);
+   trig_recur(clz,slz,sin1z,cos1z,site[0],site[1],site[2],cstar,lmax,ns0,ns1);
+
 #if defined(SPMD) && defined(MPPMANY)
    par_collect_all(chx[0]+ns0, chx[0], nsnode, nsarray, hmax+1);
    par_collect_all(shx[0]+ns0, shx[0], nsnode, nsarray, hmax+1);
@@ -670,9 +735,11 @@ VECTORIZE
       for(is = 0; is < nsitesxf; is++)
       {
 	 force_comp = qsinkr[is]*sqcoskr - qcoskr[is]*sqsinkr;
-	 site_fx[is] += kv0 * force_comp;
-	 site_fy[is] += kv1 * force_comp;
-	 site_fz[is] += kv2 * force_comp;
+	 sfx =  site_fx[is] + kv0 * force_comp;
+	 sfy =  site_fy[is] + kv1 * force_comp;
+	 site_fz[is] +=       kv2 * force_comp;
+	 site_fx[is] = sfx;
+	 site_fy[is] = sfy;
       }
 /*
  *  Framework sites -- only interact with non-framework sites
@@ -681,9 +748,11 @@ VECTORIZE
       for(is = nsitesxf; is < nsites; is++)
       {
 	 force_comp = qsinkr[is]*sqcoskrn - qcoskr[is]*sqsinkrn;
-	 site_fx[is] += kv0 * force_comp;
-	 site_fy[is] += kv1 * force_comp;
-	 site_fz[is] += kv2 * force_comp;
+	 sfx =  site_fx[is] + kv0 * force_comp;
+	 sfy =  site_fy[is] + kv1 * force_comp;
+	 site_fz[is] +=       kv2 * force_comp;
+	 site_fx[is] = sfx;
+	 site_fy[is] = sfy;
       }
 /*
  * End of loop over K vectors.
@@ -691,6 +760,6 @@ VECTORIZE
    }
    afree((gptr*)chx); afree((gptr*)cky); afree((gptr*)clz); 
    afree((gptr*)shx); afree((gptr*)sky); afree((gptr*)slz);
-   xfree(qcoskr); xfree(qsinkr);
+   xfree(cshkl);
    xfree(hkl);
 }
