@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ *       Revision 2.8.2.1  2000/12/11 12:33:36  keith
+ *       Incorporated site-pbc branch "bekker" into main "Beeman" branch.
+ *
  *       Revision 2.8.4.1  2000/12/07 15:58:29  keith
  *       Mainly cosmetic minor modifications and added special comments to
  *       shut lint up.
@@ -144,7 +147,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.8.4.1 2000/12/07 15:58:29 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.8.2.1 2000/12/11 12:33:36 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -461,6 +464,7 @@ mat_mt		stress_vir;	/* 'Potential' part of stress, or virial      */
    int		ispec, ipe;
    double	e, tot_ke = 0.0, tot_pe = 0.0;
    int		i, j, k;
+   int		tdof = 0;
    mat_mt	ke_dyad,
                 stress;
    double	vol = det(system->h);
@@ -472,13 +476,17 @@ mat_mt		stress_vir;	/* 'Potential' part of stress, or virial      */
    }
 
    for (spec = species; spec < &species[system->nspecies]; spec++)
+      if( ! spec->framework )
+	 tdof += 3*spec->nmols;
+
+   for (spec = species; spec < &species[system->nspecies]; spec++)
    {
       ispec = spec-species;
       e = trans_ke(system->h, spec->vel, spec->mass, spec->nmols);
       add_average(CONV_E * e, tke_n, ispec);	/* c of m  kinetic energy     */
       tot_ke += e;
 
-      add_average(e/(1.5*spec->nmols*kB), tt_n, ispec);
+      add_average(e/(1.5*spec->nmols*kB)*tdof/(tdof-3), tt_n, ispec);
 						/* c of mass temp.	      */
       if(spec->rdof > 0)			/* Only if polyatomic species */
       {

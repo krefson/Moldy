@@ -25,6 +25,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.19.2.5  2001/03/07 11:03:33  keith
+ *       Retrofitted molecular PBC capability
+ *       Updated example files.
+ *
  *       Revision 2.19.2.4  2001/03/02 11:09:23  keith
  *       Fixed minor lint message.
  *
@@ -261,7 +265,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.19.2.4 2001/03/02 11:09:23 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.19.2.5 2001/03/07 11:03:33 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -523,10 +527,21 @@ spec_mp		species;
    double          ttemp = 0.0, rtemp = 0.0;
 
    for(spec=species, ispec = 0; ispec < nspecies; spec++, ispec++)
+      if( ! spec->framework )
+      {
+	 rdof += spec->rdof*spec->nmols;
+	 tdof += 3*spec->nmols;
+      }
+
+   for(spec=species, ispec = 0; ispec < nspecies; spec++, ispec++)
    {
+      /*
+       * Definition of species trans temp includes factor of (3N/(3N-3))
+       * to be consistent with total temp - only 3N-3 d.o.f.
+       */
       temp_value[2*ispec  ] = 
-	 trans_ke(sys->h, spec->velp, spec->mass, spec->nmols)
-	 /(1.5*spec->nmols*kB);
+	 trans_ke(sys->h, spec->velp, spec->mass, spec->nmols)*tdof
+	 /(1.5*spec->nmols*kB*(tdof-3));
       if(spec->rdof > 0)                       /* Only if polyatomic species */
          temp_value[2*ispec+1] = 
 	    rot_ke(spec->quat, spec->qdotp, spec->inertia, spec->nmols)
@@ -568,9 +583,7 @@ spec_mp		species;
 	 if( ! spec->framework )
 	 {
 	    ttemp += 3*spec->nmols*temp_value[2*ispec  ]; 
-	    tdof += 3*spec->nmols;
 	    rtemp += spec->rdof*spec->nmols*temp_value[2*ispec+1]; 
-	    rdof += spec->rdof*spec->nmols;
 	 }
       ttemp /= tdof;
       if( rdof > 0 )
