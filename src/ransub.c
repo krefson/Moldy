@@ -26,7 +26,10 @@ what you give them.   Help stamp out software-hoarding! */
  *		Output written in Moldy system specification format		      *
  ************************************************************************************** 
  *  Revision Log
- *  $Log$
+ *  $Log: ransub.c,v $
+ *  Revision 1.18  2004/11/22 18:21:10  kr
+ *  Merget "util_updates" branch into main
+ *
  *  Revision 1.17.10.8  2004/05/07 07:39:43  moldydv
  *  Now uses eigensort to find principal frame.
  *
@@ -166,7 +169,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/ransub.c,v 1.18 2004/11/22 18:21:10 kr Exp $";
 #endif  
 
 #include "defs.h"
@@ -548,8 +551,8 @@ void
 calc_quat(quat_mt q, vec_mt *sites, vec_mt *p_f_sites, int n)
 {
  int i, j;
- double x[3][n];
- double y[3][n];
+ double **x = (double**)arralloc(sizeof(double), 2, 0, 2, 0, n);
+ double **y = (double**)arralloc(sizeof(double), 2, 0, 2, 0, n);
  double xxyx, xxyy, xxyz;
  double xyyx, xyyy, xyyz;
  double xzyx, xzyy, xzyz;
@@ -611,6 +614,9 @@ calc_quat(quat_mt q, vec_mt *sites, vec_mt *p_f_sites, int n)
  q[1] = v[1][3];
  q[2] = v[2][3];
  q[3] = v[3][3];
+
+ afree(x);
+ afree(y);
 }
 /******************************************************************************
  * sys_spec_out().  Write a system configuration to stdout in the form of a   *
@@ -633,8 +639,8 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    int          max_id = system->max_id; /* Total no of different sites in system */
    int          dflag = 0;
    int		namelength = 0;
-   vec_mt       p_f_sites[dopant->nsites];  /* Dopant site positions in principal frame */
-   vec_mt       dopant_sites[dopant->nsites]; /* Site positions of single dopant molecule */
+   vec_mt       *p_f_sites = ralloc(dopant->nsites);  /* Dopant site positions in principal frame */
+   vec_mt       *dopant_sites = ralloc(dopant->nsites); /* Site positions of single dopant molecule */
    quat_mt      quaternion;
    boolean	polymol;
    vec_mt       *site = ralloc(dopant->nsites);
@@ -642,8 +648,8 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    vec_mt       solute_pos;     /* Position vector of dopant relative to solvent cofm */
    mat_mt       rot_mat;        /* Rotation matrix */
    real		inertia[6];     /* Inertia tensor for rot to principal frame */
-   double	mass[dopant->nsites];	/* Temporary storage for dopant site mass */
-   int		num_site[max_id]; /* No of each site type */
+   double	*mass=dalloc(dopant->nsites);	/* Temporary storage for dopant site mass */
+   int		*num_site = ialloc(max_id); /* No of each site type */
    vec_mt	mult;	/* Factor for multiplying positions after eigensort (+1 or -1) */
 
    zero_real(solvent_pos,3);
@@ -889,6 +895,10 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    (void)printf("end\n");
 
    afree((gptr*) site);
+   afree((gptr*) p_f_sites);
+   afree((gptr*) dopant_sites);
+   xfree(mass);
+   xfree(num_site);
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
 }
@@ -1460,5 +1470,8 @@ main(int argc, char **argv)
     default:
       break;
     }
+
+   afree(dopsite);
+   afree(totsite);
    return 0;
 }
