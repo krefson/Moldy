@@ -37,6 +37,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *
+ *      Revision 2.14  1999/10/08 10:49:39  keith
+ *      Added checks to behave sensibly if rdf-interval changed during accumulation
+ *      of RDF data upon restart and to discard excess data if begin-rdf changed.
+ *      Added "validate_control()" to perform some simple checks on (usually sign of)
+ *      input parameters.
+ *
  *      Revision 2.13  1998/05/07 17:06:11  keith
  *      Reworked all conditional compliation macros to be
  *      feature-specific rather than OS specific.
@@ -241,7 +248,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/startup.c,v 2.13 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/startup.c,v 2.15 1999/10/08 15:49:58 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -1047,6 +1054,8 @@ void validate_control()
       message(&nerrs, NULLP, ERROR, INVVLF, control.limit, "rdf-limit");
    if( control.subcell < 0.0 )
       message(&nerrs, NULLP, ERROR, INVVLF, control.subcell, "subcell");
+   if( control.const_pressure < 0 || control.const_pressure > 2 )
+      message(&nerrs, NULLP, ERROR, INVVAL, control.const_pressure, "const-pressure");
    if( control.const_temp < 0 || control.const_temp > 2 )
       message(&nerrs, NULLP, ERROR, INVVAL, control.const_temp, "const-temp");
    if( control.rtmass < 0.0 )
@@ -1096,14 +1105,13 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
    long		old_rdf_interval;	/* To check if altered on restart     */
    long		old_rdf_out;		/* To check if altered on restart     */
    long		old_begin_rdf;		/* To check if altered on restart     */
+   int		old_const_pressure;     /* To check if altered on restart     */
    boolean	flag;			/* Used to test 'fseek'		      */
    long		pos;			/* Where control info starts on input */
    restrt_mt	backup_header;		/* To read backup file header into    */
    contr_mt	backup_control;		/* Control struct from backup file    */
    quat_mt	*qpf=0;			/* Quat of rotation to princ. frame   */
    int		av_convert;		/* Flag for old-fmt averages in restrt*/
-   int          *rdf_base;
-   int          rdf_size;
    int		i;
    *backup_restart = 0;
    (void)memst(restart_header,0,sizeof(*restart_header));
@@ -1139,6 +1147,7 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
       old_rdf_interval	     = control.rdf_interval;
       old_begin_rdf	     = control.begin_rdf;
       old_rdf_out	     = control.rdf_out;
+      old_const_pressure     = control.const_pressure;
       conv_control(&prog_unit, false);
       control.scale_end     -= control.istep;		/* These parameters   */
       control.begin_average -= control.istep;		/* are respecified    */
@@ -1301,9 +1310,11 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
       control.begin_rdf     += control.istep;
       control.begin_dump    += control.istep;
       control.nsteps	    += control.istep;
-      if( control.maxdumps != old_max_dumps ||		/* Need to restart    */
-	  control.dump_interval != old_dump_interval )	/* dump seq if changed*/
+      if( control.istep >= control.begin_dump && 
+	  (control.maxdumps != old_max_dumps ||		/* Need to restart    */
+	   control.dump_interval != old_dump_interval) )/* dump seq if changed*/
       {
+	 message(NULLI, NULLP, WARNING, DMPAL2);
          control.begin_dump = control.istep + 1;	/* Set new beginning  */
       }
 
@@ -1359,6 +1370,11 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
       for(i = 0; i < 9; i++)		/* Zap cell velocities if constrained */
 	 if( (control.strain_mask >> i) & 1 )
 	    system->hddot[0][i] = system->hddoto[0][i] = system->hdot[0][i] = 0;
+      if(control.const_pressure == 2 && old_const_pressure == 1) 
+      {                      /* Enforce consistency if const-p method changed */
+	 for(i = 0; i < 9; i++)		           /* Zap cell velocities etc */
+	    system->hddot[0][i] = system->hddoto[0][i] = system->hdot[0][i] = 0;
+      }
 
       (void)fclose(restart);
       message(NULLI, NULLP, INFO, RESUCC, control.restart_file);
