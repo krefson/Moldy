@@ -1,20 +1,41 @@
+TODO
+====
+
 Unpack into own directory.
 Update restart with "xdr-xizeof" -- implement a replacement.
 Eliminate extra args for kernel.
 Take DEBUG_THERMOSTAT out of accel.c
-Ensure that "will be scaled" message in banner page printed only if
-   istep <= scale-end.
 Get rid of system header -subst files?
 
 Dump legacy restart file reading.
+
+NPL version should test for 2.16 restart file and refuse to read....
+
+Fix T3E version - don't use MPI_ABORT as it dumps core
+
+Zap value of save-file when written to avoid overwriting?  Or test for
+restart-file and save-file being identical and handle?
+
+Get Configure to select options better, eg mpicc where underlying
+compiler is Portland.
+
+DONE
+====
+
+Ensure that "will be scaled" message in banner page printed only if
+   istep <= scale-end.
 
 Update UNKPOT message in messages.h.
 QNORM2 & UNKPOT should be changed.
 WDPTR missing a space and incorrect (%ul)
 
-Fix alloc.c to work for systems where sizeof(float) < sizeof(int), namely T3E.
-Use "configure"?
+Fix alloc.c to work for systems where sizeof(float) < sizeof(int),
+namely T3E. Use "configure"?
 
 Add #procs messages to timing output.
 
-NPL version should test for 2.16 restart file and refuse to read....
+Fix "scaling" message in banner page not to print if scaling not to be
+performed.
+
+Fix "rescale" to fix Deng/Ca sim problem.
+
