@@ -43,6 +43,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.16  2000/11/09 16:28:03  keith
+ *       Updated dump file format for new Leapfrog dynamics\nAdded #molecules etc to dump header format
+ *
  *       Revision 2.15  2000/11/06 16:02:05  keith
  *       First working version with a Nose-Poincare thermostat for rigid molecules.
  *
@@ -195,7 +198,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.15 2000/11/06 16:02:05 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.16 2000/11/09 16:28:03 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -220,6 +223,7 @@ void            vscale( int,  double,  real *, int); /* Vector* const multiply *
 static void	dump_convert(float *, system_mp, vec_mt (*), vec_mt (*), 
 			     mat_mt, double );
 static void	real_to_float(real *b, float *a, int n);
+static void	avel_to_float(quat_mt *b, float *a, int n, double ts);
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
 /*========================== External data references ========================*/
@@ -590,10 +594,8 @@ static void	dump_convert(float *buf, system_mp system, vec_mt (*force),
       real_to_float(scale_buf[0],    buf, 3*nmols);	buf += 3*nmols;
       if( system->nmols_r > 0 )
       {
-	 real_to_float(system->avel[0], buf, 4*nmols_r);
-	 for(i=0; i < 4*nmols_r; i++)
-	    buf[i] /= system->ts;
-	 buf += 4*nmols_r;
+	 avel_to_float(system->avel, buf, nmols_r, 1.0/system->ts);
+	 buf += 3*nmols_r;
       }
       real_to_float(system->hdot[0],    buf, 9);	buf += 9;
       real_to_float(&system->tsmom, buf, 1);		buf += 1;
@@ -619,4 +621,17 @@ static void	real_to_float(real *b, float *a, int n)
    int i;
    for( i=0; i<n; i++)
       a[i] = b[i];
+}
+/******************************************************************************
+ *  avel_to_float  Copy data from angular velocity array of quaternions to    *
+ *  vector, float array.                                                      *
+ ******************************************************************************/
+static void	avel_to_float(quat_mt *b, float *a, int n, double rts)
+{
+   int i,iq;
+   for( iq=0; iq<n; iq++)
+   {
+      for(i=0; i<3; i++)
+	 a[3*iq+i] = b[iq][i+1]*rts;
+   }
 }

@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.15 2000/10/20 15:15:47 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.16 2000/11/09 16:28:03 keith Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.16  2000/11/09 16:28:03  keith
+ * Updated dump file format for new Leapfrog dynamics\nAdded #molecules etc to dump header format
+ *
  * Revision 2.15  2000/10/20 15:15:47  keith
  * Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
  *
@@ -283,7 +286,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * Version ID strings
  */
 #define          REVISION         "$Name:  $"
-#define		 REVISION_DATE    "$Date: 2000/10/20 15:15:47 $"
+#define		 REVISION_DATE    "$Date: 2000/11/09 16:28:03 $"
 #define		 REVISION_STATE   "$State: Exp $"
 
 #ifdef HAVE_CONFIG_H
@@ -486,8 +489,6 @@ typedef vec_mt	*mat_mp;
 #endif
 /*========================== Dump ==========================================*/
 #define DUMP_SIZE(level, n, n_r)  \
-   			 (( (level & 1) + (level>>1 & 1) ) * \
-                                    (3*n + 4*n_r + 9 + 1)+ \
-                             (level>>3 & 1) * \
-                                    (3*n + 3*n_r + 9) +\
-                             (level & 1))
+   			 (( (level & 1)    * (3*n + 4*n_r + 9 + 2)+ \
+			    (level>>1 & 1) * (3*n + 3*n_r + 9 + 1)+ \
+                            (level>>3 & 1) * (3*n + 3*n_r + 9) ))

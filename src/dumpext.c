@@ -234,17 +234,17 @@ main(int argc, char **argv)
 #endif
    
    static cpt_mt cpt[] = {{3, 0, 3, 1, "C of M positions"},
-			 {4, 0, 4, 1, "quaternions"},
-			 {9, 0, 1, 0, "unit cell matrix"},
-			 {1, 0, 1, 0, "Thermostat variable"},
-			 {1, 0, 1, 0, "potential energy"},
-			 {3, 0, 3, 1, "C of M velocities"},
-			 {4, 0, 4, 1, "angular velocities"},
-			 {9, 0, 1, 0, "unit cell velocities"},
-			 {1, 0, 1, 0, "Thermostat momentum"},
-			 {3, 0, 3, 1, "C of M forces"},
-			 {3, 0, 3, 1, "torques"},
-			 {9, 0, 1, 0, "stress tensor"} };
+			  {4, 0, 4, 1, "quaternions"},
+			  {9, 0, 1, 0, "unit cell matrix"},
+			  {1, 0, 1, 0, "Thermostat variable"},
+			  {1, 0, 1, 0, "potential energy"},
+			  {3, 0, 3, 1, "C of M velocities"},
+			  {3, 0, 3, 1, "angular velocities"},
+			  {9, 0, 1, 0, "unit cell velocities"},
+			  {1, 0, 1, 0, "Thermostat momentum"},
+			  {3, 0, 3, 1, "C of M forces"},
+			  {3, 0, 3, 1, "torques"},
+			  {9, 0, 1, 0, "stress tensor"} };
 #define NCPT (int)(sizeof(cpt)/sizeof(cpt_mt))
 
    static int level_mask[16] = {  0x0000,0x001f,0x01e0,0x01ff,

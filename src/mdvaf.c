@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdvaf.c,v 1.8 2000/04/27 17:57:10 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdvaf.c,v 1.9 2000/11/09 16:54:13 keith Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,9 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdvaf.c,v 1.8 
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.9  2000/11/09 16:54:13  keith
+ *  Updated utility progs to be consistent with new dump format
+ *
  *  Revision 1.8  2000/04/27 17:57:10  keith
  *  Converted to use full ANSI function prototypes
  *
@@ -80,18 +83,20 @@ gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 
 #define DOTPROD(x,y)   ((x[0]*y[0])+(x[1]*y[1])+(x[2]*y[2]))
 
-void	make_sites(real (*h)[3], vec_mp c_of_m_s, quat_mp quat, vec_mp p_f_sites, int framework, real **site, int nmols, int nsites);
 char	*strlower(char *s);
-void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_info, pot_mp *pot_ptr);
-void	initialise_sysdef(system_mp system, spec_mt *species, site_mt *site_info, quat_mt (*qpf));
+void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, 
+                    site_mp *site_info, pot_mp *pot_ptr);
+void	initialise_sysdef(system_mp system, spec_mt *species, site_mt *site_info, 
+                          quat_mt (*qpf));
 void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr);
-void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr);
+void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr, 
+                     site_mp *site_info, pot_mp *pot_ptr);
 void	allocate_dynamics(system_mp system, spec_mt *species);
 void	read_restart(FILE *restart, char *vsn, system_mp system, int av_convert);
-void	init_averages(int nspecies, char *vsn, long int roll_interval, long int old_roll_interval, int *av_convert);
+void	init_averages(int nspecies, char *vsn, long int roll_interval, 
+   long int old_roll_interval, int *av_convert);
 int	getopt(int, char *const *, const char *);
 gptr	*talloc(int n, size_mt size, int line, char *file);
-void	zero_real(real *r, int n);
 void	tfree(gptr *p);
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
@@ -99,49 +104,24 @@ contr_mt                control;
 
 #define VAF  0
 #define VTF  1
-
-/******************************************************************************
- * vel_to_moldy.  Fill the 'system' velocity arrays with the dump data in     *
- * 'buf' (see dump.c for format), expanding floats to doubles if necessary.   *
- ******************************************************************************/
-void
-vel_to_moldy(float *buf, system_mt *system)
+void	zero_float(float *r, int n)
 {
    int i;
-   float        *vel    = buf;
+   for(i=0; i < n; i++)
+      r[i] = 0.0;
+}
 
-/* $dir no_recurrence */
-   for(i = 0; i < system->nmols; i++)
-   {
-      system->vel[i][0] = vel[3*i];
-      system->vel[i][1] = vel[3*i+1];
-      system->vel[i][2] = vel[3*i+2];
-   }
-}
-/******************************************************************************
- * vel_copy().  Copy molecular c_of_m velocities to array                     * 
- ******************************************************************************/
-void
-vel_copy(spec_mt *species, vec_mt (*vel), int *sp_range)
-{
-   spec_mt	*spec;
-   int		i, imol, totmol=0;
- 
-   for( spec = species+sp_range[0]; spec <= species+sp_range[1]; spec+=sp_range[2])
-     for( imol = 0; imol < spec->nmols; totmol++, imol++)
-	   for( i = 0; i < 3; i++)
-	      vel[totmol][i] = spec->vel[imol][i];
-}
 /***********************************************************************
  * vaf_calc. Calculate vaf from velocity array		               *
  ***********************************************************************/    
 void
-vaf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc, int max_av, int it_inc, vec_mt (**vel), real **vaf)
+vaf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc, 
+	 int max_av, int it_inc, float (**vel)[3], float **vaf)
 {
    int it, irec, totmol, ivaf, ispec, imol;
-   real		vaftmp;
+   float		vaftmp;
    spec_mp      spec;
-   vec_mt	*vel0, *vel1;
+   float	(*vel0)[3], (*vel1)[3];
 
    /* Outer loop for selecting initial time slice */
    for(it = 0; it <= (max_av-1)*it_inc; it+=it_inc)
@@ -167,12 +147,13 @@ vaf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc, int
  * vtf_calc. Calculate vtf from velocity array		               *
  ***********************************************************************/    
 void
-vtf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc, int max_av, int it_inc, vec_mt (**vel), real **vtf)
+vtf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc, 
+	 int max_av, int it_inc, float (**vel)[3], float **vtf)
 {
    int it, irec, totmol, ivtf, ispec, imol, i;
    spec_mp      spec;
-   vec_mt	*vel0, *vel1;
-   vec_mt	vtftmp0, vtftmp1;
+   float	(*vel0)[3], (*vel1)[3];
+   float	vtftmp0[3], vtftmp1[3];
 
    /* Outer loop for selecting initial time slice */
    for(it = 0; it <= (max_av-1)*it_inc; it+=it_inc)
@@ -203,7 +184,7 @@ vtf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc, int
  * vaf_out().  Output routine for displaying vaf results                      *
  ******************************************************************************/
 void
-vaf_out(spec_mt *species, real **vaf, int max_av, int nvaf, int *sp_range)
+vaf_out(spec_mt *species, float **vaf, int max_av, int nvaf, int *sp_range)
 {
    int          ispec=0, ivaf;
    spec_mp      spec;
@@ -228,12 +209,10 @@ vaf_out(spec_mt *species, real **vaf, int max_av, int nvaf, int *sp_range)
  * Call: mdvaf [-s sys-spec-file] [-r restart-file] [-d dump-file] 	      *
  * If not specified on command line, user is interrogated.		      *
  ******************************************************************************/
-contr_mt		control;
-
 int
 main(int argc, char **argv)
 {
-   int	c, cflg = 0, ans_i, sym = 0;
+   int	aflg = 0,c, cflg = 0, ans_i, sym = 0;
    char 	line[80];
    extern char	*optarg;
    int		errflg = 0;
@@ -253,16 +232,16 @@ main(int argc, char **argv)
    int		dump_size;
    float	*dump_buf;
    FILE		*Fp, *Dp;
+   system_mt    sys;
+   spec_mt      *species;
    restrt_mt	restart_header;
-   system_mt	sys;
-   spec_mt	*species;
-   vec_mt       **vel;
-   site_mt	*site_info;
-   pot_mt	*potpar;
+   site_mt      *site_info;
+   pot_mt       *potpar;
+   float        (**vel)[3];
    quat_mt	*qpf;
-   contr_mt	control_junk;
+   contr_mt	control, control_junk;
    int          nvaf, max_av, nspecies;
-   real         **vaf;
+   float         **vaf;
 
 #define MAXTRY 100
    control.page_length=1000000;
@@ -274,9 +253,12 @@ main(int argc, char **argv)
      outsw = VAF;
 
 
-   while( (c = getopt(argc, argv, "cr:s:d:t:v:i:g:o:q") ) != EOF )
+   while( (c = getopt(argc, argv, "acr:s:d:t:v:i:g:o:q") ) != EOF )
       switch(c)
       {
+       case 'a':
+	 aflg++;
+	 break;
        case 'c':
          cflg++;
          break;
@@ -322,7 +304,7 @@ main(int argc, char **argv)
    if( errflg )
    {
       fprintf(stderr,
-         "Usage: %s [-s sys-spec-file |-r restart-file] [-c] ",comm);
+         "Usage: %s [-s sys-spec-file |-r restart-file] [-a] [-c] ",comm);
       fputs("-d dump-files -t s[-f[:n]] [-v s[-f[:n]]] ",stderr);
       fputs("[-g s[-f[:n]]] [-i init-inc] [-q] [-o output-file]\n",stderr);
       exit(2);
@@ -375,7 +357,6 @@ main(int argc, char **argv)
     default:
       error("Internal error - invalid input type", "");
    }
-   allocate_dynamics(&sys, species);
 
   /* Dump dataset			      */
    if( dump_name == 0 )
@@ -515,23 +496,23 @@ main(int argc, char **argv)
    dump_size = 3*sys.nmols*sizeof(float);
 
   /* Allocate memory for velocity data and zero */
-   vel = (vec_mt**)arralloc(sizeof(vec_mt),2,0,nslices-1,0,sys.nmols-1);
-   zero_real(vel[0][0], nslices*sys.nmols*3);
+   vel = (float (**)[3])arralloc(sizeof(float[3]),2,0,nslices-1,0,sys.nmols-1);
+   zero_float(vel[0][0], nslices*sys.nmols*3);
 
    if( (dump_buf = (float*)malloc(dump_size)) == 0)
       error("malloc failed to allocate dump record buffer (%d bytes)",
           dump_size);
 #if defined (HAVE_POPEN) 
-   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 5 -t %d-%d:%d %s",
-        sys.nmols, sys.nmols_r, start, finish, inc, dump_name);
+   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d %s",
+        sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, dump_name);
    
    if( (Dp = popen(dumpcommand,"r")) == 0)
         error("Failed to execute \'dumpext\" command - \n%s",
             strerror(errno));
 #else
    tempname = tmpnam((char*)0);
-   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 5 -t %d-%d:%d -o %s %s",
-         sys.nmols, sys.nmols_r, start, finish, inc, tempname, dump_name);
+   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d -o %s %s",
+         sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, tempname, dump_name);
    system(dumpcommand);
    if( (Dp = fopen(tempname,"rb")) == 0)
         error("Failed to open \"%s\"",tempname);
@@ -543,9 +524,7 @@ main(int argc, char **argv)
         if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
            error("Error reading record %d in dump file - \n%s\n",
               irec, strerror(errno));
-        vel_to_moldy(dump_buf, &sys);  /*read dump data */
-        vel_copy(species, vel[irec/inc], sp_range);  /* copy to velocity-time array */
-
+	memcpy(vel[irec/inc], dump_buf, dump_size);
 #ifdef DEBUG
         fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
 	   irec, dump_name);
@@ -567,8 +546,8 @@ main(int argc, char **argv)
      if (max_av < 1)
           max_av = 1;
 
-     vaf = (real**)arralloc(sizeof(real),2,0,nvaf-1,0,nspecies-1);
-     zero_real(vaf[0],nvaf*nspecies);
+     vaf = (float**)arralloc(sizeof(float),2,0,nvaf-1,0,nspecies-1);
+     zero_float(vaf[0],nvaf*nspecies);
 
   /* Calculate and print vaf/vtf values */
      if( outsw )
