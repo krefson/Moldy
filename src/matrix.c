@@ -30,7 +30,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * invert()		Invert a 3x3 matrix				      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	matrix.c,v $
+ *       $Log: matrix.c,v $
+ * Revision 2.5  1994/01/18  13:32:44  keith
+ * Null update for XDR portability release
+ *
  * Revision 2.3  93/10/28  10:28:00  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -74,7 +77,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/matrix.c,v 2.3 93/10/28 10:28:00 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/matrix.c,v 2.5 1994/01/18 13:32:44 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -121,7 +124,7 @@ VECTORIZE
          in_vec[i][2] = m[2][0]*a0 + m[2][1]*a1 + m[2][2]*a2;
       }
    }
-   else if(ABS(in_vec-out_vec) >= number) /* parameters are distinct arrays  */
+   else 				 /* parameters are distinct arrays  */
    {
 VECTORIZE
       for(i = 0; i < number; i++)
@@ -133,8 +136,11 @@ VECTORIZE
          out_vec[i][2] = m[2][0]*a0 + m[2][1]*a1 + m[2][2]*a2;
       }
    }
+#if 0
+   /* Can not test for overlap portably in ANSI C.			*/
    else			/* in_vec and out_vec overlap, but are not identical  */
       message(NULLI, NULLP, FATAL, OVRLP1, in_vec, out_vec, number);
+#endif
 }
 /******************************************************************************
  * mat_mul   Multiply two 3 x 3 matrices. Result can NOT overwrite input.     *
