@@ -19,9 +19,16 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.20.2.2 2001/08/03 14:25:31 keith Exp $
+ * $Header: /usr/users/kr/CVS/moldy/src/defs.h,v 2.21.2.1 2002/03/13 10:27:52 kr Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.21.2.1  2002/03/13 10:27:52  kr
+ * Trial version incorporating reciprocal-space summation for r^-2 and r^-6
+ * interactions.  This version implements a new potential "genpot46" to activate.
+ *
+ * Revision 2.21  2001/08/03 14:29:53  keith
+ * Made AUtomake branch main branch.
+ *
  * Revision 2.20.2.2  2001/08/03 14:25:31  keith
  * Further tidied up use of automake and configure scripts, with
  * associated changes in some program files.
@@ -318,7 +325,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * Version ID strings
  */
 #define          REVISION         "$Name:  $"
-#define		 REVISION_DATE    "$Date: 2001/08/03 14:25:31 $"
+#define		 REVISION_DATE    "$Date: 2002/03/13 10:27:52 $"
 #define		 REVISION_STATE   "$State: Exp $"
 
 #ifdef HAVE_CONFIG_H
@@ -475,6 +482,9 @@ what you give them.   Help stamp out software-hoarding!  */
 #define ALPHAMIN	1e-7
 /* Fundamental constants '_' denotes MKS units.  SHOULD NEVER BE ALTERED      */
 #define	PI		3.14159265358979323846
+#define PISQ		(PI*PI)
+#define ROOTPI		1.77245385090551602729
+#define PI32		(PI*ROOTPI)
 #define DTOR		(PI/180.0)
 #ifdef OLDCONSTS
 #define	_kB		1.380662e-23

@@ -179,14 +179,8 @@
 # undef _ALL_SOURCE
 #endif
 
-/* Define to `long' if <sys/types.h> does not define. */
-#undef clock_t
-
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const
 
 /* Define to `unsigned' if <sys/types.h> does not define. */
 #undef size_t
-
-/* Define to `long' if <sys/types.h> does not define. */
-#undef time_t
