@@ -35,6 +35,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: leapfrog.c,v $
+ *       Revision 2.14  2001/07/02 11:30:32  keith
+ *       Fixed error in leapf_quat_b which broke symmetry, symplecticity etc.
+ *
  *       Revision 2.13  2001/06/28 15:48:23  keith
  *       Fixed bug in implementation of Nose-poincare thermostat to do with
  *       update of smom in rotational update stage.
@@ -95,7 +98,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.13 2001/06/28 15:48:23 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.14 2001/07/02 11:30:32 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -519,6 +522,17 @@ void gleap_therm(double step, real mass, real gkt, real *s, real *smom)
    *smom = leapf_smom_a(step, *s, *smom, mass, gkt );
    *s    = leapf_s     (step, *s, *smom, mass);
    *smom = leapf_smom_b(step, *s, *smom, mass, gkt);
+}
+/******************************************************************************
+ * gleap_therm.  Update thermostat variable and momenta using Nose's exact    *
+ *    solution for H=s*pi^2/2*Q.					      *
+ ******************************************************************************/
+void gleap_therm_n(double step, real mass, real *s, real *smom)
+{
+   double scale= (1.0+*smom*step/(2.0*mass));
+
+   *smom /= scale;
+   *s    *= scale*scale;
 }
 /******************************************************************************
  * gleap_cell. Update cell variable and momenta using generalized leapfrog    *
