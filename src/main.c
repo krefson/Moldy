@@ -27,6 +27,15 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  * $Log: main.c,v $
+ * Revision 2.11  1996/03/19 15:48:22  keith
+ * *** empty log message ***
+ *
+ * Revision 2.10  1996/01/15 16:54:43  keith
+ * De lint-ed code, added prototypes etc.
+ *
+ * Made averages calculation output on thread zero only.
+ * Added code for parallel RDF calculation, summing data from each thread
+ *
  * Revision 2.9  1995/10/25 11:59:45  keith
  * Added test to avoid attemted open of backup file with null name.
  *
@@ -147,7 +156,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/main.c,v 2.10 1996/01/15 15:15:50 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/main.c,v 2.11 1996/03/19 15:48:22 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -398,10 +407,9 @@ char	*argv[];
 	 (void)remove(control.backup_file);		/* Get rid of backup */
 
       rmlockfiles();
+      printf(" *I* Run used %.2fs of CPU time and %.2fs elapsed\n", 
+	     cpu()-cpu_base, rt_clock()-rt);
    }
-   (void)fflush(stdout);
-   printf(" *I* Run used %.2fs of CPU time and %.2fs elapsed\n", cpu()-cpu_base,
-	   rt_clock()-rt);
 #ifdef SPMD
    par_finish();
 #endif
