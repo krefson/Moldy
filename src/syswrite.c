@@ -25,6 +25,9 @@ what you give them.   Help stamp out software-hoarding! */
  **************************************************************************************
  *  Revision Log
  *  $Log: syswrite.c,v $
+ *  Revision 2.6.10.4  2004/12/06 19:12:44  cf
+ *  Removed unused variables and general tidying up.
+ *
  *  Revision 2.6.10.3  2004/04/09 06:02:55  moldydv
  *  Moved xtoupper definition to utlsup.h
  *
@@ -68,7 +71,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/syswrite.c,v 2.6.10.3 2004/04/09 06:02:55 moldydv Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/syswrite.c,v 2.6.10.4 2004/12/06 19:12:44 cf Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -296,7 +299,7 @@ main(int argc, char **argv)
    }
 
    zero_real(h[0],9);
-   zero_real(charge,MAX_ATOMS);
+   zero_double(charge,MAX_ATOMS);
    strcpy(spgr,"P 1");
 
    switch(insw)  /* Read in data according to format selected */

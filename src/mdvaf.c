@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.13.10.2 2003/07/31 02:52:45 moldydv Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.13.10.3 2004/12/06 19:08:50 cf Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,13 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.13.10.2 200
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.13.10.3  2004/12/06 19:08:50  cf
+ *  Removed unused variables.
+ *  Removed option -c for skipping control info.
+ *  Formatted output to be similar to msd.
+ *  Choice of angular or linear velocities clearer.
+ *  Automatically calculates x,y,z components.
+ *
  *  Revision 1.13.10.2  2003/07/31 02:52:45  moldydv
  *  System info now read from dump header, not sys-spec or restart files.
  *  Updated function descriptions to reflect this.
@@ -269,6 +276,7 @@ main(int argc, char **argv)
    int		nslices;
    int		dflag, iflag, vflag;
    int		outsw;
+   int		verbose = 0;
    int		irec, ispec, it_inc = 1;
    char         *dump_base = NULL;
    char         *dump_name = NULL, *dump_names = NULL;
@@ -302,7 +310,7 @@ main(int argc, char **argv)
      outsw = VAF;
 
 
-   while( (c = getopt(argc, argv, "ad:t:v:i:g:o:q") ) != EOF )
+   while( (c = getopt(argc, argv, "ad:t:l:i:g:o:qv") ) != EOF )
       switch(c)
       {
        case 'a':  /* Calculate angular velocity function */
@@ -314,7 +322,7 @@ main(int argc, char **argv)
        case 't':  /* Dump file limits */
 	 dumplims = mystrdup(optarg);
          break;
-       case 'v':  /* Limits for vtf/vaf calculation */
+       case 'l':  /* Limits for vtf/vaf calculation */
 	 vaflims = mystrdup(optarg);
          break;
        case 'g':  /* Species selection */
@@ -333,6 +341,8 @@ main(int argc, char **argv)
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error("failed to open file \"%s\" for output", optarg);
 	 break;
+       case 'v':
+         verbose++;
        default:
        case '?':
 	 errflg++;
@@ -341,8 +351,8 @@ main(int argc, char **argv)
    if( errflg )
    {
       fprintf(stderr,"Usage: %s [-a] [-q] ",comm);
-      fputs("-d dump-files -t s[-f[:n]] [-v s[-f[:n]]] ",stderr);
-      fputs("[-g s[-f[:n]]] [-i init-inc] [-o output-file]\n",stderr);
+      fputs("-d dump-files -t s[-f[:n]] [-l s[-f[:n]]] ",stderr);
+      fputs("[-g s[-f[:n]]] [-i init-inc] [-v] [-o output-file]\n",stderr);
       exit(2);
    }
 
@@ -554,7 +564,7 @@ main(int argc, char **argv)
           dump_size);
 #if defined (HAVE_POPEN) 
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d %s",
-        sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, dump_name);
+      verbose?"-v":"", sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, dump_names);
    
    if( (Dp = popen(dumpcommand,"r")) == 0)
         error("Failed to execute \'dumpext\" command - \n%s",
@@ -562,7 +572,7 @@ main(int argc, char **argv)
 #else
    tempname = tmpnam((char*)0);
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d -o %s %s",
-         sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, tempname, dump_name);
+         sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, tempname, dump_names);
    system(dumpcommand);
    if( (Dp = fopen(tempname,"rb")) == 0)
         error("Failed to open \"%s\"",tempname);

@@ -375,6 +375,7 @@ main(int argc, char **argv)
    int		offset, icpt;
    int		idump0;
    int		xdr = 0;
+   int		verbose = 0;
    dump_sysinfo_mt *dump_sysinfo;
    size_mt	sysinfo_size;
    
@@ -406,7 +407,7 @@ main(int argc, char **argv)
    mol_head.next = NULL;
    f_head.next = NULL;
 
-   while( (c = getopt(argc, argv, "c:br:R:q:Q:t:m:o:") ) != EOF )
+   while( (c = getopt(argc, argv, "c:br:R:q:Q:t:m:o:v") ) != EOF )
       switch(c)
       {
        case 'c':
@@ -447,6 +448,8 @@ main(int argc, char **argv)
 	    insert(cur, &mol_head);
 	 }	 
 	 break;
+       case 'v':
+         verbose++;
        case '?': 
        case 'h':
 	 errflg++;
@@ -462,7 +465,7 @@ main(int argc, char **argv)
    {
       fprintf(stderr,
 	   "Usage: dumpext [-Rn] [-Qn] [-b] [-c cpt]\
- [-t timeslices] [-m molecules] [-o output-file] dumpfiles\n");
+ [-t timeslices] [-m molecules] [-v] [-o output-file] dumpfiles\n");
       exit(2);
    }
    /*
@@ -528,6 +531,8 @@ main(int argc, char **argv)
 	    break;		/* Exit loop if at end of sequence */
 	 fprintf(stderr, "Failed to open dump file \"%s\"\n", dump_name);
 	 exit(2);
+      } else if (verbose) {
+        fprintf(stderr,"Checking dump file \"%s\"\n", dump_name);
       }
 
       /*
@@ -578,7 +583,10 @@ main(int argc, char **argv)
       {
          fprintf(stderr,"Dump headers don't match: file\"%s\"\n", dump_name);
 	 exit(2);
-      };
+      } else if (verbose) {
+        fprintf(stderr,"Dump file \"%s\" contains slices %ld to %ld\n",dump_name,
+              header.istep/header.dump_interval,header.istep/header.dump_interval+header.ndumps-1);
+      }
 
       (void)close_dump(dump_file);
 

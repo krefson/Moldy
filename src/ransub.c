@@ -27,6 +27,11 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.17.10.9  2004/12/06 19:11:09  cf
+ *  New options added.
+ *  Control info written to output unless specified otherwise.
+ *  Removed unused variables.
+ *
  *  Revision 1.17.10.8  2004/05/07 07:39:43  moldydv
  *  Now uses eigensort to find principal frame.
  *
@@ -166,7 +171,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/ransub.c,v 1.17.10.7 2004/04/12 08:14:28 moldydv Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/ransub.c,v 1.17.10.9 2004/12/06 19:11:09 cf Exp $";
 #endif  
 
 #include "defs.h"
@@ -216,15 +221,6 @@ int ithread=0, nthreads=1;
 
 #define NJACOBI 30
 #define PRECISION 1e-6
-/*
- *  Default backup and temporary file names if not set in "defs.h"
- */
-#ifndef BACKUP_FILE
-#define BACKUP_FILE     "MDBACKUP"
-#endif
-#ifndef TEMP_FILE
-#define TEMP_FILE       "MDTEMPX"
-#endif
 
 /*========================== External data references ========================*/
 
@@ -553,8 +549,8 @@ void
 calc_quat(quat_mt q, vec_mt *sites, vec_mt *p_f_sites, int n)
 {
  int i, j;
- double x[3][n];
- double y[3][n];
+ double **x = (double**)arralloc(sizeof(double), 2, 0, 2, 0, n);
+ double **y = (double**)arralloc(sizeof(double), 2, 0, 2, 0, n);
  double xxyx, xxyy, xxyz;
  double xyyx, xyyy, xyyz;
  double xzyx, xzyy, xzyz;
@@ -716,8 +712,8 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    int          max_id = system->max_id; /* Total no of different sites in system */
    int          dflag = 0;
    int		namelength = 0;
-   vec_mt       p_f_sites[dopant->nsites];  /* Dopant site positions in principal frame */
-   vec_mt       dopant_sites[dopant->nsites]; /* Site positions of single dopant molecule */
+   vec_mt       *p_f_sites=ralloc(dopant->nsites);    /* Dopant site positions in principal frame */
+   vec_mt       *dopant_sites=ralloc(dopant->nsites); /* Site positions of single dopant molecule */
    quat_mt      quaternion;
    boolean	polymol;
    vec_mt       *site = ralloc(dopant->nsites);
@@ -725,8 +721,8 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    vec_mt       solute_pos;     /* Position vector of dopant relative to solvent cofm */
    mat_mt       rot_mat;        /* Rotation matrix */
    real		inertia[6];     /* Inertia tensor for rot to principal frame */
-   double	mass[dopant->nsites];	/* Temporary storage for dopant site mass */
-   int		num_site[max_id]; /* No of each site type */
+   double	*mass=aalloc(dopant->nsites,double);	/* Temporary storage for dopant site mass */
+   int		*num_site=ialloc(max_id);               /* No of each site type */
    vec_mt	mult;	/* Factor for multiplying positions after eigensort (+1 or -1) */
 
    zero_real(solvent_pos,3);
@@ -969,6 +965,9 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    (void)printf("end\n");
 
    afree((gptr*) site);
+   afree((gptr*) dopant_sites);
+   xfree(mass);
+   xfree(num_site);
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
 }
@@ -1095,7 +1094,7 @@ main(int argc, char **argv)
    int          newsites=0;
    int          insw = -1;
    double       simbox[3];
-   real		euler[3];
+   double	euler[3];
    boolean      strict_match = OFF;
    boolean      shift_cofm = OFF;
    int		file_type, energy_unit = 0;
@@ -1104,8 +1103,8 @@ main(int argc, char **argv)
    control.page_length=1000000;
    dopspec.nmols = dopspec.rdof = 0;
    zero_real(h[0],9);
-   zero_real(charge,MAX_ATOMS);
-   zero_real(euler,3);
+   zero_double(charge,MAX_ATOMS);
+   zero_double(euler,3);
    strcpy(spgr,"P 1");
 
    comm = argv[0];
@@ -1536,5 +1535,7 @@ main(int argc, char **argv)
     default:
       break;
     }
+   afree(dopsite);
+   afree(totsite);
    return 0;
 }

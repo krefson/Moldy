@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/msd.c,v 2.4.10.4 2003/10/21 10:27:55 kr Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/msd.c,v 2.4.10.5 2004/12/06 19:10:07 cf Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,10 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/msd.c,v 2.4.10.4 2003/1
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 2.4.10.5  2004/12/06 19:10:07  cf
+ *  System data read from dump header file.
+ *  Removed unused variables.
+ *
  *  Revision 2.4.10.4  2003/10/21 10:27:55  kr
  *  Fixed a couple of bugs in the trajectory output
  *
@@ -420,6 +424,7 @@ main(int argc, char **argv)
    char         *spec_mask = NULL;      /* Mask for selecting species */
    int          arglen, ind, genflg;
    int          xdr = 0;
+   int		verbose = 0;
    real		msd_step; 		/* Absolute msd time interval (in ps) */
 
    zero_real(range[0],9);
@@ -432,7 +437,7 @@ main(int argc, char **argv)
    else if( strstr(comm, "mdtraj") )
       outsw = TRAJ;
 
-   while( (c = getopt(argc, argv, "d:t:m:i:g:o:w:xXyYzZ") ) != EOF )
+   while( (c = getopt(argc, argv, "d:t:m:i:g:o:w:xXyYzZv") ) != EOF )
       switch(c)
       {
        case 'd':
@@ -479,6 +484,8 @@ main(int argc, char **argv)
 	    trajsw = GEN;
 	 outsw = TRAJ;
          break;
+       case 'v':
+         verbose++;
        default:
        case '?':
 	 errflg++;
@@ -490,7 +497,7 @@ main(int argc, char **argv)
          "Usage: %s [-d dump-files] [-t s[-f[:n]]] ",comm);
       fputs("[-m s[-f[:n]]] [-g s[-f[:n]]] ",stderr);
       fputs("[-i initial-time-increment] [-w trajectory-format] ",stderr);
-      fputs("[-x|-X] [-y|-Y] [-z|-Z] [-o output-file]\n",stderr);
+      fputs("[-x|-X] [-y|-Y] [-z|-Z] [-v] [-o output-file]\n",stderr);
       exit(2);
    }
 
@@ -706,7 +713,7 @@ main(int argc, char **argv)
           dump_size);
 #if defined (HAVE_POPEN) 
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s",
-        sys.nmols, sys.nmols_r, start, finish, inc, dump_names);
+      verbose?"-v":"", sys.nmols, sys.nmols_r, start, finish, inc, dump_names);
    
    if( (Dp = popen(dumpcommand,"r")) == 0)
    {

@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/molout.c,v 1.12.8.6 2004/05/07 07:34:32 moldydv Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/molout.c,v 1.12.8.7 2004/12/06 19:10:27 cf Exp $";
 #endif
 
 #include "defs.h"
@@ -91,7 +91,7 @@ static void
 schakal_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, 
 	    char *insert, int n)
 {
-   double	**site = (double**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
    spec_mt	*spec;
    double	a, b, c, alpha, beta, gamma;
@@ -146,7 +146,7 @@ schakal_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info,
  ******************************************************************************/
 static void xtl_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char *insert, int intyp)
 {
-   double	**site = (double**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
    double	qconv;	/* Variable for converting charge from program units */
    spec_mt	*spec;
@@ -216,7 +216,7 @@ static void
 pdb_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, 
 	char *insert, int intyp)
 {
-   double	**site = (double**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
                                             0,2,0,system->nsites-1);
    mat_mt	hinv;
    spec_mt	*spec;
@@ -296,7 +296,7 @@ static void
 xyz_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, 
 	char *insert)
 {
-   double	**site = (double**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
    spec_mt	*spec;
    int		imol, isite, is;
@@ -353,7 +353,7 @@ static void
 dcd_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, 
 	int n, int irec, int inc)
 {
-   double	**site = (double**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
    float	**sitef = (float**)arralloc(sizeof(float),2,
 					    0,2,0,system->nsites-1);
@@ -399,7 +399,7 @@ dcd_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info,
 static void
 atoms_out(system_mt *system, mat_mp h, spec_mt *species)
 {
-   double	**site = (double**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
    spec_mt	*spec;
    float	fsite[3];
@@ -439,7 +439,7 @@ static void
 cssr_out(system_mt *system, mat_mp h, spec_mt *species, 
 	 site_mt *site_info, char *insert, int intyp)
 {
-   double	**site = (double**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
                                             0,2,0,system->nsites-1);
    mat_mt       hinv;
    spec_mt	*spec;
@@ -523,7 +523,7 @@ cssr_out(system_mt *system, mat_mp h, spec_mt *species,
 static void
 arc_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, int intyp, int n)
 {
-   double       **site = (double**)arralloc(sizeof(double),2,
+   real		**site = (real**)arralloc(sizeof(double),2,
                                             0,2,0,system->nsites-1);
    spec_mt      *spec;
    double       a,b,c, alpha, beta, gamma;
