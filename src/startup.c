@@ -17,6 +17,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	startup.c,v $
+ * Revision 1.3  89/06/22  15:45:19  keith
+ * Tidied up loops over species to use one pointer as counter.
+ * 
  * Revision 1.2  89/06/14  17:57:48  keith
  * Control.out eliminated, use printf and freopen instead to direct output.
  * 
@@ -26,7 +29,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: startup.c,v 1.2 89/06/14 17:57:48 keith Exp $";
+static char *RCSid = "$Header: startup.c,v 1.3 89/06/22 15:45:19 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -506,10 +509,6 @@ spec_t	species[];		/* NEW 'species' struct array	      */
    pot_p	pot_tmp;		/* sysdef.			      */
 
    re_re_sysdef(restart, &sys_tmp, &spec_tmp, &site_tmp, &pot_tmp);
-#ifdef	DEBUG
-   printf(" *D* Read Old system spec from restart file\n");
-   print_sysdef(&sys_tmp, spec_tmp, site_tmp, pot_tmp, stdout);
-#endif
 
    if(system->nspecies != sys_tmp.nspecies)
       message(NULLI, NULLP, FATAL, NSPCON, system->nspecies, sys_tmp.nspecies);
@@ -625,10 +624,6 @@ pot_p		*potpar;		/* Pointer to pot'l parameter array   */
 
       conv_potentials(&input_unit, &prog_unit, *potpar, system->n_potpar,
                          system->ptype, *site_info, system->max_id);
-#ifdef	DEBUG
-      printf(" *D* Read and converted system specification\n");
-      print_sysdef(system, *species, *site_info, *potpar, stdout);
-#endif
       initialise_sysdef(system, *species, *site_info, qpf);
       allocate_dynamics(system, *species);	/* Allocate dynamic arrays    */
 
@@ -741,6 +736,4 @@ pot_p		*potpar;		/* Pointer to pot'l parameter array   */
          message(NULLI, NULLP, FATAL, OOFAIL, control.out_file);
    }
    banner_page(system, *species);
-   if( control.print_sysdef )
-      print_sysdef(system, *species, *site_info, *potpar);
 }
