@@ -17,10 +17,13 @@
  *          of particles.  This may cause 'consistency' messages from lint.   *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log:	beeman.c,v $
+ * Revision 1.1  89/04/20  16:00:35  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/beeman.c,v 1.1 89/04/20 16:00:35 keith Stab $";
 #endif
 /*========================== Library include files ===========================*/
 #include <stdio.h>
@@ -80,7 +83,7 @@ quat_p		qdot;			/* Quaternion derivatives (update)    */
 /******************************************************************************
  *   Apply periodic boundary conditions to put particles back in MD box       *
  ******************************************************************************/
-static void escape(c_of_m, nmols)
+void escape(c_of_m, nmols)
 int		nmols;		/* First dimension of c-of-m                  */
 vec_p		c_of_m;		/* Centre of mass co-ordinates (updat)        */
 
@@ -89,9 +92,9 @@ vec_p		c_of_m;		/* Centre of mass co-ordinates (updat)        */
 
    for(imol = 0; imol < nmols; imol++)
    {
-      c_of_m[imol][0] -= (int)(SIGN(0.5, c_of_m[imol][0]) + c_of_m[imol][0]);
-      c_of_m[imol][1] -= (int)(SIGN(0.5, c_of_m[imol][1]) + c_of_m[imol][1]);
-      c_of_m[imol][2] -= (int)(SIGN(0.5, c_of_m[imol][2]) + c_of_m[imol][2]);
+      c_of_m[imol][0] -= floor(c_of_m[imol][0] + 0.5);
+      c_of_m[imol][1] -= floor(c_of_m[imol][1] + 0.5);
+      c_of_m[imol][2] -= floor(c_of_m[imol][2] + 0.5);
    }
 }
 /******************************************************************************

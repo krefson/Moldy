@@ -8,6 +8,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.4  89/07/07  10:37:02  keith
+ * Added check for uniformly zero RDF which otherwise gave divide by zero.
+ * 
  * Revision 1.3  89/06/22  15:45:10  keith
  * Tidied up loops over species to use one pointer as counter.
  * 
@@ -19,7 +22,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: rdf.c,v 1.3 89/06/22 15:45:10 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/rdf.c,v 1.4 89/07/07 10:37:02 keith Stab $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<math.h>
@@ -30,6 +33,7 @@ static char *RCSid = "$Header: rdf.c,v 1.3 89/06/22 15:45:10 keith Exp $";
 void    cfree();
 /*========================== External function declarations ==================*/
 double	det();
+void	invert();
 void	new_line();
 void	put_line();
 double	precision();
@@ -37,6 +41,8 @@ double	precision();
 extern contr_t	control;
 /*========================== External data definitions  ======================*/
 int	***rdf;				/* The RDF 'array'	      */
+/*========================== Macros ==========================================*/
+#define MATMUL(i, m, r) (m[i][0]*r[0] + m[i][1]*r[1] + m[i][2]*r[2])
 /*============================================================================*/
 
 /******************************************************************************
@@ -71,20 +77,17 @@ system_p	system;				/* System info struct	      */
 spec_t	species[];			/* Species info struct array  */
 {
    spec_p	spec;
-   register double	r, rx, ry, rz;
+   register double	r, t;
+   vec_t	rij;
    double	rbin;				/* 1.0/bin width	      */
    int		imol, isite, jsite;
    int		*id = ialloc(system->nsites);
    int		*id_ptr;
-   double	lx   = system->h[0][0],	/* Temporaries for unit cell vectors  */
-		lx_r = 2.0/lx,		/* and their reciprocals; for use     */
-		ly   = system->h[1][1],	/* in applying the periodic boundary  */
-		ly_r = 2.0/ly,		/* conditions.			      */
-		lxy  = system->h[0][1],
-		lz   = system->h[2][2],
-		lz_r = 2.0/lz,
-		lxz  = system->h[0][2],
-		lyz  = system->h[1][2];
+   mat_t	hinv;
+   double	lx   = system->h[0][0], lxy  = system->h[0][1],
+		ly   = system->h[1][1], lxz  = system->h[0][2],
+		lz   = system->h[2][2], lyz  = system->h[1][2];
+   invert(system->h,hinv);
 
    rbin = control.nbins / control.limit;
    
@@ -101,18 +104,18 @@ spec_t	species[];			/* Species info struct array  */
     for(isite = 0; isite < system->nsites; isite++)
        for(jsite = isite+1; jsite < system->nsites; jsite++)
        {
-          rx = site[jsite][0] - site[isite][0];
-          ry = site[jsite][1] - site[isite][1];
-          rz = site[jsite][2] - site[isite][2];
+          rij[0] = site[jsite][0] - site[isite][0];
+          rij[1] = site[jsite][1] - site[isite][1];
+          rij[2] = site[jsite][2] - site[isite][2];
           
-          rx -= lx  * (int)(rx * lx_r);		/* Apply pbc's    	      */
-          rx -= lxy * (int)(ry * ly_r);		/* than usual because	      */
-          ry -= ly  * (int)(ry * ly_r);		/* - More complicated 	      */
-          rx -= lxz * (int)(rz * lz_r);		/* cell.  Note recip's	      */
-          ry -= lyz * (int)(rz * lz_r);		/* to avoid division. 	      */
-          rz -= lz  * (int)(rz * lz_r);		/* of non-cubic unit	      */
+          rij[0] -= lx  *      floor(MATMUL(0,hinv,rij) + 0.5);
+          rij[0] -= lxy * (t = floor(MATMUL(1,hinv,rij) + 0.5));
+          rij[1] -= ly  * t;
+          rij[0] -= lxz * (t = floor(MATMUL(2,hinv,rij) + 0.5));
+          rij[1] -= lyz * t;
+          rij[2] -= lz  * t;
            
-          r = sqrt(rx*rx + ry*ry + rz*rz);
+          r = sqrt(rij[0]*rij[0] + rij[1]*rij[1] + rij[2]*rij[2]);
 	  if ( r < control.limit )
              rdf[id[isite]][id[jsite]][(int)(rbin * r)]++;
        }
