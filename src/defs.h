@@ -1,7 +1,12 @@
 /*
- * $Header: /usr/data/keith/moldy/RCS/defs.h,v 1.11 90/08/10 17:47:29 keith Exp $
+ * $Header: /usr/data/keith/moldy/RCS/defs.h,v 1.11 90/08/22 10:58:42 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.11  90/08/22  10:58:42  keith
+ * Changed ANSI libraries conditional compilation to rely on own
+ * symbol ANSI_LIBS rather than __STDC__.
+ * Corrected test for cray scc compiler in vectorization directives.
+ * 
  * Revision 1.10  90/05/02  15:43:52  keith
  * Got rid of typedefs time_t and size_t. 
  * 
@@ -44,7 +49,7 @@
  * Version ID strings
  */
 #define          REVISION         "$Revision: 1.11 $"
-#define		 REVISION_DATE    "$Date: 90/08/10 17:47:29 $"
+#define		 REVISION_DATE    "$Date: 90/08/22 10:58:42 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -78,7 +83,9 @@
 /*
  * Set ANSI_LIBS only if you have the standard ANSI headers and libraries
  */
-#undef ANSI_LIBS
+#if defined(CRAY) && defined(__STDC__)	/* scc compiler comes with libraries*/
+#   define ANSI_LIBS
+#endif
 /*
  * Set HAVE_VPRINTF if this function is in target machine's library.
  */
@@ -101,20 +108,25 @@
  * Vectorisation directive translation.  N.B. Most preprocessors munge 
  * directives so the #define must substiture the preprocessor OUTPUT.
  */
-#if defined(CRAY) && !defined(__STDC__)
-#define VECTORIZE ## ivdep
-#define NOVECTOR  ## novector
+#ifdef CRAY
+#   ifdef __STDC__
+#      define VECTORIZE
+#      define NOVECTOR
+#   else
+#      define VECTORIZE ## ivdep
+#      define NOVECTOR  ## novector
+#   endif
 #else
 #ifdef convexvc
-#define VECTORIZE __dir no_recurrence :
-#define NOVECTOR  __dir scalar :
+#   define VECTORIZE __dir no_recurrence :
+#   define NOVECTOR  __dir scalar :
 #else
 #ifdef stellar
-#define VECTORIZE __dir NO_RECURRENCE :
-#define NOVECTOR  __dir SCALAR :
+#   define VECTORIZE __dir NO_RECURRENCE :
+#   define NOVECTOR  __dir SCALAR :
 #else
-#define VECTORIZE /* Canny  vectorise on this machine!*/
-#define NOVECTOR  /* */
+#   define VECTORIZE /* Canny  vectorise on this machine!*/
+#   define NOVECTOR  /* */
 #endif
 #endif
 #endif
