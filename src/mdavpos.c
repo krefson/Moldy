@@ -23,13 +23,17 @@ what you give them.   Help stamp out software-hoarding! */
 static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdavpos.c,v 2.6 1998/05/07 17:06:11 keith Exp $";
 #endif
 /**************************************************************************************
- * mdavpos    	code for calculating mean positions of                                *       
+ * mdavpos    	code for calculating mean positions of                                *
  *              molecules and average box dimensions from MolDy dump files            *
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 3.0  1999/03/23 18:41:26  craig
+ *  Added option for cssr output format.
+ *  Removed unnecessary variable 'hinv' from pdb_out.
+ *
  *  Revision 2.6  1998/06/26 17:43:55  craig
- *  Lattice parm and angle fields in pdb output routine increased
+ *  Lattice parm and angle fields in pdb output routine increased.
  *
  *  Revision 2.5  1998/05/07 17:06:11  keith
  *  Reworked all conditional compliation macros to be
@@ -37,7 +41,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdavpos.c,v
  *  This is for use with GNU autoconf.
  *
  *  Revision 2.4  1998/01/28 09:55:37  keith
- *  Changed to "HAVE_POPEN" macro from system-specifics
+ *  Changed to "HAVE_POPEN" macro from system-specifics.
  *
  *  Revision 2.4  1998/01/09 11:35:11  keith
  *  Changed to "HAVE_POPEN" macro from system-specifics.
@@ -122,6 +126,7 @@ contr_mt                control;
 #define SHAK 0
 #define PDB 1
 #define XYZ 2
+#define CSSR 3
 /******************************************************************************
  * Dummies of moldy routines so that mdavpos may be linked with moldy library *
  ******************************************************************************/
@@ -505,7 +510,7 @@ mat_mp		avh;
 {
    double	**site = (double**)arralloc(sizeof(double),2,
                                             0,2,0,system->nsites-1);
-   mat_mp       h = avh;
+   mat_mp	h = avh;
    spec_mt	*spec;
    double	a,b,c, alpha, beta, gamma;
    int		imol, isite, itot=1, ispec=1;
@@ -523,7 +528,7 @@ mat_mp		avh;
           a,b,c,alpha,beta,gamma);
    for(spec = avpos; spec < avpos+system->nspecies; ispec++, spec++)
    {
-     make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
+     make_sites(avh, spec->c_of_m, spec->quat, spec->p_f_sites,
            spec->framework, site, spec->nmols, spec->nsites);
 
      isite = 0;
@@ -563,10 +568,7 @@ char            *insert;
    double       **site = (double**)arralloc(sizeof(double),2,
                                             0,2,0,system->nsites-1);
    spec_mt      *spec;
-   mat_mt       hinv;
    int          imol, isite, is;
-
-   invert(avh, hinv);
 
 /* We count the number of atoms */
    isite=0;
@@ -611,7 +613,94 @@ char            *insert;
       error("Error writing output - \n%s\n", strerror(errno));
 }
 /******************************************************************************
- * Centre_mass.  Shift system centre of mass to origin (in discrete steps),   *
+ * cssr_out().  Write a system configuration to stdout in the form of         *
+ * SERC Daresbury Lab's Cambridge Structure Search and Retrieval (cssr) file  *
+ ******************************************************************************/
+void
+cssr_out(system, site_info, insert, avpos, avh, intyp)
+system_mt	*system;
+site_mt		site_info[];
+char		*insert;
+spec_mt		avpos[];
+mat_mp		avh;
+int		intyp;
+{
+   double	**site = (double**)arralloc(sizeof(double),2,
+                                            0,2,0,system->nsites-1);
+   mat_mp       h = avh;
+   mat_mt       hinv;
+   spec_mt	*spec;
+   double	a,b,c, alpha, beta, gamma;
+   double	qconv;	/* Variable for converting charge from program units */ 
+   char         atomname[5];
+   int		imol, isite, itot=1, ispec=1;
+   int		divd=0, is;
+   
+   a = sqrt(SQR(h[0][0]) + SQR(h[1][0]) + SQR(h[2][0]));
+   b = sqrt(SQR(h[0][1]) + SQR(h[1][1]) + SQR(h[2][1]));
+   c = sqrt(SQR(h[0][2]) + SQR(h[1][2]) + SQR(h[2][2]));
+   alpha = 180/PI*acos((h[0][1]*h[0][2]+h[1][1]*h[1][2]+h[2][1]*h[2][2])/b/c);
+   beta  = 180/PI*acos((h[0][0]*h[0][2]+h[1][0]*h[1][2]+h[2][0]*h[2][2])/a/c);
+   gamma = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/a/b);
+
+   invert(h,hinv);
+
+   if( intyp == 'r' )
+      qconv = CONV_Q;
+   else
+      qconv = 1.0;
+
+/* We count the number of atoms */
+   isite=0;
+   for(spec = avpos; spec < avpos+system->nspecies; spec++)
+      for(imol = 0; imol < spec->nmols; imol++)
+         for(is = 0; is < spec->nsites; is++)
+            if(fabs(site_info[spec->site_id[is]].mass) != 0)
+                isite++;
+
+/* Write the cssr header */
+   (void)printf("%37c %7.3f %7.3f %7.3f\n",' ',a,b,c);
+   (void)printf("%21c %7.3f %7.3f %7.3f    SPGR=   1 P 1\n",' ',alpha,beta,gamma);
+   (void)printf("%4d   0 %60s\n", isite, control.title);
+
+   if( insert != NULL)
+      (void)printf("%53s\n", insert);
+   else
+      (void)printf("\n");
+
+   for(spec = avpos; spec < avpos+system->nspecies; ispec++, spec++)
+   {
+     make_sites(avh, spec->c_of_m, spec->quat, spec->p_f_sites,
+           spec->framework, site, spec->nmols, spec->nsites);
+
+     mat_vec_mul3(hinv, site, spec->nsites*spec->nmols);
+
+     isite = 0;
+     for(imol = 0; imol < spec->nmols; imol++)
+     {
+       for(is = 0; is < spec->nsites; is++)
+       {
+            
+         strncpy( atomname, site_info[spec->site_id[is]].name, 4);
+         divd = pow(10, 4-strlen(atomname));
+         if( divd > 1 )
+            sprintf(atomname,"%s%d",site_info[spec->site_id[is]].name,itot%divd);
+
+         (void)printf("%4d %-4s  %9.5f %9.5f %9.5f",
+              itot, atomname, site[0][isite], site[1][isite], site[2][isite]);
+         (void)printf("   0   0   0   0   0   0   0   0 %7.3f\n",
+              site_info[spec->site_id[is]].charge*qconv);
+         isite++;
+         itot++;
+       }
+     }
+   }
+
+   if( ferror(stdout) )
+      error("Error writing output - \n%s\n", strerror(errno));
+}
+/******************************************************************************
+ * Centre_mass.  Shift system centre of mass to origin (in discrete steps).   *
  ******************************************************************************/
 void
 centre_mass(species, nspecies, c_of_m)
@@ -665,13 +754,14 @@ vec_mt  s;
  * Translate system relative to either centre of mass or posn of framework.   *
  ******************************************************************************/
 void
-moldy_out(system, site_info, insert, avpos, avh, outsw)
+moldy_out(system, site_info, insert, avpos, avh, outsw, intyp)
 system_mt       *system;
 spec_mt         avpos[];
 site_mt         site_info[];
 mat_mp		avh;
 int             outsw;
 char            *insert;
+int		intyp;
 {
    spec_mp      spec, frame_spec  = NULL;
    vec_mt       c_of_m;
@@ -691,6 +781,9 @@ char            *insert;
    } 
    switch (outsw)
    {
+    case CSSR:
+      cssr_out(system, site_info, insert, avpos, avh, intyp);
+      break;
     case PDB:
       pdb_out(system, site_info, insert, avpos, avh);
       break;
@@ -863,7 +956,7 @@ char	*argv[];
 #define MAXTRY 100
    control.page_length=1000000;
 
-   while( (c = getopt(argc, argv, "cr:s:d:t:o:hpx") ) != EOF )
+   while( (c = getopt(argc, argv, "cr:s:d:t:o:hpxv") ) != EOF )
       switch(c)
       {
        case 'c':
@@ -896,6 +989,9 @@ char	*argv[];
        case 'x':
 	 outsw = XYZ;
 	 break;
+       case 'v':
+	 outsw = CSSR;
+	 break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error("failed to open file \"%s\" for output", optarg);
@@ -908,8 +1004,8 @@ char	*argv[];
    if( errflg )
    {
       fputs("Usage: mdavpos [-r restart-file | -s sys-spec-file] ",stderr);
-      fputs("[-c] [-h] [-p] [-x] [-d dump-files] [-t s[-f[:n]]] ",stderr);
-      fputs("[-o output-file]\n",stderr);
+      fputs("[-c] [-h] [-p] [-x] [-v] [-d dump-files] ",stderr);
+      fputs("[-t s[-f[:n]]] [-o output-file]\n",stderr);
       exit(2);
    }
 
@@ -1057,7 +1153,7 @@ char	*argv[];
 
      /* Display species and calculated trajectories */
         average(&sys, avpos, avh, nav); 
-        moldy_out(&sys, site_info, insert, avpos, avh, outsw);
+        moldy_out(&sys, site_info, insert, avpos, avh, outsw, intyp);
 
 #if defined (HAVE_POPEN) 
    pclose(Dp);
