@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 2.1 1997/10/09 11:01:10 keith Exp $"
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 2.1 1997/10/09 11:01:10 keith Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *       
@@ -28,6 +28,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.1  1997/10/13 10:55:13  craig
+ *  Removed declarations of unused variables
+ *
  *  Revision 2.1  1997/10/8 15:05:24  craig
  *  Correctly initialised p_f_sites for monatomic species
  *  Moved constant species quantities from copy_spec to init_spec
@@ -94,7 +97,6 @@ gptr	*talloc();
 FILE	*popen();
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
-static   char           *comm;
 contr_mt                control;
 #define SHAK 0
 #define PDB 1
@@ -294,7 +296,6 @@ char	*instr;
 int	*start, *finish, *inc;
 {
    char	*p, *pp, *str = mystrdup(instr);
-   /*    long strtol();*/
    
    if( (p = strchr(str,':')) != NULL)
    {
@@ -416,8 +417,7 @@ spec_mt		prev_slice[];
  * input data file for the graphics program SCHAKAL88.                        *
  ******************************************************************************/
 void
-schakal_out(n, system, site_info, insert, avpos, avh)
-int     n;
+schakal_out(system, site_info, insert, avpos, avh)
 system_mt       *system;
 spec_mt         avpos[];
 site_mt         site_info[];
@@ -466,7 +466,7 @@ mat_mp		avh;
    if( insert != NULL)
       (void)printf("%s\n", insert);
 
-   (void)printf("END %d\n", n);
+   (void)printf("END 1\n");
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
 }
@@ -475,8 +475,7 @@ mat_mp		avh;
  * Brookhaven Protein Data Bank (pdb) file                                    *
  ******************************************************************************/
 void
-pdb_out(n, system, site_info, insert, avpos, avh)
-int		n;
+pdb_out(system, site_info, insert, avpos, avh)
 system_mt	*system;
 site_mt		site_info[];
 char		*insert;
@@ -534,8 +533,7 @@ mat_mp		avh;
  * input data file for the graphics program XYZ (rasmol -xyz file)            *
  ******************************************************************************/
 void
-xyz_out(n, system, site_info, insert, avpos, avh)
-int     n;
+xyz_out(system, site_info, insert, avpos, avh)
 system_mt       *system;
 spec_mt         avpos[];
 mat_mp		avh;
@@ -545,7 +543,6 @@ char            *insert;
    double       **site = (double**)arralloc(sizeof(double),2,
                                             0,2,0,system->nsites-1);
    spec_mt      *spec;
-   double       a, b, c, alpha, beta, gamma;
    mat_mt       hinv;
    int          imol, isite, is;
 
@@ -648,8 +645,7 @@ vec_mt  s;
  * Translate system relative to either centre of mass or posn of framework.   *
  ******************************************************************************/
 void
-moldy_out(n, system, site_info, insert, avpos, avh, outsw)
-int		n;
+moldy_out(system, site_info, insert, avpos, avh, outsw)
 system_mt       *system;
 spec_mt         avpos[];
 site_mt         site_info[];
@@ -676,14 +672,14 @@ char            *insert;
    switch (outsw)
    {
     case PDB:
-      pdb_out(n, system, site_info, insert, avpos, avh);
+      pdb_out(system, site_info, insert, avpos, avh);
       break;
     case XYZ:
-      xyz_out(n, system, site_info, insert, avpos, avh); 
+      xyz_out(system, site_info, insert, avpos, avh); 
       break;
     default:
     case SHAK:
-      schakal_out(n, system, site_info, insert, avpos, avh);
+      schakal_out(system, site_info, insert, avpos, avh);
       break;
    }
 }
@@ -697,7 +693,7 @@ spec_mt		species[];
 spec_mt		dupl_spec[];
 {
    spec_mt	*spec;
-   int		imol, isite, i, j;
+   int		imol, i, j;
 
    for(spec = species; spec < species+system->nspecies; dupl_spec++,spec++)
    {
@@ -722,7 +718,7 @@ spec_mt		species[];
 spec_mt		init_spec[];
 {
    spec_mt	*spec;
-   int		i,j,isite;
+   int		i;
    for(spec = species; spec < species+system->nspecies; init_spec++,spec++)
    {
    /* Allocate space for data */
@@ -821,7 +817,7 @@ char	*argv[];
    extern char	*optarg;
    int		errflg = 0;
    int		intyp = 0;
-   int		iout = 0, outsw = SHAK;
+   int		outsw = SHAK;
    int		start, finish, inc;
    int		rflag, nav;
    int		irec;
@@ -1030,13 +1026,13 @@ char	*argv[];
         copy_spec(&sys, species, prev_slice); 
 #ifdef DEBUG
         fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
-	   irec%header.maxdumps, dump_name);
+	   irec, dump_name);
 #endif
       }
 
      /* Display species and calculated trajectories */
         average(&sys, avpos, avh, nav); 
-        moldy_out(iout++, &sys, site_info, insert, avpos, avh, outsw);
+        moldy_out(&sys, site_info, insert, avpos, avh, outsw);
 
 #if defined (unix) || defined (__unix__)
    pclose(Dp);
