@@ -1,7 +1,13 @@
 /*
- * $Header: /home/tigger/keith/md/RCS/defs.h,v 1.3 89/06/14 14:16:35 keith Stab $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.5 90/03/09 17:34:45 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.5  90/03/09  17:34:45  keith
+ * Added preprocessor directives to define USG (ie system V) for unicos.
+ * 
+ * Revision 1.4  89/09/04  18:41:49  keith
+ * Added conversion constants for charges.
+ * 
  * Revision 1.3  89/06/14  14:16:35  keith
  * Added vectorisation for stellar and recognised sysV & SysV macros
  * 
@@ -20,9 +26,9 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.3 $"
-#define		 REVISION_DATE    "$Date: 89/06/14 14:16:35 $"
-#define		 REVISION_STATE   "$State: Stab $"
+#define          REVISION         "$Revision: 1.5 $"
+#define		 REVISION_DATE    "$Date: 90/03/09 17:34:45 $"
+#define		 REVISION_STATE   "$State: Exp $"
 
 /* Vectorisation directive translation*/
 #ifdef CRAY
@@ -131,8 +137,24 @@ typedef	unsigned	size_t;
 #include		<time.h>
 #endif
 
-#if unix && ( sysV || SysV)
+/*
+ *  Set symbol USG to identify system V variant of unix.  Add your system
+ *  here if necessary.
+ */
+#if unix && ( sysV || SysV || cray)
 # define USG
+#endif
+
+/*
+ * Define system-dependant default filenames
+ */
+#ifdef VMS
+#define BACKUP_FILE	"MDBACKUP.DAT"
+#define TEMP_FILE	"MDTEMPXXXX.DAT"
+#endif
+#ifdef CMS
+#define BACKUP_FILE	"MDBACKUP MOLDY A1"
+#define TEMP_FILE	"MDTEMP XXXXXXXX A1"
 #endif
 
 #define		cfree	xfree
