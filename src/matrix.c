@@ -31,6 +31,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: matrix.c,v $
+ *       Revision 2.11  2001/02/13 17:45:08  keith
+ *       Added symplectic Parrinello-Rahman constant pressure mode.
+ *
  *       Revision 2.10  2000/12/06 17:45:31  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -118,7 +121,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/matrix.c,v 2.10 2000/12/06 17:45:31 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/matrix.c,v 2.11 2001/02/13 17:45:08 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -280,6 +283,20 @@ void invert(mat_mt a,                           /* Input matrix          (in) */
 double trace(mat_mt mat)
 {
   return(mat[0][0] + mat[1][1] + mat[2][2]);
+}
+/******************************************************************************
+ * Trace_sqr.  Calculate the trace of a'a.				      *
+ ******************************************************************************/
+double trace_sqr(mat_mt mat)
+{
+   int i,j;
+   double sum = 0.0;
+   
+   for(i = 0; i < 3; i++)
+      for(j = 0; j < 3; j++)
+	 sum += SQR(mat[i][j]);
+
+   return(sum);
 }
 /******************************************************************************
  * mvaxpy. Matrix-Vector a X + Y.					      *
