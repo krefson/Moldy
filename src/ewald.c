@@ -1,8 +1,33 @@
+/* MOLecular DYnamics simulation code, Moldy.
+Copyright (C) 1988, 1992, 1993 Keith Refson
+ 
+This program is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation; either version 2, or (at your option) any
+later version.
+ 
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+ 
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ 
+In other words, you are welcome to use, share and improve this program.
+You are forbidden to forbid anyone else to use, share and improve
+what you give them.   Help stamp out software-hoarding!  */
 /******************************************************************************
  * Ewald	The reciprocal-space part of the standard Ewald sum technique *
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.23  93/03/12  12:22:38  keith
+ * Reorganized defines to recognise all ANSI (__type__) forms.
+ * Moved spxpy() from aux.c to force.c and force_parallel.c
+ * 
+ * 
  * Revision 1.23  93/03/12  12:21:50  keith
  * *** empty log message ***
  * 
@@ -101,7 +126,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.23 93/03/12 12:21:50 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.23 93/03/12 12:22:38 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"

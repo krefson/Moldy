@@ -1,3 +1,23 @@
+/* MOLecular DYnamics simulation code, Moldy.
+Copyright (C) 1988, 1992, 1993 Keith Refson
+ 
+This program is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation; either version 2, or (at your option) any
+later version.
+ 
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+ 
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ 
+In other words, you are welcome to use, share and improve this program.
+You are forbidden to forbid anyone else to use, share and improve
+what you give them.   Help stamp out software-hoarding!  */
 /******************************************************************************
  * restart	functions for writing program configurations to a data file   *
  *		and rereading them.  Because of the way they are used, the    *
@@ -11,6 +31,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 1.19  93/03/09  15:59:12  keith
+ * Changed all *_t types to *_mt for portability.
+ * Reordered header files for GNU CC compatibility.
+ * 
  * Revision 1.18  92/10/29  15:20:35  keith
  * Changed "site_[tp]" typedefs to avoid name clash on HP.
  * 
@@ -77,7 +101,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.18 92/10/29 15:20:35 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.19 93/03/09 15:59:12 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -332,7 +356,7 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
    int		zero = 0, one = 1;
    restrt_mt	save_header;
    FILE		*save;
-   char		*vsn = "$Revision: 1.18 $"+11;
+   char		*vsn = "$Revision: 1.19 $"+11;
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)

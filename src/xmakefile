@@ -89,7 +89,7 @@ EXTRAS = $(UTILS:%=%.c) mdshak.c ewald_parallel.c force_parallel.c
 
 HFILES=		structs.h defs.h string.h time.h stddef.h stdlib.h messages.h
 
-DOC=		READ.ME BENCHMARK water-canon.out
+DOC=		READ.ME BENCHMARK water-canon.out COPYING
 
 moldy:		$(OFILES) $(EXTRA_OBJ) $(HFILES)
 		$(CC)  $(OFILES) $(EXTRA_OBJ) $(LDFLAGS) -lm -o moldy
@@ -142,7 +142,7 @@ cflow:		$(CFILES)
 		cflow -r $(CFILES) > moldy.cflow.r
 
 ci:		$(CFILES) $(HFILES) xmakefile moldy.tex $(EXTRAS)
-		ci -u $?
+		ci -u $(RCSFLAGS) $?
 
 print:		$(CFILES) $(HFILES)
 		for file in $(CFILES) $(HFILES) ;do\
@@ -179,7 +179,7 @@ annihilate:
 #
 moldy.tar:	$(DOC) $(CFILES) $(HFILES)  Makefile moldy.tex\
 		$(EXTRAS) $(INFILES)
-		tar cvf moldy.tar\
+		tar cf moldy.tar\
 		$(DOC) $(CFILES)  $(HFILES) Makefile moldy.tex\
 		$(EXTRAS) $(INFILES)
 

@@ -1,3 +1,23 @@
+/* MOLecular DYnamics simulation code, Moldy.
+Copyright (C) 1988, 1992, 1993 Keith Refson
+ 
+This program is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation; either version 2, or (at your option) any
+later version.
+ 
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+ 
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ 
+In other words, you are welcome to use, share and improve this program.
+You are forbidden to forbid anyone else to use, share and improve
+what you give them.   Help stamp out software-hoarding!  */
 /******************************************************************************
  * Input	Functions for reading and verifying the input files (except   *
  *		the restart file). Contents:				      *
@@ -9,6 +29,91 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	input.c,v $
+ * Revision 1.8.1.21  93/03/12  12:14:14  keith
+ * Changed all *_t types to *_mt for portability.
+ * Reordered header files for GNU CC compatibility.
+ * 
+ * Revision 1.8.1.21  93/03/09  15:58:36  keith
+ * Changed all *_t types to *_mt for portability.
+ * Reordered header files for GNU CC compatibility.
+ * 
+ * Revision 1.8.1.20  92/10/28  14:09:48  keith
+ * Changed "site_[tp]" typedefs to avoid name clash on HP.
+ * 
+ * Revision 1.8.1.19  92/09/22  14:48:15  keith
+ * Tidied up calls to improve "lint" rating.
+ * 
+ * Revision 1.8.1.18  92/06/26  17:03:10  keith
+ * Got rid of assumption that memory returned by talloc() or
+ * arralloc() is zeroed.  This enhances ANSI compatibility.
+ * Removed memory zeroing from alloc.c() in consequence.
+ * 
+ * Revision 1.8.1.17  92/03/11  12:56:21  keith
+ * Changed "scale-separately" parameter to "scale options"
+ * 
+ * Revision 1.8.1.16  91/08/19  16:46:39  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
+ * 
+ * Revision 1.8.1.15  91/08/16  15:25:30  keith
+ * Checked error returns from fread, fwrite, fseek and fclose more
+ * rigourously.   Called strerror() to report errors.
+ * 
+ * Revision 1.8.1.13  91/03/12  15:42:49  keith
+ * Tidied up typedefs size_t and include file <sys/types.h>
+ * Added explicit function declarations.
+ * 
+ * Revision 1.8.1.12  90/10/22  17:47:25  keith
+ * Corrected conversion of unit cell angles and lengths to vectors
+ * in lattice_start().
+ * 
+ * Revision 1.8.1.11  90/08/20  17:25:45  keith
+ * Modified to order species so that frameworks are last. 
+ * 
+ * Revision 1.8.1.10  90/05/03  16:41:24  keith
+ * Fixed sys-spec parsing to cope with GEC and other broken scanf's which
+ * return too many items matched.
+ * 
+ * Revision 1.8.1.9  90/04/16  18:18:16  keith
+ * Added "strain-mask" field to input parse table.
+ * 
+ * Revision 1.8.1.8  90/04/12  16:27:09  keith
+ * Added include of <stdio.h> which was removed from "structs.h"
+ * 
+ * Revision 1.8.1.7  90/03/26  18:05:50  keith
+ * Moved system-dependant backup and temp file names to "defs.h"
+ * 
+ * Revision 1.8.1.6  89/11/22  14:34:44  keith
+ * Changed default values of begin-rdf and average-interval.
+ * 
+ * Revision 1.8.1.5  89/11/21  16:32:30  keith
+ * Removed member out_file from control and all uses. (Now command parameter).
+ * 
+ * Revision 1.8.1.4  89/11/20  18:06:23  keith
+ * Modified form of match[] to include default values.
+ * 
+ * Revision 1.8.1.3  89/11/20  13:30:00  keith
+ * Replaced separate arrays "types" and "npotp" with array of structs "potspec"
+ * 
+ * Revision 1.8.1.2  89/09/04  18:56:08  keith
+ * Added 'surface-dipole' keyword to control file.
+ * 
+ * Revision 1.8.1.1  89/08/30  12:55:44  keith
+ * Mods to add framework structures to simulation model
+ * 
+ * Revision 1.8  89/08/30  12:51:41  keith
+ * Fixed read_sysdef() to keep original input line when reading potentials
+ * to make error message informative.
+ * Modified lattice_start() to fix bug which only considered rotations
+ * of one species.  In conjunction with change in startup.
+ * 
  * Revision 1.7  89/07/07  10:49:56  keith
  * Fixed lattice_start() so as not to test quaternion normalisation for
  * monatomic sopecies.
@@ -37,23 +142,29 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/input.c,v 1.8 89/08/30 12:34:42 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/input.c,v 1.8.1.21 93/03/12 12:14:14 keith Exp $";
 #endif
+/*========================== program include files ===========================*/
+#include	"defs.h"
 /*========================== Library include files ===========================*/
 #include	<ctype.h>
 #include	<math.h>
 #include 	"string.h"
+#include	"stddef.h"
+#include	<stdio.h>
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
 /*========================== External function declarations ==================*/
+gptr            *talloc();	       /* Interface to memory allocator       */
+void            tfree();	       /* Free allocated memory	      	      */
 void		q_mul_1();
 void		message();
+void    	zero_real();            /* Initialiser                        */
 /*========================== External data references ========================*/
-extern	contr_t	control;		/* Main simulation control record     */
-extern	unit_t	input_unit;		/* Unit specification (see Convert.c) */
-extern	char	*types[];		/* Names of potential function types  */
-extern	int	npotp[];		/* Number of parameters of each type  */
+extern	contr_mt	control;		/* Main simulation control record     */
+extern	unit_mt	input_unit;		/* Unit specification (see Convert.c) */
+extern	pots_mt	potspec[];		/* Potential type specification       */
 extern	int	npott;			/* Dimensions of above arrays	      */
 /*========================== Macros ==========================================*/
 #define		LLEN		132
@@ -62,62 +173,72 @@ extern	int	npott;			/* Dimensions of above arrays	      */
 #define		S_MASS		0x02
 #define		S_CHARGE	0x04
 #define		S_NAME		0x08
-		/* Copy a struct of type pot_t			      */
-#define	potcpy(s1, s2)	(void)memcpy((char*)(s1),(char*)(s2), sizeof(pot_t))
 /*========================== Control file keyword template ===================*/
 					/* format SFORM is defined as %NAMLENs*/
 					/* in structs.h, to avoid overflow */
-match_t	match[] = {
-		{"title",	    	SFORM,	 control.title},
-                {"nsteps",	    	"%d",	(char*)&control.nsteps},
-                {"step",	    	"%lf",	(char*)&control.step},
-                {"text-mode-save",  	"%d",	(char*)&control.print_sysdef},
-                {"new-sys-spec",    	"%d",	(char*)&control.new_sysdef},
-		{"lattice-start",	"%d",	(char*)&control.lattice_start},
-                {"sys-spec-file",   	SFORM,	 control.sysdef},
-                {"restart-file",    	SFORM,	 control.restart_file},
-                {"save-file",	   	SFORM,	 control.save_file},
-                {"dump-file",	    	SFORM,	 control.dump_file},
-                {"backup-file",	    	SFORM,	 control.backup_file},
-		{"temp-file",		SFORM,	 control.temp_file},
-		{"out-file",		SFORM,	 control.out_file},
-		{"nbins",		"%d",	(char*)&control.nbins},
-		{"seed",		"%d",	(char*)&control.seed},
-                {"page-width",	    	"%d",	(char*)&control.page_width},
-                {"page-length",	   	"%d",	(char*)&control.page_length},
-                {"scale-interval",    	"%d",	(char*)&control.scale_interval},
-		{"scale-separately",	"%d", (char*)&control.scale_separately},
-                {"const-pressure",  	"%d",	(char*)&control.const_pressure},
-                {"reset-averages",  	"%d",	(char*)&control.reset_averages},
-                {"scale-end",	   	"%d",	(char*)&control.scale_end},
-                {"begin-average",   	"%d",	(char*)&control.begin_average},
-                {"average-interval",	"%d", (char*)&control.average_interval},
-		{"begin-dump",		"%d",   (char*)&control.begin_dump},
-		{"dump-interval",  	"%d",	(char*)&control.dump_interval},
-		{"dump-level",		"%d",	(char*)&control.dump_level},
-		{"ndumps",		"%d",	(char*)&control.maxdumps},
-		{"backup-interval",	"%d",  (char*)&control.backup_interval},
-                {"roll-interval",   	"%d",	(char*)&control.roll_interval},
-                {"print-interval",  	"%d",	(char*)&control.print_interval},
-		{"begin-rdf",		"%d",	(char*)&control.begin_rdf},
-		{"rdf-interval",	"%d",	(char*)&control.rdf_interval},
-		{"rdf-out",		"%d",	(char*)&control.rdf_out},
-                {"temperature",	    	"%lf",	(char*)&control.temp},
-                {"pressure",	    	"%lf",	(char*)&control.pressure},
-                {"w",		    	"%lf",	(char*)&control.pmass},
-                {"cutoff",	    	"%lf",	(char*)&control.cutoff},
-		{"subcell",		"%lf",	(char*)&control.subcell},
-                {"density",	    	"%lf",	(char*)&control.density},
-                {"alpha",	    	"%lf",	(char*)&control.alpha},
-		{"k-cutoff",		"%lf",	(char*)&control.k_cutoff},
-		{"rdf-limit",		"%lf",	(char*)&control.limit},
-		{"cpu-limit",		"%lf",	(char*)&control.cpu_limit},
-                {"mass-unit",	    	"%lf",	(char*)&input_unit.m},
-                {"length-unit",	    	"%lf",	(char*)&input_unit.l},
-                {"time-unit",		"%lf",	(char*)&input_unit.t},
-                {"charge-unit",		"%lf",	(char*)&input_unit.q}
+/*
+ *  Default backup and temporary file names if not set in "defs.h"
+ */
+#ifndef BACKUP_FILE
+#define BACKUP_FILE	"MDBACKUP"
+#endif
+#ifndef TEMP_FILE
+#define TEMP_FILE	"MDTEMPX"
+#endif
+
+match_mt	match[] = {
+{"title",            SFORM,  "Test Simulation",(gptr*) control.title},
+{"nsteps",           "%d",   "0",            (gptr*)&control.nsteps},
+{"step",             "%lf",  "0.005",        (gptr*)&control.step},
+{"text-mode-save",   "%d",   "0",            (gptr*)&control.print_sysdef},
+{"new-sys-spec",     "%d",   "0",            (gptr*)&control.new_sysdef},
+{"scale-options"   , "%d",   "0",            (gptr*)&control.scale_options},
+{"surface-dipole",   "%d",   "0",            (gptr*)&control.surface_dipole},
+{"lattice-start",    "%d",   "0",            (gptr*)&control.lattice_start},
+{"sys-spec-file",    SFORM,  "",             (gptr*)control.sysdef},
+{"restart-file",     SFORM,  "",             (gptr*)control.restart_file},
+{"save-file",        SFORM,  "",             (gptr*)control.save_file},
+{"dump-file",        SFORM,  "",             (gptr*)control.dump_file},
+{"backup-file",      SFORM,  BACKUP_FILE,    (gptr*)control.backup_file},
+{"temp-file",        SFORM,  TEMP_FILE,      (gptr*)control.temp_file},
+{"strict-cutoff",    "%d",   "0",            (gptr*)&control.strict_cutoff},
+{"strain-mask",	     "%d",   "200",	     (gptr*)&control.strain_mask},
+{"nbins",            "%d",   "100",          (gptr*)&control.nbins},
+{"seed",             "%d",   "1234567",      (gptr*)&control.seed},
+{"page-width",       "%d",   "132",          (gptr*)&control.page_width},
+{"page-length",      "%d",   "44",           (gptr*)&control.page_length},
+{"scale-interval",   "%d",   "10",           (gptr*)&control.scale_interval},
+{"const-pressure",   "%d",   "0",            (gptr*)&control.const_pressure},
+{"reset-averages",   "%d",   "0",            (gptr*)&control.reset_averages},
+{"scale-end",        "%d",   "1000000",      (gptr*)&control.scale_end},
+{"begin-average",    "%d",   "1001",         (gptr*)&control.begin_average},
+{"average-interval", "%d",   "5000",         (gptr*)&control.average_interval},
+{"begin-dump",       "%d",   "1",            (gptr*)&control.begin_dump},
+{"dump-interval",    "%d",   "20",           (gptr*)&control.dump_interval},
+{"dump-level",       "%d",   "0",            (gptr*)&control.dump_level},
+{"ndumps",           "%d",   "250",          (gptr*)&control.maxdumps},
+{"backup-interval",  "%d",   "500",          (gptr*)&control.backup_interval},
+{"roll-interval",    "%d",   "10",           (gptr*)&control.roll_interval},
+{"print-interval",   "%d",   "10",           (gptr*)&control.print_interval},
+{"begin-rdf",        "%d",   "1000000",      (gptr*)&control.begin_rdf},
+{"rdf-interval",     "%d",   "20",           (gptr*)&control.rdf_interval},
+{"rdf-out",          "%d",   "5000",         (gptr*)&control.rdf_out},
+{"temperature",      "%lf",  "0.0",          (gptr*)&control.temp},
+{"pressure",         "%lf",  "0.0",          (gptr*)&control.pressure},
+{"w",                "%lf",  "100.0",        (gptr*)&control.pmass},
+{"cutoff",           "%lf",  "10.0",         (gptr*)&control.cutoff},
+{"subcell",          "%lf",  "0.0",          (gptr*)&control.subcell},
+{"density",          "%lf",  "1.0",          (gptr*)&control.density},
+{"alpha",            "%lf",  "0.3",          (gptr*)&control.alpha},
+{"k-cutoff",         "%lf",  "2.0",          (gptr*)&control.k_cutoff},
+{"rdf-limit",        "%lf",  "10.0",         (gptr*)&control.limit},
+{"cpu-limit",        "%lf",  "1.0e20",       (gptr*)&control.cpu_limit},
+{"mass-unit",        "%lf",  "1.6605655e-27",(gptr*)&input_unit.m},
+{"length-unit",      "%lf",  "1.0e-10",      (gptr*)&input_unit.l},
+{"time-unit",        "%lf",  "1.0e-13",      (gptr*)&input_unit.t},
+{"charge-unit",      "%lf",  "1.6021892e-19",(gptr*)&input_unit.q}
 	     };
-int	nmatch=(sizeof match / sizeof(match_t));
+int	nmatch=(sizeof match / sizeof(match_mt));
 /*=============================================================================
  |   Start of functions							      |
  =============================================================================*/
@@ -154,6 +275,33 @@ char	*s;
       *t = isupper(*t) ? tolower(*t) : *t;
    return(s);
 }
+/******************************************************************************
+ *  Sort array of species structs so frameworks are at end.		      *
+******************************************************************************/
+void sort_species(species, nspecies)
+spec_mt	*species;
+int	nspecies;
+{
+   spec_mt tmp, *lo=species, *hi=species+nspecies-1;
+
+   while( lo < hi )
+   {
+      while( lo < hi && ! lo->framework)
+	 lo++;
+      while( lo < hi && hi->framework)
+	 hi--;
+
+      if( lo >= hi )
+	 break;
+
+      tmp = *hi;
+      *hi = *lo;
+      *lo = tmp;
+
+      lo++;
+      hi--;
+   }
+}
 
 /******************************************************************************
  *  read_sysdef    Read the system specification file which must be open and  *
@@ -166,10 +314,10 @@ char	*s;
  ******************************************************************************/
 void	read_sysdef(file, system, spec_pp, site_info, pot_ptr)
 FILE		*file;			/* File pointer to read info from     */
-system_p	system;			/* Pointer to system array (in main)  */
-spec_p		*spec_pp;		/* Pointer to be set to species array */
-site_p		*site_info;		/* To be pointed at site_info array   */
-pot_p		*pot_ptr;		/* To be pointed at potpar array      */
+system_mp	system;			/* Pointer to system array (in main)  */
+spec_mp		*spec_pp;		/* Pointer to be set to species array */
+site_mp		*site_info;		/* To be pointed at site_info array   */
+pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
 {
    int		nspecies = 0,		/* Number of distinct species         */
    		max_id = 0,		/* Largest site identifier index      */
@@ -179,22 +327,23 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
 		i,			/* Counter			      */
 		n_potpar,		/* Number of parameters for this pot'l*/
    		n_items;		/* How many items scanf found in input*/
-   struct list_t {int n; struct list_t *p;};/* Template for linked list nsites*/
-   struct list_t nsites_base,		/* Head of list (contains no datum)   */
+   struct list_mt {int n; struct list_mt *p;};/* Template for linked list nsites*/
+   struct list_mt nsites_base,		/* Head of list (contains no datum)   */
    		*nsites,		/* List entry for current species     */
                 *last = &nsites_base;	/* List entry for previous species    */
    int		nerrs = 0;		/* Accumulated error count	      */
    int		flag;			/* Used to test 'fseek' result        */
    long		start_pos = ftell(file);/* Rewind marker for second pass      */
    char		name[LLEN],		/* Species name temporary             */
+   		keywd[LLEN],		/* Species attribute keywords	      */
    		line[LLEN],		/* Store for input line from file     */
    		pline[LLEN];		/* Used in pot'l paramater parsing    */
    double	mass, charge, p_tmp;	/* Local temporaries		      */
    double	p_f_sites[3];		/* Local temporary		      */
-   pot_p	pp1;			/* Used for acces to potpar ij and ji */
-   spec_p	species, spec;		/* Local pointer to species array     */
-   site_p	s_ptr;			/* Local pointer to site info array   */
-   static pot_t	pot = {S_USED};	/* Local storage for potentials       */
+   pot_mp	pp1;			/* Used for acces to potpar ij and ji */
+   spec_mp	species, spec;		/* Local pointer to species array     */
+   site_mp	s_ptr;			/* Local pointer to site info array   */
+   static pot_mt	pot = {S_USED};	/* Local storage for potentials       */
 
    message(&nerrs,NULLP,INFO,SYSRD);
    /* First pass - read system definition and count nspecies, nsites, max_id  */
@@ -202,9 +351,10 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
    while(sscanf(line, "%s", name) > 0 && strcmp(strlower(name), "end") != 0)
    {						/* Loop, parsing 'line' for   */
       nspecies++;				/* name of new species.       */
-      nsites = aalloc(1, struct list_t); 	/* Make new list element      */
+      nsites = aalloc(1, struct list_mt); 	/* Make new list element      */
       last->p = nsites;				/* Link it in		      */
       last = nsites;				/* Backwards pointer for link */
+      nsites->p=NULL; nsites->n=0;
       while(sscanf(get_line(line,LLEN,file), "%d", &id) > 0)
       {						/* Loop, reading and parsing  */
          nsites->n++;				/* for integer ie new site id.*/
@@ -217,26 +367,45 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
    /* Allocate arrays of species and site info records */
    max_id++;
    system->max_id = max_id;
-   *spec_pp    = aalloc(nspecies, spec_t );
-   *site_info  = aalloc(max_id, site_t );
-   *pot_ptr    = aalloc(max_id * max_id, pot_t );
+   *spec_pp    = aalloc(nspecies, spec_mt );
+   *site_info  = aalloc(max_id, site_mt );
+   (void)memset((char*)(*site_info), 0, max_id*sizeof(site_mt));
+   *pot_ptr    = aalloc(SQR(max_id), pot_mt );
+   for( i = 0; i < SQR(max_id); i++)
+   {
+      (*pot_ptr)[i].flag = 0;
+      zero_real((*pot_ptr)[i].p,NPOTP);
+   }
    species = *spec_pp;   			/* Local pointer for neatness.*/
    system->nspecies = nspecies;
 
    flag = fseek(file, start_pos, 0);		/* Prepare to reread input.   */
    if(flag)
-      message(NULLI, NULLP, FATAL, SEFAIL, "control file");
+      message(NULLI, NULLP, FATAL, SEFAIL, "control file", strerror(errno));
    nsites = &nsites_base;
    /* Pass 2.  read system definition and set up species and site_info arrays */
    for (spec = species; spec < species+system->nspecies; spec++)
    {						/* Loop over all species.     */
-      n_items = sscanf(get_line(line,LLEN,file),"%s %d", name, &spec->nmols);
+      n_items = sscanf(get_line(line,LLEN,file),"%s %d %s",
+		       name, &spec->nmols, keywd);
       name[sizeof spec->name-1] = '\0';		/* Truncate before copying    */
       (void)strcpy(spec->name, name);		/* to avoid overflow.         */
       nsites = nsites->p;			/* Find next element of list  */
       spec->nsites = nsites->n;			/* which contains nsites.     */
-      if(n_items < 2)				/* Number of mols not supplied*/
+      switch(n_items)
+      {				   /* Relies on fall-through: do not re-order */
+       case 3:
+	 if(! strcmp(strlower(keywd), "framework"))
+	    spec->framework = true;
+	 else if(*keywd != '\0')   /* Kludge for broken scanf's.              */
+	    message(&nerrs, NULLP, ERROR, UNKEY, keywd);
+	 break;
+       case 2:
+	 spec->framework = false;
+	 break;					/* Normal exit from switch    */
+       default:
          message(&nerrs,line, ERROR, NONUM, name);
+      }
       if(spec->nmols <= 0)			/* Can't have <=0 molecules   */
          message(&nerrs,line,ERROR, NOMOLS, spec->nmols, name);
       if(spec->nsites <=0)			/* or ghost molecules!        */
@@ -297,7 +466,13 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
         }
       }
    }
-   /* Check that all sites have been fully defined, and for gaps in ordering. */
+   /*
+    *  Order species structs with frameworks last
+    */
+   sort_species(species, nspecies);
+   /*
+    * Check that all sites have been fully defined, and for gaps in ordering.
+    */
    for(id = 1; id < max_id; id++)
    {
       sflag = (*site_info)[id].flag;
@@ -318,12 +493,12 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
    /* Next line is keyword indicating type of potentials to be used	      */
    n_items = sscanf(get_line(line,LLEN,file), "%s", name);
    for(i = 0; i < npott; i++)			/* Is 'name' a known type?    */
-      if(strcmp(strlower(name), types[i]) == 0)
+      if(strcmp(strlower(name), potspec[i].name) == 0)
          break;
    if(i == npott)				/* Did the loop find 'name'?  */
       message(&nerrs,line,FATAL,UNKPOT,name);	/* no			      */
    system->ptype = i;				/* yes		              */
-   n_potpar = system->n_potpar = npotp[i];
+   n_potpar = system->n_potpar = potspec[i].npar;
    						/* Now read in parameters     */
    while(sscanf(get_line(line,LLEN,file),"%s",name) > 0
                     && strcmp(strlower(name), "end") != 0)
@@ -353,8 +528,8 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
             message(&nerrs,line,ERROR,DUPPOT);
          else				/* Put values into pp1  and  pp2      */
          {
-            potcpy(*pot_ptr + idi + idj * system->max_id, &pot);
-            potcpy(*pot_ptr + idj + idi * system->max_id, &pot);
+            (*pot_ptr)[idi + idj * system->max_id] = pot;
+            (*pot_ptr)[idj + idi * system->max_id] = pot;
          }
       }
    }
@@ -382,45 +557,46 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
  ******************************************************************************/
 void	lattice_start(file, system, species, qpf)
 FILE	*file; 				/* File to read info from	      */
-system_p system;			/* System info struct		      */
-spec_p	species;			/* Array of species info structs      */
-quat_t	qpf[];				/* Princ frame rotation quaternion    */
+system_mp system;			/* System info struct		      */
+spec_mp	species;			/* Array of species info structs      */
+quat_mt	qpf[];				/* Princ frame rotation quaternion    */
 {
    typedef struct init_s {int species;  struct init_s *next;
-                  double r[3], q[4];} init_t; 	/* For linked list of coords  */
-   init_t	*cur, *init = NULL;		/* Current and header of list */
-   double	a, b, c, alpha, beta, gamma;	/* Unit cell lengths, angles  */
+                  double r[3], q[4];} init_mt; 	/* For linked list of coords  */
+   init_mt	*cur, *init = NULL;		/* Current and header of list */
+   double	a, b, c, calpha, cbeta, cgamma;	/* Unit cell lengths, angles  */
    int		ix, iy, iz, nx, ny, nz;		/* Number of unit cells in MDC*/
-   spec_p	spec;
+   spec_mp	spec;
    char		line[LLEN], name[LLEN];
    int		n_items, nerrs = 0, ispec, imol, i;
    int		*nmols = ialloc(system->nspecies);
    real		ca, cb, cg, sg;
-   quat_t	q;
+   quat_mt	q;
 
+   (void)memset((char*)nmols,0,system->nspecies*sizeof(int));
    n_items = sscanf(get_line(line,LLEN,file),"%lf%lf%lf%lf%lf%lf%d%d%d",
-		    &a, &b, &c, &alpha, &beta, &gamma, &nx, &ny, &nz);
+		    &a, &b, &c, &calpha, &cbeta, &cgamma, &nx, &ny, &nz);
    if(n_items < 9)
       message(&nerrs, line, ERROR, NOCELL);
    if( ! (a > 0 && b > 0 && c > 0 && nx > 0 && ny > 0 && nz > 0 &&
-	  alpha > 0 && alpha < 180.0 && beta > 0 && beta < 180.0 &&
-	  gamma > 0 && gamma < 180.0))
+	  calpha > 0 && calpha < 180.0 && cbeta > 0 && cbeta < 180.0 &&
+	  cgamma > 0 && cgamma < 180.0))
       message(&nerrs, line,  ERROR, INVCEL);
 
-   ca = cos(alpha*DTOR); cb = cos(beta*DTOR); cg = cos(gamma*DTOR);
-   sg = sin(gamma*DTOR);
+   ca = cos(calpha*DTOR); cb = cos(cbeta*DTOR); cg = cos(cgamma*DTOR);
+   sg = sin(cgamma*DTOR);
 
    system->h[0][0] = nx*a;			/* Set up MD cell matrix      */
    system->h[0][1] = ny*b * cg;			/* from lengths and angles.   */
    system->h[1][1] = ny*b * sg;
    system->h[0][2] = nz*c * cb;
-   system->h[1][2] = nz*c / sg * sqrt(ca*ca + cb*cb * cg*cg - 2*ca*cb*cg);
+   system->h[1][2] = nz*c / sg * (ca - cb*cg);
    system->h[2][2] = nz*c / sg * sqrt(1 - ca*ca - cb*cb - cg*cg + 2*ca*cb*cg);
 
    while(sscanf(get_line(line,LLEN,file), "%s", name) > 0 &&
 	 strcmp(strlower(name), "end") != 0)	/* Cycle over lines in file   */
    {
-      cur =aalloc(1, init_t );			/* Get struct for new molecule*/
+      cur =aalloc(1, init_mt );			/* Get struct for new molecule*/
       cur->next = init;  init = cur;		/* Link it into list	      */
       n_items = sscanf(line, "%s%lf%lf%lf%lf%lf%lf%lf",
 		       name, &cur->r[0], &cur->r[1], &cur->r[2],
@@ -489,7 +665,36 @@ quat_t	qpf[];				/* Princ frame rotation quaternion    */
    }
    message(NULLI, NULLP, INFO, LATTIC);
 }
+/*******************************************************************************
+ * assign()  Convert string value by format and assign to pointer location.    *
+ ******************************************************************************/
+int assign(strval, fmt, ptr)
+char	*strval, *fmt;
+gptr	*ptr;
+{
+   int len = strlen(fmt);
+   int code = fmt[MAX(0,len-1)];
+   if( len > 3 && fmt[len-2] == 'l' ) code = toupper(code);
 
+   switch(code)
+   {
+    case 's':
+    case ']':
+      return sscanf(strval, fmt, (char*)ptr);
+    case 'd':
+      return sscanf(strval, fmt, (int*)ptr);
+    case 'D':
+      return sscanf(strval, fmt, (long*)ptr);
+    case 'f':
+      return sscanf(strval, fmt, (float*)ptr);
+    case 'F':
+      return sscanf(strval, fmt, (double*)ptr);
+    default:
+      message(NULLI, NULLP, FATAL,
+	      "Scanf code \"%s\" not catered for", fmt);
+   }
+   return -1;		/* This statement is never reached		*/
+}
 /******************************************************************************
  *  read_control.   Read the control parameters from the standard input.      *
  *  Input lines are of the form " key = value ", one per line.  The struct    *
@@ -523,10 +728,10 @@ FILE	*file;
          else					/* Found it, so convert value */
          {
             if( n_items == 1 && strcmp(match[i].format,SFORM) == 0 )
-                *match[i].ptr = '\0';		/* name=<empty> - assign null */
+                *(char*)match[i].ptr = '\0';	/* name=<empty> - assign null */
 	    else
 	    {
-               n_items = sscanf(value, match[i].format, match[i].ptr);
+               n_items = assign(value, match[i].format, match[i].ptr);
                if( n_items < 1 )
                   message(&nerrs,NULLP,ERROR,BADVAL,value,name);
 	    }

@@ -1,9 +1,83 @@
+/* MOLecular DYnamics simulation code, Moldy.
+Copyright (C) 1988, 1992, 1993 Keith Refson
+ 
+This program is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation; either version 2, or (at your option) any
+later version.
+ 
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+ 
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ 
+In other words, you are welcome to use, share and improve this program.
+You are forbidden to forbid anyone else to use, share and improve
+what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/tigger/keith/md/RCS/structs.h,v 1.6 89/06/20 18:25:36 keith Stab $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/structs.h,v 1.6.1.15 93/03/12 12:14:34 keith Exp $
  *
  * $Log:	structs.h,v $
- * Revision 1.6.1.2  89/09/04  18:07:31  keith
- * Added 'charge' field to spec_t
+ * Revision 1.6.1.15  93/03/12  12:14:34  keith
+ * Changed all *_t types to *_mt for portability.
+ * Reordered header files for GNU CC compatibility.
+ * 
+ * Revision 1.6.1.15  93/03/09  15:59:22  keith
+ * Changed all *_t types to *_mt for portability.
+ * Reordered header files for GNU CC compatibility.
+ * 
+ * Revision 1.6.1.14  92/10/28  14:09:40  keith
+ * Changed "site_[tp]" typedefs to avoid name clash on HP.
+ * 
+ * Revision 1.6.1.13  92/09/22  14:55:12  keith
+ * Added support for "strict cutoff" mode.
+ * 
+ * Revision 1.6.1.12  92/03/11  12:56:24  keith
+ * Changed "scale-separately" parameter to "scale options"
+ * 
+ * Revision 1.6.1.11  91/08/23  11:34:49  keith
+ * Added extra padding to struct spec_t to round size up to 8 byte
+ * boundary.  This promotes portability of restart files.  Rounded
+ * up rather than down for compatibility of existing restart files.
+ * 
+ * Revision 1.6.1.10  91/08/15  18:12:21  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
+ * Revision 1.6.1.9  90/05/02  15:44:36  keith
+ * Got rid of typedefs time_t and size_t. 
+ * 
+ * Revision 1.6.1.8  90/04/16  18:20:40  keith
+ * Added new field "strain-mask" to control.
+ * 
+ * Revision 1.6.1.7  90/04/12  16:29:10  keith
+ * removed unneccessary include of <stdio.h>
+ * 
+ * Revision 1.6.1.6  90/04/06  11:09:49  keith
+ * Moved definition of NPOTP to defs.h
+ * 
+ * Revision 1.6.1.5  89/11/21  16:31:32  keith
+ * Removed member out_file from control and all uses. (Now command parameter).
+ * 
+ * Revision 1.6.1.4  89/11/20  18:10:41  keith
+ * Added "defalt" field to match_t.
+ * 
+ * Revision 1.6.1.3  89/11/20  13:30:14  keith
+ * Replaced separate arrays "types" and "npotp" with array of structs "potspec"
+ * 
+ * Revision 1.6.1.2  89/09/04  18:40:19  keith
+ * Added 'surface_dipole' to control_t (& removed pad), moved 'scale_separately'
+ * Added field 'charge' to spec_t.
  * 
  * Revision 1.6.1.1  89/08/25  15:24:21  keith
  * Mods to add framework structures to simulation model
@@ -32,7 +106,6 @@
 #ifndef	STRUCT_ALREADY
 #define	STRUCT_ALREADY
 
-#include <stdio.h>
 #include "defs.h"
 
 #define		SFORM	"%127[^#]" /* Format for scanf to read strings safely */
@@ -46,22 +119,24 @@ typedef struct			/* Control parameters for simulation	      */
 		new_sysdef,	/* Read new sysdef instead of restart file one*/
 		const_pressure, /* Flag to turn on P&R CP method	      */
 		reset_averages,	/* Flag to set average counters to zero       */
+   		scale_options,	/* Scale each species separately	      */
+		surface_dipole,	/* Flag surface dipole term in Ewald sum      */
    		lattice_start;	/* Flag to read starting state from sysdef    */
    char 	sysdef[L_name],		/* Name of system specification file  */
 		restart_file[L_name],	/* Name of restart configuration file */
 		save_file[L_name],	/* Name of file to write restart conf */
 		dump_file[L_name],	/* Name of file 'dump' writes to      */
    		backup_file[L_name],	/* Name of backup save file	      */
-   		temp_file[L_name],	/* Temporary file for writing restart */
-   	 	out_file[L_name]; 	/* Name of main output file	      */
-   int		pad;		/* To preserve alignment of structure	      */
+   		temp_file[L_name];	/* Temporary file for writing restart */
+   int	 	spare[30];	/* Extra space for expansion 	              */
+   boolean	strict_cutoff;  /* Perform real-space cutoff rigorously       */
+   int		strain_mask;	/* Mask of constrained elements of h matrix   */
    int		nbins;		/* Number of bins for rdf calculation         */
    unsigned long seed; 		/* Seed for random number generator	      */
    int		page_width,	/* Line width for output file		      */
 		page_length,	/* Length of page on output file	      */
 		scale_interval, /* Number of timesteps between scales	      */
 		scale_end,	/* Stop scaling after n timesteps	      */
-   		scale_separately,/* Scale each species separately	      */
 		begin_average,	/* Number of 'equilibration' steps	      */
 		average_interval,/* Frequency of averages calculation	      */
    		begin_dump,	/* When to start storing dumps for analysis   */
@@ -85,7 +160,7 @@ typedef struct			/* Control parameters for simulation	      */
    		k_cutoff,	/* Cutoff in k space for ewald sum	      */
 		limit,		/* Limiting distance for rdf calculation      */
    		cpu_limit;	/* Maximum CPU allowed before run is stopped  */
-} contr_t, *contr_p;
+} contr_mt, *contr_mp;
 
 typedef struct			/* Whole system information		      */
 {
@@ -100,25 +175,25 @@ typedef struct			/* Whole system information		      */
 		/* Dynamic variable arrays for whole system		      */
 		/* Dimensions for C of M quantities are [nmols][3]	      */
 		/* and for quaternions and derivatives, [nmols_r][4]	      */
-   vec_p	c_of_m, 	/* Centre of mass positions		      */
+   vec_mp	c_of_m, 	/* Centre of mass positions		      */
 		vel,		/* " " " velocities			      */
 		velp,		/* Predicted C of M velocities		      */
 		acc,		/* C of M accelerations 		      */
 		acco,		/* " " at previous timestep		      */
 		accvo;		/* " " two timesteps before		      */
-   quat_p	quat,		/* Quaternions for this component	      */
+   quat_mp	quat,		/* Quaternions for this component	      */
 		qdot,		/* Quaternion derivatives		      */
 		qdotp,		/* Predicted quaternion derivatives	      */
 		qddot,		/* Quaternion second derivatives	      */
 		qddoto, 	/* Old quaternion second derivatives	      */
 		qddotvo;	/* Second derivatives two timesteps before    */
-   mat_p	h,		/* Unit cell for zero-stress simulation       */
+   mat_mp	h,		/* Unit cell for zero-stress simulation       */
 		hdot,		/* Unit cell derivatives		      */
 		hdotp,		/* Predicted unit cell derivatives	      */
 		hddot,		/* Unit cell second derivatives 	      */
 		hddoto, 	/* Old unit cell second derivatives	      */
 		hddotvo;	/* Very old unit cell second derivatives      */
-} system_t, *system_p;
+} system_mt, *system_mp;
 
 
 typedef struct			/* Information for one species		      */
@@ -129,29 +204,31 @@ typedef struct			/* Information for one species		      */
    		charge;		/* Total charge				      */
    int		nsites, 	/* Number of sites on this species	      */
 		nmols;		/* Number of molecules of this species	      */
-   int		rdof;		/* Rotational degrees of freedom (2=linear)   */
+   int		rdof,		/* Rotational degrees of freedom (2=linear)   */
+   		framework;	/* Flag to signal this is a framework species */
    char 	name[32];	/* Name of this species 		      */
    int		*site_id;	/* site identifier array		      */
-   vec_p	p_f_sites;	/* Site co-ordinates in principal frame       */
+   vec_mp	p_f_sites;	/* Site co-ordinates in principal frame       */
 		/* Dynamic variable arrays for this species		      */
 		/* These point to a subset of the whole-system arrays	      */
 		/* Dimensions for C of M quantities are [nmols][3]	      */
 		/* and for quaternions and derivatives, [nmols][4]	      */
 		/* If species is monatomic, quaternion pointers are null      */
-   vec_p	c_of_m, 	/* Centre of mass positions		      */
+   vec_mp	c_of_m, 	/* Centre of mass positions		      */
 		vel,		/* " " " velocities			      */
 		velp,		/* Predicted C of M velocities		      */
 		acc,		/* C of M accelerations 		      */
 		acco,		/* " " at previous timestep		      */
 		accvo;		/* " " two timesteps before		      */
-   quat_p	quat,		/* Quaternions for this species 	      */
+   quat_mp	quat,		/* Quaternions for this species 	      */
 		qdot,		/* Quaternion derivatives		      */
 		qdotp,		/* Predicted quaternion derivatives	      */
 		qddot,		/* Quaternion second derivatives	      */
 		qddoto, 	/* Old quaternion second derivatives	      */
 		qddotvo;	/* Second derivatives two timesteps before    */
-   int		pad;		/* Padding to align on 8-byte boundary	      */
-} spec_t, *spec_p;
+   int		pad[2];		/* Needed for compatibility of binary restart */
+   				/* files due to historical cock-up.	      */ 
+} spec_mt, *spec_mp;
 
 typedef struct			/* site info template.			      */
 {
@@ -160,15 +237,20 @@ typedef struct			/* site info template.			      */
    char		name[8];
    int		flag;
    int		pad;
-}	site_t,  *site_p;
+}	site_mt,  *site_mp;
    		
-#define NPOTP 5                 /* Must be number of doubles in pot_t        */
 typedef struct			/* Holds potential parameter information      */
 {
    int		flag;
    int		pad;
    real		p[NPOTP];
-} pot_t, *pot_p;
+} pot_mt, *pot_mp;
+
+typedef struct
+{
+   char	*name;
+   int  npar;
+} pots_mt;
 
 typedef struct			/* Units used for program input		      */
 {
@@ -177,7 +259,7 @@ typedef struct			/* Units used for program input		      */
 		t,		/* time					      */
 		q;		/* charge				      */
 
-} unit_t, *unit_p;
+} unit_mt, *unit_mp;
 
 typedef struct                  /* Record of dimensions of physical quantity  */
 {
@@ -185,25 +267,26 @@ typedef struct                  /* Record of dimensions of physical quantity  */
                 l,
                 t,
                 q;
-} dim_t, *dim_p;
+} dim_mt, *dim_mp;
 
 typedef	struct				/* Struct template for keyword	      */
 {					/* in read_control.		      */
    char	*key,
 	*format,
-	*ptr;
-}	match_t;
+        *defalt;
+   gptr	*ptr;
+}	match_mt;
 
 #define DLEN	28		/* Length of date/time string		      */
 typedef	struct			/* Restart file header format 		      */
 {
-   time_t	timestamp,	/* Date and time restart file was written     */
+   time_mt	timestamp,	/* Date and time restart file was written     */
    		prev_timestamp;	/* Timestamp of preceding restart file	      */
    char		init_date[DLEN],/* Date run was initiated (propagated through)*/
 		title[L_name],	/* Title when run was initiated		      */
 		vsn[16];	/* Version SID of program that wrote restart  */
    int		seq;		/* Sequence NO.  eg 5th restart in run        */
-}	restrt_t;
+}	restrt_mt;
 
 typedef struct			/* Dump file header format		      */
 {
@@ -215,8 +298,8 @@ typedef struct			/* Dump file header format		      */
    		maxdumps,	/* Maximum number of dump records in file     */
    		ndumps,		/* How many dump records in file	      */
    		dump_size;	/* Size of a dump record		      */
-   time_t	timestamp,	/* Time file was written		      */
+   time_mt	timestamp,	/* Time file was written		      */
    		dump_init,	/* Time dump run was started (ie first file)  */
    		restart_timestamp;/* Time corresponding restart file written  */
-}	dump_t;
+}	dump_mt;
 #endif

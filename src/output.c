@@ -1,3 +1,23 @@
+/* MOLecular DYnamics simulation code, Moldy.
+Copyright (C) 1988, 1992, 1993 Keith Refson
+ 
+This program is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation; either version 2, or (at your option) any
+later version.
+ 
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+ 
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ 
+In other words, you are welcome to use, share and improve this program.
+You are forbidden to forbid anyone else to use, share and improve
+what you give them.   Help stamp out software-hoarding!  */
 /******************************************************************************
  * output	Contains various output and error handling functions, except  *
  *		for 'print_frame' and 'output' which, because of their	      *
@@ -17,6 +37,66 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	output.c,v $
+ * Revision 1.8.1.15  93/03/12  12:14:23  keith
+ * Changed all *_t types to *_mt for portability.
+ * Reordered header files for GNU CC compatibility.
+ * 
+ * Revision 1.8.1.15  93/03/09  15:59:03  keith
+ * Changed all *_t types to *_mt for portability.
+ * Reordered header files for GNU CC compatibility.
+ * 
+ * Revision 1.8.1.14  93/03/05  15:03:25  keith
+ * Moved include of stdlib above stdio for non-ANSI gcc environments.
+ * 
+ * Revision 1.8.1.13  92/10/28  14:10:02  keith
+ * Changed "site_[tp]" typedefs to avoid name clash on HP.
+ * 
+ * Revision 1.8.1.12  92/06/11  20:31:52  keith
+ * Added file locking against multiple runs using same dump or backup files.
+ * 
+ * Revision 1.8.1.11  92/06/05  13:37:44  keith
+ * Conditionally undefed va_dcl for ANSI, stdarg.h case --
+ * just prevents warning from gcc.
+ * 
+ * Revision 1.8.1.10  92/03/11  12:56:18  keith
+ * Changed "scale-separately" parameter to "scale options"
+ * 
+ * Revision 1.8.1.9  91/08/19  16:47:37  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
+ * 
+ * Revision 1.8.1.8  91/08/16  15:25:59  keith
+ * Checked error returns from fread, fwrite, fseek and fclose more
+ * rigourously.   Called strerror() to report errors.
+ * 
+ * Revision 1.8.1.6  90/05/16  18:40:32  keith
+ * Renamed own freer from cfree to tfree.
+ * 
+ * Revision 1.8.1.5  90/05/16  14:20:17  keith
+ * *** empty log message ***
+ * 
+ * Revision 1.8.1.4  90/05/15  19:00:54  keith
+ * Fixed error line 497 which wrapped on unsigned "strlen"
+ * 
+ * Revision 1.8.1.3  89/11/21  15:52:52  keith
+ * Fixed format of "special" in accordance with altered struct type match_t.
+ * 
+ * Revision 1.8.1.1  89/11/20  13:30:06  keith
+ * Replaced separate arrays "types" and "npotp" with array of structs "potspec"
+ * 
+ * Revision 1.7.1.2  89/09/04  17:56:35  keith
+ * Added charge and dipole info to per-species output in banner_page()
+ * 
+ * Revision 1.8  89/09/04  17:53:43  keith
+ * Added charge and dipole info to per-species output in banner_page()
+ * 
  * Revision 1.7  89/08/11  10:53:38  keith
  * Tidied up loops over species to use pointer as counter
  * Fixed print_config() to convert control parameters to correct units
@@ -44,17 +124,21 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/output.c,v 1.8 89/09/04 17:37:18 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/output.c,v 1.8.1.15 93/03/12 12:14:23 keith Exp $";
 #endif
+/*========================== Program include files ===========================*/
+#include "defs.h"
 /*========================== Library include files ===========================*/
-#include <stdio.h>
-#if ANSI || __STDC__
-#include <stdarg.h>
+#if defined(ANSI) || defined(__STDC__)
+#include 	<stdarg.h>
 #else
-#include <varargs.h>
+#include 	<varargs.h>
 #endif
-#include <math.h>
-#include "string.h"
+#include 	<math.h>
+#include 	"stdlib.h"
+#include	"stddef.h"
+#include 	"string.h"
+#include        <stdio.h>
 /*========================== Program include files ===========================*/
 #include "structs.h"
 #include "messages.h"
@@ -63,12 +147,13 @@ void	conv_control();			/* Unit conversion for 'control'      */
 char	*atime();			/* Current date and time in ASCII     */
 char	*cctime();			/* Convert long time to ASCII.	      */
 /*========================== External data references ========================*/
-extern  contr_t 	control;
-extern	restrt_t	restart_header;
-extern	char		*types[];
-extern	int		npotp[];
-extern	match_t		match[];
+extern  contr_mt 	control;
+extern	restrt_mt	restart_header;
+extern	pots_mt		potspec[];
+extern	match_mt	match[];
 extern	int		nmatch;
+extern	char		backup_lockfile[];
+extern	char		dump_lockfile[];
 /*========================== External data definitions  ======================*/
 int	out_page = 1;			/* Which page of output we are on     */
 int	out_line = 999999;	        /* Which line of output               */
@@ -76,17 +161,17 @@ int	out_line = 999999;	        /* Which line of output               */
 #define		S_USED		0x01
 /*========================== Special Control output cases ====================*/
 static  int	one=1;
-static	unit_t	prog_unit = {MUNIT, LUNIT, TUNIT, QUNIT};
-static	match_t	special[] = {
-                         {"lattice-start",	"%d", (char*)&one},
-			 {"restart-file",	"%s", ""},
-			 {"sys-spec-file",	"%s", ""},
-			 {"mass-unit",		"%lf", (char*)&prog_unit.m},
-			 {"length-unit",	"%lf", (char*)&prog_unit.l},
-			 {"time-unit",		"%lf", (char*)&prog_unit.t},
-			 {"charge-unit",	"%lf", (char*)&prog_unit.q}
+static	unit_mt	prog_unit = {MUNIT, LUNIT, TUNIT, QUNIT};
+static	match_mt	special[] = {
+        {"lattice-start",	"%d", "",	(gptr*)&one},
+	{"restart-file",	"%s", "",	(gptr*)""},
+	{"sys-spec-file",	"%s", "",	(gptr*)""},
+	{"mass-unit",		"%lf", "",	(gptr*)&prog_unit.m},
+	{"length-unit",		"%lf", "",	(gptr*)&prog_unit.l},
+	{"time-unit",		"%lf", "",	(gptr*)&prog_unit.t},
+	{"charge-unit",		"%lf", "",	(gptr*)&prog_unit.q}
 		      };
-static	int	nspecial = sizeof(special) / sizeof(match_t);
+static	int	nspecial = sizeof(special) / sizeof(match_mt);
 /******************************************************************************
  * new_line.   print a newline and update line counter                        *
  ******************************************************************************/
@@ -95,7 +180,7 @@ void	new_line()
    void	new_page();
    (void)putchar('\n');
    out_line++;
-   if(out_line > control.page_length)   new_page();
+   if(out_line > control.page_length && control.page_length > 0)   new_page();
 }
 void	new_lins(n)
 int	n;
@@ -128,10 +213,13 @@ char	c;
  *  message.   Deliver error message to possibly exiting.  It can be called   *
  *	       BEFORE output file is opened, in which case outt to stderr.    *
  ******************************************************************************/
-#if ANSI || __STDC__
-#undef  va_alist
-#define	va_alist int *nerrs, ...
-#define va_dcl /* */
+#if defined(ANSI) || defined(__STDC__)
+#   undef  va_alist
+#   define	va_alist int *nerrs, ...
+#   ifdef va_dcl
+#      undef va_dcl
+#   endif
+#   define va_dcl /* */
 #endif
 /*VARARGS*/
 void	message(va_alist)
@@ -142,7 +230,7 @@ va_dcl
    int		sev;
    char		*format;
    static char	*sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
-#if ANSI || __STDC__
+#if defined(ANSI) || defined(__STDC__)
    va_start(ap, nerrs);
 #else
    int		*nerrs;
@@ -168,12 +256,18 @@ va_dcl
    if(sev >= ERROR && nerrs != NULL)
       (*nerrs)++;
    if(sev == FATAL)
+   {
+      if( backup_lockfile[0] )
+	 remove(backup_lockfile);
+      if( dump_lockfile[0] )
+	 remove(dump_lockfile);
       exit(3);
+   }
 }
 /******************************************************************************
  *  note   write a message to the output file				      *
  ******************************************************************************/
-#if ANSI || __STDC__
+#if defined(ANSI) || defined(__STDC__)
 #undef  va_alist
 #define	va_alist char *text, ...
 #define va_dcl /* */
@@ -183,7 +277,7 @@ void	note(va_alist)
 va_dcl
 {
    va_list	ap;
-#if ANSI || __STDC__
+#if defined(ANSI) || defined(__STDC__)
    va_start(ap, text);
 #else
    char		*text;
@@ -201,7 +295,7 @@ va_dcl
  ******************************************************************************/
 static void	print_array(text, n)
 char	*text[];
-int	n;
+size_t	n;
 {
    int i;
    for(i=0; i<n; i++)
@@ -263,21 +357,23 @@ static char	*Revision	= REVISION,
 static char	*name_addr[] = {"Keith Refson",
 				"Department of Earth Sciences",
 				"Parks Road, Oxford OX1 3PR",
-				"REFSON@UK.AC.OX.VAX  (JANET)",
-				"REFSON@VAX.OX.AC.UK  (BITNET)"};
-static char	*copy_notice[] = {"Copyright Keith Refson 1988",
-				  ""};
+				"keith@earth.ox.ac.uk"};
+static char	*copy_notice[] = {"Moldy Copyright (C) Keith Refson 1988, 1992, 1993",
+				  "Moldy comes with ABSOLUTELY NO WARRANTY:",
+				  "This is free software and you are welcome to",
+				  "redistribute it under certain conditions.",
+				  "For details see file COPYING included with source."};
 
 	
 /******************************************************************************
  *  banner_page   Write the banner and relevant system/run information        *
  ******************************************************************************/
 void	banner_page(system, species)
-system_p	system;
-spec_t	species[];
+system_mp	system;
+spec_mt	species[];
 {
-   spec_p	spec;
-   mat_p	h = system->h;
+   spec_mp	spec;
+   mat_mp	h = system->h;
    char		version[132], *vsn=version;
 
    new_page(); new_lins(2);
@@ -286,7 +382,7 @@ spec_t	species[];
 		 	(int)strlen(Revision+11)-1,      Revision+11,
 		 	(int)strlen(Revision_State+8)-1, Revision_State+8,
 		 	(int)strlen(Revision_Date+7)-1,  Revision_Date+7);
-   print_array( &vsn, 1);
+   print_array( &vsn, (size_t)1);
    print_array( name_addr, sizeof name_addr / sizeof(char*));
    print_array( copy_notice, sizeof copy_notice / sizeof(char*));
    if(control.restart_file[0] != '\0')
@@ -340,10 +436,33 @@ spec_t	species[];
    format_dbl("CPU limit",control.cpu_limit,"s");
    if(control.scale_interval > 0)
    {
-      (void)printf(" Velocities will be scaled");
-      if( control.scale_separately )
-	 (void)printf(" (for each species individually)");
-      new_line();
+      if( control.scale_options & 0x8 )
+      {
+	 (void)printf(" Velocities to be periodically RESET from MB distribution");
+	 new_line();
+      }
+      else
+      {
+	 (void)printf(" Temperature will be scaled using %s kinetic energy",
+		      control.scale_options & 0x4 ? 
+		      "rolling average" : "instantaneous");
+	 new_line();
+	 if( control.scale_options & 0x3)
+	 {
+	    (void)printf(" (for ");
+	    if( control.scale_options & 0x2 )
+	    {
+	       (void)printf("transl. and rotl.");
+	       if( control.scale_options & 0x1 )
+		  (void)printf(" and ");
+	    }
+	    if( control.scale_options & 0x1 )
+	       (void)printf("each species");
+	    
+	    (void)printf(" individually)");
+	    new_line();
+	 }
+      }
       format_dbl("Applied Temperature",control.temp,"K");
       format_int("No. steps between scalings",control.scale_interval);
       format_int("End scaling at step",control.scale_end);
@@ -404,17 +523,18 @@ spec_t	species[];
  ******************************************************************************/
 void    print_sysdef(file, system, species, site_info, potpar)
 FILE		*file;
-system_p        system;                 /* Pointer to system array (in main)  */
-spec_t          species[];              /* Pointer to species array           */
-site_p          site_info;              /* pointer to site_info array         */
-pot_t           potpar[];               /* Potential parameter array          */
+system_mp       system;                 /* Pointer to system array (in main)  */
+spec_mt         species[];              /* Pointer to species array           */
+site_mp        site_info;              /* pointer to site_info array         */
+pot_mt          potpar[];               /* Potential parameter array          */
 {
-   spec_p       spec;
+   spec_mp      spec;
    int  isite, idi, idj, idij, ip;
-   int  n_potpar = npotp[system->ptype];
+   int  n_potpar = potspec[system->ptype].npar;
    for(spec = species; spec < &species[system->nspecies]; spec++)
    {
-      (void)fprintf(file, " %-16s  %d\n", spec->name, spec->nmols);
+      (void)fprintf(file, " %-16s  %d  %s\n", spec->name, spec->nmols,
+		    spec->framework ? "framework" : "");
       for(isite=0; isite < spec->nsites; isite++)
          (void)fprintf(file, " %6d %9g %9g %9g %9g %9g %s\n",
                         spec->site_id[isite],
@@ -426,7 +546,7 @@ pot_t           potpar[];               /* Potential parameter array          */
                         site_info[spec->site_id[isite]].name);
    }
    (void)fprintf(file, " end\n");
-   (void)fprintf(file, " %s potential parameters\n",types[system->ptype]);
+   (void)fprintf(file," %s potential parameters\n",potspec[system->ptype].name);
    for(idi = 1; idi < system->max_id; idi++)
       for(idj = idi; idj < system->max_id; idj++)
       {
@@ -448,24 +568,24 @@ pot_t           potpar[];               /* Potential parameter array          */
  ******************************************************************************/
 void	print_config(save_name, system, species, site_info, potpar)
 char		*save_name;		/* Name of save file to be written    */
-system_p	system;			/* Pointer to system array (in main)  */
-spec_p		species;		/* Pointer to be set to species array */
-site_p		site_info;		/* To be pointed at site_info array   */
-pot_p		potpar;			/* To be pointed at potpar array      */
+system_mp	system;			/* Pointer to system array (in main)  */
+spec_mp		species;		/* Pointer to be set to species array */
+site_mp		site_info;		/* To be pointed at site_info array   */
+pot_mp		potpar;			/* To be pointed at potpar array      */
 {
    FILE 	*out;
-   match_t	*match_p, *cur, *special_p;
-   spec_p	spec;
+   match_mt	*match_p, *cur, *special_p;
+   spec_mp	spec;
    int		imol, code, i, j, k;
    double	cell_length[3], cell_angle[3];
-   mat_p	h = system->h;
-   contr_t	save_control;
+   mat_mp	h = system->h;
+   contr_mt	save_control;
 
    /*
     * Convert 'control' to input units for correct rereading.
     * Save current values and restore afterwards.
     */
-   (void)memcpy((char*)&save_control, (char*)&control, sizeof control);
+   save_control = control;
    conv_control(&prog_unit, false);
 
    if( (out = fopen(save_name, "w")) == NULL )
@@ -487,7 +607,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
       {
        case 's':
        case ']':
-	 (void)fprintf(out, "%s = %s\n", cur->key, cur->ptr);
+	 (void)fprintf(out, "%s = %s\n", cur->key, (char*)cur->ptr);
 	 break;
        case 'd':
 	 (void)fprintf(out, "%s = %d\n", cur->key, *(int*)cur->ptr);
@@ -529,11 +649,10 @@ pot_p		potpar;			/* To be pointed at potpar array      */
       }
    (void)fprintf(out, "end\n");
    
-   if( ferror(out) )
-      message(NULLI,NULLP,FATAL,REWRT,ferror(out));
+   if( ferror(out) || fclose(out) )
+      message(NULLI,NULLP,FATAL,REWRT,strerror(errno));
 
-   (void)fclose(out);
-   (void)memcpy((char*)&control, (char*)&save_control, sizeof control);
+   control = save_control;
 }
 
 	 

@@ -1,7 +1,31 @@
+/* MOLecular DYnamics simulation code, Moldy.
+Copyright (C) 1988, 1992, 1993 Keith Refson
+ 
+This program is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation; either version 2, or (at your option) any
+later version.
+ 
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+ 
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ 
+In other words, you are welcome to use, share and improve this program.
+You are forbidden to forbid anyone else to use, share and improve
+what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.23 93/03/09 15:59:24 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.24 93/03/12 12:26:12 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.24  93/03/12  12:26:12  keith
+ * Reorganized defines to recognise all ANSI (__type__) forms.
+ * Fixed up Cray by defining old symbol.
+ * 
  * Revision 1.23  93/03/09  15:59:24  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
@@ -94,8 +118,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.23 $"
-#define		 REVISION_DATE    "$Date: 93/03/09 15:59:24 $"
+#define          REVISION         "$Revision: 1.24 $"
+#define		 REVISION_DATE    "$Date: 93/03/12 12:26:12 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *

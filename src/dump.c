@@ -1,3 +1,23 @@
+/* MOLecular DYnamics simulation code, Moldy.
+Copyright (C) 1988, 1992, 1993 Keith Refson
+ 
+This program is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation; either version 2, or (at your option) any
+later version.
+ 
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+ 
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ 
+In other words, you are welcome to use, share and improve this program.
+You are forbidden to forbid anyone else to use, share and improve
+what you give them.   Help stamp out software-hoarding!  */
 /******************************************************************************
  *  dump   Does a periodic dump of simulation data to a file.	In fact most  *
  *  of this function is concerned with the bookkeeping associated with 	      *
@@ -23,6 +43,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.19  93/03/09  15:58:26  keith
+ * Changed all *_t types to *_mt for portability.
+ * Reordered header files for GNU CC compatibility.
+ * 
  * Revision 1.18  92/06/02  10:37:52  keith
  * Added check of ferror() as well as return from fwrite().  Talk
  * about belt and braces.
@@ -94,7 +118,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.18 92/06/02 10:37:52 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.19 93/03/09 15:58:26 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -212,7 +236,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 1.18 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 1.19 $"+11,
 		                     sizeof dump_header.vsn-1);
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;

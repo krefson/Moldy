@@ -1,3 +1,23 @@
+/* MOLecular DYnamics simulation code, Moldy.
+Copyright (C) 1988, 1992, 1993 Keith Refson
+ 
+This program is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation; either version 2, or (at your option) any
+later version.
+ 
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+ 
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ 
+In other words, you are welcome to use, share and improve this program.
+You are forbidden to forbid anyone else to use, share and improve
+what you give them.   Help stamp out software-hoarding!  */
 /******************************************************************************
  * Aux		This file contains auxilliary service functions and (almost)  *
  *		all machine-dependant stuff.  The ANSI standard interface is  *
@@ -6,6 +26,132 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	aux.c,v $
+ * Revision 1.7.1.32  93/03/15  14:41:33  keith
+ * Added GPL copyleft notice to permit release and distribution.
+ * N.B.  Previous versions were copyright (C) by author and 
+ * only licensed by explicit permission.
+ * 
+ * Revision 1.7.1.31  93/03/12  12:19:22  keith
+ * Reorganized defines to recognise all ANSI (__type__) forms.
+ * Moved spxpy() from aux.c to force.c and force_parallel.c
+ * 
+ * Revision 1.7.1.30  93/03/09  15:58:18  keith
+ * Changed all *_t types to *_mt for portability.
+ * Reordered header files for GNU CC compatibility.
+ * 
+ * Revision 1.7.1.29  93/03/05  15:02:58  keith
+ * Now is POSIX - safe wrt declaration of times().
+ * 
+ * Revision 1.7.1.28  92/09/22  14:48:22  keith
+ * Tidied up calls to improve "lint" rating.
+ * 
+ * Revision 1.7.1.27  92/06/26  17:02:46  keith
+ * Got rid of assumption that memory returned by talloc() or
+ * arralloc() is zeroed.  This enhances ANSI compatibility.
+ * Removed memory zeroing from alloc.c() in consequence.
+ * 
+ * Revision 1.7.1.26  92/06/19  17:28:40  keith
+ * Added faster version of "search_lt" for Titan.
+ * 
+ * Revision 1.7.1.25  92/06/12  12:55:41  keith
+ * Mods to make it work on VMS again.  Ugh.
+ * 
+ * Revision 1.7.1.24  92/06/11  20:31:04  keith
+ * Added file locking against multiple runs using same dump or backup files.
+ * 
+ * Revision 1.7.1.23  91/11/26  10:24:31  keith
+ * Modified timing routines to work under POSIX.
+ * Replaced saxpy() with sxpy() -- UNVECTORIZED as indices may be repeated.
+ * 
+ * Revision 1.7.1.22  91/08/17  16:24:15  keith
+ * Added strerror() for pre-ANSI unix systems
+ * Updated #defines with __unix__ symbol and protection of sys/time.h for convex.
+ * 
+ * Revision 1.7.1.21  91/08/15  18:11:44  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
+ * Revision 1.7.1.20  91/05/29  10:58:00  keith
+ * Modified wheneq to generate better code on Stardent TITAN
+ * Added #ifdefe'd "const" qualifier in "remove" for ANSI compilers
+ * without ANSI libraries.
+ * 
+ * Revision 1.7.1.19  91/03/12  15:42:12  keith
+ * Tidied up typedefs size_t and include file <sys/types.h>
+ * Added explicit function declarations.
+ * 
+ * Revision 1.7.1.18  91/02/07  16:48:36  keith
+ * Modified BLAS functions to vectorise better undar Stardent Titan compiler.
+ * 
+ * Revision 1.7.1.17  90/10/23  20:10:47  keith
+ * Added inhibit_vectorization() dummy function.
+ * 
+ * Revision 1.7.1.16  90/10/18  17:24:26  keith
+ * Added extra arg to gather() for (conditional) bounds check.
+ * C.f. force.c 1.8.1.17.
+ * 
+ * Revision 1.7.1.15  90/09/28  13:29:08  keith
+ * Inserted braces around VECTORIZE directives and changed include files
+ * for STARDtardent 3000 series (via cond. comp symbol "ardent").
+ * 
+ * Revision 1.7.1.14  90/08/30  16:00:21  keith
+ * Replaced malloc() calls with calls to own allocator 'aalloc()'
+ * Ifdefed out 'remove' and 'memset/memcpy' if ANSI_LIBS is set.
+ * 
+ * Revision 1.7.1.13  90/05/16  18:39:46  keith
+ * Renamed own freer from cfree to tfree.
+ * 
+ * Revision 1.7.1.12  90/05/15  19:00:16  keith
+ * Incorporate new ANSI CLOCKDS_PER_SEC instead of CLK_TCK.
+ * 
+ * Revision 1.7.1.11  90/05/02  18:15:12  keith
+ * Tidied up include files, added "time.h".
+ * 
+ * Revision 1.7.1.10  90/04/16  13:04:08  keith
+ * Improved sysV version of rt_clock() by using result of times().
+ * Coded zero-real explicitly for ANSI compliance.
+ * Added strchr() for BSD systems (calls index()).
+ * 
+ * Revision 1.7.1.9  90/03/27  17:34:46  keith
+ * Moved selection of own `vprintf into defs.h - 
+ * Define symbol HAVE_VPRINTF if not needed. (Also HAVE_DOPRNT).
+ * 
+ * Revision 1.7.1.8  90/03/09  17:32:35  keith
+ * Modified preprocessor conditionals to handle unicos.
+ * 
+ * Revision 1.7.1.7  90/01/02  19:01:03  keith
+ * Rewrote loops to go from zero to n again - substantially faster on Stellar
+ * 
+ * Revision 1.7.1.6  89/12/18  17:50:23  keith
+ * Sum() tests for special case of stride=1 for efficiency.
+ * Rt_clock() added (returns time in seconds).
+ * 
+ * Revision 1.7.1.5  89/11/21  15:51:10  keith
+ * Added purge() for cray and fixed replace() for standard case.
+ * 
+ * Revision 1.7.1.4  89/10/25  10:05:24  keith
+ * Added spaxpy() in support of change in force.c.
+ * 
+ * Revision 1.7.1.3  89/09/20  17:08:26  keith
+ * Added wheneq() and gatheri() to veclib calls for convex.
+ * Modified search_lt() for cray to return zero if called with n=0.
+ * 
+ * Revision 1.7.1.2  89/09/18  17:39:37  keith
+ * Fixed error in vprintf which used puts() instead of fputs() giving extra \n.
+ * Made 'eps' static in precision() to give correct answer on subsequent calls.
+ * 
+ * Revision 1.7.1.1  89/08/25  15:21:36  keith
+ * Mods to add framework structures to simulation model
+ * 
+ * Revision 1.7  89/08/15  18:29:58  keith
+ * Fixed bug which assumed clock tick for Sys V machines = 1/60s
+ * 
  * Revision 1.6  89/08/10  17:29:42  keith
  * Fixed search_lt() to return correct result for non-unit stride.
  * 
@@ -33,26 +179,33 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: aux.c,v 1.6 89/08/10 17:29:42 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/aux.c,v 1.7.1.32 93/03/15 14:41:33 keith Exp $";
 #endif
+/*========================== program include files ===========================*/
+#include	"defs.h"
 /*========================== Library include files ===========================*/
-#include	<stdio.h>
+#if defined(ANSI) || defined(__STDC__)
+#include 	<stdarg.h>
+#else
+#include 	<varargs.h>
+#endif
 #include	<ctype.h>
 #include	<math.h>
 #include 	"string.h"
-/*========================== program include files ===========================*/
-#include	"defs.h"
-/*========================== Library declarations ============================*/
-#ifdef unix
-time_t	time();
-#endif
+#include	"stddef.h"
+#include	"stdlib.h"
+#include	"time.h"
+#include	<stdio.h>
+/*========================== External function declarations ==================*/
+gptr            *talloc();	       /* Interface to memory allocator       */
+void            tfree();	       /* Free allocated memory	      	      */
 /*============================================================================*/
 /******************************************************************************
  *  Vector routines - special cases for cray and convex to call vectorised    *
  *  library versions.  Other machines do it the hard way.		      *
  *  CRAY versions.							      *
  ******************************************************************************/
-#if defined(CRAY) && ! defined(unix)
+#if defined(CRAY)
 double vdot(n,x,ix,y,iy)
 int	n;
 real	*x, *y;
@@ -78,6 +231,7 @@ int	ix;
    void SSCAL();
    SSCAL(&n, &s, x, &ix);
 }
+#ifdef NOT_FOR_NOW
 void saxpy(n, sa, sx, ix, sy, iy)
 int	n, ix, iy;
 double	sa;
@@ -86,6 +240,7 @@ double	sx[], sy[];
    void SAXPY();
    SAXPY(&n, &sa, sx, &ix, sy, &iy);
 }
+#endif
 int	search_lt(n, x, ix, s)
 int	n;
 real	x[];
@@ -93,9 +248,12 @@ int	ix;
 double	s;
 {
    int	ISRCHFLT();
+   if( n <= 0 )
+      return(0);
    return( ISRCHFLT(&n, x, &ix, &s) - 1);
 }
-void	gather(n, a, b, ix)
+                            /*ARGSUSED*/
+void	gather(n, a, b, ix, lim)
 int	n;
 real	a[], b[];
 int	ix[];
@@ -103,6 +261,15 @@ int	ix[];
    void GATHER();
    GATHER(&n, a, b+1, ix);
 }
+void    gatheri(n, a, b, ix)
+int     n;
+int     a[], b[];
+int     ix[];
+{
+   void GATHER();
+   GATHER(&n, a, b+1, ix);
+}
+#ifdef NOT_FOR_NOW
 void	scatter(n, a, ix, b)
 int	n;
 real	a[], b[];
@@ -111,12 +278,25 @@ int	ix[];
    void SCATTER();
    SCATTER(&n, a+1, ix, b);
 }
+#endif
+int wheneq(n, x, ix, s, idx)
+int n, ix, idx[];
+int x[], s;
+{
+  int nval = 0, i;
+  void WHENEQ();
+
+  WHENEQ(&n, x, &ix, &s, idx, &nval);
+  for(i=0; i < nval; i++)
+     idx[i]--;
+  return( nval );
+}
 
 #endif
 /******************************************************************************
  *  Vector routines - CONVEX versions.  The calls are to VECLIB functions.    *
  ******************************************************************************/
-#if defined(convexvc)
+#if defined(__convexc__)
 #define SINGLE (sizeof(real) == sizeof(float))
 double vdot(n,x,ix,y,iy)
 int	n;
@@ -153,6 +333,7 @@ int	ix;
    else
       dscal_(&n, &s, x, &ix);
 }
+#ifdef NOT_FOR_NOW
 void saxpy(n, sa, sx, ix, sy, iy)
 int	n, ix, iy;
 double	sa;
@@ -165,6 +346,7 @@ double	sx[], sy[];
    else
       daxpy_(&n, &sa, sx, &ix, sy, &iy);
 }
+#endif
 int	search_lt(n, x, ix, s)
 int	n;
 real	x[];
@@ -178,7 +360,8 @@ double	s;
    else
       return( (i = idsvlt_(&n, x, &ix, &s)) ? i - 1 : n);
 }
-void	gather(n, a, b, ix)
+                            /*ARGSUSED*/
+void	gather(n, a, b, ix, lim)
 int	n;
 real	a[], b[];
 int	ix[];
@@ -189,6 +372,7 @@ int	ix[];
    else
       dgthr_(&n, b+1, a, ix);
 }
+#ifdef NOT_FOR_NOW
 void	scatter(n, a, ix, b)
 int	n;
 real	a[], b[];
@@ -199,6 +383,29 @@ int	ix[];
       ssctr_(&n, b, ix, a+1);
    else
       dsctr_(&n, b, ix, a+1);
+}
+#endif
+                            /*ARGSUSED*/
+void    gatheri(n, a, b, ix, lim)
+int     n;
+int     a[], b[];
+int     ix[];
+{
+   void igthr_();
+   igthr_(&n, b+1, a, ix);
+}
+
+int wheneq(n, x, ix, s, idx)
+int n, ix, idx[];
+int x[], s;
+{
+   int nval = 0, i;
+   void ilsteq_();
+   
+   ilsteq_(&n, x, &ix, &s, &nval, idx);
+   for(i=0; i < nval; i++)
+      idx[i]--;
+   return( nval );
 }
 #endif
 /******************************************************************************
@@ -230,6 +437,7 @@ int	ix;
    void sscal_();
    sscal_(&n, &s, x, &ix);
 }
+#ifdef NOT_FOR_NOW
 void saxpy(n, sa, sx, ix, sy, iy)
 int	n, ix, iy;
 double	sa;
@@ -238,6 +446,7 @@ double	sx[], sy[];
    void saxpy_();
    saxpy_(&n, &sa, sx, &ix, sy, &iy);
 }
+#endif
 int	search_lt(n, x, ix, s)
 int	n;
 real	x[];
@@ -247,7 +456,8 @@ double	s;
    int	isrchflt_();
    return( isrchflt_(&n, x, &ix, &s) - 1);
 }
-void	gather(n, a, b, ix)
+                            /*ARGSUSED*/
+void	gather(n, a, b, ix, lim)
 int	n;
 real	a[], b[];
 int	ix[];
@@ -255,6 +465,7 @@ int	ix[];
    void gather_();
    gather_(&n, a, b+1, ix);
 }
+#ifdef NOT_FOR_NOW
 void	scatter(n, a, ix, b)
 int	n;
 real	a[], b[];
@@ -263,22 +474,35 @@ int	ix[];
    void scatter_();
    scatter_(&n, a+1, ix, b);
 }
+#endif
 
 #endif
 /******************************************************************************
- *  Vector handling functions - versions for scalar machines.		      *
+ *  Vector handling functions - C versions. 		     		      *
  ******************************************************************************/
-#if ! (defined(CRAY) && ! defined(unix) ) \
-       && ! defined(convexvc) && ! defined(alliant)
+#if !defined(CRAY) && !defined(__convexc__) && !defined(alliant)
 double vdot(n,x,ix,y,iy)
 int	n;
 real	x[], y[];
 int	ix, iy;
 {
    register double	dot=0.0;
-   int i, j;
-   for(i = (n-1)*ix, j = (n-1)*iy; i >= 0; i -= ix, j -= iy)
-      dot += x[i] * y[j];
+   register int i, j;
+   if( ix == iy && ix == 1)
+   {
+VECTORIZE
+      for(i = 0; i < n; i++)
+         dot += x[i] * y[i];
+   }
+   else
+   {
+VECTORIZE
+      for(i = j = 0; i != n*ix; i += ix)
+      {
+         dot += x[i] * y[j];
+         j += iy;
+      }
+   }
    return(dot);
 }
 double sum(n,x,ix)
@@ -288,8 +512,19 @@ register int	ix;
 {
    register double	s=0.0;
    int i;
-   for(i = (n-1)*ix; i >= 0; i -= ix)
-      s += x[i];
+
+   if( ix == 1 )
+   {
+VECTORIZE
+     for( i = 0; i < n; i++)
+       s += x[i];
+   } 
+   else
+   {
+VECTORIZE
+      for(i = 0; i != n*ix; i += ix)
+	s += x[i];
+   }
    return(s);
 }
 void	vscale(n,s,x,ix)
@@ -299,47 +534,116 @@ register real	x[];
 register int	ix;
 {
    int i;
-   for(i = (n-1)*ix; i >= 0; i -= ix)
+VECTORIZE
+   for(i = 0; i != n*ix; i += ix)
       x[i] *= s;
 }
+#ifdef NOT_FOR_NOW
 void saxpy(n, sa, sx, ix, sy, iy)
 int	n, ix, iy;
 double	sa;
 double	sx[], sy[];
 {
    int i, j;
-   for(i = (n-1)*ix, j = (n-1)*iy; i >= 0; i -= ix, j -= iy)
+VECTORIZE
+   for(i = j = 0; i != n*ix; i += ix, j += iy)
       sy[j] += sa * sx[i];
 }
+#endif
+/*
+ *  Two alternatives for search_lt.  The first can vectorize using an
+ *  IDFMIN type function, the second using an isrchtl.  They don't
+ *  do QUITE the same thing; the first returns the index of the 
+ *  smallest value,, the second that of the first one less than s.
+ */
+#ifdef ardent
+int	search_lt(n, x, ix, s)
+int	n;
+real 	x[];
+int	ix;
+double	s;
+{
+   int i, im=n*ix;
+   double min = x[0];
+VECTORIZE
+   for( i = 0; i != n*ix; i += ix )
+      if( x[i] < min )
+      {
+	 im = i;
+	 min = x[i];
+      }
+   if ( min < s )
+      return(im/ix);
+   else
+      return n;
+}
+#else
 int	search_lt(n, x, ix, s)
 int	n;
 real	x[];
 int	ix;
 double	s;
 {
-   int i;
-   for( i = 0; i < n*ix; i += ix )
+   int i, im=n*ix;
+VECTORIZE
+   for( i = (n-1)*ix; i >= 0; i -= ix )
       if( x[i] < s )
-         break;
-   return(i/ix);
+	 im = i;
+   return(im/ix);
 }
-void	gather(n, a, b, ix)
-int	n;
+#endif
+                            /*ARGSUSED*/
+void	gather(n, a, b, ix, lim)
+int	n, lim;
 real	a[], b[];
 int	ix[];
 {
    int i;
-   for(i = n-1; i >= 0; i--)
+VECTORIZE
+   for( i = 0; i < n; i++)
+   {
+#ifdef DEBUG
+      if(ix[i] < 0 || ix[i] >= lim )
+	 message(0,0,2, "Gather index out of bounds %d %d\n", i, ix[i]);
+#endif
+      a[i] = b[ix[i]];
+   }
+}
+void	gatheri(n, a, b, ix)
+int	n;
+int	a[], b[];
+int	ix[];
+{
+   int i;
+VECTORIZE
+   for( i = 0; i < n; i++)
       a[i] = b[ix[i]];
 }
+#ifdef NOT_FOR_NOW
 void	scatter(n, a, ix, b)
 int	n;
 real	a[], b[];
 int	ix[];
 {
    int i;
-   for(i = n-1; i >= 0; i--)
+VECTORIZE
+   for( i = 0; i < n; i++)
       a[ix[i]] = b[i];
+}
+#endif
+int wheneq(n, x, ix, s, idx)
+int n, ix, idx[];
+int x[], s;
+{
+  int nval = 0, i;
+ 
+  for(i = 0; i != n*ix; i += ix)
+    if(x[i] == s)
+    {
+      idx[nval] = i;
+      nval++;
+   }
+  return( nval );
 }
 #endif
 /******************************************************************************
@@ -365,8 +669,8 @@ double	mdrand()
 double	precision()
 {
    static	int	first=1;
-   double		eps = 0.5, eps2;
-   double  		*eps1 = &eps2;		/* Use pointer to force store */
+   static	double	eps = 0.5;
+   double  		eps2, *eps1 = &eps2;	/* Use pointer to force store */
    
    if(first)
    {
@@ -381,12 +685,119 @@ double	precision()
    return(eps);
 }
 /******************************************************************************
+ *  cpu.  Return (double) the current cpu time in seconds.		      *
+ *  rt_clock(). Return elapsed time in s.				      *
+ ******************************************************************************/
+#if defined(unix) || defined(__unix__)
+#ifdef BSD
+
+/*
+ *  Protect against double inclusion of <time.h>.  Why can't vendors do this?
+ *  OK, so OSF does and it breaks if you have it.  Sigh.
+ */
+#ifndef __osf__
+#define KERNEL
+#define INKERNEL
+#define _KERNEL 
+#include <sys/time.h>
+#undef KERNEL
+#undef INKERNEL
+#undef _KERNEL
+#endif
+
+#ifdef __convexc__		/* For"-std" and "-str" ANSI modes. Sigh. */
+#   ifndef _POSIX_SOURCE
+#      define _POSIX_SOURCE
+#      define _CONVEX_SOURCE
+#   endif
+#endif
+#include <sys/resource.h>
+
+double	cpu()	/* The standard unix 'clock' wraps after 36 mins.	      */
+{
+   struct rusage ru;
+   int getrusage();
+ 
+   (void)getrusage(RUSAGE_SELF, &ru);
+
+   return(ru.ru_utime.tv_sec  + ru.ru_stime.tv_sec
+	  + 1.0e-6 * (ru.ru_utime.tv_usec + ru.ru_stime.tv_usec));
+}
+
+double rt_clock()
+{
+   int gettimeofday();
+   struct timeval tp;
+   (void)gettimeofday(&tp,(struct timezone *)0);
+   return(tp.tv_sec + tp.tv_usec*0.000001);
+}
+
+#else			/* System V or POSIX.			      */
+
+/*
+ *  We must protect the inclusion of <sys/types.h>.  But size_t may already
+ *  be defined in "stddef.h" , so we define it out of the way.  The twist
+ *  comes for a GNU CC compilation.  That *may* have fixed includes, but
+ *  we can't rely on that, so define size_t to the same symbol as the GNU
+ *  header file does to stop it complaining.   Roll on ANSI.
+ */
+#if ! defined(POSIX) && ! defined(_POSIX_SOURCE)  /* Already declared in times.h*/
+#ifndef SYS_TYPES_INCLUDED
+#define SYS_TYPES_INCLUDED
+#   define size_t ___size_t
+#   include <sys/types.h>
+#   undef  size_t
+#endif
+#include <sys/param.h>
+#endif
+
+#include <sys/times.h>
+
+#if defined(HZ) && ! defined(CLK_TCK)
+#define CLK_TCK HZ
+#endif
+
+double        cpu()
+{
+   struct tms buf;
+ 
+   (void)times(&buf);
+
+   return (buf.tms_utime + buf.tms_stime)/(double)CLK_TCK;
+}
+
+double rt_clock()
+{
+   struct tms buf;
+ 
+   return times(&buf)/(double)CLK_TCK;
+}
+
+#endif			/* USG or BSG					      */
+#else			/* Not Unix					      */
+#ifdef CRAY
+#   define CLOCKS_PER_SEC 1000000
+#endif
+#if !defined(CLOCKS_PER_SEC) && defined(CLK_TCK)
+#   define  CLOCKS_PER_SEC CLK_TCK
+#endif
+double	cpu()
+{
+   return((double)clock() / CLOCKS_PER_SEC);
+}
+double rt_clock()
+{
+   return time((time_t *)0);
+}
+#endif
+/******************************************************************************
  *  cctime()  Return ctime() but without the newline			      *
  ******************************************************************************/
 char	*cctime(timeloc)
-time_t	*timeloc;
+time_mt	*timeloc;
 {
-   char	*p = ctime(timeloc);
+   time_t  loc = *timeloc;
+   char	*p = ctime(&loc);
    *strchr(p, '\n') = '\0';
    return(p);
 }
@@ -395,83 +806,89 @@ time_t	*timeloc;
  ******************************************************************************/
 char	*atime()
 {
-   time_t t = time((time_t*)0);
+   time_mt t = time((time_t*)0);
    return(cctime(&t));
 }
 /******************************************************************************
- *  cpu.  Return (double) the current cpu time in seconds.		      *
+ * Zero real.  Set array to floating-point zero.			      *
  ******************************************************************************/
-#ifdef unix
-#ifdef USG
-
-#define size_t NOTHING
-#define time_t NOTHING2
-#include <sys/param.h>
-#include <sys/types.h>
-#include <sys/times.h>
-#undef size_t
-#undef time_t
-
-double        cpu()
-{
-   struct tms buf;
- 
-   (void)times(&buf);
-
-   return((buf.tms_utime + buf.tms_stime)/(double)HZ);
-}
-#else			/* Not USG ie BSD varitety of unix		      */
-
-#define KERNEL          /* This stops sys/time.h from including time.h again  */
-#define time_t NOTHING
-#include <sys/time.h>
-#include <sys/resource.h>
-#undef time_t
-
-double	cpu()	/* The standard unix 'clock' wraps after 36 mins.	      */
-{
-   struct rusage ru;
- 
-   (void)getrusage(RUSAGE_SELF, &ru);
-
-   return(ru.ru_utime.tv_sec  + ru.ru_stime.tv_sec
-	  + 1.0e-6 * (ru.ru_utime.tv_usec + ru.ru_stime.tv_usec));
-}
-#endif			/* USG or BSG					      */
-#else			/* Not Unix					      */
-#ifdef CRAY
-#define CLK_TCK 1000000
-#endif
-double	cpu()
-{
-   return((double)clock() / CLK_TCK);
-}
-#endif
-/******************************************************************************
- * Zero real.  assumes memset or bzero.					      *
- ******************************************************************************/
-#if defined(unix) && !defined(USG)   	/* BSD Unix - use bzero		      */
 void	zero_real(r,n)
-real	*r;
+real	r[];
 int	n;
 {
-   int bzero();
-   (void)bzero((char *)r, n * sizeof(real));
+   int i;
+VECTORIZE
+   for(i = 0; i < n; i++)
+      r[i] = 0.0;
 }
-#else					/* SYSV unix or ANSI - use memset()   */
-void	zero_real(r,n)
-real	*r;
+void	zero_double(r,n)
+double	r[];
 int	n;
 {
-   (void)memset((char *)r, 0, n * sizeof(real));
+   int i;
+VECTORIZE
+   for(i = 0; i < n; i++)
+      r[i] = 0.0;
 }
+/******************************************************************************
+ * strerror for pre-ANSI unix machines					      *
+ ******************************************************************************/
+#ifndef ANSI_LIBS
+#if defined(unix) || defined(__unix__)
+char	*strerror(i)
+int i;
+{
+   extern int sys_nerr;
+   extern char *sys_errlist[];
+   if( i >= 0 && i < sys_nerr )
+      return sys_errlist[i];
+   else
+      return "invalid error code";
+}   
+#endif
 #endif
 /******************************************************************************
- * memcpy   replacement for BSD machines which don't have it		      *
+ * raise for pre-ANSI unix machines					      *
  ******************************************************************************/
-#if defined(unix) && !defined(USG)
-char *memcpy(s1, s2, n)
-char *s1, *s2;
+#ifndef ANSI_LIBS
+#if defined(unix) || defined(__unix__)
+int 	raise(sig)
+int sig;
+{
+   extern int getpid();
+   extern int kill();
+
+   return(kill(getpid(), sig));
+}   
+#endif
+#endif
+/******************************************************************************
+ * raise for VMS.  Why doesn't it have it?
+ ******************************************************************************/
+#ifdef VMS
+int 	raise(sig)
+int sig;
+{
+   extern int getpid();
+   extern int kill();
+
+   return(kill(getpid(), sig));
+}   
+#endif
+/******************************************************************************
+ * memcpy  and strchr replacement for BSD machines which don't have them.     *
+ ******************************************************************************/
+#ifndef ANSI_LIBS
+#ifdef BSD
+char *strchr(s, c)
+char	*s;
+int	c;
+{
+   extern char	*index();
+   return index(s,c);
+}
+gptr *memcpy(s1, s2, n)
+gptr *s1, *s2;
 int n;
 {
    int bcopy();
@@ -479,36 +896,19 @@ int n;
    return(s1);
 }
 #endif
-/******************************************************************************
- * remove.  delete (unlink) a file.   (ANSI replacement)		      *
- ******************************************************************************/
-#if defined(unix) || defined(CRAY)
-remove(file)
-char	*file;
-{
-   return (unlink(file));
-}
 #endif
 /******************************************************************************
  *  replace - replace file1 by file2, renaming or overwriting		      *
  ******************************************************************************/
-#ifdef vms
-int	replace(file1, file2)
-char	*file1, *file2;
-{
-   int f;  char name[L_name];
-   f = rename(file1, file2);
-   if(f == 0) (void)remove(strcat(strcpy(name,file2),";-1"));
-   return(f);
-}
-#else
+#if defined(CRAY) && !defined(unix) && !defined(__unix__)       /* COS only   */
 
-#if defined(CRAY) && !defined(unix)	/* COS only - not UNICOS	      */
+#define PDNLEN 16
 
 void cos_parse(name, own, id, dn)
 char	*name, *own, *id, *dn;
 {
    char	*tok[3], *t = NULL, *name2 = strdup(name);
+   int i;
    tok[0] = tok[1] = tok[2] = "";
 
    while ( (t = strtok(t ? 0 : name2, "/")) != NULL )
@@ -518,49 +918,157 @@ char	*name, *own, *id, *dn;
    (void)strcpy(dn, tok[2]);
    (void)strcpy(id, tok[1]);
    (void)strcpy(own, tok[0]);
-   cfree(name2);
+   if( own[0] == '\0' )
+      strcpy(own, cuserid(0));
+   free(name2);
 }
 
-#define PDNLEN 16
+remove(file)
+char	*file;
+{
+   void ACCESS(), DELETE();
+   char pdn[PDNLEN], id[PDNLEN], own[PDNLEN], tmp[PDNLEN];
+   int flag,i;
+   for(i = 0; i < PDNLEN; i++)
+      tmp[i] = 0;
+   
+   (void)tmpnam(tmp);
+   cos_parse(file, own, id, pdn);
+   ACCESS(&flag,"DN",tmp,"PDN",pdn,"ID", id, "UQ", "MSG");
+   if( ! flag )
+      DELETE(&flag,"DN",tmp, "MSG"); 
+   return(flag);
+}
 
-int     replace(file1, file2)   /* Actually saves a DN as a PDN and purges    */
+int     replace(file1, file2)   /* Actually saves a DN as a PDN.	      */
 char    *file1, *file2;
 {
    void SAVE(), RELEASE(), ACCESS(), DELETE();
-   char from[PDNLEN], to[PDNLEN], tmp[PDNLEN], id[PDNLEN], own[PDNLEN];
-   int flag; int i, oldflag = -1;
+   char from[PDNLEN], to[PDNLEN], id[PDNLEN], own[PDNLEN];
+   int flag; int i;
    /*
     * The CRAY JCL routines expect nulls up to the end of each word (8 bytes)
     */
    for( i = 0; i < PDNLEN; i++ )
-      from[i] = to[i] = tmp[i] = id[i] = '\0';
-   strncpy(from, file1, PDNLEN-1); 
-   (void)tmpnam(tmp);
+      from[i] = to[i] = id[i] = '\0';
 
+   strncpy(from, file1, 7); 
    cos_parse(file2, own, id, to);
 
-   ACCESS(&oldflag,"DN",tmp,"PDN",to,"ID", id, "UQ");
-   SAVE(&flag,"DN",from,"PDN",to, "ID", id);
+   SAVE(&flag,"DN",from,"PDN",to, "ID", id, "MSG");
    if( flag )     return(flag);
-   RELEASE(&flag,"DN",from);            
-   if( flag )   return(flag);
-   if( ! oldflag )
-      DELETE(&flag,"DN",tmp); 
+   RELEASE(&flag,"DN",from);
    return(flag);
 }
 #else
-
+#   if defined(unix) || defined(__unix__)
 int	replace(file1, file2)
 char	*file1, *file2;
 {
    int f;
+#ifndef ANSI_LIBS
+   int rename();
+#endif
+   char *backup = aalloc(strlen(file2)+2, char);
+   (void)strcat(strcpy(backup, file2), "%");
+
+   f = rename(file2, backup);		/* Backup old version - ignore failure*/
+   f = rename(file1, file2);		/* Rename old version to new	      */
+   xfree(backup);
+   return(f);
+}
+#   else
+int	replace(file1, file2)
+char	*file1, *file2;
+{
+   int f;
+   int rename();
    f = rename(file1, file2);
-   if(f != 0 && remove(file2) )		/* If already exists try remove target*/
+   if(f != 0 && remove(file2) == 0)	/* If already exists try remove target*/
       f = rename(file1, file2);
    return(f);
 }
+#   endif
+#endif
+/******************************************************************************
+ * remove.  delete (unlink) a file.   (ANSI replacement)		      *
+ ******************************************************************************/
+#ifndef ANSI_LIBS
+#if defined(unix) || defined(__unix__)
+int remove(file)
+#ifdef __STDC__
+const 
+#endif
+char	*file;
+{
+   int unlink();
+   return (unlink(file));
+}
 #endif
 #endif
+/******************************************************************************
+ *  Purge Remove 1 old version of a file.  (Do nothing if O/S has no versions)*
+ ******************************************************************************/
+#ifdef VMS 
+void	purge(file)
+char	*file;
+{
+   char *name = aalloc(strlen(file)+4,char);
+   strcpy(name, file);
+   if( strchr(name, ';') == NULL)
+      (void)remove(strcat(name,";-1"));
+   tfree(name);
+}
+#else				/*  VMS				*/
+#  if defined (CRAY) && !defined(unix)  && !defined(__unix__) 
+void purge(file)
+char	*file;
+{
+   void ACCESS(), DELETE();
+   char pdn[PDNLEN], id[PDNLEN], own[PDNLEN], tmp[PDNLEN], ed[PDNLEN];
+   char mess[L_name];
+   int flag,i;
+   for(i = 0; i < PDNLEN; i++)
+      tmp[i] = ed[i] = 0;
+   
+   (void)tmpnam(tmp);
+   cos_parse(file, own, id, pdn);
+   ACCESS(&flag,"DN",tmp,"PDN",pdn,"ID", id, "MSG");
+   if( flag == 0 )
+   {
+      i = NACSED();
+      if( itostr(i-1, ed, 10, 0) == 0 )
+      {
+         remark("NACSED() gave invalid integer ");
+         remark(strcat(strcpy(mess,"New edition number = "), ed));
+      }
+      RELEASE(&flag, "DN", tmp);
+      ACCESS(&flag,"DN",tmp,"PDN",pdn,"ID", id, "ED", ed, "UQ", "MSG");
+      if( ! flag )
+         DELETE(&flag,"DN",tmp, "MSG"); 
+   }
+}
+#   else			/* Cray && ! unix		*/
+#      if defined(unix) || defined(__unix__)
+void	purge(file)
+char	*file;
+{
+   int unlink();
+   char *name = aalloc(strlen(file)+2,char);
+   (void)strcat(strcpy(name, file), "%");
+
+   (void)unlink(name);
+   xfree(name);
+}
+#      else
+/*ARGSUSED*/
+void	purge(file)
+char	*file;
+{
+}
+#      endif
+#   endif			/* Cray && ! unix		*/
+#endif				/*  VMS				*/
 /******************************************************************************
  * err_fn  error function. See Abramowitz & Stegun p299.		      *
  ******************************************************************************/
@@ -583,13 +1091,17 @@ double	x;
       return( -err_fn(-x) );
 }
 /******************************************************************************
+ * inhibit_vectorization().  Self explanatory dummy function		      *
+ ******************************************************************************/
+void inhibit_vectorization()
+{
+}
+/******************************************************************************
  *  vprintf for those machines which don't have it			      *
  ******************************************************************************/
-#if ! defined(sun) && ! defined(vms) && ! defined(ANSI) && ! defined(__STDC__)
+#ifndef HAVE_VPRINTF
 
-#include <varargs.h>
-
-#if defined(CRAY) && ! defined(unix)
+#if defined(CRAY)&& ! defined(unix) && ! defined(__unix__)
 
 int	vprintf (fmt, args)
 char   	*fmt;
@@ -600,7 +1112,7 @@ va_list args;
 }
 
 #else
-#if defined(convex) || defined(sequent)
+#ifdef	HAVE_DOPRNT
 
 int	vprintf (fmt, args)
 char	*fmt;
@@ -614,16 +1126,20 @@ va_list	args;
 
 #include <ctype.h>
 int	vprintf (format, ap)
+#ifdef __STDC__
+const
+#endif
 char	*format;
 va_list	ap;
 {
-    int     pos, charsout, fpos, error;
+    int     pos, charsout, fpos, error, modflag;
     char    fmt[1024], temps[1024];
     char    ch;
 
     pos = charsout = error = 0;
     while (format[pos] != 0)
     {
+        modflag = 0;
         if (format[pos] != '%')
         {
             putchar (format[pos++]);
@@ -636,6 +1152,11 @@ va_list	ap;
             while (format[pos] != 0 && !islower (format[pos]) &&
                 format[pos] != '%')
                 fmt[fpos++] = format[pos++];
+	    if( format[pos] == 'l' || format[pos] == 'L' || format[pos] == 'h')
+	    {
+	       modflag = format[pos];
+	       fmt[fpos++] = format[pos++];
+	    }
             if (format[pos] == 0)
             {
             /* error in format string */
@@ -667,7 +1188,10 @@ va_list	ap;
               case 'u':
               case 'x':
               case 'X':
-                sprintf (temps, fmt, va_arg (ap, int));
+		if( modflag == 'l')
+		   sprintf (temps, fmt, va_arg (ap, long));
+		else
+		   sprintf (temps, fmt, va_arg (ap, int));
                 break;
               case 'e':
               case 'E':
@@ -683,7 +1207,7 @@ va_list	ap;
 #ifdef DEBUG
             printf ("temps is \"%s\"\n", temps);
 #endif
-            puts (temps);
+            fputs (temps, stdout);
             charsout += strlen (temps);
 #ifdef DEBUG
             printf ("still to interpret \"%s\"\n", (char *) &format[pos]);
@@ -694,7 +1218,6 @@ va_list	ap;
         return (-1);
     return (charsout);
 }
-#endif		/* convex or sequent */
+#endif		/* HAVE_DOPRNT       */
 #endif		/* Cray		     */
 #endif		/* Vprintf needed    */
-

@@ -1,3 +1,23 @@
+/* MOLecular DYnamics simulation code, Moldy.
+Copyright (C) 1988, 1992, 1993 Keith Refson
+ 
+This program is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation; either version 2, or (at your option) any
+later version.
+ 
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+ 
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ 
+In other words, you are welcome to use, share and improve this program.
+You are forbidden to forbid anyone else to use, share and improve
+what you give them.   Help stamp out software-hoarding!  */
 /******************************************************************************
  * rdf		Functions to accumulate and calculate radial distribution     *
  *		functions. Contents:					      *
@@ -8,6 +28,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.19  93/03/12  12:25:17  keith
+ * Got rid of unneccesary convex special case.
+ * 
  * Revision 1.18  93/03/09  15:59:09  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
@@ -80,7 +103,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.18 93/03/09 15:59:09 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.19 93/03/12 12:25:17 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
