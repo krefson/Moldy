@@ -34,6 +34,8 @@ what you give them.   Help stamp out software-hoarding!  */
 #ifdef USE_XDR
    XDR          xdrs;
 #endif
+
+static int verbose;
 /******************************************************************************
  * strstr replacement for pre-ANSI machines which don't have it.              *
  ******************************************************************************/
@@ -375,7 +377,7 @@ main(int argc, char **argv)
    int		offset, icpt;
    int		idump0;
    int		xdr = 0;
-   int		verbose = 0;
+
    dump_sysinfo_mt *dump_sysinfo;
    size_mt	sysinfo_size;
    
@@ -406,6 +408,8 @@ main(int argc, char **argv)
 
    mol_head.next = NULL;
    f_head.next = NULL;
+
+   verbose = 0;
 
    while( (c = getopt(argc, argv, "c:br:R:q:Q:t:m:o:v") ) != EOF )
       switch(c)
@@ -450,9 +454,11 @@ main(int argc, char **argv)
 	 break;
        case 'v':
          verbose++;
+	 break;
        case '?': 
        case 'h':
 	 errflg++;
+	 break;
       }
 
 
@@ -495,6 +501,7 @@ main(int argc, char **argv)
 #define MAXTRY 500
       dump_base = argv[optind];
       idump0 = -1;
+      if ( verbose )  fprintf(stderr,"Searching for dump file matching \"%s\"\n",dump_base);
       do                      /* Search for a dump file matching pattern */
 	 sprintf(cur_dump, dump_base, ++idump0);
       while( (dump_file = fopen(cur_dump, "rb")) == NULL && idump0 < MAXTRY);
@@ -502,6 +509,8 @@ main(int argc, char **argv)
       {
 	 fprintf(stderr,"I can't find any dump files to match \"%s\".\n",dump_base);
 	 exit(2);
+      } else if (verbose) {
+	fprintf(stderr,"... found \"%s\"\n", cur_dump);
       }
       (void)fclose(dump_file);
    }
@@ -525,6 +534,7 @@ main(int argc, char **argv)
 	    break;
       }
 
+      if( verbose ) fprintf(stderr, "Checking I can open dump file \"%s\"\n",dump_name);
       if( (dump_file = open_dump(dump_name, "rb")) == NULL)
       {
 	 if( genflg )
@@ -595,6 +605,7 @@ main(int argc, char **argv)
       cur->i = header.istep/header.dump_interval;
       cur->num = header.ndumps;
       insert(cur, &f_head);
+      if( verbose ) fprintf(stderr, "Dump file \"%s\" added to list to be processed\n",dump_name);
 #ifdef DEBUG
       fprintf(stderr,"File \"%s\" \nslice %5d length %5d\n",
 	              dump_name, cur->i, cur->num);
@@ -677,7 +688,7 @@ main(int argc, char **argv)
       if(tslice < 0 || numslice > maxslice)
       {
 	 fprintf(stderr, "Error in dump sequence - step %d not found\n", 
-		 numslice);
+		 numslice-1);
 	 exit(2);
       }
    }
