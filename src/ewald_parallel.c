@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.10  91/03/12  16:30:08  keith
+ * Stardent Titan (ST3000) version.
+ * 
  * Revision 1.9  90/09/28  13:29:19  keith
  * Inserted braces around VECTORIZE directives and changed include files
  * for STARDtardent 3000 series (via cond. comp symbol "ardent").
@@ -62,7 +65,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.9 90/09/28 13:29:19 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.10 91/03/12 16:30:08 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -108,8 +111,10 @@ extern	contr_t	control;		/* Main simulation control record     */
  *  Ewald  Calculate reciprocal-space part of coulombic forces		      *
  ******************************************************************************/
 void ewald_inner();
+#ifdef PARALLEL
 #pragma opt_level 3
 #pragma pproc ewald_inner
+#endif
 void	ewald(site,site_force,system,species,chg,pe,stress)
 real		**site,			/* Site co-ordinate arrays	 (in) */
 		**site_force;		/* Site force arrays		(out) */
@@ -146,6 +151,8 @@ mat_t		stress;			/* Stress virial		(out) */
 		**slz = (real**)arralloc(sizeof(real),2, 0, lmax, 0, nsites-1);
    real		*coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
    real               *c1, *s1, *cm1, *sm1;
+   real		*sf0, *sf1, *sf2, *ssf0, *ssf1, *ssf2;
+   real		*site0, *site1, *site2;
    int		nthreads = nprocessors(),
    		ithread;
    double	*pe_n = aalloc(nthreads, double);
@@ -192,6 +199,7 @@ mat_t		stress;			/* Stress virial		(out) */
       nsitesxf = ssite;
       frame_flag = (spec != species+system->nspecies);
 
+#pragma no_parallel
       for(is = 0; is < nsitesxf; is++)
       {
 	 sq += chg[is];
@@ -202,6 +210,7 @@ mat_t		stress;			/* Stress virial		(out) */
        * Sqxf is total non-framework charge.  Calculate grand total in sq.
        */
       sqxf = sq;
+#pragma no_parallel
       for(; is < nsites; is++)
 	 sq += chg[is];
       /*
@@ -260,24 +269,32 @@ mat_t		stress;			/* Stress virial		(out) */
 /*
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
  */
-#pragma no_parallel
-VECTORIZE
-   for(is = 0; is < nsites; is++)
-      chx[0][is] = cky[0][is] = clz[0][is] = 1.0;
-
+   coshx = chx[0]; cosky = cky[0]; coslz = clz[0];
 #pragma no_parallel
 VECTORIZE
    for(is = 0; is < nsites; is++)
    {
-      kx = astar[0]*site[0][is]+astar[1]*site[1][is]+astar[2]*site[2][is];
-      ky = bstar[0]*site[0][is]+bstar[1]*site[1][is]+bstar[2]*site[2][is];
-      kz = cstar[0]*site[0][is]+cstar[1]*site[1][is]+cstar[2]*site[2][is];
-      chx[1][is] = cos(kx);
-      shx[1][is] = sin(kx);
-      cky[1][is] = cos(ky);
-      sky[1][is] = sin(ky);
-      clz[1][is] = cos(kz);
-      slz[1][is] = sin(kz);
+      coshx[is] = 1.0;
+      cosky[is] = 1.0;
+      coslz[is] = 1.0;
+   }
+
+   coshx = chx[1]; cosky = cky[1]; coslz = clz[1];
+   sinhx = shx[1]; sinky = sky[1]; sinlz = slz[1];
+   site0 = site[0]; site1 = site[1]; site2 = site[2];
+#pragma no_parallel
+VECTORIZE
+   for(is = 0; is < nsites; is++)
+   {
+      kx = astar[0]*site0[is]+astar[1]*site1[is]+astar[2]*site2[is];
+      ky = bstar[0]*site0[is]+bstar[1]*site1[is]+bstar[2]*site2[is];
+      kz = cstar[0]*site0[is]+cstar[1]*site1[is]+cstar[2]*site2[is];
+      coshx[is] = cos(kx);
+      sinhx[is] = sin(kx);
+      cosky[is] = cos(ky);
+      sinky[is] = sin(ky);
+      coslz[is] = cos(kz);
+      sinlz[is] = sin(kz);
    }
 /*
  * Use addition formulae to get sin(h*astar*x)=sin(Kx*x) etc for each site
@@ -348,15 +365,19 @@ VECTORIZE
 	 for(j = 0; j < 3; j++)
 	    stress[i][j] += stress_n[ithread][i][j];
    }
+   sf0 = site_force[0]; sf1 = site_force[1]; sf2 = site_force[2];
    for(ithread = 0; ithread < nthreads-1; ithread++)
    {
+      ssf0 = s_f_n[ithread][0];
+      ssf1 = s_f_n[ithread][1];
+      ssf2 = s_f_n[ithread][2];
 #pragma ipdep
 VECTORIZE
       for(is = 0; is < nsites; is++)
       {
-	 site_force[0][is] += s_f_n[ithread][0][is];
-	 site_force[1][is] += s_f_n[ithread][1][is];
-	 site_force[2][is] += s_f_n[ithread][2][is];
+	 sf0[is] += ssf0[is];
+	 sf1[is] += ssf1[is];
+	 sf2[is] += ssf2[is];
       }
    }
    
@@ -367,7 +388,9 @@ VECTORIZE
    if( nthreads > 1)
       tfree((char*)s_f_n);
 }
+#ifdef PARALLEL
 #pragma opt_level 2
+#endif
 /*****************************************************************************
  * qsincos().  Evaluate q sin(k.r) and q cos(k.r).  This is in a separate    *
  * function because some compilers (notably Stellar's) generate MUCH better  *
@@ -380,7 +403,6 @@ real coshx[], sinhx[], cosky[], sinky[], coslz[], sinlz[],
 int  k,l,nsites;
 {
    int is;
-   real chxky, shxky;
    
    if( k >= 0 )
       if( l >= 0 )
@@ -388,10 +410,12 @@ int  k,l,nsites;
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    chxky = coshx[is]*cosky[is] - sinhx[is]*sinky[is];
-	    shxky = sinhx[is]*cosky[is] + coshx[is]*sinky[is];
-	    qcoskr[is] = chg[is]*(chxky*coslz[is] - shxky*sinlz[is]);
-	    qsinkr[is] = chg[is]*(shxky*coslz[is] + chxky*sinlz[is]);
+	    qcoskr[is] = chg[is]*(
+		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
+                - (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
+	    qsinkr[is] = chg[is]*(
+                  (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
+		+ (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
 	 }
       }
       else
@@ -399,10 +423,12 @@ VECTORIZE
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    chxky = coshx[is]*cosky[is] - sinhx[is]*sinky[is];
-	    shxky = sinhx[is]*cosky[is] + coshx[is]*sinky[is];
-	    qcoskr[is] = chg[is]*(chxky*coslz[is] +shxky*sinlz[is]);
-	    qsinkr[is] = chg[is]*(shxky*coslz[is] - chxky*sinlz[is]);
+	    qcoskr[is] = chg[is]*(
+		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
+                + (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
+	    qsinkr[is] = chg[is]*(
+                  (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
+		- (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
 	 }
       }
    else
@@ -411,10 +437,12 @@ VECTORIZE
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    chxky = coshx[is]*cosky[is] + sinhx[is]*sinky[is];
-	    shxky = sinhx[is]*cosky[is] - coshx[is]*sinky[is];
-	    qcoskr[is] = chg[is]*(chxky*coslz[is] - shxky*sinlz[is]);
-	    qsinkr[is] = chg[is]*(shxky*coslz[is] + chxky*sinlz[is]);
+	    qcoskr[is] = chg[is]*(
+		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
+                - (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
+	    qsinkr[is] = chg[is]*(
+                  (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
+		+ (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
 	 }
       }
       else
@@ -422,10 +450,12 @@ VECTORIZE
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    chxky = coshx[is]*cosky[is] + sinhx[is]*sinky[is];
-	    shxky = sinhx[is]*cosky[is] - coshx[is]*sinky[is];
-	    qcoskr[is] = chg[is]*(chxky*coslz[is] + shxky*sinlz[is]);
-	    qsinkr[is] = chg[is]*(shxky*coslz[is] - chxky*sinlz[is]);
+	    qcoskr[is] = chg[is]*(
+		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
+                + (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
+	    qsinkr[is] = chg[is]*(
+                  (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
+		- (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
 	 }
      }
 }
@@ -542,20 +572,29 @@ char *getenv();
 int nprocessors()
 {
    char *env;
-   int n=1000000,    nthreads = MT_NUMBER_OF_PROCS();
+   static int n=0;
+   int    nphys;
 
-   if( ( env = getenv("THREADS") ) != NULL)
-      n =atoi(env);
-   return MIN(nthreads,n);
+   if( n <= 0 )
+   {
+      nphys = MT_NUMBER_OF_PROCS();
+      if( ( env = getenv("THREADS") ) == NULL || (n = atoi(env)) <= 0 
+	  || n > nphys)
+         n = nphys;
+   }
+   return n;
 }
 #else			/* GS1000/2000 but should compile on any unix */
 int nprocessors()
 {
    char *env;
-   int n;
-   if( ( env = getenv("THREADS") ) == NULL || (n = atoi(env)) <= 0 )
-      return 4;
-   else
-      return n;
+   static int n = 0;
+
+   if( n <= 0 )
+   {
+      if( ( env = getenv("THREADS") ) == NULL || (n = atoi(env)) <= 0 )
+         n = 4;
+   }
+   return n;
 }
 #endif
