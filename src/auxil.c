@@ -26,6 +26,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.23  2001/07/31 14:14:12  keith
+ *       Added check to make sure that the save file doesn't overwrite the
+ *       run's own input file.
+ *
+ *       Revision 2.22  2001/07/11 10:41:52  keith
+ *       Fixed a couple of compilation problems caused by erroneous "protoize".
+ *
  *       Revision 2.21  2001/02/05 11:47:33  keith
  *       Improved test of close site-site approaches to catch all intermolecular
  *       ones.  The avoidance test for intramolecular approaches invalidated the
@@ -303,7 +310,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.21 2001/02/05 11:47:33 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.23 2001/07/31 14:14:12 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -311,6 +318,8 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.21
 #include	<math.h>
 #include 	"string.h"
 #include	<stdio.h>
+#include        <ctype.h>
+#include	"stdlib.h"
 /*================= System Library include files - unix only ================*/
 #if defined(HAVE_TIMES) && defined(HAVE_SYS_TIMES_H)
 #   include <sys/times.h>
@@ -804,6 +813,51 @@ void	purge(char *file)
 }
 #   endif			
 #endif				/*  VMS				*/
+
+/******************************************************************************
+ * save_version_inc. Add a version number to save_file name                   *
+ ******************************************************************************/
+#if defined(unix) || defined(__unix) || defined(__unix__)
+void save_version_inc(char *save_name, int namesize)
+{
+   int len = strlen(save_name), i, vsn=0;
+   FILE *rst;
+   
+   for(i=len-1; isdigit(save_name[i]); i--)
+      ;
+   if( save_name[i] != '.' )
+   {
+      if( namesize - len >= 2 ) 
+      {
+	 (void)strcat(save_name,".0");
+	 len +=2;
+	 i++;
+      }
+      else
+      {
+	 /* No room to add extension.  Return and give up? */
+	 return;
+      }
+   }
+   if( i < len-1)
+      vsn=atoi(save_name+i+1)+1;
+
+   (void)sprintf(save_name+i+1,"%d", vsn);
+   /*
+    * Better not overwrite a file which exists.
+    */
+   while( rst = fopen(save_name,"rb") )
+   {
+      vsn++;
+      (void)sprintf(save_name+i+1,"%d", vsn);
+      fclose(rst);
+   }
+}
+#else
+void save_version_inc(char *save_name, int namelen)
+{
+}
+#endif
 /******************************************************************************
  * err_fn  error function. See Abramowitz & Stegun p299.		      *
  ******************************************************************************/
