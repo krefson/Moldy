@@ -31,6 +31,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.16  2000/10/20 15:15:48  keith
+ *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
+ *
  *       Revision 2.15  2000/05/23 15:23:08  keith
  *       First attempt at a thermostatted version of the Leapfrog code
  *       using either a Nose or a Nose-Poincare thermostat
@@ -181,7 +184,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/restart.c,v 2.15 2000/05/23 15:23:08 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/restart.c,v 2.16 2000/10/20 15:15:48 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -312,10 +315,12 @@ void	xdr_cread(xfp_mt xfp, gptr *ptr, size_mt size, int nitems, xdrproc_t proc)
       }
       end_data = xdr_getpos(xfp.xp);
       if ( nitems > 0 )
+      {
 	 if(feof(xfp.fp))
 	    message(NULLI,NULLP,FATAL,REEOF);
 	 else
 	    message(NULLI,NULLP,FATAL,"Unknown read error");
+      }
       if(stored_size != end_data-begin_data)
 	 message(NULLI,NULLP,FATAL,REFORM, xdr_getpos(xfp.xp),
 		 stored_size, end_data-begin_data);
@@ -370,8 +375,8 @@ void	xdr_cwrite(xfp_mt xfp, gptr *ptr, size_mt size, int nitems, xdrproc_t proc)
 #endif
 
 #ifdef USE_XDR
-#define cread	xdr_cread
-#define cwrite	xdr_cwrite
+#define cread(a,b,c,d,e)	xdr_cread((a),(b),(c),(d),(xdrproc_t)(e))
+#define cwrite(a,b,c,d,e)	xdr_cwrite((a),(b),(c),(d),(xdrproc_t)(e))
 #define cnext	xdr_cnext
 #endif
 /******************************************************************************
@@ -613,7 +618,7 @@ void	write_restart(char *save_name, restrt_mt *header, system_mp system, spec_mp
    XDR		xdrsw;
    xfp_mt	xfp;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.12.2.1 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.16 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    save = fopen(control.temp_file, "wb");

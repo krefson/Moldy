@@ -113,8 +113,6 @@ DOC=		$(DOCCI) moldy.bbl $(FIGS)
 VMSBUILD=	compile_moldy.com link_moldy.com defcomm.com\
 		compile_utils.com link_utils.com compile.com
 
-DOSBUILD=	Makefile.mak OFILES.RSP SHAKOBJS.RSP Makefile.w32
-
 all:		moldy utilities Makefile
 
 moldy:		$(OFILES) $(EXTRA_OBJ) $(HFILES)
@@ -186,57 +184,20 @@ install:	moldy $(UTILS) $(UTILS2)
 		for file in $?; do $(INSTALL) $$file $(bindir); done
 
 Makefile.in:	xmakefile
-		@PATH=/usr/5bin:${PATH};\
-		echo	  '{{{{{{{{{\n/^CFILES *=/  c\\\nCFILES=' $(CFILES)\
-				'\n}\n/^OFILES *=/  c\\\nOFILES=' $(OFILES)\
-				'\n}\n/^LFILES *=/  c\\\nLFILES=' $(LFILES)\
-				'\n}\n/^AHLINK *=/  c\\\nAHLINK=' $(AHLINK)\
-				'\n}\n/^SHAKC *=/   c\\\nSHAKC='  $(SHAKC)\
-				'\n}\n/^SHAKOBJS *=/  c\\\nSHAKOBJS='$(SHAKOBJS)\
-				'\n}\n/^UTILC *=/   c\\\nUTILC='  $(UTILC)\
-				'\n}\n/^UTILO *=/   c\\\nUTILO='  $(UTILO)\
-				'\n}\n/^FIGS *=/   c\\\nFIGS='  $(FIGS)\
-				'\n}\n/^%\.[a-z][a-z]*:	/,/^$$/ d\n'\
-				'/^moldy.bbl:	/,/^$$/ d\n' \
-				'/^Makefile.in:	/,/^$$/ d\n' \
-				 > make.sed 
+		@ echo	  's@^CFILES *=.*@CFILES=' $(CFILES) '@' > make.sed
+		@ echo	  's@^OFILES *=.*@OFILES=' $(OFILES) '@' >> make.sed
+		@ echo	  's@^LFILES *=.*@LFILES=' $(LFILES) '@' >> make.sed
+		@ echo	  's@^AHLINK *=.*@AHLINK=' $(AHLINK) '@' >> make.sed
+		@ echo	  's@^SHAKC *=.*@SHAKC='  $(SHAKC) '@' >> make.sed
+		@ echo	  's@^SHAKOBJS *=.*@SHAKOBJS='$(SHAKOBJS) '@' >> make.sed
+		@ echo	  's@^UTILC *=.*@UTILC='  $(UTILC) '@' >> make.sed
+		@ echo	  's@^UTILO *=.*@UTILO='  $(UTILO) '@' >> make.sed
+		@ echo	  's@^FIGS *=.*@FIGS='  $(FIGS) '@' >> make.sed
+		@ echo	  '/^%\.[a-z][a-z]*:	/,/^$$/ d' >> make.sed
+		@ echo	  '/^moldy.bbl:	/,/^$$/ d'  >> make.sed
+		@ echo	  '/^Makefile.in:	/,/^$$/ d'  >> make.sed
 		sed -f make.sed ./xmakefile > Makefile.in
 		@ $(RM) make.sed
-
-Makefile.w32:	Makefile.in
-		@PATH=/usr/5bin:${PATH};\
-		echo	's/ -\<lm\>//\n'\
-			's/@\(CC\)@/gcc/\n'\
-			's/@\(CFLAGS\)@/-g/\n'\
-			's/@\(OPT\)@/-O2 -ffast-math -mcpu=pentium -malign-double/\n'\
-			's/@\(OPT2\)@/-O2 -ffast-math -mcpu=pentium -malign-double/\n'\
-			's/@\(OPTAUX\)@/-funroll-loops/\n'\
-			's/@\([A-Z][A-Z]*\)@//\n'\
-			'/$$(CFILES).*:/,/	co/d\n'\
-			'/^.SUFFIXES/d' > makew32.sed
-		sed -f makew32.sed ./Makefile.in > Makefile.w32
-		@$(RM) makew32.sed
-
-Makefile.mak:	Makefile.in
-		@PATH=/usr/5bin:${PATH};\
-		echo	's/^\([ 	].*\)$$(OFILES)/\1@OFILES.RSP/g\n'\
-			's/^\([ 	].*\)$$(SHAKOBJS)/\1@SHAKOBJS.RSP/g\n'\
-			's/\.\<o\>/.obj/g\n'\
-			's/\.o$$/.obj/g\n'\
-			's/ -\<o\> *\(\<[a-z]*\>\)/ -e\1 /\n'\
-			's/ -\<lm\>//\n'\
-			's/@\(CC\)@/tcc/\n'\
-			's/@\(CPPFLAGS\)@//\n'\
-			's/@\(CFLAGS\)@/-A -Z -G/\n'\
-			's/@\(OPT\)@/-f287 -mh -O/\n'\
-			's/@\(OPT2\)@/-f287 -mh -O/\n'\
-			's/@\(OPTAUX\)@//\n'\
-			's/@\(LDFLAGS\)@/-mh/\n'\
-			's/@\(LIBS\)@//\n'\
-			'/$$(CFILES).*:/,/	co/d\n'\
-			'/^.SUFFIXES/d' > makedos.sed
-		sed -f makedos.sed ./Makefile.in > Makefile.mak
-		@$(RM) makedos.sed
 
 OFILES.RSP:	
 		echo $(OFILES)   | sed -e 's/\.\<o\>/.obj/g'  > OFILES.RSP
@@ -288,8 +249,7 @@ distclean:	clean
 		$(RM)      moldy.com* moldy.tar* moldy.zip\
                            moldy.aux moldy.toc moldy.lof moldy.lot\
 			   Makefile config.cache config.h config.status \
-			   config.log $(AHLINK) \
-			   $(DOSBUILD) $(VMSBUILD)
+			   config.log $(AHLINK) $(VMSBUILD)
 
 maintainer-clean:	distclean
 		if ( [ -d RCS ] ) then\
@@ -304,10 +264,10 @@ maintainer-clean:	distclean
 #
 
 moldy.tar:	$(CFILES) $(HFILES) $(AHFILES) \
-		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD) $(DOSBUILD)
+		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD)
 		$(TAR) cf moldy.tar\
 		$(CFILES)  $(HFILES) $(AHFILES) \
-		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD) $(DOSBUILD)
+		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD)
 
 moldy.tar.Z:	moldy.tar
 		compress -c moldy.tar > moldy.tar.Z
@@ -316,10 +276,10 @@ moldy.tar.gz:	moldy.tar
 		gzip -c moldy.tar > moldy.tar.gz
 
 moldy.zip:	$(CFILES) $(HFILES) $(AHFILES)  \
-		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD) $(DOSBUILD)
+		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD)
 		$(ZIP) -l -q moldy.zip\
 		$(CFILES)  $(HFILES) $(AHFILES) \
-		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD) $(DOSBUILD);\
+		$(EXTRAS) $(INFILES) $(DOC) $(VMSBUILD);\
 		$(ZIP) -r -j  -q moldy.zip $(W32BIN)
 
 compile_moldy.com:	Makefile.in
@@ -357,9 +317,9 @@ compile.com:
 	'$$ write sys$$output "===========Done======================"'
 
 moldy.com:	$(CFILES) $(HFILES) $(AHFILES) $(EXTRAS)\
-		$(INFILES) Aaaa_Read.Me $(DOC) $(VMSBUILD) $(DOSBUILD)
+		$(INFILES) Aaaa_Read.Me $(DOC) $(VMSBUILD)
 		$(DCLAR) Aaaa_Read.Me compile.com $(CFILES) $(HFILES) $(AHFILES)\
-		$(INFILES) $(EXTRAS) $(DOC) $(VMSBUILD)  $(DOSBUILD)\
+		$(INFILES) $(EXTRAS) $(DOC) $(VMSBUILD)\
 			> moldy.com
 
 moldy.com.Z:	moldy.com

@@ -171,7 +171,7 @@ extract(char *dump_name, int cpt_mask, list_mt *molecules, cpt_mt *cpt, int ncpt
 	    {
 	       xdr_setpos(&xdrs, dump_base+cpt[icpt].offset*XDR_FLOAT_SIZE);
 	       xdr_vector(&xdrs, (char*)buf, (u_int)cpt[icpt].size, XDR_FLOAT_SIZE, 
-			  xdr_float);
+			  (xdrproc_t)xdr_float);
 	    }
 	    else
 #endif

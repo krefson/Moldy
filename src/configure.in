@@ -4,6 +4,9 @@ AC_CONFIG_HEADER(config.h)
 
 AC_CANONICAL_SYSTEM
 
+dnl Checks for programs.
+AC_PROG_CC2
+
 if test "${CC-cc}" != gcc; then
 dnl 
 dnl Check for C compiler. DEFCC is preferred compiler, ALTCC is a list
@@ -25,7 +28,7 @@ dnl
 dnl
 dnl Alternative compilers for Linux
 dnl
-      i?86-pc-linux*)     DEFCC=pgcc ALTCC="gcc mpicc bspcc";;
+      i?86-pc-linux*)     DEFCC=pgcc ALTCC="mpicc bspcc";;
                      *)   ALTCC="mpicc bspcc";;
    esac
 dnl
@@ -83,8 +86,6 @@ dnl
    fi
 fi
 
-dnl Checks for programs.
-AC_PROG_CC2
 dnl AC_PATH_CPP
 dnl Extra compiler options.  We know whether we are using gcc at this point.
 if test "x$ac_cv_prog_gcc" = xyes; then

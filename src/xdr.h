@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.h,v $
+ *       Revision 2.11  2000/04/27 17:57:12  keith
+ *       Converted to use full ANSI function prototypes
+ *
  *       Revision 2.10  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -70,7 +73,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSidh = "$Header: /home/eeyore_data/keith/CVS/moldy/src/xdr.h,v 2.10 1998/05/07 17:06:11 keith Exp $";
+static char *RCSidh = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.h,v 2.11 2000/04/27 17:57:12 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef USE_XDR
@@ -90,6 +93,14 @@ static char *RCSidh = "$Header: /home/eeyore_data/keith/CVS/moldy/src/xdr.h,v 2.
 #define realloc xxrealloc
 #endif
 
+/*
+ * A Horrible hack.  defs.h declares MIN and MAX macros, but so does
+ * <rpc/types.h>.  Undefine and redefine them here.
+ */
+
+#undef MIN
+#undef MAX
+
 #ifdef vms
 #include	"rpc_types.h"
 #include	"rpc_xdr.h"
@@ -98,6 +109,15 @@ static char *RCSidh = "$Header: /home/eeyore_data/keith/CVS/moldy/src/xdr.h,v 2.
 #include	<rpc/types.h>
 #include	<rpc/xdr.h>
 #endif
+
+#ifdef MIN
+#undef  MIN
+#endif
+#ifdef MAX
+#undef  MAX
+#endif
+#define MIN(x,y)	((x) < (y) ? (x) : (y))
+#define MAX(x,y)	((x) > (y) ? (x) : (y))
 
 
 #ifndef STDC_HEADERS

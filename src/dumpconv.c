@@ -19,11 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dumpconv.c,v 2.11 2000/04/27 17:57:06 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dumpconv.c,v 2.12 2000/11/09 16:28:03 keith Exp $";
 #endif
 
 /*
  * $Log: dumpconv.c,v $
+ * Revision 2.12  2000/11/09 16:28:03  keith
+ * Updated dump file format for new Leapfrog dynamics\nAdded #molecules etc to dump header format
+ *
  * Revision 2.11  2000/04/27 17:57:06  keith
  * Converted to use full ANSI function prototypes
  *
@@ -172,7 +175,8 @@ void read_binary(float *buf, int buflen, int xdr)
 #ifdef USE_XDR
    if( xdr )
    {
-      xdr_vector(&xdrsr, (char*)buf, buflen, XDR_FLOAT_SIZE, xdr_float);
+      xdr_vector(&xdrsr, (char*)buf, buflen, XDR_FLOAT_SIZE, 
+		 (xdrproc_t)xdr_float);
    }
    else
 #endif
@@ -193,7 +197,8 @@ void write_native(float *buf, int buflen)
 #ifdef USE_XDR
 void write_xdr(float *buf, int buflen)
 {
-   xdr_vector(&xdrsw, (char*)buf, buflen, XDR_FLOAT_SIZE, xdr_float);
+   xdr_vector(&xdrsw, (char*)buf, buflen, XDR_FLOAT_SIZE,
+	      (xdrproc_t)xdr_float);
    if( ferror(stdout) )
       error("Write error on output file (Error code %d).",ferror(stdout));
 }
