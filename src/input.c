@@ -29,6 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	input.c,v $
+ * Revision 2.3  93/10/28  10:27:52  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.1  93/07/19  13:27:53  keith
  * Added XDR capability for backup and dump files.
  * 
@@ -150,7 +153,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/input.c,v 2.1 93/07/19 13:27:53 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/input.c,v 2.5 94/01/18 13:32:35 keith Stab $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -214,7 +217,7 @@ match_mt	match[] = {
 {"backup-file",      SFORM,  BACKUP_FILE,    (gptr*)control.backup_file},
 {"temp-file",        SFORM,  TEMP_FILE,      (gptr*)control.temp_file},
 {"strict-cutoff",    "%d",   "0",            (gptr*)&control.strict_cutoff},
-{"xdr",    	     "%d",   "0",            (gptr*)&control.xdr_write},
+{"xdr",    	     "%d",   "1",            (gptr*)&control.xdr_write},
 {"strain-mask",	     "%d",   "200",	     (gptr*)&control.strain_mask},
 {"nbins",            "%d",   "100",          (gptr*)&control.nbins},
 {"seed",             "%d",   "1234567",      (gptr*)&control.seed},
