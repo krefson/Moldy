@@ -111,10 +111,15 @@ OFILES = $(FILES:%=%.o)
 
 LFILES = $(FILES:%=%.ln)
 
-INFILES = control.water control.100 tips2.in\
+INFILES = 	control.water control.100 tips2.in\
 		control.tip4p tip4p.in\
 		methane.in mcy.in water-big.in control.big\
-		control.mgclh2o mgclh2o.in control.clay
+		control.mgclh2o mgclh2o.in control.clay\
+		control.argon argon.in control.tips2\
+		quartz-vbst.in control.quartz\
+		water-canon.out argon-example.out\
+		tips2-example.out mgclh2o-example.out\
+		quartz-example.out
 
 SHAKS=	algorith alloc auxil eigens kernel input matrix\
 		quaterns restart startup values xdr
@@ -129,8 +134,7 @@ EXTRAS = $(UTILS:%=%.c) mdshak.c ewald_parallel.c force_parallel.c ewald-RIL.c
 
 HFILES=		structs.h defs.h string.h time.h stddef.h stdlib.h messages.h xdr.h
 
-DOC=		READ.ME BENCHMARK COPYING RELNOTES\
-			water-canon.out moldy.tex moldy.bbl
+DOC=		READ.ME BENCHMARK COPYING RELNOTES moldy.tex moldy.bbl
 
 VMSBUILD=	compile_moldy.com link_moldy.com defcomm.com\
 		compile_utils.com link_utils.com compile.com
@@ -167,10 +171,10 @@ proto-mdshak:	mdshak.c $(SHAKC)
 		protoize mdshak.c $(SHAKC)
 
 install:	moldy $(UTILS) mdshak
-		for file in $?; do install $$file $$HOME/bin; done
+		for file in $?; do install $$file $$HOME/bin/; done
 
 install2:	moldy $(UTILS) mdshak
-		for file in $?; do install $$file $$HOME/bin.$$HOSTTYPE; done
+		for file in $?; do install $$file $$HOME/bin.$$HOSTTYPE/; done
 
 Makefile:	xmakefile
 		@PATH=/usr/5bin:${PATH};\
