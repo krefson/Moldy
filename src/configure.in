@@ -47,8 +47,8 @@ dnl
      rs6000-ibm-aix*)   : ${OPT=-qansialias\ -O3}  ${OPT2=$OPT};;
      mips-sgi-irix5*)   : ${OPT=-O2\ -mips2} ${OPT2=$OPT} \
                           ${LIBS=-lmalloc\ -lfastm} ;;
-     mips-sgi-irix6*)   : ${OPT=-O3\ -woff\ 1174} \
-                          ${OPT2=${OPT}\ -OPT:alias=restrict:fast_sqrt=on}};;
+     mips-sgi-irix6*)   : ${OPT=-O3} \
+                          ${OPT2=${OPT}\ -OPT:alias=restrict:fast_sqrt=on:roundoff=3:IEEE_arithmetic=3}};;
      hppa1.*-hp-*)      : ${OPT=+O3\ +Olibcalls}  \
                           ${OPT2=${OPT}\ +Onoparmsoverlap}  ;;
      c*-convex-bsd*)    : ${OPT=-O2\ -na\ -nv\ -fi}  \
@@ -58,7 +58,9 @@ dnl
                         : ${OPT=-h\ nostdc,vector3,scalar3,ivdep} ${OPT2=$OPT}
                         : ${LDFLAGS=-Wl,-D,HEAP=50000+50000\ -Wl,-D,STACK=10000+10000} \
                           ${LIBS=-lsci}  ;;
-     T3*-cray-unicos*)  : ${OPT=-O2} ${OPT2=${OPT}\ -hrestrict=a} \
+     T3D-cray-unicos*)  : ${OPT=-O2} ${OPT2=-O3\ -hunroll,aggress,restrict=a} \
+                          ${LIBS=-lsci} ;;
+     T3E-cray-unicos*)  : ${OPT=-O2} ${OPT2=-O3\ -hunroll,aggress,restrict=a,inlinefrom=auxil.c} \
                           ${LIBS=-lsci} ;;
                     *)  : ${OPT=-O} ${OPT2=$OPT} 
     esac
