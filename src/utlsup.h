@@ -15,6 +15,27 @@
 #define ARC 6
 #define XTL 7
 
+/* Utility messages */
+#define EXEC       "executing command\n    %s"
+#define COMPLETE   "calculation completed"
+#define HEADER     "dump header read successfully"
+
+/* Utility errors */
+#define NOCOMP     "%s not contained in dump of level %d"
+#define INVSPECIES "invalid species specification \"%s\" - choose from species 1 to %d"
+#define INVSLICES  "invalid range for dump records \"%s\""
+#define BUFFMEM    "malloc failed to allocate dump record buffer (%d bytes)"
+#define COMMEM     "malloc failed to allocate dumpext command string buffer (%d bytes)"
+#define FILEOPEN   "failed to open \"%s\""
+#define NOOUTF     "failed to open file \"%s\" for output"
+#define WRITERR    "error writing output - \n%s\n"
+#define DUMPREC    "error reading record %d in dump file \"%s\"\n"
+#define DUMPREC0   "error reading record %d in dump file \"%s\" - \n%s\n"
+#define NOSYSSPEC  "couldn't open system specification file \"%s\" for reading"
+#define NORESTART  "couldn't open restart file \"%s\" for reading -\n%s\n"
+#define DUMPCOMM   "failure executing \"dumpext\" command - \n%s"
+#define UNKSTRUCT  "structure file \"%s\" of unknown format"
+
 /*======================== External data references =======================================*/
 extern int optind;
 contr_mt                control;
@@ -79,6 +100,7 @@ void	read_restart(FILE *restart, char *vsn, system_mp system,
 void	init_averages(int nspecies, char *vsn, long int roll_interval, 
 		      long int old_roll_interval, int *av_convert);
 int	getopt(int, char *const *, const char *);
+int	dump_info(FILE *Fp, int *dump_level);
 void	zero_real(real *r, int n);
 void    zero_double(double *r, int n);
 void    conv_potentials(const unit_mt *unit_from, const 

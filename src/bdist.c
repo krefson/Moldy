@@ -5,7 +5,10 @@ Copyright (C) 1999, 2003 Craig Fisher */
  * bdist   code for calculating bond distributions from Shell-style bond output files *
  ************************************************************************************** 
  *  Revision Log
- *  $Log$
+ *  $Log: bdist.c,v $
+ *  Revision 1.9  2004/12/07 13:00:02  cf
+ *  Merged with latest utilities.
+ *
  *  Revision 1.7.10.3  2004/12/06 19:03:40  cf
  *  Added stdlib.h to headers.
  *  Set uninitialized node to NULL.
@@ -592,7 +595,7 @@ int main(int argc, char **argv)
 	 break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
-	    perror("failed to open file \"%s\" for output");
+            error(NOOUTF, optarg);
 	 break;
        case 'a':
 	 anglims = mystrdup(optarg);

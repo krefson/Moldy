@@ -26,7 +26,10 @@ what you give them.   Help stamp out software-hoarding! */
  *		Output written in Moldy system specification format		      *
  ************************************************************************************** 
  *  Revision Log
- *  $Log$
+ *  $Log: ransub.c,v $
+ *  Revision 1.22  2004/12/07 13:00:01  cf
+ *  Merged with latest utilities.
+ *
  *  Revision 1.17.10.10  2004/12/07 10:35:56  cf
  *  Incorporated Keith's corrections and additions.
  *
@@ -174,7 +177,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/ransub.c,v 1.22 2004/12/07 13:00:01 cf Exp $";
 #endif  
 
 #include "defs.h"
@@ -1175,7 +1178,7 @@ main(int argc, char **argv)
          break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
-	    error("failed to open file \"%s\" for output", optarg);
+	    error(NOOUTF, optarg);
 	 break;
        default:
        case '?': 
@@ -1185,7 +1188,7 @@ main(int argc, char **argv)
    if( errflg )
    {
       fprintf(stderr,
-             "Usage: %s [-r restart-file | -s sys-spec-file] ", comm);
+             "Usage: %s [-r restart-file | -s sys-spec-file] ",comm);
       fputs("[-c] [-m solvent-species] [-e element-data-file] [-v energy-unit-code] ",stderr);
       fputs("[-u solute-species] [-n no-of-substitutions] [-w mass] [-q charge] [-z symbol] ",stderr);
       fputs("[-a solute-structure-file] ",stderr);
@@ -1217,7 +1220,7 @@ main(int argc, char **argv)
    {
     case 's':
       if( (Fp = fopen(filename,"r")) == NULL)
-	 error("Couldn't open sys-spec file \"%s\" for reading", filename);
+	 error(NOSYSSPEC, filename);
       default_control(); 
       file_type = check_control(Fp);
       if (file_type)
@@ -1229,8 +1232,7 @@ main(int argc, char **argv)
       break;
     case 'r':
       if( (Fp = fopen(filename,"rb")) == NULL)
-	 error("Couldn't open restart file \"%s\" for reading -\n%s\n", 
-	       filename, strerror(errno));
+	 error(NORESTART, filename); 
       re_re_header(Fp, &restart_header, &control);
       re_re_sysdef(Fp, restart_header.vsn, &sys, &species, &site_info, &potpar);
       prep_pot(&sys, site_info, potpar, energy_unit);
@@ -1363,7 +1365,7 @@ main(int argc, char **argv)
                ndopsites = read_xyz(dopfile, h, label, dopant_coords, title);
                break;
             default:
-               error("Configuration file \"%s\" of unknown format", dopfile);
+               error(UNKSTRUCT, dopfile);
          }
 
          if( ndopsites < 0)

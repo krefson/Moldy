@@ -24,7 +24,10 @@ what you give them.   Help stamp out software-hoarding! */
  *              -y selects .pot file from which potentials are read                   *
  **************************************************************************************
  *  Revision Log
- *  $Log$
+ *  $Log: syswrite.c,v $
+ *  Revision 2.9  2004/12/07 13:00:01  cf
+ *  Merged with latest utilities.
+ *
  *  Revision 2.6.10.5  2004/12/07 10:35:56  cf
  *  Incorporated Keith's corrections and additions.
  *
@@ -74,7 +77,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/syswrite.c,v 2.9 2004/12/07 13:00:01 cf Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -248,7 +251,7 @@ main(int argc, char **argv)
 	 break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
-	    error("Failed to open file \"%s\" for output",optarg);
+	    error(NOOUTF, optarg);
 	 break;
        case 'y':
          potname = optarg;
@@ -273,7 +276,7 @@ main(int argc, char **argv)
 
    if( errflg )
    {
-      fputs("Usage: syswrite [-i input-file] [-o output-file] ",stderr);
+      fprintf(stderr,"Usage: %s [-i input-file] [-o output-file] ",comm);
       fputs("[-n no-of-molecules] [-l species-label] [-y potential-parameter-file]\n",stderr);
 
       exit(2);
@@ -323,7 +326,7 @@ main(int argc, char **argv)
          atomtot = read_xyz(filename, h, label, x, title);
 	 break;
       default:
-         error("Structure file \"%s\" of unknown format", filename);
+         error(UNKSTRUCT, filename);
    }
 
    if( atomtot <= 0  )
