@@ -38,3 +38,9 @@
 #   define TEMP_FILE		"MDTEMP XXXXXXXX A1"
 #endif
 
+
+#if defined(__unix__) || defined(__unix)
+#   define STDC_HEADERS
+#   define LOCKEX		".lck"
+#   define ALLOC_ALIGN
+#endif
