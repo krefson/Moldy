@@ -19,9 +19,24 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.19 2001/02/22 11:51:47 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.20.2.2 2001/08/03 14:25:31 keith Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.20.2.2  2001/08/03 14:25:31  keith
+ * Further tidied up use of automake and configure scripts, with
+ * associated changes in some program files.
+ *
+ * Tested to at least configure and make under IRIX, Solaris, DU,
+ * UNICOS, linux.
+ *
+ * Revision 2.20.2.1  2001/08/02 17:14:09  keith
+ * First attempt at a port to use Automake.
+ *
+ * Revision 2.20  2001/05/24 16:26:43  keith
+ * Updated program to store and use angular momenta, not velocities.
+ *  - added conversion routines for old restart files and dump files.
+ * Got rid of legacy 2.0 and lower restart file reading code.
+ *
  * Revision 2.19  2001/02/22 11:51:47  keith
  * Added "generic+win" potential.
  *
@@ -303,13 +318,67 @@ what you give them.   Help stamp out software-hoarding!  */
  * Version ID strings
  */
 #define          REVISION         "$Name:  $"
-#define		 REVISION_DATE    "$Date: 2001/02/22 11:51:47 $"
+#define		 REVISION_DATE    "$Date: 2001/08/03 14:25:31 $"
 #define		 REVISION_STATE   "$State: Exp $"
 
 #ifdef HAVE_CONFIG_H
 #   include "config.h"
 #else
 #   include "defconf.h"
+#endif
+/*
+ * Post-config.h processing
+ */
+#ifdef _AIX
+#   define __unix__
+#endif
+
+/*
+ * To allow XDR stuff to work on HP.  Surely there's a more general
+ * way of doing this? I think that HPs header files are broken.
+ */
+#if defined(__hpux) && ! defined(__convex_spp)
+#   define _HPUX_SOURCE
+#   define __unix__
+#endif
+
+#ifdef __convexc__              /* For"-std" and "-str" ANSI modes. Sigh. */
+#   ifndef _POSIX_SOURCE
+#      define _POSIX_SOURCE
+#      define _CONVEX_SOURCE
+#   endif
+#endif
+
+#if defined(HAVE_XDR_INT) && defined(HAVE_RPC_XDR_H)
+#   define USE_XDR
+#endif
+
+/* 
+ * Vectorisation directive translation.  N.B. Most preprocessors munge 
+ * directives so the #define must substitute the preprocessor OUTPUT.
+ */
+#if defined(_CRAY1)	/* This seems to be defined for all CRI PVP systems */
+#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
+#endif
+#if defined(__convexc__) && ! defined(__convex_spp)
+#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
+#endif
+#ifdef stellar
+#   define VECTORIZE __dir NO_RECURRENCE :
+#   define NOVECTOR  __dir SCALAR :
+#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
+#endif
+#ifdef ardent
+#   define VECTORIZE # pragma ivdep
+#   define NOVECTOR  # pragma novector
+#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
+#endif
+
+#if defined(unix) || defined(__unix) || defined(__unix__) || defined(__CYGWIN__)
+#   define UNRESTRICTED_FILE_NAMES
+#   define BACKUP_FILE	"MDBACKUP"
+#   define LOCKEX		".lck"
+#   define ALLOC_ALIGN
 #endif
 
 #include <errno.h>
@@ -473,9 +542,9 @@ typedef	unsigned long int time_mt;/* Larger than any possible time_t */
 typedef unsigned long size_mt;    /* Wide type for passing sizeof	      */
 
 #ifdef HAVE_VOID_PTRS
-typedef char	gptr;
-#else
 typedef void	gptr;
+#else
+typedef char	gptr;
 #endif
 
 typedef	double			real;

@@ -26,6 +26,17 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.23.2.1  2001/08/03 14:25:31  keith
+ *       Further tidied up use of automake and configure scripts, with
+ *       associated changes in some program files.
+ *
+ *       Tested to at least configure and make under IRIX, Solaris, DU,
+ *       UNICOS, linux.
+ *
+ *       Revision 2.23  2001/07/31 17:06:38  keith
+ *       Added check to make sure that the save file doesn't overwrite the
+ *       run's own input file.
+ *
  *       Revision 2.23  2001/07/31 14:14:12  keith
  *       Added check to make sure that the save file doesn't overwrite the
  *       run's own input file.
@@ -310,7 +321,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.23 2001/07/31 14:14:12 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.23.2.1 2001/08/03 14:25:31 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -759,7 +770,7 @@ VECTORIZE
 /******************************************************************************
  *  replace - replace file1 by file2, renaming or overwriting		      *
  ******************************************************************************/
-#if defined(unix) || defined(__unix) || defined(__unix__)
+#ifdef UNRESTRICTED_FILE_NAMES
 int	replace(char *file1, char *file2)
 {
    int f;
@@ -796,7 +807,7 @@ char	*file;
    tfree(name);
 }
 #else				/*  VMS				*/
-#   if defined(unix) || defined(__unix) || defined(__unix__)
+#   ifdef UNRESTRICTED_FILE_NAMES
 void	purge(char *file)
 {
    int unlink(const char *);
@@ -817,7 +828,7 @@ void	purge(char *file)
 /******************************************************************************
  * save_version_inc. Add a version number to save_file name                   *
  ******************************************************************************/
-#if defined(unix) || defined(__unix) || defined(__unix__)
+#ifdef UNRESTRICTED_FILE_NAMES
 void save_version_inc(char *save_name, int namesize)
 {
    int len = strlen(save_name), i, vsn=0;
