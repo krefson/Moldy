@@ -23,9 +23,12 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.1  89/04/27  15:13:56  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header: dump.c,v 1.2 89/04/25 16:41:50 keith Exp $";
+static char *RCSid = "$Header: dump.c,v 1.2 89/05/11 13:54:14 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -38,23 +41,23 @@ static char *RCSid = "$Header: dump.c,v 1.2 89/04/25 16:41:50 keith Exp $";
 void	cfree();			/* Free allocated memory	      */
 time_t	time();
 /*========================== External function declarations ==================*/
-char	*mutate();
-double	mdrand();
-void	mat_vec_mul();
-void	dump_convert();
-void	real_to_float();
-void	message();
-void	note();
+static char	*mutate();
+double		mdrand();
+void		mat_vec_mul();
+static void	dump_convert();
+static void	real_to_float();
+void		message();
+void		note();
 /*========================== External data references ========================*/
 extern contr_t	control;
 extern restrt_t restart_header;
 /*========================== Macros ==========================================*/
-#define FLEN		128
 #define DUMP_SIZE	(((control.dump_level & 1)+(control.dump_level & 2) + \
 			  (control.dump_level & 4) ) * \
 			 (3*system->nmols + 4*system->nmols_r + 9)+ \
 			  (control.dump_level & 8) * \
-			 (3*system->nmols + 3*system->nmols_r + 10))
+			 (3*system->nmols + 3*system->nmols_r + 9) +\
+			  (control.dump_level & 1))
 /*============================================================================*/
 
 void	dump(system, force, torque, stress, pe)
@@ -65,8 +68,8 @@ double		pe;
 {
    FILE		*dumpf;			/* File pointer to dump files	      */
    dump_t	dump_header;		/* Header record proforma	      */
-   char		cur_file[FLEN],		/* Names of current and previous      */
-   		prev_file[FLEN],	/* dump files.			      */
+   char		cur_file[L_name],	/* Names of current and previous      */
+   		prev_file[L_name],	/* dump files.			      */
    		*fname;			/* Pointer to one of above filenames  */
    int		filenum=control.dump_offset+(control.istep-control.begin_dump) /
    		        (control.dump_interval * control.maxdumps),
@@ -76,6 +79,7 @@ double		pe;
    float	*dump_buf = aalloc(dump_size, float);	/* For converted data */
    long		file_pos,		/* Offset within file of current rec. */
    		file_len;		/* Length of file		      */
+   		boolean errflg = false;
    static	boolean init = true;
    
    if( ! strchr(control.dump_file, '%') )
@@ -89,42 +93,43 @@ double		pe;
                         else    fname = cur_file;
 
       if( (dumpf = fopen(fname, "r+b")) == NULL)	/* Open dump file     */
-         	goto start_new;		/* OK smart guy, YOU find a better way*/
+         	errflg = true;
 
-      if( fread((char*)&dump_header, sizeof(dump_t), 1, dumpf) == 0 ) 
-        	goto start_new;
+      if( !errflg &&
+	   fread((char*)&dump_header, sizeof(dump_t), 1, dumpf) == 0 ) 
+        	errflg = true;
 
-      if( control.dump_level != dump_header.dump_level )
-         	goto start_new_2;
-
-      if( init &&
-	  dump_header.restart_timestamp != restart_header.prev_timestamp )
-        	 message(NULLI, NULLP, FATAL, CONTIG, fname);
-
-      if( dump_header.ndumps < (ndumps ? ndumps : control.maxdumps ) )
-         message(NULLI,NULLP,FATAL, SHTDMP, fname, dump_header.ndumps, ndumps);
-      else if( dump_header.ndumps >  (ndumps ? ndumps : control.maxdumps) )
-         message(NULLI,NULLP,WARNING,LNGDMP, fname, dump_header.ndumps, ndumps);
-
-      dump_header.ndumps = ndumps;
-      
-      (void)fseek(dumpf, 0L, SEEK_END);
-      file_len = ftell(dumpf);			/* Get length of file	      */
-      file_pos = sizeof(dump_t) + ndumps*dump_size;	/* Expected length    */
-      if( file_len < file_pos )
-         	message(NULLI, NULLP, FATAL, CORUPT, fname, file_len, file_pos);
-   }
-   else						/* Begin new dump run	      */
-   {
-      if( false )				/* Abnormal entry - start run */
-      {
-start_new:
+      if( errflg )
 	 message(NULLI, NULLP, WARNING, DUMPFI, fname);
-	 if( false )
-	 {
-start_new_2:
-	    message(NULLI, NULLP, INFO, DMPALT);
-	 }
+      else if( control.dump_level != dump_header.dump_level )
+      {
+	 errflg = true;
+         message(NULLI, NULLP, INFO, DMPALT);
+      }
+
+      if( !errflg )
+      {
+	 if( init &&
+	    dump_header.restart_timestamp != restart_header.prev_timestamp )
+	     message(NULLI, NULLP, FATAL, CONTIG, fname);
+
+	 if( dump_header.ndumps < (ndumps ? ndumps : control.maxdumps ) )
+            message(NULLI,NULLP,FATAL, SHTDMP,
+		    fname, dump_header.ndumps, ndumps);
+	 else if( dump_header.ndumps >  (ndumps ? ndumps : control.maxdumps) )
+            message(NULLI,NULLP,WARNING,LNGDMP,
+		    fname, dump_header.ndumps, ndumps);
+
+	 dump_header.ndumps = ndumps;
+      
+	 (void)fseek(dumpf, 0L, SEEK_END);
+	 file_len = ftell(dumpf);		/* Get length of file	      */
+	 file_pos = sizeof(dump_t) + ndumps*dump_size;	/* Expected length    */
+	 if( file_len < file_pos )
+         	message(NULLI, NULLP, FATAL, CORUPT, fname, file_len, file_pos);
+      }
+      else
+      {
 	 (void)fclose(dumpf);
 	 if( ndumps != 0 )
 	 {
@@ -134,7 +139,9 @@ start_new_2:
             (void)sprintf(cur_file, control.dump_file, filenum);
 	 }
       }
-
+   }
+   if( control.istep == control.begin_dump )
+   {
       (void)strcpy(dump_header.title, control.title);
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;
@@ -234,21 +241,22 @@ double		pe;
 
    if( control.dump_level & 1)
    {
-      mat_vec_mul(system->h, system->c_of_m, scale_buf, 3*nmols);
+      mat_vec_mul(system->h, system->c_of_m, scale_buf, nmols);
       real_to_float(scale_buf[0],    buf, 3*nmols);	buf += 3*nmols;
       real_to_float(system->quat[0], buf, 4*nmols_r);	buf += 4*nmols_r;
       real_to_float(system->h[0],    buf, 9);		buf += 9;
+      real_to_float(&ppe, buf, 1);		buf += 1;
    }
    if( control.dump_level & 2)
    {
-      mat_vec_mul(system->h, system->vel, scale_buf, 3*nmols);
+      mat_vec_mul(system->h, system->vel, scale_buf, nmols);
       real_to_float(scale_buf[0],    buf, 3*nmols);	buf += 3*nmols;
       real_to_float(system->qdot[0], buf, 4*nmols_r);	buf += 4*nmols_r;
       real_to_float(system->hdot[0],    buf, 9);	buf += 9;
    }
    if( control.dump_level & 4)
    {
-      mat_vec_mul(system->h, system->acc, scale_buf, 3*nmols);
+      mat_vec_mul(system->h, system->acc, scale_buf, nmols);
       real_to_float(scale_buf[0],     buf, 3*nmols);	buf += 3*nmols;
       real_to_float(system->qddot[0], buf, 4*nmols_r);	buf += 4*nmols_r;
       real_to_float(system->hddot[0], buf, 9);		buf += 9;
@@ -258,7 +266,6 @@ double		pe;
       real_to_float(force[0],  buf, 3*nmols);	buf += 3*nmols;
       real_to_float(torque[0], buf, 3*nmols_r);	buf += 3*nmols_r;
       real_to_float(stress[0], buf, 9);		buf += 9;
-      real_to_float(&ppe, buf, 1);		buf += 1;
    }
    cfree((char*)scale_buf);
 }
