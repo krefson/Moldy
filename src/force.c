@@ -29,6 +29,12 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.18  1998/07/17 14:34:06  keith
+ *       Attempt at better algorithm to guess size for neighbour list arrays,
+ *       "n_nab_sites".  This determines the subcell with the highest density
+ *       of sites and uses this rather than the average in the estimate.
+ *       This should work for very inhomogeneous systems.
+ *
  *       Revision 2.17  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -132,7 +138,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/force.c,v 2.17 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/force.c,v 2.18 1998/07/17 14:34:06 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -225,25 +231,6 @@ static irvec_mt *ifloor; /*Lookup tables for int "floor()"    */
 #   define P0 1
 #endif
 /*============================================================================*/
-/******************************************************************************
- * spxpy    Sparse add for force.c.  N.B.  MUST NOT BE VECTORIZED as ix may   *
- *          contain duplicate entries.  This occurs if a site interacts with  *
- *          more than one periodic copy of another site.                      *
- ******************************************************************************/
-static void spxpy(n, sx, sy, ix)
-int     n, ix[];
-real    sx[], sy[];
-{
-   int i;
-NOVECTOR
-#if defined(__stdc__) || defined(__STDC__)
-#pragma novector
-#endif
-   for( i = 0; i < n; i++)
-   {
-      sy[ix[i]] += sx[i];
-   }
-}
 
 /******************************************************************************
  *  cellbin.    Safe binning function for putting molecules/sites into cells. *
@@ -1055,6 +1042,9 @@ real            **site_force;           /* Site force arrays            (out) */
    real         **pp, **ppp;            /* Loop pointer variables for potp.   */
    real         force_cpt, site0, site1, site2, s00, s01, s02, s11, s12, s22;
                                    /* Accumulators for forces and stresses.   */
+   real		*sf0=site_force[0], 
+                *sf1=site_force[1], 
+                *sf2=site_force[2];/* Temporary aliases for site_force array  */
    real         rrx, rry, rrz;                  /* Scalar loop temporaries    */
    real         h00, h01, h02, h11, h12, h22;   /* Temp copies of system->h   */
    double       norm = 2.0*control.alpha/sqrt(PI);      /* Coulombic prefactor*/
@@ -1066,6 +1056,7 @@ real            **site_force;           /* Site force arrays            (out) */
                 isite, jsite, ipot, lim;/* Counters.                          */
    int          nsites = system -> nsites;      /* Temporary copy for optim'n */
    int          nfnab[2];               /* Number of non-fw and fw neighbours */
+   int		it, inab;
    cell_mt      *cmol;                  /* Loop counter for link cells.       */
 
    s00 = s01 = s02 = s11 = s12 = s22 = 0.0;     /* Accumulators for stress    */
@@ -1223,17 +1214,26 @@ VECTORIZE
                site2           -= force_cpt;
                forcejz[jsite]  += force_cpt;
             }
-            site_force[0][isite] += site0;
-            site_force[1][isite] += site1;
-            site_force[2][isite] += site2;
+            sf0[isite] += site0;
+            sf1[isite] += site1;
+            sf2[isite] += site2;
 #ifdef DEBUG3
             printf("PE = %f\n",pe[0]);
 #endif
          }
       }
-      spxpy(nnab, forcejx, site_force[0], nab);
-      spxpy(nnab, forcejy, site_force[1], nab);
-      spxpy(nnab, forcejz, site_force[2], nab);
+#if defined(__stdc__) || defined(__STDC__)
+#pragma novector
+#endif
+      for(inab=0; inab < nnab; inab++)
+      {
+	 it=nab[inab];
+	 site0 = sf0[it] + forcejx[inab];
+	 site1 = sf1[it] + forcejy[inab];
+	 sf2[it]        += forcejz[inab];
+	 sf0[it] = site0;
+	 sf1[it] = site1;
+      }
    }
    stress[0][0]  += s00;
    stress[0][1]  += s01;
