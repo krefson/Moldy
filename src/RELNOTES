@@ -1,8 +1,50 @@
+RELEASE_2.16
+------------
+* New version of real-space force calculation.  More elegant and more efficient.
+
+* New 1-D integer addition scheme for encoding and handling relative
+  neighbour lists.  Site-neighbour list is 2-3 times as fast as
+  before.
+
+* Implemented a scheme derived from that of H. Bekker to take the calculation
+  of the virial out of the innermost loops in force.c.  Should give a noticeable
+  speedup.
+
+* Using the Bekker scheme, molecular sites are assigned to the
+  link-cell according to their co-ordinates instead of the molecular
+  centre of mass.  This allows a reduced size of neighbour cell list
+  (ie extended cutoff) for molecular systems, since sites can not be
+  closer than the cell-cell distance.  In lazy mode this will allow a
+  reduced cutoff for the same accuracy, In strict mode, it is no longer
+  necessary to add twice the molecular radius to the cutoff internally, so
+  its very much quicker.
+
+  This scheme unavoidably includes intramolecular interactions in the
+  potential energy and forces.  Therefore we pre-compute the
+  intramolecular terms and subtract them.  These terms cancel out in
+  the calculation of centre-of-mass forces and torques and the Virial
+  (the reciprocal-space part of the Ewald sum has always relied on
+  this cancellation).
+
+* Two new potential types.
+  1) "morse".  Really the Busing-Ida-Gilbert plus Morse-potential as
+     used in the japanese MD code Mdxorto.
+  2) "hiw"     The 4/6/12 potential form as used in the "hydrated-ion-water"
+     potential of J.M.Martinez et al J.Chem.Phys. 110,1669 1999
+
+* Corrected number of degrees of freedom - was 3N, should be 3N-3
+  due to conservation of linear momentum.  This will give a 1/N
+  difference in the calculated temperatures - < 1% in almost every case.
+
+* Initial banner is more selective and does not print velocity scaling
+  unless velocities really will be scaled in this run.  Same applies
+  to RDF computation.
+
 RELEASE 2.15e
 -------------
  * 2.15d introduced a major bug in the dump-file headers
    simply because the longer cvs branch revision string
-   plus extras overflowed the16 char "vsn" header field.
+   plus extras overflowed the 16 char "vsn" header field.
    2.15e fixes this.
 
 RELEASE 2.15d2
@@ -139,7 +181,7 @@ Release 2.12
 ------------
 
 * New utilities msd and mdavpos.  Many thanks to Dr Craig Fisher for
-  doing the work and adding these worthwhile utilites. 
+  doing the work and adding these worthwhile utilities. 
 
   "msd" computes mean-square displacements from dump files, eg for
         calculation of diffusion constants.  It can also output
@@ -151,7 +193,7 @@ Release 2.12
     
 * Minor bug fixes:
 
-  - mdshak had an initialization problem which meant it couldn't read
+  - mdshak had an initialisation problem which meant it couldn't read
            certain restart files.
  
   - makefile updated to work with GNU make (Linux users should be happy!)
@@ -187,7 +229,7 @@ Release 2.11
   mass parameters and turn thermostatting back on by hand in the
   control file.  For non XDR files there's nothing that can be done.
 
-* Fixed initialization problem which caused FP error on Cray T3D (non-ieee)
+* Fixed initialisation problem which caused FP error on Cray T3D (non-ieee)
 
 * Corrected error in implementation of integration of thermostat
   equations of motion. This seems to make no practical diff at all.
