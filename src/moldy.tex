@@ -42,37 +42,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%\usepackage{geometry}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%% Needed for tables 3.1 and 3.2.  If you get rid of it %%%%%%%
-%%%%%%%%%%% edit the tabular header to excise the >{} descriptor.%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\usepackage{array}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%% Prettifies some script letters.  Omit if necessary. %%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\usepackage[mathcal]{eucal}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%% Not really essential, but it will be the default soon. %%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\usepackage[T1]{fontenc}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%% Postscript figure inclusion.  Epsfig is part of the %%%%%%%%
-%%%%%%%%%%% "graphics" bundle.  Install it if necessary.        %%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\usepackage{epsfig}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%% Eepic graphics work well if you don't have PostScript
-%%%%%%%%%%% but you DO have a graphics driver which supports the
-%%%%%%%%%%% "tpic" \special's, (iptex,dviis).  Even if you don't
-%%%%%%%%%%% you can use the "eepicemu" package at a pinch but the
-%%%%%%%%%%% quality is poor.  
-%%%%%%%%%%%   To use it, rename the eepic figures "fig_*-eepic.tex"
-%%%%%%%%%%% to "fig_*.tex" and then run latex.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%\usepackage{epic}             % For eepic or eepicemu
-%%\usepackage{eepic}            % Tpic specials *or*
-%%%%\usepackage{eepicemu}       % No special support.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%% Dimensions and settings                                %%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\geometry{body={160mm,230mm},top=40mm,nohead}
@@ -85,6 +54,63 @@
 \topmargin  41.54103pt
 \headheight 0.0pt
 \headsep    0.0pt
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%% Needed for tables 3.1 and 3.2.  If you get rid of it %%%%%%%
+%%%%%%%%%%% edit the tabular header to excise the >{} descriptor.%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{array}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%% Prettifies some script letters.  Omit if necessary. %%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage[mathcal]{eucal}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%% Not really essential, but it will be the default soon. %%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage[T1]{fontenc}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%% Postscript figure inclusion.  Epsfig is part of the %%%%%%%%
+%%%%%%%%%%% "graphics" bundle.  Install it if necessary.        %%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{epsfig}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%% Eepic graphics work well if you don't have PostScript
+%%%%%%%%%%% but you DO have a graphics driver which supports the
+%%%%%%%%%%% "tpic" \special's, (iptex,dviis).  Even if you don't
+%%%%%%%%%%% you can use the "eepicemu" package at a pinch but the
+%%%%%%%%%%% quality is poor.  
+%%%%%%%%%%%   To use it, rename the eepic figures "fig_*-eepic.ftx"
+%%%%%%%%%%% to "fig_*.ftx" and then run latex.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%\usepackage{epic}             % For eepic or eepicemu
+%%\usepackage{eepic}            % Tpic specials *or*
+%%%%\usepackage{eepicemu}       % No special support.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%% Bold math symbols.  The 'bm' package, new with teTeX 0.9
+%%%%%%%%%%% does this  *right*. Otherwise use \mathbf, but you won't
+%%%%%%%%%%% get bold greek or symbols. 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\typeout{^^JAttention - if the ``bm'' Package isn't installed you will
+  get an error here.^^JJust hit <ret> and continue. (Bold math won't
+  work quite as well).}
+\usepackage{bm}
+\providecommand{\bm}[1]{\mathbf{#1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%% This defines the \sideset{} macro as a replacement for
+%%%%%%%%%%% the AMS version plus the superfig/partfigure environments.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{moldy}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%% Hyperref is useful for including hypertext links.   %%%%%%%%
+%%%%%%%%%%% Useful options to the package are                   %%%%%%%%
+%%%%%%%%%%% [hypertex] - for xdvi.  (Need xhdvik)               %%%%%%%%
+%%%%%%%%%%% [pdfmark]  - tp process ps file with distiller to pdf %%%%%%
+%%%%%%%%%%% [pdftex] for direct conversion to pdf using pdftex
+%%%%%%%%%%% It must be commented out for LaTeXtHTML processing    %%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\usepackage[hypertex]{hyperref}
 
 \renewcommand{\topfraction}{0.9}
 \renewcommand{\textfraction}{0.1}
@@ -99,7 +125,7 @@
 %
 % Set font for filename display - sans-serif is nice.
 %
-\newcommand{\Fname}[1]{{\upshape\mdseries\sffamily#1}}
+\newcommand{\Fname}[1]{{\upshape\mdseries\sffamily{}#1}}
 \newenvironment{Fndescription}{\begingroup%
      \renewcommand{\descriptionlabel}[1]{\Fname{##1}}\begin{description}}%
      {\end{description}\endgroup}
@@ -108,16 +134,16 @@
 %     input/output and code fragments.
 %
 \newcommand{\Litf}{\ttfamily\upshape\mdseries}
-%\newcommand{\Lit}[1]{{\Litf#1}}
 \DeclareTextFontCommand{\Lit}{\Litf}
+%% LaTeX2HTML doesn't recognise \DeclareTextFontCommand.  The
+%% \providecommand  should define it conditionally for LaTeX2html at
+%% the expense of our font.parameterization.
+\providecommand{\Lit}[1]{\texttt{#1}}
+
 \newenvironment{Litdescription}{\begingroup%
      \renewcommand{\descriptionlabel}[1]{\Lit{##1}}\begin{description}}%
      {\end{description}\endgroup}
 \newcommand{\ttlabel}[1]{\Lit{#1}\hfil}
-%
-% Abbreviation for bold math.  Set to \mathbf for LaTeX2e
-%
-\newcommand{\bm}[1]{\mathbf{#1}}
 %
 % Calculus infinitesimal - upright ``d''
 %
@@ -126,32 +152,6 @@
 % Quaternion - bold sans-serif.
 %
 \newcommand{\Quat}[1]{\mbox{\mathversion{bold}$\mathsf{#1}$}}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\makeatletter
-\def\sideset#1#2#3{%
-  \setbox\z@\hbox{$\displaystyle{\vphantom{#3}}#1{#3}\m@th$}%
-  \setbox\tw@\hbox{$\displaystyle{#3}#2\m@th$}%
-  \hskip\wd\z@\hskip-\wd\tw@\mathop{\hskip\wd\tw@\hskip-\wd\z@
-  {\vphantom{#3}}#1{#3}#2}}
-\makeatother
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%% Define superfig and partfigure environments for multi-page figures
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcounter{subfig}
-
-\newenvironment{superfig}{%
-\setcounter{subfig}{0}
-\addtocounter{figure}{1}
-}{\setcounter{subfig}{0}}
-
-\makeatletter
-\newenvironment{partfigure}[1][tbp]{%
-\addtocounter{subfig}{1}\addtocounter{figure}{-1}%
-\@float{figure}[#1]%
-\renewcommand{\thefigure}{\thechapter.\arabic{figure}(\alph{subfig})}%
-}{\end@float}
-\renewcommand{\l@figure}{\@dottedtocline{1}{1.5em}{3em}}
-\makeatother
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% Useful shorthand macros                               %%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -170,7 +170,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.12 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.14 $ $}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -356,10 +356,10 @@ The motion is governed by the Newton-Euler equations
 M_i\ddot{\bm{R}}_i = \bm{F}_i \label{eqn:newton}
 \end{equation}
 \begin{equation}
-  \bm{I}_i \cdot \dot{\bm\omega}_i - \bm\omega_i \times \bm{I}_i
-  \cdot \bm\omega_i = \bm{N}_i \label{eqn:euler}
+  \bm{I}_i \cdot \dot{\bm{\omega}}_i - \bm{\omega}_i \times \bm{I}_i
+  \cdot \bm{\omega}_i = \bm{N}_i \label{eqn:euler}
 \end{equation}
-where  $\bm\omega_i$ is the angular velocity of the molecule, 
+where  $\bm{\omega}_i$ is the angular velocity of the molecule, 
 $ \bm{I}_i = \sum_{\alpha} m_{i\alpha} 
 ( p_{i\alpha}^2 \bm{1} - \bm{p}_{i\alpha}\bm{p}_{i\alpha} ) $ 
 is the inertia tensor and 
@@ -437,14 +437,14 @@ principal frame angular velocity was given by Evans\cite[Equation
 27]{evans:77} and rewritten using quaternion algebra by 
 Refson\cite{refson:87a} as
 \begin{equation}
-2 \Quat{\dot{q}} = \Quat{q}(0,\bm\omega^p)
+2 \Quat{\dot{q}} = \Quat{q}(0,\bm{\omega}^p)
 \label{eqn:qomega}
 \end{equation}
 The second derivative is given by
 \begin{eqnarray}
 \nonumber
-2\Quat{\ddot{q}} & = & \Quat{q}(- 1/2 (\omega^p)^2,\dot{\bm\omega}^p) \\
- & = & \Quat{q}(-2 |\Quat{\dot{q}}|^2,\dot{\bm\omega}^p)
+2\Quat{\ddot{q}} & = & \Quat{q}(- 1/2 (\omega^p)^2,\dot{\bm{\omega}}^p) \\
+ & = & \Quat{q}(-2 |\Quat{\dot{q}}|^2,\dot{\bm{\omega}}^p)
 \label{eqn:qddot}
 \end{eqnarray}
 Equations~\ref{eqn:qddot} and~\ref{eqn:euler} allow the simulation to
@@ -594,7 +594,7 @@ The total potential energy of the system is
 U = \sum_i \sum_{j > i} \sum_\alpha \sum_\beta \phi_{i\alpha j\beta}(
 \bm{r}_{i\alpha j\beta}).
 \end{equation}
-where $\bm{f}_{i\alpha j\beta} = - \bm\nabla \phi_{i\alpha  j\beta}(
+where $\bm{f}_{i\alpha j\beta} = - \bm{\nabla} \phi_{i\alpha  j\beta}(
 \bm{r}_{i\alpha j\beta})$ is the force acting on site $\beta$ of molecule
 $j$ from site $\alpha$ of molecule $i$.
 
@@ -617,7 +617,7 @@ site virial as
 
 \begin{eqnarray}
 \label{eqn:stress-sr}
-V \bm\pi^{sr} & = & \left <  \sum_i M_i \bm{V}_i \bm{V}_i 
+V \bm{\pi}^{sr} & = & \left <  \sum_i M_i \bm{V}_i \bm{V}_i 
               + \sum_i \sum_{j>i} \bm{R}_{ij} \bm{F}_{ij} 
 \right > \\ \nonumber
 & = & \left < \sum_i M_i \bm{V}_i \bm{V}_i 
@@ -647,11 +647,11 @@ P_c V & = & \frac{2\pi}{3 V} \sum_\alpha \sum_\beta N_\alpha N_\beta
                 \, \Calcd r \nonumber \\ 
            & = & U_c + \frac{2\pi}{3 V} \sum_\alpha \sum_\beta
            N_\alpha N_\beta r_c^3 \phi_{\alpha\beta}(r_c) \\
-\bm\pi_c & = & P_c \bm\delta
+\bm{\pi}_c & = & P_c \bm{\delta}
 \end{eqnarray}
 where the sums run over all the distinct kinds of sites,
 $N_\alpha$ is the total number of sites of type $\alpha$ in the system
-and $\bm\delta$ is the unit matrix.
+and $\bm{\delta}$ is the unit matrix.
 
 
 \subsection{Potential Functions}
@@ -1071,8 +1071,8 @@ therefore given by the ensemble average of its kinetic energy.
 \label{eqn:equipartition}
 T = \left < {\mathcal T} \right > = \frac{2}{gk_B} \left <
   \sum_{f=1}^{g} {\mathcal K}_f \right > = \frac{1}{3Nk_B}\left <
-  \sum_{i=1}^N m_i \bm{v}_i^2 + \bm\omega_i \cdot \bm{I} \cdot
-  \bm\omega_i \right >
+  \sum_{i=1}^N m_i \bm{v}_i^2 + \bm{\omega}_i \cdot \bm{I} \cdot
+  \bm{\omega}_i \right >
 \end{equation}
 Here ${\mathcal K}_f$ is the instantaneous kinetic energy of degree of
 freedom $f$, $g$ is the number of degrees of freedom, $N$ is the
@@ -1189,9 +1189,9 @@ motion (equations~\ref{eqn:newton} and~\ref{eqn:euler}) are modified thus
 \label{eqn:nhtherm}
 \ddot{\bm{R}}_i = \frac{\bm{F}_i}{M_i} - \zeta \dot{\bm{R}}_i
 \nonumber \\
-\bm{I}_i \cdot \dot{\bm\omega}_i - \bm\omega_i \times \bm{I}_i
+\bm{I}_i \cdot \dot{\bm{\omega}}_i - \bm{\omega}_i \times \bm{I}_i
 \cdot
-\bm\omega_i = \bm{N}_i - \zeta \bm{I}_i \cdot \bm\omega_i \\
+\bm{\omega}_i = \bm{N}_i - \zeta \bm{I}_i \cdot \bm{\omega}_i \\
 \dot{\zeta} = \frac{g}{Q}\left ( k_B {\mathcal T} - k_B T \right )
 \nonumber
 \end{eqnarray}
@@ -1252,11 +1252,11 @@ equations of motion are
 \itemsep=0.5em
 \ddot{\bm{R}}_i = \frac{\bm{F}_i}{M_i} - \zeta_T \dot{\bm{R}}_i \nonumber \\
 \zeta_T = \frac{\sum_j\bm{v}_j \cdot \bm{F}_j}{\sum_j M_j\bm{v}_j^2} \\
-\bm{I}_i \cdot \dot{\bm\omega}_i - \bm\omega_i \times \bm{I}_i
+\bm{I}_i \cdot \dot{\bm{\omega}}_i - \bm{\omega}_i \times \bm{I}_i
 \cdot
-\bm\omega_i = \bm{N}_i - \zeta_R \bm{I}_i \cdot \bm\omega_i \nonumber \\
-\zeta_R = \frac{\sum_j\bm\omega_j \cdot \bm{N}_j}{\sum_j
-  \bm\omega_j \cdot \bm{I}_j \cdot \bm\omega_j}\nonumber
+\bm{\omega}_i = \bm{N}_i - \zeta_R \bm{I}_i \cdot \bm{\omega}_i \nonumber \\
+\zeta_R = \frac{\sum_j\bm{\omega}_j \cdot \bm{N}_j}{\sum_j
+  \bm{\omega}_j \cdot \bm{I}_j \cdot \bm{\omega}_j}\nonumber
 \end{eqnarray}
 
 These bear a superficial resemblance to equations~\ref{eqn:nhtherm}
@@ -1302,15 +1302,15 @@ The dynamics of the unit cell matrix $\bm{h}$ are governed by the
 equation
 \begin{equation}
 \label{eqn:rahman}
-W\ddot{\bm{h}} = \left ( \bm\pi - p \right ) \bm\sigma
+W\ddot{\bm{h}} = \left ( \bm{\pi} - p \right ) \bm{\sigma}
 \end{equation}
-where $W$ is a fictitious mass parameter, $\bm\sigma = V
+where $W$ is a fictitious mass parameter, $\bm{\sigma} = V
 \bm{h}^{\prime-1}$ and $p$ is the external pressure.  The
-instantaneous internal stress $\bm\pi$ is given by 
+instantaneous internal stress $\bm{\pi}$ is given by 
 \begin{equation}
 \label{eqn:prstress}
-\bm\pi = \frac{1}{V}\sum_{i=1}^N m_i (\bm{h}_i\dot{\bm{s}}_i)^2 +
-\bm\pi^{\textnormal{s.r.}} + \bm\pi^e 
+\bm{\pi} = \frac{1}{V}\sum_{i=1}^N m_i (\bm{h}_i\dot{\bm{s}}_i)^2 +
+\bm{\pi}^{\textnormal{s.r.}} + \bm{\pi}^e 
 \end{equation}
 with the short-ranged and electrostatic components given by
 equations~\ref{eqn:stress-sr} and~\ref{eqn:ewald-stress} respectively.
@@ -1440,7 +1440,7 @@ the principle in 2 dimensions.
 
 \begin{figure}
 \setlength{\unitlength}{0.012500in}%
-\input{fig_skewstart}
+\input{fig_skewstart.ftx}
 \caption[The Skew Start method]{The Skew Start method.  $N$ molecules
   are placed at evenly-spaced intervals, $a$ on a line joining a
   corner of the MD cell to its image $k$ cells away (5 in this
@@ -1546,7 +1546,7 @@ must set the quaternion derivatives and accelerations to the corresponding
 values. Using equations~\ref{eqn:qomega} and~\ref{eqn:qddot} we
 have
 \begin{equation}
-\Quat{\dot{q}} = \Quat{q}(0,\bm\omega^p/2)
+\Quat{\dot{q}} = \Quat{q}(0,\bm{\omega}^p/2)
 \end{equation}
 and
 \begin{equation}
@@ -3743,7 +3743,7 @@ pointer \Lit{double **x}.
 
 \begin{figure}[tb]
   \begin{center}
-    \input{fig_arralloc}
+    \input{fig_arralloc.ftx}
   \end{center}
   \caption[Storage layout of a 2-dimensional pointer-based
     pseudo-array]{Storage layout of a 2-dimensional pointer-based
@@ -4015,7 +4015,7 @@ annotated list of files follows.
 \begin{superfig}
 \begin{partfigure}[tb]
 \noindent
-\input{fig_startup-a}
+\input{fig_startup-a.ftx}
 \begin{minipage}[b]{2.55in}
 \raggedright
 \textbf{Functions called by start\_up()}\\
@@ -4068,7 +4068,7 @@ annotated list of files follows.
 
 \begin{partfigure}[tb]
 \begin{center}
-\input{fig_startup-b}
+\input{fig_startup-b.ftx}
 \end{center}
 \caption[Block diagram of initialization function
 \Lit{start\_up()}]{Block diagram of the initialization function
@@ -4190,7 +4190,7 @@ which is called from \Lit{do\_step()} since the force arrays are
 local to that function.
 
 \begin{figure}[tb]
-\input{fig_main}
+\input{fig_main.ftx}
 \caption[The main timestep loop]{The main timestep loop in file
 \Fname{main.c} showing the outermost control structures.  Periodic
 analysis, trajectory dump or output tasks are all shown here including
@@ -4202,7 +4202,7 @@ integrated into the link cell force calculation.}
 \begin{superfig}
 \begin{partfigure}[tbp]
 \begin{center}
-\input{fig_dostep-a}
+\input{fig_dostep-a.ftx}
 \end{center}
 \caption[Flow  diagram of function \Lit{do\_step()} which performs
 a single timestep.]{Flow diagram of function \Lit{do\_step()} which
@@ -4213,7 +4213,7 @@ a single timestep.]{Flow diagram of function \Lit{do\_step()} which
 \end{partfigure}
 \begin{partfigure}[tbp]
 \begin{center}
-  \input{fig_dostep-b}
+  \input{fig_dostep-b.ftx}
 \end{center}
 \caption[Flow  diagram of function \Lit{do\_step()} which performs
 a single timestep.]{Flow diagram of function \Lit{do\_step()} which
@@ -4300,7 +4300,7 @@ error introduced will be very small.
 
 \begin{figure}[tb]
 \noindent
-\input{fig_link-cell}
+\input{fig_link-cell.ftx}
 \caption{The Link-Cell short-range force calculation}
 \label{fig:link-cell}
 \end{figure}
@@ -4328,7 +4328,7 @@ vector computers.
 
 \begin{figure}[tb]
 \noindent
-\input{fig_ewald}
+\input{fig_ewald.ftx}
 \caption{Evaluation of the reciprocal-space parts of the ewald sum}
 \label{fig:ewald}
 \end{figure}
@@ -4837,7 +4837,7 @@ syntax for such options. The numbers 1, 5, 17 to 20 inclusive and
 commas and each one may be a range separated by a hyphen with an
 optional increment following a colon.
 
-v%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Moldyext}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 It is usual to plot the instantaneous values of energy, temperature
