@@ -23,12 +23,17 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.2  89/05/11  13:56:05  keith
+ * Tidied up code using flags rather than GOTO's
+ * Fixed bug in 'dump_convert' which wrote outside array bounds
+ * Put PE in dump-level 1 rather than 8
+ * 
  * Revision 1.1  89/04/27  15:13:56  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: dump.c,v 1.2 89/05/11 13:54:14 keith Exp $";
+static char *RCSid = "$Header: dump.c,v 1.3 89/05/15 17:38:22 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -52,12 +57,12 @@ void		note();
 extern contr_t	control;
 extern restrt_t restart_header;
 /*========================== Macros ==========================================*/
-#define DUMP_SIZE	(((control.dump_level & 1)+(control.dump_level & 2) + \
-			  (control.dump_level & 4) ) * \
+#define DUMP_SIZE(level)	(((level & 1)+(level & 2) + \
+			  (level & 4) ) * \
 			 (3*system->nmols + 4*system->nmols_r + 9)+ \
-			  (control.dump_level & 8) * \
+			  (level & 8) * \
 			 (3*system->nmols + 3*system->nmols_r + 9) +\
-			  (control.dump_level & 1))
+			  (level & 1))
 /*============================================================================*/
 
 void	dump(system, force, torque, stress, pe)
@@ -75,7 +80,8 @@ double		pe;
    		        (control.dump_interval * control.maxdumps),
 		ndumps =(control.istep-control.begin_dump) /
    			 control.dump_interval % control.maxdumps; 
-   int		dump_size = DUMP_SIZE;	/* Size in floats of each dump record */
+   int		dump_size = DUMP_SIZE(control.dump_level);
+                                        /* Size in floats of each dump record */
    float	*dump_buf = aalloc(dump_size, float);	/* For converted data */
    long		file_pos,		/* Offset within file of current rec. */
    		file_len;		/* Length of file		      */
@@ -124,7 +130,8 @@ double		pe;
       
 	 (void)fseek(dumpf, 0L, SEEK_END);
 	 file_len = ftell(dumpf);		/* Get length of file	      */
-	 file_pos = sizeof(dump_t) + ndumps*dump_size;	/* Expected length    */
+	 file_pos = sizeof(dump_t)
+	            + ndumps*dump_size*sizeof(float);	/* Expected length    */
 	 if( file_len < file_pos )
          	message(NULLI, NULLP, FATAL, CORUPT, fname, file_len, file_pos);
       }
@@ -143,9 +150,12 @@ double		pe;
    if( control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
+      (void)strncpy(dump_header.vsn, "$Revision: 1.3 $"+11,
+		                     sizeof dump_header.vsn-1);
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;
       dump_header.maxdumps	= control.maxdumps;
+      dump_header.dump_size	= dump_size;
       dump_header.dump_init     = time((time_t *)0);
 
       while( (dumpf = fopen(cur_file, "r")) != 0 )
@@ -184,7 +194,7 @@ double		pe;
    dump_header.restart_timestamp = restart_header.timestamp;
 
    (void)fseek(dumpf, file_pos, SEEK_SET);		/* Write data at end */
-   if( fwrite((char*)dump_buf, dump_size, 1, dumpf) == 0 )
+   if( fwrite((char*)dump_buf, dump_size, sizeof(float), dumpf) == 0 )
       	message(NULLI, NULLP, FATAL, DWFAIL, cur_file);
 
    (void)fseek(dumpf, 0L, SEEK_SET);			/* Write header      */
