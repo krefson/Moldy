@@ -22,12 +22,16 @@ what you give them.   Help stamp out software-hoarding!  */
  * rdf		Functions to accumulate and calculate radial distribution     *
  *		functions. Contents:					      *
  * init_rdf()		Prepare to collect rdf's. Must be called first	      *
- * rdf_calc()		Bin site-site distances and accumulate RDF's	      *
+ * rdf_calc() (NOT USED)Bin site-site distances and accumulate RDF's	      *
+ * rdf_accum()		Bin site-site distances and accumulate RDF's	      *
  * print_rdf()		Calculate RDF from binned data and output it.	      *
  * rdf[idi][idj][ibin]	RDF database (also accessed by 'restart')	      *
  ******************************************************************************
  *      Revision Log
  *       $Log: rdf.c,v $
+ *       Revision 2.7  1994/06/08 13:22:31  keith
+ *       Null update for version compatibility
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -140,7 +144,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/rdf.c,v 2.7 1994/06/08 13:22:31 keith stab keith $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -168,8 +172,11 @@ extern contr_mt	control;    		    /* Main simulation control parms. */
 /*====================================data definitions  ======================*/
 static int	***rdf;				/* The RDF 'array'	      */
 static   int	*rdf_base;			/* base of data area          */
-gptr *rdf_ptr()
+static   int    rdf_size;
+gptr *rdf_ptr(size)
+int *size;
 {
+   *size = rdf_size;
    return (gptr*)rdf_base;
 }
 /*========================== Macros ==========================================*/
@@ -188,8 +195,9 @@ system_mp	system;				/* System info struct	      */
    int		*base;
 
    rdf = aalloc(max_id, int ** );
-   base = rdf_base = ialloc(control.nbins * max_id * (max_id - 1) / 2);
-   memst(base, 0, control.nbins * max_id * (max_id - 1) / 2*sizeof(int));
+   rdf_size = control.nbins * max_id * (max_id - 1) / 2;
+   base = rdf_base = ialloc(rdf_size);
+   memst(base, 0, rdf_size*sizeof(int));
    for(idi = 1; idi < max_id; idi++)
       rdf[idi] = aalloc(max_id, int * );
    for(idi = 1; idi < max_id; idi++)
@@ -261,6 +269,28 @@ VECTORIZE
        }
     }
     xfree(id);    xfree(bind);
+}
+/******************************************************************************
+ *  rdf_accum.  Calculate site pair distances and bin for RDF.                *
+ ******************************************************************************/
+void	rdf_accum(lo, hi, rsq, iid, id, nab)
+int	lo, hi;
+real	rsq[];
+int	iid;
+int	id[];
+int	nab[];
+{
+   int  j, bin;
+   int  *nj = nab + lo;
+   int  **rdfi = rdf[iid];
+   double rbin = control.nbins / control.limit;
+
+   for(j=lo; j<hi; j++,nj++)
+   {
+      bin = rbin*sqrt(rsq[j]);
+      if( bin < control.nbins)
+	 rdfi[id[*nj]][bin]++;      
+   }
 }
 /******************************************************************************
  * print_rdf.  Calculate the radial distribution function from the binned pair*
