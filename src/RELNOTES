@@ -1,3 +1,42 @@
+RELEASE 2.15
+------------
+ * text-mode save now converts potentials and control back to input units. 
+   By changing the *-unit parameters in the control file you could use 
+   this to do parameter conversion.  
+
+ * New constant-pressure (NPT(E) not N sigma T(E)) ensemble added.
+
+ * Configure updated to autoconf 2.13.  Better choice of libraries,
+   compiler options etc.  Cygwin compilation now fully supported.
+
+ * Bug fixes to bdist.c, mdbond.
+
+ * Common support routines for all utilities extracted to separate
+   files.  Both Msd And mdshak now support all 5 output formats.
+
+ * New utilitey "mdvaf" added.  Calculates (linear) velocity
+   autocorrelation function.
+ 
+ * Comments documenting new potential addition in kernel.c clarified.
+
+ * RDF calculation made robust against rdf-interval, rdf-out
+   rdf-limit or nbins changed during data collection.
+
+ * New sanity checks on values of many control-file variables.
+   WARNING: these only detect some of the most obvious bad values
+   and most subtle error will still go unremarked.
+
+ * Extensive changes to the manual including better documentation of
+   build and configure procedure, clarifications of several confused
+   points including adding a new potential parameter, handling of
+   units in input files.  Sections for mdbond, bdist, mdvaf added.
+
+ * plotrdf script considerably enhanced.
+   1. Now handles more than one RDF dump in file correctly.  Subsequent 
+      dumps are output sequentially, or are averaged if "-a" flag given.
+   2. New flag "-m <RE>" selects subset of columns to print,
+      <RE> is any PERL regular expression (eg "Mg-O")
+
 RELEASE 2.14
 ------------
  * Fix for missing error messages when MPI parallel run aborts.
