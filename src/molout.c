@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/molout.c,v 1.1 1999/10/11 14:03:51 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/molout.c,v 1.2 1999/10/29 16:44:28 keith Exp keith $";
 #endif
 
 #include "defs.h"
@@ -27,6 +27,7 @@ void	invert();
 void	make_sites();
 void    error();
 void    afree();
+char    *atime();
 /*======================== Global vars =======================================*/
 extern contr_mt		control;
 #define OUTBIN 2
@@ -184,6 +185,7 @@ mat_mp		h;
    spec_mt	*spec;
    double	a,b,c, alpha, beta, gamma;
    char         *atom_name;
+   double	atom_charge;
    int		imol, isite, itot=1, ispec=1;
    int		i, is;
 
@@ -197,6 +199,8 @@ mat_mp		h;
    gamma = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/a/b);
 
 /* Write the pdb header */
+   (void)printf("HEADER     %-40s%10s%4d\n", "Moldy output", atime(), 1);
+   (void)printf("TITLE      %-60s\n", control.title);
    (void)printf("CRYST1 %8.3f %8.3f %8.3f %6.2f %6.2f %6.2f P 1\n",
           a,b,c,alpha,beta,gamma);
 
@@ -215,10 +219,12 @@ mat_mp		h;
        for(is = 0; is < spec->nsites; is++)
        {
          atom_name = site_info[spec->site_id[is]].name;
+	 atom_charge = site_info[spec->site_id[is]].charge;
          if(fabs(site_info[spec->site_id[is]].mass) != 0)
-            (void)printf("HETATM%5d %2s%-2d NON A   1     %7.3f %7.3f %7.3f"
-               "  1.00  0.00          %4s\n",itot, atom_name, ispec,
-                  site[0][isite], site[1][isite], site[2][isite], atom_name);
+            (void)printf("HETATM%5d %2s%-2d NON A   1     %7.3f %7.3f %7.3f\
+ %5.2f %5.2f          %2s%1.0f%c\n",
+			 itot, atom_name, ispec, site[0][isite], site[1][isite], site[2][isite],
+			 1.0,0.0, atom_name, fabs(atom_charge),atom_charge<0?'-':'+');
          isite++;
          itot++;
        }
@@ -265,7 +271,7 @@ char		*insert;
 /* Now we write the Xyz header */
    (void)printf("%d\n",isite);
 /* It would be nice to have here the real title */
-   (void)printf("%s\n",control.title);
+   (void)printf("%s\n",control.title[0]?control.title:"Moldy output");
    
    for(spec = species; spec < species+system->nspecies; spec++)
    {
