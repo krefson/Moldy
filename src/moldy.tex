@@ -156,7 +156,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.23 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.24 $ $}
 \newcommand{\moldyversion}{2.14}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1742,12 +1742,15 @@ system, but usually by issuing the command \Lit{moldy}.\footnote{On
     moldy :== \$mydisk:[mydir]moldy}} For Unix(tm) Windows 95 and NT
 and MS-DOS the executable file \Fname{moldy} or \Fname{MOLDY.EXE}
 should be placed in the shell search path (\eg\ in the current
-directory). There is no GUI and \moldy\ should always be run from a
-command line, from a terminal window under Unix or a MS-DOS window
-under Windows 95/NT.  There are two optional arguments - the name of
-the control file (see section~\ref{sec:control}) and the output file
-(see section~\ref{sec:output}).  If either is omitted, control input
-is read from the ``standard input'' which may be a terminal or a job
+directory)\footnote{It is important that the \Fname{dumpext} utility
+  is found in a directory in the shell search path as it is invoked by
+  several of the other utilities to read dump files.}. There is no GUI
+and \moldy\ should always be run from a command line, from a terminal
+window under Unix or a MS-DOS window under Windows 95/NT.  There are
+two optional arguments - the name of the control file (see
+section~\ref{sec:control}) and the output file (see
+section~\ref{sec:output}).  If either is omitted, control input is
+read from the ``standard input'' which may be a terminal or a job
 command file depending on the operating system and circumstances, and
 the output is written to ``standard output'' which may be a terminal
 or batch job logfile.\footnote{Some operating systems (Unix and
@@ -5224,7 +5227,7 @@ trajectories in the format selected by \Lit{-w}.
 \item[-w] selects output format for trajectory data. Set to 
   \Lit{0} for format readable by GNUPlot (default) or
   \Lit{1} for generic format (simple matrix).
-\item[-x, -y, -z, -X, -Y, -Z] indicate that limits (in \AA) are to be
+\item[-x, -y, -z, -X, -Y, -Z] indicate that limits (in {\AA}) are to be
   specified in the given cartesian direction. If the direction is in
   lowercase, only particles whose initial positions lie \emph{within}
   these limits are included in the msd calculation or trajectory
