@@ -156,7 +156,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.25.2.2 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.25.2.3 $ $}
 \newcommand{\moldyversion}{2.14}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -5645,11 +5645,12 @@ randomly distributed vacancies by prefixing the solute name with ``\#''.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Plotrdf}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Plotrdf is a \emph{perl} script which reads "Moldy" output files and
+Plotrdf is a \emph{perl} script which reads \moldy output files and
 extracts RDF information, skipping page breaks.  It produces output
 suitable for reading into most graphics programs, but most notably
-\emph{gnuplot}.  Obviously you must have \emph{perl} installed on your
-computer to use it.
+\emph{gnuplot} and \emph{xmgrace}.  It can also write a command script
+for either of these two programs if requested.  Obviously you must
+have \emph{perl} installed on your computer to use it.
 
 \begin{center}
   \Lit{plotrdf}
@@ -5658,6 +5659,8 @@ computer to use it.
  \Lit{[-gg]}
  \Lit{[-ps]}
  \Lit{[-eps]}
+ \Lit{[-xg]}
+ \Lit{[-xgg]}
  \Lit{[-m} \textit{REGEXP}\Lit{]} 
  \textit{moldy-output-file} ...
 \end{center}
@@ -5669,6 +5672,8 @@ computer to use it.
       \item[-ps]        Invoke GNUPLOT to plot data and write as a PostScript file
       \item[-eps]       Invoke GNUPLOT to plot data and write as an
         encapsulated  PostScript (EPS) file
+      \item[-xg]        Write a GRACE script to plot data
+      \item[-xgg]       Write a script and invoke XMGRACE to plot data
       \item[-m]  output/plot only columns which match the (perl) regular expression REGEXP. (no '//' needed)    
 \end{Argdescription}
 

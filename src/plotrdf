@@ -7,13 +7,15 @@ eval 'exec perl -S $0 ${1+"$@"}'
 # Plotrdf.  This script reads "Moldy" output files and extracts RDF information
 # skipping page breaks.
 #
-#  Usage: plotrdf [-a] [-m REGEXP] [-g] moldy-output-file ...
+#  Usage: plotrdf [-a] [-m REGEXP] [-g|-gg|-xg|-xgg] [-eps|-ps] moldy-output-file ...
 #      -a         Take average of multiple RDF blocks
 #      -g         Write a GNUPLOT script to plot data
 #      -gg        Write a script and invoke GNUPLOT to plot data
 #      -ps        Invoke GNUPLOT to plot data and write as a PostScript file
 #      -eps       Invoke GNUPLOT to plot data and write as an encapsulated 
 #                 PostScript (EPS) file
+#      -xg        Write a GRACE script to plot data
+#      -xgg       Write a script and invoke GRACE to plot data
 #      -m REGEXP  output/plot only columns which match the (perl) regular 
 #                 expression REGEXP. (no '//' needed)    
 #
@@ -62,7 +64,16 @@ sub usage {
    printf STDERR "    -gg        Write a script and invoke GNUPLOT to plot data\n";
    printf STDERR "    -ps        Invoke GNUPLOT to plot data and write as a PostScript file\n";
    printf STDERR "    -eps       Invoke GNUPLOT to plot data and write as an encapsulated PostScript (EPS) file\n";
+   printf STDERR "    -xg        Write a GRACE script to plot data\n";
+   printf STDERR "    -xgg       Write a script and invoke GRACE to plot data\n";
    printf STDERR "    -m REGEXP  output/plot only columns which match the (perl) regular expression REGEXP. (no '//' needed)\n";
+}
+
+sub pfout {
+    my($hdrlist, $plotfile, $gpflag, $title) = @_;
+    gpout(@_) if $gpflag > 0;
+    graceout(@_) if $grflag > 0;
+
 }
 
 sub gpout {
@@ -91,7 +102,31 @@ sub gpout {
     print   "\npause -1\n";
 }
 
+sub graceout {
+    my($hdrlist, $plotfile, $grflag, $title) = @_;
+    my($i);
+    
+    $| = 1;
+
+    print   "\@timestamp def \"",scalar(localtime),"\"\n";
+    print   "\@with g0\n";
+    print   "\@title \"",$title,"\"\n";
+    print   "\@xaxis label \"r(A)\"\n";
+    print   "\@yaxis label \"g(r)\"\n";
+
+    $ncols = $#$hdrlist;
+
+    print   "\@read block \"$plotfile\"\n";
+    foreach $i (0..$ncols ) {
+        print "\@with s",$i,"\n";
+	print "\@block xy \"1:",$i+2,"\"\n";
+	print "\@s",$i," legend \"$$hdrlist[$i]\"\n" ;
+    }
+}
+
+
 $gpflag = 0;
+$grflag = 1;
 $aflag = 0;
 $plotfd=*STDOUT;
 $match = ".";
@@ -113,6 +148,14 @@ while ($#ARGV >= 0 && $ARGV[0] =~ /^-\w+/ ) {
 	$gpflag=4 ;
 	$flag = "";
     }
+    if ($flag eq "-xg" ) {
+	$grflag=1 ;
+	$flag = "";
+    }
+    if ($flag eq "-xgg" ) {
+	$grflag=2 ;
+	$flag = "";
+    }
    if( $flag eq "-a") {
 	$aflag++;
 	$flag = "";
@@ -127,7 +170,7 @@ while ($#ARGV >= 0 && $ARGV[0] =~ /^-\w+/ ) {
     }
 }
 $title=$ARGV[0];
-if ($gpflag ) {
+if ($gpflag || $grflag) {
     $plotfile = $title.".data";
     open PLOTFILE, ">$plotfile" || die "Failed to open plot file $plotfile for writing\n";
     $plotfd=*PLOTFILE;
@@ -136,6 +179,9 @@ if ($gpflag ) {
 
 if ($gpflag > 1) {
     open STDOUT, "| gnuplot -persist" or die "Failed to open pipe to GNUPLOT process";
+} elsif ($grflag > 1 ) {
+    open STDOUT, "| xmgrace -pipe" or die "Failed to open pipe to GRACE process";
+
 }
 
 $be = 0;
@@ -206,7 +252,7 @@ while ( <> ) {
 		$firstblock = 0;
 		if( ! $aflag ) {
 		    rdfout(\%rdflist, $binw, $plotfd, 1.0);
-		    gpout([keys %rdflist], $plotfile, $gpflag, $title) if ($gpflag);
+		    pfout([keys %rdflist], $plotfile, $gpflag, $title) if ($gpflag || $grflag);
 		}
 		
 	    }
@@ -215,6 +261,6 @@ while ( <> ) {
 }
 if( $aflag ) {
     rdfout(\%rdflist, $binw, $plotfd, 1.0/$nrdfblocks);
-    gpout([keys %rdflist], $plotfile, $gpflag, $title) if ($gpflag);
+    pfout([keys %rdflist], $plotfile, $gpflag, $title) if ($gpflag || $grflag);
 }
 	
