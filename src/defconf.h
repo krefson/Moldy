@@ -5,8 +5,10 @@
 #   define vms
 #endif
 #ifdef vms
+#if _POSIX_C_SOURCE >= 2 || !defined(_ANSI_C_SOURCE) && __CRTL_VER >= 70000000
+#      define HAVE_POPEN
+#endif
 #   define ALLOC_ALIGN
-#   define HAVE_POPEN
 #   define HAVE_GETOPT
 #   define STDC_HEADERS
 #   define BACKUP_FILE		"MDBACKUP.DAT"
