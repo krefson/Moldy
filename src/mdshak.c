@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdshak.c,v 2.13 1997/11/26 10:09:47 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdshak.c,v 2.15 1998/01/09 11:35:11 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -696,6 +696,7 @@ char	*argv[];
    char		*filename = NULL, *dump_name = NULL;
    char		*dumplims = NULL, *atom_sel = NULL;
    char		*insert = NULL;
+   char		*tempname;
    char		dumpcommand[256];
    int		dump_size;
    float	*dump_buf;
@@ -918,7 +919,7 @@ char	*argv[];
 	 * Loop over dump records, ascertaining which file they are in
 	 * and opening it if necessary.  Call output routine.
 	 */
-#if defined (unix) || defined (__unix__)
+#if defined (HAVE_POPEN) 
 	sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %s %s",
 		sys.nmols,sys.nmols_r, dumplims, dump_name);
 	if( (Dp = popen(dumpcommand,"r")) == 0)
@@ -947,7 +948,7 @@ char	*argv[];
 		   irec%header.maxdumps, dump_name);
 #endif
 	}
-#if defined (unix) || defined (__unix__)
+#if defined (HAVE_POPEN) 
 	pclose(Dp);
 #else
 	fclose(Dp);

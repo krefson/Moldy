@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 2.2 1997/10/15 13:12:07 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 2.4 1998/01/09 11:35:11 keith Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *       
@@ -28,6 +28,13 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.4  1998/01/09 11:35:11  keith
+ *  Changed to "HAVE_POPEN" macro from system-specifics.
+ *
+ *  Revision 2.3  1997/11/26 10:08:29  keith
+ *  Corrected usage message.
+ *  Made -r and -s options mutually exclusive.
+ *
  *  Revision 2.2  1997/10/15 13:12:07  keith
  *  Fixed for polyatomics - CF
  *
@@ -991,7 +998,7 @@ char	*argv[];
      if( (dump_buf = (float*)malloc(dump_size)) == 0)
        error("malloc failed to allocate dump record buffer (%d bytes)",
            dump_size);
-#if defined (unix) || defined (__unix__)
+#if defined (HAVE_POPEN) 
      sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s",
         sys.nmols, sys.nmols_r, start, finish, inc, dump_name);
    
@@ -1042,7 +1049,7 @@ char	*argv[];
         average(&sys, avpos, avh, nav); 
         moldy_out(&sys, site_info, insert, avpos, avh, outsw);
 
-#if defined (unix) || defined (__unix__)
+#if defined (HAVE_POPEN) 
    pclose(Dp);
 #else
    fclose(Dp);
