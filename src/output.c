@@ -37,6 +37,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.17  2000/04/27 17:57:10  keith
+ *       Converted to use full ANSI function prototypes
+
+ *       Revision 2.16.2.1  2000/08/29 17:27:45  keith
+ *       Updated revision mechanism for CVS -- should now print correct
+ *       version number if checked out with that tag.
+ *
  *       Revision 2.16  2000/04/24 15:07:48  keith
  *       Added extra output to banner_page.  Now ALL important control-file
  *       options are logged in the output.
@@ -198,7 +205,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/output.c,v 2.16 2000/04/24 15:07:48 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.16.2.1 2000/08/29 17:27:45 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -432,7 +439,7 @@ void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
    new_page(); new_lins(2);
    print_array( banner, lsizeof banner / sizeof(char*));
    (void)sprintf(version, "Version %.*s (%.*s) %.*s",
-		 	(int)strlen(Revision+11)-1,      Revision+11,
+		 	(int)strlen(Revision+7)-1,      Revision+7,
 		 	(int)strlen(Revision_State+8)-1, Revision_State+8,
 		 	(int)strlen(Revision_Date+7)-1,  Revision_Date+7);
    print_array( &vsn, (size_mt)1);

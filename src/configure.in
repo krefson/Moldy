@@ -16,12 +16,16 @@ dnl
       sparc-sun-sunos*)   DEFCC=cc ALTCC="mpicc bspcc acc";;
       sparc-sun-solaris*) DEFCC=cc ALTCC="mpicc bspcc c89";;
 dnl   
-dnl Unrtunately the Bourne-shell "env=value command" construct breaks the 
+dnl Unfortunately the Bourne-shell "env=value command" construct breaks the 
 dnl configure script.
 dnl However we can rely on the "env" command in the case of the crays.
 dnl   
       T3D-cray-unicos*)   DEFCC="env TARGET=cray-t3d cc" ALTCC="mpicc bspcc";;
       T3E-cray-unicos*)   DEFCC="env TARGET=cray-t3e cc" ALTCC="mpicc bspcc";;
+dnl
+dnl Alternative compilers for Linux
+dnl
+      i?86-pc-linux*)     DEFCC=pgcc ALTCC="gcc mpicc bspcc";;
                      *)   ALTCC="mpicc bspcc";;
    esac
 dnl
@@ -70,6 +74,10 @@ dnl
      T3E-cray-unicos*)  : ${OPT=-O2} ${OPTAUX=-O3\ -hunroll,aggress,restrict=a} \
                           ${OPT2=$OPTAUX,inlinefrom=auxil.c} \
                           ${LIBS=-lsci} ;;
+     i?86-pc-linux*)      if test $CC = "pgcc" ; then
+			   :  ${OPT=-O2} ${OPT2=$OPT} ${OPTAUX=$OPT2 -Munroll}
+		  	  fi ;;
+
                     *)  : ${OPT=-O} ${OPT2=$OPT} ${OPTAUX=$OPT2}
     esac
    fi

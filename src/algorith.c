@@ -42,6 +42,19 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: algorith.c,v $
+ *       Revision 2.14.2.2  2000/10/20 13:59:31  keith
+ *       Incorporated new neightbour list stuff into accel.c.
+ *       Removed old "poteval" from accel.c.  Now use one in
+ *       force.
+ *       Other errors corrected and declarations tidied somewhat.
+ *
+ *       Revision 2.14.2.1  2000/10/20 11:48:51  keith
+ *       Incorporated new neighbour list indexing algorithm from 2.16
+ *
+ *       Revision 2.14  2000/05/23 15:23:07  keith
+ *       First attempt at a thermostatted version of the Leapfrog code
+ *       using either a Nose or a Nose-Poincare thermostat
+ *
  *       Revision 2.13  2000/04/27 17:57:05  keith
  *       Converted to use full ANSI function prototypes
  *
@@ -144,7 +157,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/algorith.c,v 2.13 2000/04/27 17:57:05 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/algorith.c,v 2.14.2.2 2000/10/20 13:59:31 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -156,14 +169,14 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/algorith.c,
 /*========================== External function declarations ==================*/
 gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
 void            tfree(gptr *p);	       /* Free allocated memory	      	      */
-void	mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);			/* 3 x 3 Matrix by Vector multiplier  */
-void	mat_mul(real (*a)[3], real (*b)[3], real (*c)[3]);	          	/* 3 x 3 matrix multiplier	      */
-void	mat_add(real (*a)[3], real (*b)[3], real (*c)[3]);			/* Add 2 3x3 matrices                 */
-void	mat_sca_mul(register real s, real (*a)[3], real (*b)[3]);			/* Multiply 3x3 matrix by scalar      */
-void	transpose(real (*a)[3], real (*b)[3]);			/* transpose a 3x3 matrix	      */
-void	invert(real (*a)[3], real (*b)[3]);			/* invert a 3x3 matrix		      */
-double	det(real (*a)[3]);				/* Determinant of 3x3 matrix	      */
-void	q_to_rot(real *quat, real (*rot)[3]);			/* Make rotation matrix from quat'n   */
+void	mat_vec_mul(mat_mt m, vec_mp in_vec, vec_mp out_vec, int number);			/* 3 x 3 Matrix by Vector multiplier  */
+void	mat_mul(mat_mt a, mat_mt b, mat_mt c);	          	/* 3 x 3 matrix multiplier	      */
+void	mat_add(mat_mt a, mat_mt b, mat_mt c);			/* Add 2 3x3 matrices                 */
+void	mat_sca_mul(register real s, mat_mt a, mat_mt b);			/* Multiply 3x3 matrix by scalar      */
+void	transpose(mat_mt a, mat_mt b);			/* transpose a 3x3 matrix	      */
+void	invert(mat_mt a, mat_mt b);			/* invert a 3x3 matrix		      */
+double	det(mat_mt a);				/* Determinant of 3x3 matrix	      */
+void	q_to_rot(real *quat, mat_mt rot);			/* Make rotation matrix from quat'n   */
 void	q_mul(quat_mp p, quat_mp q, quat_mp r, int n);
 void	q_conj_mul(quat_mp p, quat_mp q, quat_mp r, int n);
 double	vdot(int n, real *x, int ix, real *y, int iy);				/* Vector dot product		      */
@@ -298,15 +311,20 @@ VECTORIZE
  *  molecules from the principal-frame sites, the quaternions and the centre  *
  *  of mass co-ordinates.  Called once for each molecular species.            *
  ******************************************************************************/
-void make_sites(real (*h)[3], vec_mp c_of_m_s, quat_mp quat, vec_mp p_f_sites, int framework, real **site, int nmols, int nsites)
+/******************************************************************************
+ *  make_sites     Calculate the atomic site co-ordinates for nmols identical *
+ *  molecules from the principal-frame sites, the quaternions and the centre  *
+ *  of mass co-ordinates.  Called once for each molecular species.            *
+ ******************************************************************************/
+void make_sites(mat_mt h, vec_mp c_of_m_s, quat_mp quat, vec_mp p_f_sites, real **site, int nmols, int nsites, int molflag)
       		  		/* Unit cell matrix h		     (in)     */
       		         	/* Centre of mass co-ords [nmols][3] (in)     */
 		          	/* Principal-frame sites [nsites][3] (in)     */
     		       		/* Sites [nmols*nsites][3]          (out)     */
-   		          	/* Flag to signal framework structure (in)    */
        		     		/* Quaternions [nmols][4]            (in)     */
    		      		/* Number of molecules                        */
 		       		/* Number of sites on each molecule           */
+   		        	/* Whether to apply pbc to sites or cofm      */
 {
    int		imol, isite, i;	/* Counters				      */
    vec_mt	c_of_m;		/* Unscaled centre of mass co-ordinates       */
@@ -336,7 +354,7 @@ void make_sites(real (*h)[3], vec_mp c_of_m_s, quat_mp quat, vec_mp p_f_sites, i
       }
    }
 
-   if( framework )			/* Apply pbc's to put sites into cell */
+   if( molflag!=MOLPBC ) /* Apply pbc's to put sites into cell */
       for( isite = 0; isite < nmols*nsites; isite++ )
       {
           site[0][isite] -= lx  *      floor(MATMUL(0,hinv,site,isite) + 0.5);
@@ -375,7 +393,7 @@ void newton(vec_mp force, vec_mp acc, double mass, int nmols)
  *  accelerations in the Parinello and Rahman zero-stress method.             *
  *  Parinello M. and Rahman A. J. Appl. Phys. 52(12), 7182-7190 (1981)        *
  ******************************************************************************/
-void parinello(real (*h)[3], real (*h_dot)[3], vec_mp vel, vec_mp acc, vec_mp acc_out, int nmols)
+void parinello(mat_mt h, mat_mt h_dot, vec_mp vel, vec_mp acc, vec_mp acc_out, int nmols)
       	  			/* P and R's unit cell matrix            (in) */
 	      			/* Derivative of h matrix                (in) */
       	    			/* Centre of mass scaled velocities      (in) */
@@ -413,7 +431,7 @@ void parinello(real (*h)[3], real (*h_dot)[3], vec_mp vel, vec_mp acc, vec_mp ac
 /******************************************************************************
  *  Trans_ke  calculate and return the translational kinetic energy           *
  ******************************************************************************/
-double	trans_ke(real (*h)[3], vec_mt (*vel_s), real s, double mass, int nmols)
+double	trans_ke(mat_mt h, vec_mt (*vel_s), real s, double mass, int nmols)
       	  			/* Unit cell matrix			 (in) */
       	        		/* Scaled c of m velocities		 (in) */
       	     			/* Mass of a molecule of this species	 (in) */
@@ -449,7 +467,7 @@ double	rot_ke(quat_mt (*omega_p), real *inertia, int nmols)
 /******************************************************************************
  * energy_dyad.  Calculate the dyadic sum m V V (dyad over V) for zero stress *
  ******************************************************************************/
-void energy_dyad(real (*ke_dyad)[3], real (*h)[3], real s, vec_mp vels, double mass, int nmols)
+void energy_dyad(mat_mt ke_dyad, mat_mt h, double s, vec_mp vels, double mass, int nmols)
       	        			/* Dyad is accumulated here  (in/out) */
 	  				/* Unit cell matrix		(in)  */
       	     				/* Scaled velocities		(in)  */
@@ -469,14 +487,14 @@ void energy_dyad(real (*ke_dyad)[3], real (*h)[3], real s, vec_mp vels, double m
 
    xfree(vel);
 }
-double trace(real (*mat)[3])
+double trace(mat_mt mat)
 {
   return(mat[0][0] + mat[1][1] + mat[2][2]);
 }
 /******************************************************************************
  * Rahman   Calculate the unit cell matrix accelerations                      *
  ******************************************************************************/
-void rahman(real (*stress_vir)[3], real (*h)[3], real (*hddot)[3], real (*ke_dyad)[3], double press, double W, int mask)
+void rahman(mat_mt stress_vir, mat_mt h, mat_mt hddot, mat_mt ke_dyad, double press, double W, int mask)
       	           			/* Stress virial		      */
 	  				/* Unit cell matrix		      */
 	      				/* Unit cell accelerations            */

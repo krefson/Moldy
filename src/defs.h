@@ -19,9 +19,33 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/moldy/src/RCS/defs.h,v 2.12.1.5 1998/12/14 15:48:01 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.14.4.1 2000/10/20 11:48:53 keith Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.14.4.1  2000/10/20 11:48:53  keith
+ * Incorporated new neighbour list indexing algorithm from 2.16
+ *
+ * Revision 2.14.2.1.2.1  2000/10/11 16:11:09  keith
+ * First working version of H. Bekker's pbc algorithm.  This computes
+ * forces and stresses correctly without computing the virial in the
+ * inner loop.
+ *
+ * It relies on atomic sites being assigned to cells rather than
+ * molecules, and should therefore be more efficient for systems
+ * containing "large" molecules.  This is because the neighbour
+ * list can be smaller.
+ *
+ * It gives exactly the same energies, forces and stresses as the standard
+ * version for systems like controp.tips2 and control.quartz, but only in
+ * strict-cutoff mode.  Lazy cutoff mode generates slightly different numbers.
+ *
+ * Revision 2.14.2.1  2000/08/29 16:57:53  keith
+ * Updated revision mechanism for CVS -- should now print correct
+ * version number if checked out with that tag.
+ *
+ * Revision 2.14  1999/09/09 11:42:37  keith
+ * Update for 2.14 release
+ *
  * Revision 2.12.1.5  1998/12/14 15:48:01  keith
  * Picky picky picky
  *
@@ -255,8 +279,8 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 2.12.1.5 $"
-#define		 REVISION_DATE    "$Date: 1998/12/14 15:48:01 $"
+#define          REVISION         "$Name:  $"
+#define		 REVISION_DATE    "$Date: 2000/10/20 11:48:53 $"
 #define		 REVISION_STATE   "$State: Exp $"
 
 #ifdef HAVE_CONFIG_H
@@ -328,6 +352,8 @@ what you give them.   Help stamp out software-hoarding!  */
 #define SEEK_END	2
 #endif
 
+#define MOLPBC 1
+#define SITEPBC 0
 #define	L_name		128			/* Max Length of file names  */
 #define	NPE		2			/* real & Ewald PE's	     */
 #undef  MAX

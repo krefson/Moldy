@@ -26,6 +26,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.18.2.1  2000/10/20 11:47:04  keith
+ *       Added || RNG mods of 2.15
+ *
+ *       Revision 2.18  2000/04/27 17:57:05  keith
+ *       Converted to use full ANSI function prototypes
+ *
  *       Revision 2.17  1999/09/09 11:32:59  keith
  *       Got rid of #ifdef unix and rely on HAVE_FEATURE macros to
  *       conditionally compile the timers.  This enables compilation
@@ -282,7 +288,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/auxil.c,v 2.17 1999/09/09 11:32:59 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.18.2.1 2000/10/20 11:47:04 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -588,15 +594,28 @@ VECTORIZE
 #define  im  1771875L
 #define  ia  2416L
 #define  ic  374441L
-static unsigned long jran = 1;
+static unsigned long jran = 1, jran1 = 1;
 void	smdrand(long unsigned int seed)
 {
    jran = seed;
+}
+unsigned long getseed(void)
+{
+   return jran;
 }
 double	mdrand(void)
 {
    jran = (jran*ia + ic) % im;
    return (double)jran/(double)im;
+}
+void	smdrand1(long unsigned int seed)
+{
+   jran = seed;
+}
+double	mdrand1(void)
+{
+   jran1 = (jran1*ia + ic) % im;
+   return (double)jran1/(double)im;
 }
 /******************************************************************************
  *  Precision. Return smallest eps s.t. 1.0+eps > 1			      *

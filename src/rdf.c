@@ -29,6 +29,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: rdf.c,v $
+ *       Revision 2.9.2.1  2000/09/01 11:23:39  keith
+ *       Fixed to cope with site-id's with no corresponding sites, ie gaps
+ *       in list.  Used to generate NaN or divide-by-zero.
+ *
  *       Revision 2.9  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -153,7 +157,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/rdf.c,v 2.9 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/rdf.c,v 2.9.2.1 2000/09/01 11:23:39 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -325,28 +329,31 @@ void	print_rdf(system_mt *system, spec_mt *species, site_mt *site_info)
    for(idi = 1; idi < system->max_id; idi++)
       for(idj = idi; idj < system->max_id; idj++)
       {
-         (void)printf("\t%s-%s RDF", site_info[idi].name, site_info[idj].name);
-         new_line();
-	 col = 0;
+	 if( nfrac[idi] > 0 && nfrac[idj] > 0 ) 
+	 {
+	    (void)printf("\t%s-%s RDF", site_info[idi].name, site_info[idj].name);
+	    new_line();
+	    col = 0;
 
-	 norm = 3.0*system->nsites*control.rdf_interval /
-	    (4.0*PI*bincb*rho*nfrac[idi]*nfrac[idj]*control.rdf_out);
-	 if( idi == idj )
-	    norm += norm;
-         for(ibin = 0; ibin < control.nbins; ibin++)
-         {
-            sprintf(buf, " %7f",rdf[idi][idj][ibin]*norm/
-		    ( 3*(SQR(ibin) + ibin) + 1));
-	    col += strlen(buf);
-            if(col > control.page_width)
-            {
-               col = strlen(buf);
-	       new_line();
+	    norm = 3.0*system->nsites*control.rdf_interval /
+	       (4.0*PI*bincb*rho*nfrac[idi]*nfrac[idj]*control.rdf_out);
+	    if( idi == idj )
+	       norm += norm;
+	    for(ibin = 0; ibin < control.nbins; ibin++)
+	    {
+	       sprintf(buf, " %7f",rdf[idi][idj][ibin]*norm/
+		       ( 3*(SQR(ibin) + ibin) + 1));
+	       col += strlen(buf);
+	       if(col > control.page_width)
+	       {
+		  col = strlen(buf);
+		  new_line();
+	       }
+	       fputs(buf, stdout);
+	       rdf[idi][idj][ibin] = 0;				/* Reset      */
 	    }
-	    fputs(buf, stdout);
-            rdf[idi][idj][ibin] = 0;				/* Reset      */
-         }
-	 new_line();
+	    new_line();
+	 }
       }
    put_line('_');
    xfree(nfrac);

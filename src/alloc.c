@@ -34,6 +34,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: alloc.c,v $
+ *       Revision 2.12  2000/04/27 17:57:05  keith
+ *       Converted to use full ANSI function prototypes
+ *
+ *       Revision 2.11.2.1  2000/08/11 17:40:03  keith
+ *       Workaround for Portland group C compiler bug.
+ *
  *       Revision 2.11  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -159,11 +165,14 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/alloc.c,v 2.11 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/alloc.c,v 2.11.2.1 2000/08/11 17:40:03 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
 #include "messages.h"
+#ifdef DEBUGY
+#include <stdio.h>
+#endif
 /*========================== Library include files ===========================*/
 #   include <stdarg.h>
 #include "stdlib.h"
@@ -344,6 +353,7 @@ gptr		*arralloc(size_mt size, int ndim, ...)
 #else /* ALLOC_SEPARATELY*/
 #define CSA(a) ((char*)(a))
 #define ALIGN(a,base,b)	((word_mt*)(CSA(base)+((CSA(a)-CSA(base))+(b)-1)/(b)*(b) ))
+word_mt w;
 static
 void 	subarray(size_mt size, int ndim, long int prdim, word_mt ***pp, word_mt **qq, word_mt *base, va_list ap)
 {
@@ -355,11 +365,11 @@ void 	subarray(size_mt size, int ndim, long int prdim, word_mt ***pp, word_mt **
    {
       for( i = 0; i < prdim; i++)
       {
-	 inhibit_vectorization();  /* Circumvent bug in cray compiler v4.1   */
 	 pp[i] = qq + i*dim - lb;
       }
 
       subarray(size, ndim-1, prdim*dim, (word_mt***)qq, qq+prdim*dim, base, ap);
+      w=base[0];
    }
    else			/* Last recursion - set up pointers to data   */
       for( i = 0; i < prdim; i++)

@@ -22,11 +22,18 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.24  2000/08/18 17:50:59  keith
+ *       Updated for themostat version.
+ *
  *       Revision 2.23  2000/04/27 17:57:10  keith
  *       Converted to use full ANSI function prototypes
  *
  *       Revision 2.22  2000/04/26 16:01:01  keith
  *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
+ *
+ *       Revision 2.21.2.1  2000/08/29 16:49:19  keith
+ *       Fixed RNG to be synchronous on multiprocessor -- needed for
+ *       scale-options=8.
  *
  *       Revision 2.21  1998/07/17 14:54:06  keith
  *       Ported SHMEM version to IRIX 6/ SGI Origin 2000
@@ -85,7 +92,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2.23 2000/04/27 17:57:10 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2.21.2.1 2000/08/29 16:49:19 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -1130,6 +1137,7 @@ void	copy_dynamics(system_mp system)
 void replicate(contr_mt *control, system_mt *system, spec_mt **spec_ptr, site_mt **site_info, pot_mt **pot_ptr, restrt_mt *restart_header)
 {
    int av_convert;
+   int jran;
    /*
     *  Fetch the top-level structs
     */
@@ -1161,5 +1169,11 @@ void replicate(contr_mt *control, system_mt *system, spec_mt **spec_ptr, site_mt
     * Copy the dynamic vars from the other processes.
     */
    copy_dynamics(system);
+   /*
+    * Synchronize pseudo-random number generator.
+    */
+   jran = getseed();
+   par_broadcast((gptr*)&jran, 1, sizeof jran, 0);
+   smdrand(jran);
 #endif
 }

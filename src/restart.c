@@ -31,11 +31,20 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.15  2000/05/23 15:23:08  keith
+ *       First attempt at a thermostatted version of the Leapfrog code
+ *       using either a Nose or a Nose-Poincare thermostat
+ *
  *       Revision 2.14  2000/04/27 17:57:11  keith
  *       Converted to use full ANSI function prototypes
  *
  *       Revision 2.13  2000/04/26 16:01:02  keith
  *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
+ *
+ *       Revision 2.12.2.1  2000/09/29 14:24:22  keith
+ *       Added tests and made secure against buffer overflow in "vsn" field of
+ *       dump and restart headers.  The 16-char buffer leads to overflows with
+ *       long CVS version strings
  *
  *       Revision 2.12  1999/12/20 15:19:26  keith
  *       Check for rdf-limit or nbinds changed on restart, and handle
@@ -172,7 +181,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/restart.c,v 2.14 2000/04/27 17:57:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/restart.c,v 2.15 2000/05/23 15:23:08 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -372,6 +381,7 @@ void	xdr_cwrite(xfp_mt xfp, gptr *ptr, size_mt size, int nitems, xdrproc_t proc)
 static   XDR		xdrs;
 void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr)
 {
+   char         vbuf[sizeof header->vsn + 1];
    int		vmajor,vminor;
    xfp_mt	xfp;
    xfp.xp =     &xdrs;
@@ -382,8 +392,10 @@ void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr)
    if( cnext(xfp) == XDR_RESTRT_SIZE )
    {
       cread(xfp,  (gptr*)header, lsizeof(restrt_mt), 1, xdr_restrt);
-      header->vsn[15] = '\0';   /* Add terminator in case vsn is garbage*/
-      if( ! strstr(header->vsn,"(XDR)") )
+      strncpy(vbuf,header->vsn,sizeof header->vsn);
+      vbuf[sizeof header->vsn] = '\0';   
+                                /* Add terminator in case vsn is garbage*/
+      if( ! strstr(vbuf,"(XDR)") )
 	 xdr_read = FALSE;
    }
    else
@@ -396,6 +408,10 @@ void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr)
    if( ! xdr_read )
       cread(xfp,  (gptr*)header, lsizeof(restrt_mt), 1, xdr_restrt);
    cread(xfp,  (gptr*)contr, lsizeof(contr_mt), 1, xdr_contr); 
+   /*
+    * Ensure header version string is null-terminated -- we rely on it.
+    */
+   header->vsn[sizeof header->vsn-1] = '\0'; 
    /*
     * Parse header version
     */
@@ -596,7 +612,9 @@ void	write_restart(char *save_name, restrt_mt *header, system_mp system, spec_mp
    FILE		*save;
    XDR		xdrsw;
    xfp_mt	xfp;
-   char		*vsn = "$Revision: 2.14 $"+11;
+#define REV_OFFSET 11
+   char		*vsn = "$Revision: 2.12.2.1 $"+REV_OFFSET;
+#define LEN_REVISION strlen(vsn)
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)
@@ -612,10 +630,16 @@ void	write_restart(char *save_name, restrt_mt *header, system_mp system, spec_mp
 #endif
 
    save_header = *header;
-   (void)strncpy(save_header.vsn, vsn, sizeof save_header.vsn-1);
-   save_header.vsn[strlen(save_header.vsn)-2] = '\0'; /* Strip trailing $     */
+   (void)strncpy(save_header.vsn, vsn, sizeof save_header.vsn);
+   save_header.vsn[LEN_REVISION-2] = '\0'; /* Strip trailing $     */
    if( control.xdr_write )
-      (void)strncat(save_header.vsn," (XDR)",16);
+   {
+#define  LEN_XDR 5
+      if(LEN_REVISION-2+LEN_XDR >= sizeof save_header.vsn)
+	 message(NULLI,NULLP,FATAL,
+		    "Internal error: restrt_mt header field VSN too small");
+      (void)strncat(save_header.vsn,"(XDR)",sizeof save_header.vsn);
+   }
    save_header.prev_timestamp = header->timestamp;
    save_header.timestamp = time((time_t*)0);		/* Update header      */
    save_header.seq++;

@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.22  2000/05/23 15:23:07  keith
+ *       First attempt at a thermostatted version of the Leapfrog code
+ *       using either a Nose or a Nose-Poincare thermostat
+ *
  *       Revision 2.21  2000/04/27 17:57:05  keith
  *       Converted to use full ANSI function prototypes
  *
@@ -240,7 +244,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/accel.c,v 2.19.2.1 2000/04/24 17:05:41 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.22 2000/05/23 15:23:07 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -255,62 +259,96 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/accel.c,v 2
 #include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
-void            tfree(gptr *p);	       /* Free allocated memory	      	      */
-void            afree(gptr *p);	       /* Free allocated array	      	      */
-void		leapf_com(real step, vec_mt (*c_of_m), vec_mt (*vel), int nmols);
-void		leapf_vel(real step, real (*hinv)[3], vec_mt (*vel), vec_mt (*force), real mass, int nmols);
-void		leapf_quat(real step, quat_mt (*quat), quat_mt (*avel), real *inertia, int nmols);
-void		leapf_avel(real step, quat_mt (*avel), vec_mt (*torque), real *inertia, int nmols);
-void		leapf_s(double step, real *s, real smom, double Q);
-void		leapf_smom(double step, real s, real *smom, double kepold, double pe, double Q, double gkt, double H_0);
-void		leapf_smom_simple(double step, real *smom, double ke, double gkt);
-void		leapf_smom_a(double step, real s, real *smom, double ke, double pe, double Q, double gkt, double H_0);
-void		leapf_smom_b(double step, real s, real *smom, double ke, double pe, double Q, double gkt, double H_0);
-void            make_sites(real (*h)[3], vec_mp c_of_m_s, quat_mp quat, vec_mp p_f_sites, int framework, real **site, int nmols, int nsites);	       /* Construct site coordinate arrays    */
-void            mol_force(real **site_force, vec_mp force, int nsites, int nmols);	       /* Calculare molecular from site force */
-void            mol_torque(real **site_force, vec_mp site, vec_mp torque, quat_mp quat, int nsites, int nmols);	       /* Calculate torques from site forces  */
-void            rotate();	       /* Perform rotations given quaternions */
-void            newton(vec_mp force, vec_mp acc, double mass, int nmols);	       /* Calculate accelerations from forces */
-void            euler();	       /* Get quat 2nd derivatives            */
-void            parinello(real (*h)[3], real (*h_dot)[3], vec_mp vel, vec_mp acc, vec_mp acc_out, int nmols);	       /* Get correction to c of m accns      */
-void            rahman(real (*stress_vir)[3], real (*h)[3], real (*hddot)[3], real (*ke_dyad)[3], double press, double W, int mask);	       /* Get h 2nd derivatives	              */
-void            energy_dyad(real (*ke_dyad)[3], real (*h)[3], vec_mp vels, double mass, int nmols);	       /* Calculate mvv for stress term       */
-void            force_calc(real **site, real **site_force, system_mt *system, spec_mt *species, real *chg, pot_mt *potpar, double *pe, real (*stress)[3]);	       /* Calculate direct-space forces       */
-double          dist_pot(real *potpar, double cutoff, int ptype);	       /* Returns integrated potential fn     */
-void            ewald(real **site, real **site_force, system_mp system, spec_mt *species, real *chg, double *pe, real (*stress)[3]);	       /* Get Ewald sum forces		      */
-void            dump(system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3], double pe, restrt_mt *restart_header, int backup_restart);		       /* Maintain and write dump data files  */
-void            zero_real(real *r, int n);	       /* Clear area of memory		      */
-void            zero_double(double *r, int n);	       /* Clear area of memory		      */
-void            invert(real (*)[3], real (*)[3]);	       /* Matrix inverter		      */
-double          det(real (*)[3]);		       /* Returns matrix determinant	      */
-void            mat_vec_mul(real (*)[3], vec_mp, vec_mp, int);	       /* 3 x 3 Matrix by Vector multiplier   */
-void            mean_square(vec_mt (*x), real *meansq, int nmols);	       /* Caluculates mean square of args     */
-void            rdf_calc(real **site, system_mp system, spec_mt *species);	       /* Accumulate and bin rdf	      */
-double 		value(av_n type, int comp);	       /* Return thermodynamic average	      */
-double 		roll_av(av_n type, int comp);	       /* Return thermodynamic average	      */
-double          vdot(int n, real *x, int ix, real *y, int iy);		       /* Fast vector dot product	      */
-double		sum(register int n, register double *x, register int ix);		       /* Fast vector sum.		      */
-void            vscale(register int n, register double s, register real *x, register int ix);	       /* Vector by constant multiply	      */
-double          vec_dist(real *v1, real *v2, int n);	       /* normalised vector distance	      */
-void		thermalise(system_mp system, spec_mt *species);	       /* Randomize velocities to given temp  */
-double		trans_ke(real (*h)[3], vec_mt (*vel_s), real s, double mass, int nmols);	       /* Compute translational kinetic en.   */
-double		rot_ke(quat_mt (*omega_p), real *inertia, int nmols);	       /* Compute rotational kinetic en.      */
-void            hoover_tr(double alpha, vec_mp accel_in, vec_mp accel_out, vec_mp vel, int nmols);           /* Corrects forces due to thermostat   */
-void            hoover_rot(double alpha, real *inertia, vec_mp force_in, vec_mp force_out, quat_mp omega, int nmols);          /* Corrects forces due to thermostat   */
-double          gaussiant(vec_mp vec1, vec_mp vec2, int nmols);           /* Return Force*vel                    */
-double          gaussianr1(vec_mp vec1, quat_mp vec2, int nmols);          /* Return Torque*omega                 */
-double          gaussianr2(quat_mp omega, real *inertia, int nmols);          /* Return omega*I*omega                */
-void            q_conj_mul(quat_mp p, quat_mp q, quat_mp r, int n);          /* Quat. conjugated x by quat. dot     */
-void	inhibit_vectorization(void);       /* Self-explanatory dummy              */
-void            kernel(int, int, real *, double *, real *, real *, double, double, double, int, real **);              /* Potential function evaluation       */
+gptr   *talloc(int n, size_mt size, int line, char *file); 
+                              /* Interface to memory allocator       */
+void   tfree(gptr *p);	       /* Free allocated memory	      	      */
+void   afree(gptr *p);	       /* Free allocated array	      	      */
+void   leapf_com(real step, vec_mt (*c_of_m), vec_mt (*vel), int nmols);
+void   leapf_vel(real step, mat_mt, vec_mt (*vel), 
+       	  vec_mt (*force), real mass, int nmols);
+void   leapf_quat(real step, quat_mt (*quat), quat_mt (*avel), 
+       	   real *inertia, int nmols);
+void   leapf_avel(real step, quat_mt (*avel), vec_mt (*torque), 
+       	   real *inertia, int nmols);
+void   leapf_s(double step, real *s, real smom, double Q);
+void   leapf_smom(double step, real s, real *smom, double kepold, 
+       	   double pe, double Q, double gkt, double H_0);
+void   leapf_smom_simple(double step, real *smom, double ke, double gkt);
+void   leapf_smom_a(double step, real s, real *smom, double ke, 
+       	     double pe, double Q, double gkt, double H_0);
+void   leapf_smom_b(double step, real s, real *smom, double ke, 
+       	     double pe, double Q, double gkt, double H_0);
+void   make_sites(mat_mt, vec_mp c_of_m_s, quat_mp quat, 
+       	   vec_mp p_f_sites, real **site, int nmols, int nsites, 
+       	   int molflag);		/* Construct site coordinate arrays  */
+void   mol_force(real **site_force, vec_mp force, int nsites, int nmols);
+                                      /* Calculate molecular from site force */
+void   mol_torque(real **site_force, vec_mp site, vec_mp torque, quat_mp quat, 
+       	   int nsites, int nmols);    /* Calculate torques from site forces  */
+void   rotate();		      /* Perform rotations given quaternions */
+void   newton(vec_mp force, vec_mp acc, double mass, int nmols); 
+				      /* Calculate accelerations from forces */
+void   euler();	                      /* Get quat 2nd derivatives            */
+void   parinello(mat_mt, mat_mt, vec_mp vel, vec_mp acc,
+       	  vec_mp acc_out, int nmols); /* Get correction to c/m acceleration  */
+void   rahman(mat_mt stress_vir, mat_mt, mat_mt, 
+              mat_mt ke_dyad, double press, double W, int mask); 
+					/* Get h 2nd derivatives             */
+void   energy_dyad(mat_mt ke_dyad, mat_mt, double s, vec_mp vels, double mass,  
+       	    int nmols);			/* Calculate mvv for stress term     */
+void   force_calc(real **site, real **site_force, system_mt *system, 
+       	   spec_mt *species, real *chg, pot_mt *potpar, double *pe, 
+       	   mat_mt stress);		/* Calculate direct-space forces     */
+double poteval(real *potpar, double r, int ptype, double chgsq);
+double dist_pot(real *potpar, double cutoff, int ptype); 
+                                      /* Returns integrated potential fn     */
+void   ewald(real **site, real **site_force, system_mp system, spec_mt *species, 
+             real *chg, double *pe, mat_mt stress); 
+void   dump(system_mp system, vec_mt (*force), vec_mt (*torque), 
+            mat_mt stress, double pe, restrt_mt *restart_header, 
+            int backup_restart);	/*  Write dump data files            */
+void   zero_real(real *r, int n);      /* Clear area of memory		     */
+void   zero_double(double *r, int n);  /* Clear area of memory		     */
+void   invert(mat_mt , mat_mt );	/* Matrix inverter		     */
+double det(mat_mt );			/* Returns matrix determinant	     */
+void   mat_vec_mul(mat_mt , vec_mp, vec_mp, int);
+                                      /* 3 x 3 Matrix by Vector multiplier   */
+void   mean_square(vec_mt (*x), real *meansq, int nmols);
+                     	                /* Calculates mean square of args    */
+void   rdf_calc(real **site, system_mp system, spec_mt *species);
+                            	       /* Accumulate and bin rdf	     */
+double value(av_n type, int comp); /* Return thermodynamic average	     */
+double roll_av(av_n type, int comp); /* Return thermodynamic average	     */
+double vdot(int n, real *x, int ix, real *y, int iy); /* Fast  dot product   */
+double sum(int n, double *x, int ix); /* Fast sum */
+void   vscale(int n, double s, real *x, int ix); /* Vector by const multiply */
+double vec_dist(real *v1, real *v2, int n); /* normalised vector distance    */
+void   thermalise(system_mp system, spec_mt *species);	      
+                                      /* Randomize velocities to given temp  */
+double trans_ke(mat_mt, vec_mt (*vel_s), real s, double mass, int nmols);
+                                     /* Compute translational kinetic energy */
+double rot_ke(quat_mt (*omega_p), real *inertia, int nmols); 
+                                    /* Compute rotational kinetic energy     */
+void   hoover_tr(double alpha, vec_mp accel_in, vec_mp accel_out, vec_mp vel, 
+       	  int nmols);		       /* Corrects forces due to thermostat  */
+void   hoover_rot(double alpha, real *inertia, vec_mp force_in, 
+       	   vec_mp force_out, quat_mp omega, int nmols); 
+                                      /* Corrects forces due to thermostat   */
+double gaussiant(vec_mp vec1, vec_mp vec2, int nmols); /* Return Force*vel   */
+double gaussianr1(vec_mp vec1, quat_mp vec2, int nmols); /* Return Torque*av */
+double gaussianr2(quat_mp omega, real *inertia, int nmols); /* Return av*I*av*/
+void   q_conj_mul(quat_mp p, quat_mp q, quat_mp r, int n);   
+                                      /* Quat. conjugated x by quat. dot     */
+void   inhibit_vectorization(void);       /* Self-explanatory dummy          */
+void   kernel(int, int, real *, double *, real *, real *, double, double, 
+              double, int, real **);   /* Potential function evaluation      */
 #ifdef SPMD
-void		par_rsum(real *buf, int n);
-void		par_dsum(double *buf, int n);
-#endif
-gptr		*arralloc(size_mt,int,...); /* Array allocator		      */
-void		note(char *, ...);	/* Write a message to the output file */
-void		message(int *, ...);	/* Write a warning or error message   */
+void   par_rsum(real *buf, int n);
+void   par_dsum(double *buf, int n);
+#endif 
+gptr   *arralloc(size_mt,int,...);	/* Array allocator		      */
+void   note(char *, ...);		/* Write a message to the output file */
+void   message(int *, ...);		/* Write a warning or error message   */
 /*========================== External data references ========================*/
 extern contr_mt control;                    /* Main simulation control parms. */
 extern int 	ithread, nthreads;
@@ -501,28 +539,6 @@ rescale(system_mp system, spec_mp species)
    }
    tfree((gptr*)temp_value);
 }
-
-/******************************************************************************
- * Poteval	      Return potential evaluated at a single point.           *
- ******************************************************************************/
-static double
-poteval(real *potpar, double r, int ptype)
-    	         			/* Array of potential parameters      */
-      	  				/* Cutoff distance		      */
-   	      				/* Potential type selector	      */
-{
-   double pe = 0.0;
-   real f,rr;
-   real *pp[NPOTP];
-   int  i;
-
-   for(i=0; i<NPOTP; i++)
-      pp[i] = potpar+i;
-
-   rr = SQR(r);
-   kernel(0,1,&f,&pe,&rr,(real*)0,0.0,0.0,0.0,ptype, pp);
-   return pe;
-}
 /******************************************************************************
  *  distant_const     Return the constant part of the distant-potential term  *
  *  c = - 2 pi sum i sum j Ni Nj Aij(cutoff), where i,j are site types, Ni,Nj *
@@ -532,7 +548,7 @@ poteval(real *potpar, double r, int ptype)
 static double 
 distant_const(system_mp system, spec_mt *species, pot_mt *potpar, double cutoff, int iflag)
 {
-   int             isite, id, jd;	/* Counters		      */
+   int             isite, id, jd;		/* Counters		      */
    spec_mp         spec;	       		/* pointer to current species */
    int            *site_count = ialloc(system->max_id);	/* Numbers of each site
 							 * type */
@@ -559,7 +575,7 @@ NOVECTOR
 	 if( iflag )
 	    c += 2.0/3.0 * PI * site_count[id] * site_count[jd]
 	    * CUBE(cutoff) * poteval(potpar[id + system->max_id*jd].p, cutoff, 
-				     system->ptype);
+				     system->ptype, 0.0);
       }
 
    xfree(site_count);
@@ -581,7 +597,7 @@ eval_forces(system_mp sys,             /* Pointer to system info        (in) */
 	    pot_mt *potpar,            /* Array of potential parameters (in) */
 	    double *pe,                /* Potential energy real/Ewald  (out) */
 	    real *dip_mom,             /* Total system dipole moment   (out) */
-	    real (*stress)[3],         /* Virial part of stress        (out) */
+	    mat_mt stress,	       /* Virial part of stress        (out) */
 	    vec_mp *force,             /* Array of molecular forces    (out) */
 	    vec_mp *torque)            /* Array of molecular torques   (out) */
 {
@@ -658,7 +674,6 @@ eval_forces(system_mp sys,             /* Pointer to system info        (in) */
       for (imol = 0; imol < spec->nmols; imol++)
 	 for (isite = 0; isite < spec->nsites; isite++)
 	    *chg_ptr++ = site_info[spec->site_id[isite]].charge;
-   mat_vec_mul(sys->h, sys->c_of_m, c_of_m, sys->nmols);
 /*
  * Set some accumulators to zero
  */
@@ -677,7 +692,7 @@ eval_forces(system_mp sys,             /* Pointer to system info        (in) */
    for (spec = species; spec < &species[nspecies]; spec++)
    {
       make_sites(sys->h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		spec->framework,site_sp[spec-species],spec->nmols,spec->nsites);
+		site_sp[spec-species],spec->nmols,spec->nsites,SITEPBC);
 #ifdef DEBUG1
    { int is;
      printf("%s co-ordinates\n",spec->name);
@@ -709,6 +724,12 @@ eval_forces(system_mp sys,             /* Pointer to system info        (in) */
    par_rsum(stress[0], 9);
    par_rsum(site_force[0], 3*nsarray);
 #endif
+   for (spec = species; spec < &species[nspecies]; spec++)
+   {
+      make_sites(sys->h, spec->c_of_m, spec->quat, spec->p_f_sites,
+		 site_sp[spec-species],spec->nmols,spec->nsites,
+		 spec->framework?SITEPBC:MOLPBC);
+   }
    if (control.alpha > ALPHAMIN)
    {
 /*
@@ -738,10 +759,10 @@ eval_forces(system_mp sys,             /* Pointer to system info        (in) */
 	 mol_torque(force_sp[ispec], spec->p_f_sites,
 		    torque[ispec], spec->quat, spec->nsites, spec->nmols);
    }
-
 /*
  * Add correction term to convert from site to molecular virial
  */
+   mat_vec_mul(sys->h, sys->c_of_m, c_of_m, sys->nmols);
    for (i = 0; i < 3; i++)
    {
       for (j = i + 1; j < 3; j++)
@@ -800,7 +821,7 @@ do_step(system_mp sys,                   /* Pointer to system info        (in) *
 	vec_mt (*meansq_f_t)[2],         /* Mean square force and torque (out) */
 	double *pe, 		         /* Potential energy real/Ewald  (out) */
 	real *dip_mom, 		         /* Total system dipole moment   (out) */
-	real (*stress)[3], 	         /* Virial part of stress        (out) */
+	mat_mt stress,	 	         /* Virial part of stress        (out) */
 	restrt_mt *restart_header,       /* What the name says.           (in) */
 	int backup_restart)	         /* Flag signalling backup restart (in)*/
 {
