@@ -1,3 +1,0 @@
-$ACCENT_IMAGES='large';
-$MAX_LINK_DEPTH = "+1";
-$MAX_SPLIT_DEPTH = "4";
