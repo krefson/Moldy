@@ -31,8 +31,6 @@ what you give them.   Help stamp out software-hoarding!  */
 #include        "utlsup.h"
 #include	"messages.h"
 
-int		getopt(int, char *const *, const char *);
-
 #ifdef USE_XDR
    XDR          xdrs;
 #endif
@@ -483,7 +481,7 @@ main(int argc, char **argv)
       fprintf(stderr,"\t%-32s %d\n","All data components",0);
       for(icpt = 0; icpt < NCPT; icpt++)
 	 fprintf(stderr,"\t%-32s %d\n",cpt[icpt].name,icpt+1);
-      xcpt=get_int("Quantity index (0-13)? ",-1,NCPT);
+      xcpt=get_int("Quantity index (0-12)? ",-1,NCPT);
    }
    /*
     *  Generate list of dump files if required
