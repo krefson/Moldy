@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.h,v $
+ *       Revision 2.7  1994/06/08 13:22:31  keith
+ *       Null update for version compatibility
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -64,11 +67,13 @@ what you give them.   Help stamp out software-hoarding!  */
  * In case an implementation (eg SGI) does it right by including <stdlib.h>
  * ensure that any Moldy module includes "stdlib.h" *before* "xdr.h".
 */
+#ifndef ANSI_LIBS
 #define free xxfree
 #define exit xxexit
 #define malloc xxmalloc
 #define calloc xxcalloc
 #define realloc xxrealloc
+#endif
 
 #ifdef vms
 #include	"rpc_types.h"
@@ -79,11 +84,14 @@ what you give them.   Help stamp out software-hoarding!  */
 #include	<rpc/xdr.h>
 #endif
 
+
+#ifndef ANSI_LIBS
 #undef free
 #undef exit
 #undef malloc
 #undef calloc
 #undef realloc
+#endif
 
 #else
 typedef	char XDR;
