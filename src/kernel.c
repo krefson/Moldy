@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.14.2.2  2001/02/22 11:51:47  keith
+ *       Added "generic+win" potential.
+ *
  *       Revision 2.14.2.1  2000/12/08 17:11:22  keith
  *       Added Window potential back onto HIW
  *
@@ -181,7 +184,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/kernel.c,v 2.14.2.1 2000/12/08 17:11:22 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/kernel.c,v 2.14.2.2 2001/02/22 11:51:47 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -207,7 +210,9 @@ void	message(int *,...);		/* Write a warning or error message   */
                         /* Kazuyuki Hirao,  (1994) ISBN 4-7853-6803-9         */
 			/*     U=    B * exp ((C-R)*D)   - E/r^6 +            */
 			/*           F * exp (-2*G(r-H)) - 2F*exp (-G(r-H))   */
-#define GENWIN 7	/* "generic" potential for multipurpose use. +        */                        /* harmonic window potential                          */
+#define GENWIN 7	/* "generic" potential for multipurpose use. +        */
+                        /* harmonic window potential                          */
+#define HIW7WIN 8       /* Version of HIW potential including r**-7 term      */
 
 const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 		              {"buckingham",3},
@@ -217,6 +222,7 @@ const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 		              {"hiw+win",5},
 		              {"morse",7},
 		              {"generic+win",8},
+			      {"hiw7+win",6},
 		              {0,0}};	            /* MUST be null-terminated*/
 /*
  *  Array of dimensions of pot'l parameters.  Triplets contain powers
@@ -235,6 +241,7 @@ const dim_mt   pot_dim[][NPOTP]= {
 			          {1,8,-2},{1,2,-2},{0,-1,0},{0, 1, 0}},
    /* Generic+Win   */  {{1,2,-2},{0,-1,0},{1,14,-2},{1,6,-2},
                          {1,8,-2},{1,10,-2},{1,0,-2},{0,1,0}}, 
+   /* HIW7+Win      */  {{1,6,-2},{1,8,-2},{1,9,-2},{1,14,-2},{1,0,-2},{0,1,0}},
                                   };
 
 /*========================== Macros ==========================================*/
@@ -289,6 +296,10 @@ double	dist_pot(real *potpar,          /* Array of potential parameters      */
     case HIWPOT:
          return( - potpar[0] /cutoff - potpar[1] /CUBE(cutoff)/3.0 -
                    potpar[2] /CUBE(CUBE(cutoff))/9.0);
+    case HIW7WIN:
+         return( - potpar[0] /cutoff - potpar[1] /CUBE(cutoff)/3.0
+                 - potpar[2] /(4.0*cutoff*CUBE(cutoff))
+                 - potpar[3] /CUBE(CUBE(cutoff))/9.0);
    }
 }
 /******************************************************************************
@@ -311,7 +322,7 @@ void	kernel(int jmin,
    register real t, ar;			/* Argument of erfc() polynomial.     */
    register real r;			/* Site-site distance.		      */
    register real r_r, r_6_r, r_sqr_r, r_12_r,	/* Reciprocal powers of r.    */
-                 r_4_r, r_8_r;
+                 r_4_r, r_7_r, r_8_r;
    register real erfc_term;		/* Intermediates in erfc calculation. */
    	    real ppe = 0.0;		/* Local accumulator of pot. energy.  */
    	    real exp_f1, exp_f2, exp_f3; /* Temporary for b*exp(-cr) etc      */
@@ -561,7 +572,41 @@ VECTORIZE
                                + 12.0 * r_12_r + erfc_term - r*fwin);  
          }
          break; 
-      }
+        case HIW7WIN:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+         {
+            /*
+             * Calculate r and coulombic part
+             */
+            r       = sqrt(r_sqr[jsite]);
+            ar      = alpha*r;
+            t = 1.0/(1.0+PP*ar);
+            erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+            r_r  = 1.0 / r;
+            t = POLY5(t) * erfc_term * r_r;
+            erfc_term = t + norm * erfc_term;
+            r_sqr_r = SQR(r_r);
+            /*
+             * Non-coulombic ie potential-specific part
+             */
+            r_4_r = SQR(r_sqr_r);
+            r_6_r = r_sqr_r * r_4_r;
+	    r_7_r = r_6_r*r_r;
+            r_12_r = p3[jsite] * SQR(r_6_r);
+            r_7_r *= p2[jsite];
+            r_6_r *= p1[jsite];
+            r_4_r *= p0[jsite];
+	    rmr0 = (r - p5[jsite]);
+	    fwin = p4[jsite]*rmr0;
+
+            ppe += t + r_4_r + r_6_r + r_7_r + r_12_r + 0.5*fwin*rmr0;
+
+            forceij[jsite] =   r_sqr_r * ( 4.0 * r_4_r + 6.0 * r_6_r + 7.0 * r_7_r 
+                               + 12.0 * r_12_r + erfc_term - r*fwin);  
+         }
+         break; 
+     }
    else
       switch(ptype)
       {
@@ -709,6 +754,29 @@ VECTORIZE
             ppe += r_4_r + r_6_r + r_12_r + 0.5*fwin*rmr0;
 
             forceij[jsite] =   r_sqr_r * ( 4.0 * r_4_r + 6.0 * r_6_r  
+                               + 12.0 * r_12_r  - r*fwin); 
+         }
+         break; 
+       case HIW7WIN:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+         {
+            r       = sqrt(r_sqr[jsite]);
+            r_r  = 1.0 / r;
+            r_sqr_r = SQR(r_r);
+            r_4_r = SQR(r_sqr_r);
+            r_6_r = r_sqr_r * r_4_r;
+	    r_7_r = r_6_r*r_r;
+            r_12_r = SQR(r_6_r) * p3[jsite];
+            r_7_r *= p2[jsite];
+            r_6_r *= p1[jsite]; 
+            r_4_r *= p0[jsite];
+	    rmr0 = (r - p5[jsite]);
+	    fwin = p4[jsite]*rmr0;
+
+            ppe += r_4_r + r_6_r + r_7_r + r_12_r + 0.5*fwin*rmr0;
+
+            forceij[jsite] =   r_sqr_r * ( 4.0 * r_4_r + 6.0 * r_6_r + 7.0 * r_7_r  
                                + 12.0 * r_12_r  - r*fwin); 
          }
          break; 
