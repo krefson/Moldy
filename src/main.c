@@ -27,6 +27,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 2.3  93/10/28  10:27:59  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.0  93/03/15  14:49:13  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
@@ -109,7 +112,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 2.0 93/03/15 14:49:13 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 2.3 93/10/28 10:27:59 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"

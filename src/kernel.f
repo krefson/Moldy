@@ -1,7 +1,10 @@
 c     
-c     $Header: /home/tigger/keith/md/RCS/kernel.f,v 1.3 89/07/13 15:14:53 keith Exp $
+c     $Header: /home/eeyore/keith/md/moldy/RCS/kernel.f,v 1.4 89/09/21 10:50:24 keith Exp $
 c     
 c     $Log:	kernel.f,v $
+c Revision 1.4  89/09/21  10:50:24  keith
+c Corrected .gt. to .ge. in test for negative alpha for MCY pot'l
+c 
 c Revision 1.3  89/07/13  15:14:53  keith
 c Fixed error in erfc evaluation in MCY potential.
 c 

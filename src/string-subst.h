@@ -19,9 +19,13 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 2.3 93/10/28 10:28:31 keith Stab $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 2.4 94/01/18 13:23:17 keith Exp $
  *
  * $Log:	string.h,v $
+ * Revision 2.4  94/01/18  13:23:17  keith
+ * Incorporated all portability experience to multiple platforms since 2.2.
+ * Including ports to VAX/VMS and Open VMS on Alpha AXP and Solaris.
+ * 
  * Revision 2.3  93/10/28  10:28:31  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 

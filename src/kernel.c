@@ -34,6 +34,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 2.4  94/01/13  12:46:53  keith
+ * Aedded distant porential correction for GENPOT potential (NTS 13/1/94.
+ * 
+ * 
  * Revision 2.3  93/10/28  10:27:57  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -109,7 +113,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 2.3 93/10/28 10:27:57 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 2.4 94/01/13 12:46:53 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"

@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	algorith.c,v $
+ * Revision 2.3  93/10/28  10:27:35  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.0  93/03/15  14:48:51  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
@@ -96,7 +99,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 2.0 93/03/15 14:48:51 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 2.3 93/10/28 10:27:35 keith Stab $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"

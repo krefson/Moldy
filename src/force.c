@@ -29,7 +29,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *		module (kernel.c) for ease of modification.		      *
  ******************************************************************************
  *      Revision Log
- *       $Log: force.c,v $
+ *       $Log:	force.c,v $
+ * Revision 2.4  94/01/13  14:42:44  keith
+ * Minor optimization using "store at end of loop" trick.
+ * 
  * Revision 2.3  1993/10/28  15:23:38  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  *
@@ -219,7 +222,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force.c,v 2.3 1993/10/28 15:23:38 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force.c,v 2.4 94/01/13 14:42:44 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"

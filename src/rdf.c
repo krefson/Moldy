@@ -28,6 +28,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 2.3  93/10/28  10:28:08  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.1  93/07/29  17:37:11  keith
  * Changed evaluation of rdf to be in exact accordance with
  * manual.  That is, replaced (nsites-1) with nsites and
@@ -114,7 +117,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 2.1 93/07/29 17:37:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 2.3 93/10/28 10:28:08 keith Stab $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"

@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/structs.h,v 2.1 93/07/19 13:28:21 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/structs.h,v 2.3 93/10/28 10:28:19 keith Stab $
  *
  * $Log:	structs.h,v $
+ * Revision 2.3  93/10/28  10:28:19  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.1  93/07/19  13:28:21  keith
  * Added XDR capability for backup and dump files.
  * 

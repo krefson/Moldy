@@ -4,10 +4,13 @@
  *		Vetterling W.T. "Numerical Recipies in C" CUP, 1988 p364.     *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log:	jacobi.c,v $
+ * Revision 1.1  89/04/20  16:00:44  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/jacobi.c,v 1.1 89/04/20 16:00:44 keith Stab $";
 #endif
 /*========================== Library include files ===========================*/
 #include <math.h>

@@ -25,6 +25,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	accel.c,v $
+ * Revision 2.4  93/12/16  18:14:11  keith
+ * Fixed divide-by-zero bug when rescaling on atomic systems.
+ * (Only showed up on FPE trapping architectures.)
+ * 
  * Revision 2.3  93/10/28  10:27:32  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -158,7 +162,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.3 93/10/28 10:27:32 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.4 93/12/16 18:14:11 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"

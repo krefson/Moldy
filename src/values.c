@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	values.c,v $
+ * Revision 2.3  93/10/28  10:28:15  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.1  93/07/19  13:28:25  keith
  * Added XDR capability for backup and dump files.
  * 
@@ -106,7 +109,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 2.1 93/07/19 13:28:25 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 2.3 93/10/28 10:28:15 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"

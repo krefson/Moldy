@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	xdr.c,v $
+ * Revision 2.4  94/01/18  13:15:18  keith
+ * Put casts in function calls to satisfy picky-picky-picky SGI compiler.
+ * Added return values to dummy xdr functions to get rid of VMS warnings.
+ * 
  * Revision 2.4  93/12/20  16:42:04  keith
  * Put casts in function calls to satisfy picky-picky-picky SGI compiler.
  * 
@@ -40,7 +44,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/xdr.c,v 2.4 93/12/20 16:42:04 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/xdr.c,v 2.4 94/01/18 13:15:18 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"

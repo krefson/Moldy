@@ -31,6 +31,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 2.3  93/10/28  12:27:25  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.3  93/10/28  12:25:07  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -118,7 +121,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 2.3 93/10/28 12:25:07 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 2.3 93/10/28 12:27:25 keith Stab $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"

@@ -1,9 +1,13 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/kernel_single.c,v 1.2 89/07/04 18:43:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel_single.c,v 1.3 90/09/28 13:29:41 keith Exp $";
 #endif
 
 /*
  * $Log:	kernel_single.c,v $
+ * Revision 1.3  90/09/28  13:29:41  keith
+ * Inserted braces around VECTORIZE directives and changed include files
+ * for STARDtardent 3000 series (via cond. comp symbol "ardent").
+ * 
  * Revision 1.2  89/07/04  18:43:11  keith
  * Fixed error in kernel and force which led to sites being allocated the
  * wrong potential parameters.  Needed extra parameter to kernel.

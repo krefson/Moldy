@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 2.3  93/10/28  10:27:48  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.1  93/09/02  12:31:55  keith
  * Optimized qsincos() -- should give up to 25% speed improvement on
  * compilers without assert no aliasing options.
@@ -139,7 +142,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 2.1 93/09/02 12:31:55 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 2.3 93/10/28 10:27:48 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"

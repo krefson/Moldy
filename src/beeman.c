@@ -38,6 +38,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	beeman.c,v $
+ * Revision 2.3  93/10/28  10:27:45  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.0  93/03/15  14:48:58  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
@@ -71,7 +74,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/beeman.c,v 2.0 93/03/15 14:48:58 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/beeman.c,v 2.3 93/10/28 10:27:45 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
