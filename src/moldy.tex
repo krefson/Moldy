@@ -319,8 +319,8 @@ represent ``predicted'' and ``corrected'' velocities respectively.
 \end{array} 
 \right \}
 \end{eqnarray}
-\\
 \end{minipage}
+\vspace{10pt}
 
 The predictor-corrector cycle of steps {\em iii} to {\em v} are
 iterated until the predicted and corrected velocities have converged
@@ -362,6 +362,13 @@ U & = &  \underbrace{\frac{1}{4 \pi \epsilon_0}
 \sum_{\kappa=1}^{N_m} \sum_{\lambda=\kappa+1}^{N_m} q_{m\kappa} q_{m\lambda}
 \frac{\erf( \alpha | \bm{r}_{\kappa\lambda} |)}{ |
 \bm{r}_{\kappa\lambda}| }}_{\mbox{Intra-molecular self energy}}
+\nonumber \\
+& + & \underbrace{ \frac{1}{8 \pi \epsilon_0 V \alpha^2}
+                    \left | \sum_{i=1}^N q_i 
+		    \right |^2}_{\mbox{charged system term}}
+\; \underbrace{\left [ + \frac{1}{6 \epsilon_0 V} 
+                    \left | \sum_{i=1}^N q_i \bm{r}_i 
+                    \right |^2 \right ]}_{\mbox{surface dipole term}}
 \nonumber
 \end{eqnarray}
 
@@ -396,11 +403,15 @@ and the force on charge $i$ is given by
 \right \rbrace \frac{ \bm{r}_{ij} + \bm{n}}{ | \bm{r}_{ij} + \bm{n} |^2}
 }_{\mbox{Real-space term}} \nonumber \\
  & + & \underbrace{\frac{1}{\epsilon_0 V} 
-\sum_{\bm{k} \ne 0} q_j \frac{\bm{k}}{k^2} e^{-\frac{k^2}{4 \alpha^2}} 
+\sum_{\bm{k} \ne 0} q_i \frac{\bm{k}}{k^2} e^{-\frac{k^2}{4 \alpha^2}} 
 \left \lbrace 
-\sin(\bm{k.r}_j) \sum_{i=1}^{N} q_i \cos(\bm{k.r}_i)  + 
-\cos(\bm{k.r}_j) \sum_{i=1}^{N} q_i \sin(\bm{k.r}_i) 
-\right \rbrace}_{\mbox{Reciprocal-space term}}
+\sin(\bm{k.r}_i) \sum_{j=1}^{N} q_j \cos(\bm{k.r}_j)  + 
+\cos(\bm{k.r}_i) \sum_{j=1}^{N} q_j \sin(\bm{k.r}_j) 
+\right \rbrace}_{\mbox{Reciprocal-space term}}\\
+& \, & \underbrace{\left [ + \frac{q_i}{6 \epsilon_0 V} 
+                    \left ( \sum_{j=1}^N q_j \bm{r}_j
+                    \right ) \right ]}_{\mbox{surface dipole term}}
+\nonumber
 \end{eqnarray}
 
 Both the real- and reciprocal-space series (the sums over $\bm{n}$ and
@@ -410,15 +421,16 @@ that all terms with $| \bm{r}_{ij} +\bm{n} | < r_c$ and $\bm{k} < k_c$
 are included.
 
 Notice that the equation~\ref{eqn:ewald} for the energy contains a
-correction for the intra-molecular self-energy, but that for the
-forces (equation~\ref{eqn:ewald-force}) does not.  This term corrects
-for interactions between charges on the {\em same} molecule which are
-implicitly included in the reciprocal space sum, but are not required
-in the rigid-molecule model.  Though the site forces $\bm{f}_i$ do
-therefore include unwanted terms these sum to zero in the
-evaluation of the molecular centre-of-mass forces and torques
-(equations~\ref{eqn:comf} and \ref{eqn:comt}) (by the conservation
-laws for linear and angular momentum).
+correction for the intra-molecular self-energy, whose derivative is
+absent from the equation for the forces
+(equation~\ref{eqn:ewald-force}).  This term corrects for interactions
+between charges on the {\em same} molecule which are implicitly
+included in the reciprocal space sum, but are not required in the
+rigid-molecule model.  Though the site forces $\bm{f}_i$ do therefore
+include unwanted terms these sum to zero in the evaluation of the
+molecular centre-of-mass forces and torques (equations~\ref{eqn:comf}
+and \ref{eqn:comt}) (by the conservation laws for linear and angular
+momentum).
 % Self energies
 % uniform sheet correction
 % Surface dipole term
