@@ -50,7 +50,7 @@ dnl
                           ${OPT2=$OPT} ${OPTAUX=$OPT2};;
      mips-sgi-irix5*)   : ${OPT=-O2\ -mips2} ${OPT2=$OPT} ${OPTAUX=$OPT2}\
                           ${LIBS=-lmalloc\ -lfastm} ;;
-     mips-sgi-irix6*)   : ${OPT=-O3} \
+     mips-sgi-irix6*)   : ${CFLAGS=-woff\ 1174,84} ${OPT=-O3} \
                           ${OPT2=${OPT}\ -OPT:alias=restrict:fast_sqrt=on:roundoff=3:IEEE_arithmetic=3}} \
                           ${OPTAUX=$OPT2};;
      hppa1.*-hp-*)      : ${OPT=+O3\ +Olibcalls}  \
@@ -99,15 +99,14 @@ AC_AIX
 
 dnl Checks for libraries.
 dnl Replace `main' with a function in -lm:
-AC_CHECK_LIB(m, main)
+AC_SEARCH_LIBS(sin, m)
+dnl AC_CHECK_LIB(m, main)
 
 dnl Checks for header files.
-dnl ANSI headers.  Only set HAVE_STDARG_H if all present.
+dnl ANSI headers.  
 AC_HEADER_STDC
 rm -f string.h time.h stddef.h stdlib.h
-if test $ac_cv_header_stdc = yes; then
-AC_DEFINE(HAVE_STDARG_H)
-else
+if test $ac_cv_header_stdc = no; then
 $LN_S string-subst.h string.h
 $LN_S time-subst.h time.h
 $LN_S stddef-subst.h stddef.h
@@ -125,26 +124,26 @@ AC_TRY_COMPILE(,void * func(); void *ip; ip=func(ip);, md_cv_prog_cc_voidptr=yes
 if test $md_cv_prog_cc_voidptr = yes; then
    AC_DEFINE(HAVE_VOID_PTRS)
 fi
+AC_CACHE_CHECK("whether $CC supports stdarg.h with function prototypes",md_cv_prog_cc_stdarg,
+AC_TRY_COMPILE([#include <stdarg.h>], int argtst(int x, ...);, md_cv_prog_cc_stdarg=yes,md_cv_prog_cc_stdarg=no))
+if test $md_cv_prog_cc_stdarg = yes; then
+   AC_DEFINE(HAVE_STDARG_H)
+fi
 
 AC_TYPE_SIZE_T
+AC_CHECK_TYPE(time_t, long)
+AC_CHECK_TYPE(clock_t, long)
 
 dnl Checks for library functions.
 AC_TYPE_SIGNAL
 AC_FUNC_STRFTIME
 AC_FUNC_VPRINTF
 
-AC_CHECK_FUNCS(xdr_int)
-if test $ac_cv_func_xdr_int = "no"; then
-   AC_CHECK_LIB(nsl, xdr_int, ac_cv_func_xdr_int="yes")
-fi
-if test $ac_cv_func_xdr_int = no; then
-   AC_CHECK_LIB(sun, xdr_int, ac_cv_func_xdr_int="yes")
-fi
-if test $ac_cv_func_xdr_int = no; then
-   AC_CHECK_LIB(rpclib, xdr_int, ac_cv_func_xdr_int="yes")
-fi
+AC_SEARCH_LIBS(xdr_int, nsl sun rpclib)
 
-AC_CHECK_FUNCS(gettimeofday getrusage strdup strerror strstr strchr memcpy memset remove strtol popen getopt raise times)
+AC_CHECK_FUNCS(gettimeofday getrusage strdup strerror strstr strchr memcpy memset remove strtol popen raise times)
+
+AC_REPLACE_FUNCS(getopt)
 
 if test $ac_cv_func_times = "yes" -a $ac_cv_header_sys_times_h = "yes" ; then
 AC_CACHE_CHECK("whether times returns the wall-clock time",md_cv_func_times_value,
@@ -172,8 +171,9 @@ dnl to run the preprocessor in the test for headers.
        AC_CHECK_FUNC(MPI_Init)
    else
       AC_CHECK_HEADERS(mpi.h)
-      AC_CHECK_LIB($parlib, MPI_Init)
-      ac_cv_func_MPI_Init=$ac_cv_lib_mpi_MPI_Init
+      AC_SEARCH_LIBS(MPI_Init, $parlib)
+      ac_cv_func_MPI_Init="no"
+      test "x$ac_cv_search_MPI_Init" = xno || ac_cv_func_MPI_Init="yes"
    fi   
    if test $ac_cv_func_MPI_Init = yes && test $ac_cv_header_mpi_h = yes; then 
       AC_DEFINE(SPMD) 
@@ -192,8 +192,9 @@ dnl to run the preprocessor in the test for headers.
        AC_CHECK_FUNC(bsp_begin)
    else
       AC_CHECK_HEADERS(bsp.h bsp_level1.h)
-      AC_CHECK_LIB($parlib, bsp_begin)
-      ac_cv_func_bsp_begin=$ac_cv_lib_bsp_bsp_begin
+      AC_SEARCH_LIBS(bsp_begin, $parlib)
+      ac_cv_func_bsp_begin="no"
+      test "x$ac_cv_search_bsp_begin" = xno || ac_cv_func_bsp_begin="yes"
    fi
    if  test $ac_cv_func_bsp_begin = "yes" && test $ac_cv_header_bsp_h = "yes" && test $ac_cv_header_bsp_level1_h = "yes"; then
       AC_DEFINE(SPMD) 
@@ -214,6 +215,7 @@ fi
 if test $parlib = "tcgmsg" ; then
    CF_INCLUDE_PATH(/usr/local/include)
    AC_CHECK_HEADERS(sndrcv.h)
+   AC_SEARCH_LIBS(socket, socket)
    AC_CHECK_LIB($parlib, PBEGIN_)
    if test $ac_cv_lib_tcgmsg_PBEGIN_ = yes && test $ac_cv_header_sndrcv_h = yes; then 
       AC_DEFINE(SPMD) 
@@ -224,8 +226,8 @@ if test $parlib = "tcgmsg" ; then
 fi
 if test $parlib = "shmem" ; then
    AC_CHECK_HEADERS(mpp/shmem.h)
-   AC_CHECK_LIB(sma,shmem_barrier_all)
-   if test $ac_cv_lib_sma_shmem_barrier_all = yes && test $ac_cv_header_mpp_shmem_h = yes; then 
+   AC_SEARCH_LIBS(shmem_barrier_all, sma)
+   if test "x$ac_cv_search_shmem_barrier_all" != "xno" && test $ac_cv_header_mpp_shmem_h = yes; then 
       AC_DEFINE(SPMD) 
       AC_DEFINE(SHMEM)
       AC_CHECK_FUNCS(shmem_long_get globalexit sbreak)
