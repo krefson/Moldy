@@ -1,25 +1,49 @@
-\makeatletter
-
-\def\sideset#1#2#3{%
-  \setbox\z@\hbox{$\displaystyle{\vphantom{#3}}#1{#3}\m@th$}%
-  \setbox\tw@\hbox{$\displaystyle{#3}#2\m@th$}%
-  \hskip\wd\z@\hskip-\wd\tw@\mathop{\hskip\wd\tw@\hskip-\wd\z@
-  {\vphantom{#3}}#1{#3}#2}}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%% Define superfig and partfigure environments for multi-page figures
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcounter{subfig}
-
-\newenvironment{superfig}{%
-\setcounter{subfig}{0}
-\addtocounter{figure}{1}
-}{\setcounter{subfig}{0}}
-
-\newenvironment{partfigure}[1][tbp]{%
-\addtocounter{subfig}{1}\addtocounter{figure}{-1}%
-\@float{figure}[#1]%
-\renewcommand{\thefigure}{\thechapter.\arabic{figure}(\alph{subfig})}%
-}{\end@float}
 \renewcommand{\l@figure}{\@dottedtocline{1}{1.5em}{3em}}
-\makeatother
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%% Font selection macros to parameterize document %%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%  Extra emphasis - use bold.
+%
+\newcommand{\Emph}[1]{\textbf{#1}}
+%
+% Set font for filename display - sans-serif is nice.
+%
+\newcommand{\Fname}[1]{{\upshape\mdseries\sffamily{}#1}}
+
+\newenvironment{Fndescription}{\begingroup%
+     \renewcommand{\descriptionlabel}[1]{\Fname{##1}}\begin{description}}%
+     {\end{description}\endgroup}
+
+%
+% Set font for literal text display (typed commands, file contents
+%     input/output and code fragments.
+%
+\newcommand{\Litf}{\ttfamily\upshape\mdseries}
+
+\DeclareTextFontCommand{\Lit}{\Litf}
+
+%% LaTeX2HTML doesn't recognise \DeclareTextFontCommand.  The
+%% \providecommand  should define it conditionally for LaTeX2html at
+%% the expense of our font.parameterization.
+\providecommand{\Lit}[1]{\texttt{#1}}
+
+\newcommand{\ttlabel}[1]{\Lit{#1}\hfil}
+
+\newenvironment{Litdescription}{\begingroup%
+     \renewcommand{\descriptionlabel}[1]{\Lit{##1}}\begin{description}}%
+     {\end{description}\endgroup}
+\newenvironment{Argdescription}{%
+      \begin{list}{}{\let\makelabel\ttlabel \itemsep=0pt%
+          \parsep=3pt \leftmargin=1.5cm}}%
+      {\end{list}}
+
+%
+% Calculus infinitesimal - upright ``d''
+%
+\newcommand{\Calcd}{\mathrm{d}}
+%
+% Quaternion - bold sans-serif.
+%
+\newcommand{\Quat}[1]{\mbox{\mathversion{bold}$\mathsf{#1}$}}
+
