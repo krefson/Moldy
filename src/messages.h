@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /usr/users/moldydv/CVS/moldy/src/messages.h,v 2.30 2002/03/04 16:08:12 kr Exp $
+ * $Header: /usr/users/moldy/CVS/moldy/src/messages.h,v 2.31 2002/09/26 14:03:08 moldydv Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -117,17 +117,17 @@ rotational degrees of freedom (%d vs %d)"
 #define ROTLEN  "Length (%d) not a multiple of quaternion number (%d) in \
 \"rotate\""
 #define OVRLAP  "%s - Result matrix overlaps input"
-#define OVRLP1  "mat_vec_mul - Input and output vectors overlap\
+#define OVRLP1  "mat_vec_mul - Input and output vectors overlap \
 (in=%x, out=%x, len=%x)"
 #define SNGMAT  "%s - matrix is singular"
 #define AVNOC   "%s - init_averages has not been called"
 #define AVBNDS  "add_average - offset (%d) out of bounds for type %s"
 #define NEGVAR  "%s - variance < 0 (%f) for type %s"
-#define NOMEM   "Memory allocation fails at line %d in \"%s\"\
-(%d items of %lu bytes)"
+#define NOMEM   "Memory allocation fails at line %d in \"%s\" \
+(%d item%sof %lu bytes)"
 #define	DUMPST	"Started dumping data to file \"%s\" at timestep %ld"
 #define CONTIG	"Dump file \"%s\" and restart file do not match"
-#define DUMPTS  "Dump file(\"%s\")'s timestep (%ld) does not match current timestep (%ld)."
+#define DUMPTS  "Dump file \"%s\"'s timestep (%ld) does not match current timestep (%ld)."
 #define DRESET  "Problems prevent continuing existing dump.  Starting new sequence."
 #define	SHTDMP	"Records missing from dump file \"%s\" - found %d, expected %d"
 #define LNGDMP	"Extra records in dump file \"%s\" - found %d, expected %d"
@@ -149,8 +149,8 @@ correction of %g kJmol(-1) added to self energy"
 correction of %g kJmol(-1) added to self energy"
 #define WDPTR	"Arralloc called for object with size (%lu) not an integral \
 number of words"
-#define NCNVRG  "Do_step: velocities failed to converge after %d iterations \
-- dist = %f"
+/* #define NCNVRG  "Do_step: velocities failed to converge after %d iterations \
+- dist = %f"*/
 #define INRVSN	"Init_averages: Invalid RCS version \"%s\""
 #define INDVSN  "Read_dump_header:  Invalid RCS version \"%s\""
 #define OLDVSN	"Attempt to append to incompatible version of dump files (RCS version \"%s\")"
