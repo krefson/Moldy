@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/mdshak.c,v 2.26 2001/05/18 17:10:56 keith Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/mdshak.c,v 2.27 2002/09/19 09:26:29 kr Exp $";
 #endif
 
 #include "defs.h"
@@ -35,14 +35,6 @@ int	getopt(int, char *const *, const char *);
 int ithread=0, nthreads=1;
 contr_mt		control;
 
-#define SHAK   0
-#define XYZ 1
-#define OUTBIN 2
-#define DCD 3
-#define PDB 4
-#define CSSR 5
-#define ARC 6
-#define XTL 7
 /******************************************************************************
  * main().   Driver program for generating SCHAKAL input files from MOLDY     *
  * files.    Acceptable inputs are sys-spec files, or restart files. Actual   *

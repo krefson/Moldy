@@ -1,4 +1,20 @@
 /*
+ * utlsup definitions
+ */
+#define MAX_SPECIES 50                     /* Maximum no of different species          */
+#define DOTPROD(x,y)   ((x[0]*y[0])+(x[1]*y[1])+(x[2]*y[2])) /* Scalar product between x and y */
+/*
+ * file formats
+ */
+#define SHAK   0
+#define XYZ 1
+#define OUTBIN 2
+#define DCD 3
+#define PDB 4
+#define CSSR 5
+#define ARC 6
+#define XTL 7
+/*
  * utlsup functions
  */
 extern void init_rdf (system_mt *sys); 
@@ -21,7 +37,7 @@ extern void dump_to_moldy (float *buf, system_mt *system);
 extern void invert (real (*a)[3], real (*b)[3]);
 extern void mat_vec_mul (real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
 extern void traj_con (system_mt *system, vec_mt (*prev_cofm), int n); 
-extern void traj_con2 (spec_mt *species, vec_mt (*prev_cofm), vec_mt (*traj_cofm), int *sp_range); 
+extern void traj_con2 (spec_mt *species, vec_mt (*prev_cofm), vec_mt (*traj_cofm), int nspecies); 
 extern int range_in (system_mt *system, real (*range)[3]); 
 extern char *comm;
 /*

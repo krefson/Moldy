@@ -2,7 +2,7 @@ AUTOMAKE_OPTIONS = no-dependencies dist-zip
 
 HFILES= structs.h defs.h messages.h xdr.h  list.h utlsup.h ReadDCD.h defconf.h specdata.h sginfo.h
 
-UTILC = algorith.c alloc.c auxil.c ansi.c convert.c eigens.c kernel.c input.c matrix.c quaterns.c restart.c startup.c values.c xdr.c ReadDCD.c utlsup.c molout.c
+UTILC = algorith.c alloc.c auxil.c ansi.c convert.c eigens.c kernel.c input.c list.c matrix.c quaterns.c restart.c startup.c values.c xdr.c ReadDCD.c utlsup.c molout.c
 
 UTILS =  moldyext dumpconv dumpext  manalyze bdist mdshak msd mdavpos mdbond ransub mdvaf syswrite
 
@@ -22,7 +22,7 @@ mdbond_SOURCES = mdbond.c  $(UTILC)
 
 mdvaf_SOURCES = mdvaf.c  $(UTILC) 
 
-moldyext_SOURCES = moldyext.c 
+moldyext_SOURCES = moldyext.c utlsup.c matrix.c
 
 dumpconv_SOURCES = dumpconv.c xdr.c 
 
@@ -30,7 +30,9 @@ dumpext_SOURCES = dumpext.c xdr.c utlsup.c matrix.c
 
 manalyze_SOURCES = manalyze.c 
 
-bdist_SOURCES = bdist.c
+list_SOURCES = list.c 
+
+bdist_SOURCES = bdist.c list.c utlsup.c matrix.c
 
 ransub_SOURCES = ransub.c sgclib.c sginfo.h sgio.c spgrexp.c transparse.c readers.c $(UTILC) 
 
@@ -105,6 +107,7 @@ lint-utils:
 		$(LCHECK) $(dumpconv_SOURCES) 
 		$(LCHECK) $(dumpext_SOURCES) 
 		$(LCHECK) $(manalyze_SOURCES) 
+		$(LCHECK) $(list_SOURCES) 
 		$(LCHECK) $(bdist_SOURCES) 
 		$(LCHECK) $(syswrite_SOURCES) 
 #
@@ -138,7 +141,7 @@ accel.o: accel.c defs.h config.h structs.h
 algorith.o: algorith.c defs.h config.h messages.h
 alloc.o: alloc.c defs.h config.h messages.h
 ansi.o: ansi.c defs.h config.h
-bdist.o: bdist.c defs.h config.h list.h
+bdist.o: bdist.c defs.h config.h list.h utlsup.h
 convert.o: convert.c defs.h config.h structs.h messages.h
 dump.o: dump.c defs.h config.h structs.h messages.h xdr.h
 dumpconv.o: dumpconv.c defs.h config.h messages.h structs.h xdr.h
@@ -146,6 +149,7 @@ dumpext.o: dumpext.c defs.h config.h structs.h xdr.h utlsup.h messages.h
 eigens.o: eigens.c defs.h config.h
 input.o: input.c defs.h config.h structs.h messages.h
 leapfrog.o: leapfrog.c defs.h config.h structs.h messages.h
+list.o: list.c list.h
 main.o: main.c defs.h config.h structs.h messages.h
 manalyze.o: manalyze.c defs.h config.h structs.h
 matrix.o: matrix.c defs.h config.h messages.h

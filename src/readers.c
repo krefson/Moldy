@@ -22,7 +22,6 @@ what you give them.   Help stamp out software-hoarding! */
  * Readers   Routines for reading SHAKAL, CSSR and PDB structure files              *
  *           Contents:                                                              *
  * tokenize()        Break down string into substrings and return no of substrings  *
- * space_minus()     Insert spaces before every '-' in s string except exponent     *
  * multi_char()      Return value of run-time string as if multichar constant       *
  * trim()            Remove leading and trailing spaces from string                 *
  * str_cut()         Divide string into alphabetical and numerical parts            *
@@ -31,6 +30,8 @@ what you give them.   Help stamp out software-hoarding! */
  * read_cssr()       Read data from Cambridge Search and Structure Retrieval file   *
  * read_pdb()        Read data from Brookhaven Protein Databank (PDB) file          *
  * read_shak()       Read data from Schakal file                                    *
+ * read_xtl()        Read data from Biosym xtl file                                 *
+ * read_xyz()        Read data from generic xyz file                                *
  * read_ele()        Read element data from file                                    *
  *****************************************************************+******************
  */
@@ -59,9 +60,9 @@ what you give them.   Help stamp out software-hoarding! */
 extern  const pots_mt   potspec[];           /* Potential type specification  */
 
 extern int transformation_matrix (char *buf, T_RTMx *trans_matrix);
-extern int symm_gen (T_RTMx matrix, mat_mp apos, char (*atype)[32], double *charge, int max, int natoms, int abegin, int aend);
+extern int symm_gen (T_RTMx matrix, mat_mp apos, char (*atype)[NLEN], double *charge, int max, int natoms, int abegin, int aend);
 extern void sgtransform (T_RTMx m, mat_mp x, mat_mp xp, int natoms);
-extern int sgexpand (int maxnatoms, int natoms, vec_mt (*a_lst), char (*label)[32], double *charge, char *spgr);
+extern int sgexpand (int maxnatoms, int natoms, vec_mt (*a_lst), char (*label)[NLEN], double *charge, char *spgr);
 
 /******************************************************************************
  * tokenize().                                                                *
@@ -80,22 +81,6 @@ int   tokenize(char *buf, char **linev)
    }
 
    return linec;
-}
-/******************************************************************************
- * space_minus().  Insert spaces before every '-' in s string except exponent.*
- ******************************************************************************/
-void space_minus(char *str, int n)
-{
-   char *in = strdup(str), *savein = in, *strbegin = str;
-
-   do
-   {
-      if( *in == '-' &&(
-        (in > savein && in[-1] != 'E' && in[-1] != 'e') || in == savein))
-         *str++ = ' ';
-      *str++ = *in++;
-   } while( *(in-1) && str-strbegin < n-1);
-   free(savein);
 }
 /******************************************************************************
  * multi_char().  Return the value of a (run-time) string as if it had been   *
@@ -215,7 +200,7 @@ char      *s = filename;
 /******************************************************************************
  * read_cssr().  Read structural data from cssr file.                         *
  ******************************************************************************/
-int      read_cssr(char *filename, mat_mp h, char (*label)[32], vec_mp x, double *charge, char *title, char *spgr)
+int      read_cssr(char *filename, mat_mp h, char (*label)[NLEN], vec_mp x, double *charge, char *title, char *spgr)
 {
 int      i, coord_sys=-1, nocell=0;
 int      natoms;
@@ -287,7 +272,7 @@ int	answer;
 /******************************************************************************
  * read_pdb().  Read structural data from pdb file.                           *
  ******************************************************************************/
-int      read_pdb(char *filename, mat_mp h, char (*label)[32], vec_mp x, double *charge, char *title, char *spgr)
+int      read_pdb(char *filename, mat_mp h, char (*label)[NLEN], vec_mp x, double *charge, char *title, char *spgr)
 
                                     /* Species' C of M coordinates */
 {
@@ -321,7 +306,7 @@ FILE     *Fp;
 
        if(strcmp(strlower(keyword),"cryst1") == 0)   /* CRYST1 - Specify unit cell */
        {
-          if( sscanf(line,"CRYST1%9lf%9lf%9lf%9lf%9lf%9lf%11c",
+          if( sscanf(line,"CRYST1%9lf%9lf%9lf%7lf%7lf%7lf%11c",
              &cell[0],&cell[1],&cell[2],&cell[3],&cell[4],&cell[5],spgr) < 6 )
                 error("Error in CRYST1 line of \"%s\" -- should have at least 6 parameters", filename);
 
@@ -385,7 +370,7 @@ FILE     *Fp;
 /******************************************************************************
  * read_shak().  Read structural data from SCHAKAL file.                      *
  ******************************************************************************/
-int      read_shak(char *filename, mat_mt h, char (*label)[32], vec_mp x, double *charge, char *title, double *simbox)
+int      read_shak(char *filename, mat_mt h, char (*label)[NLEN], vec_mp x, double *charge, char *title, double *simbox)
 {
 int      i, natoms = 0;
 double   cell[6];                                    /* Cell parameters */
@@ -409,7 +394,6 @@ FILE     *Fp;
       if( fgets(line, sizeof line, Fp) == NULL)
          break;              /* Force end on EOF     */
 
-      space_minus(line, sizeof line);
       bufend = strchr(line,'\n');
       if( bufend == NULL)
          bufend = line+strlen(line);
@@ -610,6 +594,163 @@ FILE     *Fp;
       }
    }
    return natoms;                       /* Finished reading file   */
+}
+/******************************************************************************
+ * read_xtl().  Read structural data from xtl file.                           *
+ ******************************************************************************/
+int      read_xtl(char *filename, mat_mp h, char (*label)[NLEN], vec_mp x, double *charge, char *title, char *spgr)
+{
+int      natoms = 0;
+double   cell[6];                                  /* Cell parameters */
+char     line[LLEN], keyword[LLEN];
+char     temp_name[6];
+int      crystflag = 0, sgno = 0;
+FILE     *Fp;
+
+   if( (Fp = fopen(filename,"r")) == NULL)
+      error("Failed to open configuration file \"%s\" for reading", filename);
+
+   while( !feof(Fp) )
+   {
+      sscanf(get_line(line,LLEN,Fp,0),"%s",keyword);
+
+      if(strcmp(strlower(keyword),"title") == 0 )         /* Title */
+      {
+         if( strlen(line+5) == 0)
+            strncat(title,filename,TITLE_SIZE);
+         else
+            strncat(title,line+5,TITLE_SIZE);
+         trim(title);
+      }
+
+      if(strcmp(strlower(keyword),"cell") == 0)   /* CELL - Specify unit cell */
+      {
+         if( sscanf(get_line(line,LLEN,Fp,0),"%10lf %10lf %10lf %10lf %10lf %10lf",
+            &cell[0],&cell[1],&cell[2],&cell[3],&cell[4],&cell[5]) < 6 )
+               error("Error in CELL line of \"%s\" -- should have 6 parameters", filename);
+         crystflag = 1;
+      }
+
+      if(strcmp(strlower(keyword),"symmetry") == 0 )         /* Space group */
+      {
+         if( sscanf(line,"SYMMETRY  NUMBER %d  LABEL %s",&sgno,spgr) < 1 )
+             error("Error in SYMMETRY line of \"%s\" -- should have 2 parameters", filename);
+
+         trim(spgr);
+      }
+
+      if(strcmp(strlower(keyword),"atoms") == 0)
+      {
+         if( natoms > MAX_ATOMS )
+            fprintf(stderr,"Warning: \"%s\" contains too many atoms! (%d)\n", filename, natoms);
+
+         if( sscanf(get_line(line,LLEN,Fp,0),"%s",keyword) < 1)
+            error("File \"%s\" has incorrect format", filename);
+
+         if( strcmp(strlower(keyword),"name") == 0)
+         {
+            
+            while( strcmp(strlower(keyword),"eof") !=0 )
+            {
+               if( sscanf(get_line(line,LLEN,Fp,0),"%s",keyword) < 1)
+                  error("File \"%s\" has incorrect format", filename);
+
+               if( strcmp(strlower(keyword),"eof") !=0 )
+               {
+                  if( sscanf(line,"%8s %12lf %12lf %12lf %12lf", temp_name,
+                      &x[natoms][0], &x[natoms][1], &x[natoms][2], &charge[natoms]) < 5)
+                     error("File \"%s\" has incorrect format", filename);
+
+                  str_cut(temp_name, label[natoms]); /* Convert atom name to atom symbol */
+                  trim(label[natoms]);
+                  natoms++;
+               }
+            }
+         }
+      }
+   }
+   fclose(Fp);
+
+   if( crystflag ) /* Only transform coords if unit cell defined */
+   {
+       if( ! (cell[0] > 0 && cell[1] > 0 && cell[2] > 0 &&
+          cell[3] > 0 && cell[3] < 180.0 &&
+          cell[4] > 0 && cell[4] < 180.0 &&
+          cell[5] > 0 && cell[5] < 180.0))
+      {
+         error("Error in \"%s\" - Invalid unit cell %f %f %f %f %f %f", filename,
+                       cell[0], cell[1], cell[2], cell[3], cell[4], cell[5]);
+      }
+
+      cell_to_prim(cell,h);
+   }
+   return natoms;
+}
+/******************************************************************************
+ * read_xyz().  Read structural data from xyz file.                           *
+ ******************************************************************************/
+int      read_xyz(char *filename, mat_mp h, char (*label)[NLEN], vec_mp x, char *title)
+{
+int      natoms = 0;
+double   cell[6];                                  /* Cell parameters */
+char     line[LLEN];
+char	 temp_name[8];
+double   cellmax[3], cellmin[3];
+mat_mt   hinv;
+int	 i,j;
+FILE     *Fp;
+
+   if( (Fp = fopen(filename,"r")) == NULL)
+      error("Failed to open configuration file \"%s\" for reading", filename);
+
+   if( sscanf(get_line(line,LLEN,Fp,0),"%d", &natoms) < 1)
+      error("EOF or unexpected format on line 1 in \"%s\"", filename);
+
+   if( sscanf(get_line(line,LLEN,Fp,0),"%s", title) < 1)
+      error("EOF or unexpected format on line 2 in \"%s\"", filename);
+
+   strncpy(title,line,TITLE_SIZE);
+   trim(title);
+   if( strlen(title) == 0)
+      strncat(title,filename,TITLE_SIZE);
+
+   for( i = 0; i < natoms; i++)
+   {
+      if( sscanf(get_line(line,LLEN,Fp,0),"%s %lf %lf %lf",
+            temp_name, &x[i][0], &x[i][1], &x[i][2]) < 4 )
+         error("EOF or unexpected format in atom definitions in \"%s\"", filename);
+
+      str_cut(temp_name, label[i]); /* Convert atom name to atom symbol */
+      trim(label[i]);
+   }
+
+   fclose(Fp);
+
+   /*
+    * Convert to fractional co-ordinates
+    */
+   for( i = 0; i < natoms; i++)
+      for( j = 0; j < 3; j++)
+      {
+         cellmax[j] = MAX(cellmax[j],x[i][j]);
+         cellmin[j] = MIN(cellmin[j],x[i][j]);
+      }
+
+   for( i = 0; i < natoms; i++)   /* Shift all atoms to positive coords */
+      for( j = 0; j < 3; j++)
+          x[i][j] -= cellmin[j];
+
+   for( j = 0; j < 3; j++)
+      cell[j] = 2.0*fabs(cellmax[j] - cellmin[j]);
+
+   cell[3] = cell[4] = cell[5] = 90.0;
+
+   cell_to_prim(cell,h);
+   invert(h,hinv);
+
+   mat_vec_mul(hinv, x, x, natoms);   /* Convert to fractional coords */
+
+   return natoms;
 }
 /******************************************************************************
  * read_ele().  Read elemental data from file.                                *

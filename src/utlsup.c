@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/utlsup.c,v 1.14 2002/09/18 09:59:19 kr Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/utlsup.c,v 1.15.6.1 2003/07/29 08:30:17 moldydv Exp $";
 #endif
 
 #include "defs.h"
@@ -103,6 +103,37 @@ char * mystrdup(char *s)
    char * t = NULL;
    if(s) t=malloc(strlen(s)+1);
    return t?strcpy(t,s):0;
+}
+/******************************************************************************
+ *  Tokenise().  Parse the string of fields to be returned and return a mask  *
+ *  in a char array.  Format is 1,3,6-9,3 . . . ie comma-separated with cont- *
+ *  iguous range specified with hyphen.  Numbering starts at 1.               *
+ ******************************************************************************/
+int     tokenise(char *fields, char *mask, int len)
+{
+   char *s;
+   int  lo, hi, i, n;
+
+   for(i = 0; i < len; i++)
+      mask[i] = 0;
+
+   while( ( s = strtok(fields,",") ) != NULL )
+   {
+      n = sscanf(s, "%d-%d", &lo, &hi);
+      if( n == 0 )
+         return 0;
+
+      if( n == 1 )
+         hi = lo;
+
+      if( lo < 1 || hi < lo || hi > len)
+         return 0;
+
+      for( i = lo-1; i < hi; i++)
+         mask[i] = 1;
+      fields = NULL;
+   }
+   return 1;
 }
 /******************************************************************************
  * get_int().  Read an integer from stdin, issuing a prompt and checking      *
@@ -309,12 +340,12 @@ traj_con(system_mt *system, vec_mt (*prev_cofm), int n)
  * traj_con2().  Connect molecular c_of_m`s into continuous trajectories      * 
  ******************************************************************************/
 void
-traj_con2(spec_mt *species, vec_mt (*prev_cofm), vec_mt (*traj_cofm), int *sp_range)
+traj_con2(spec_mt *species, vec_mt (*prev_cofm), vec_mt (*traj_cofm), int nspecies)
 {
    spec_mt	*spec;
    int		i, imol, totmol=0;
  
-   for( spec = species+sp_range[0]; spec <= species+sp_range[1]; spec+=sp_range[2])
+   for( spec = species; spec < species+nspecies; spec++)
      for( imol = 0; imol < spec->nmols; totmol++, imol++)
 	if( prev_cofm == 0 ) 
 	   for( i = 0; i < 3; i++)
