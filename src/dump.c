@@ -43,6 +43,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.10.2.1  2000/08/29 16:49:20  keith
+ *       Fixed RNG to be synchronous on multiprocessor -- needed for
+ *       scale-options=8.
+ *
  *       Revision 2.10  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -172,7 +176,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.10 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.10.2.1 2000/08/29 16:49:20 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -221,6 +225,7 @@ dump_mt	*hdr_p;
 boolean	*xdr_write;
 {
    int      errflg = true;	/* Provisionally !!   */
+   char     vbuf[sizeof hdr_p->vsn + 1];
 
    *xdr_write = false;
    if( (*dumpf = fopen(fname, "r+b")) == NULL)	/* Open dump file     */
@@ -234,8 +239,9 @@ boolean	*xdr_write;
       xdrstdio_create(&xdrs, *dumpf, XDR_DECODE);
       if( xdr_dump(&xdrs, hdr_p) )
       {
-	 hdr_p->vsn[sizeof hdr_p->vsn - 1] = '\0';
-	 if( strstr(hdr_p->vsn,"(XDR)") )
+	 strncpy(vbuf,hdr_p->vsn,sizeof hdr_p->vsn);
+	 vbuf[sizeof hdr_p->vsn] = '\0';
+	 if( strstr(vbuf,"(XDR)") )
 	 {
 	    errflg = false;
 	    *xdr_write = true;
@@ -290,6 +296,9 @@ double		pe;
    int		junk;
    boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
+#define REV_OFFSET 11
+   char		*vsn = "$Revision: 2.10.2.1 $"+REV_OFFSET;
+#define LEN_REVISION strlen(vsn)
 
    if( ! strchr(control.dump_file, '%') )
       	(void)strcat(control.dump_file, "%d");
@@ -377,14 +386,18 @@ double		pe;
    }
    if( errflg || control.istep == control.begin_dump )
    {
+#define LEN_XDR 5
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 2.10 $"+11,
-		                     sizeof dump_header.vsn-1);
+      (void)strncpy(dump_header.vsn, vsn, sizeof dump_header.vsn);
+      dump_header.vsn[LEN_REVISION-2] = '\0';
 #ifdef USE_XDR
       if( control.xdr_write )
       {
-	 (void)strncat(dump_header.vsn, " (XDR)",
-		                     sizeof dump_header.vsn-1);
+	 if(LEN_REVISION-2+LEN_XDR >= sizeof dump_header.vsn)
+	    message(NULLI,NULLP,FATAL,
+		    "Internal error: dump_mt header field VSN too small");
+	 (void)strncat(dump_header.vsn, "(XDR)",sizeof dump_header.vsn-1);
+	 dump_header.vsn[sizeof dump_header.vsn-1] = '\0';
 	 xdr_write = true;
       }
 #endif

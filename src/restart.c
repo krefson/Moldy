@@ -31,6 +31,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.12  1999/12/20 15:19:26  keith
+ *       Check for rdf-limit or nbinds changed on restart, and handle
+ *       gracefully.
+ *
  *       Revision 2.11  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -162,7 +166,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/restart.c,v 2.11 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/restart.c,v 2.12 1999/12/20 15:19:26 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -393,6 +397,7 @@ FILE	  *restart;
 restrt_mt *header;
 contr_mt  *contr;
 {
+   char         vbuf[sizeof header->vsn + 1];
    int		vmajor,vminor;
    xfp_mt	xfp;
    xfp.xp =     &xdrs;
@@ -403,8 +408,10 @@ contr_mt  *contr;
    if( cnext(xfp) == XDR_RESTRT_SIZE )
    {
       cread(xfp,  (gptr*)header, lsizeof(restrt_mt), 1, xdr_restrt);
-      header->vsn[15] = '\0';   /* Add terminator in case vsn is garbage*/
-      if( ! strstr(header->vsn,"(XDR)") )
+      strncpy(vbuf,header->vsn,sizeof header->vsn);
+      vbuf[sizeof header->vsn] = '\0';   
+                                /* Add terminator in case vsn is garbage*/
+      if( ! strstr(vbuf,"(XDR)") )
 	 xdr_read = FALSE;
    }
    else
@@ -417,6 +424,10 @@ contr_mt  *contr;
    if( ! xdr_read )
       cread(xfp,  (gptr*)header, lsizeof(restrt_mt), 1, xdr_restrt);
    cread(xfp,  (gptr*)contr, lsizeof(contr_mt), 1, xdr_contr); 
+   /*
+    * Ensure header version string is null-terminated -- we rely on it.
+    */
+   header->vsn[sizeof header->vsn-1] = '\0'; 
    /*
     * Parse header version
     */
@@ -635,7 +646,9 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
    FILE		*save;
    XDR		xdrsw;
    xfp_mt	xfp;
-   char		*vsn = "$Revision: 2.11 $"+11;
+#define REV_OFFSET 11
+   char		*vsn = "$Revision: 2.12 $"+REV_OFFSET;
+#define LEN_REVISION strlen(vsn)
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)
@@ -651,10 +664,16 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
 #endif
 
    save_header = *header;
-   (void)strncpy(save_header.vsn, vsn, sizeof save_header.vsn-1);
-   save_header.vsn[strlen(save_header.vsn)-2] = '\0'; /* Strip trailing $     */
+   (void)strncpy(save_header.vsn, vsn, sizeof save_header.vsn);
+   save_header.vsn[LEN_REVISION-2] = '\0'; /* Strip trailing $     */
    if( control.xdr_write )
-      (void)strncat(save_header.vsn," (XDR)",16);
+   {
+#define  LEN_XDR 5
+      if(LEN_REVISION-2+LEN_XDR >= sizeof save_header.vsn)
+	 message(NULLI,NULLP,FATAL,
+		    "Internal error: restrt_mt header field VSN too small");
+      (void)strncat(save_header.vsn,"(XDR)",sizeof save_header.vsn);
+   }
    save_header.prev_timestamp = header->timestamp;
    save_header.timestamp = time((time_t*)0);		/* Update header      */
    save_header.seq++;
