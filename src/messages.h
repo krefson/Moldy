@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/messages.h,v 2.22 2000/11/15 17:51:59 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/messages.h,v 2.23 2000/11/16 10:54:19 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -51,7 +51,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #define NOCGRG	"no charge specified for site id %d"
 #define NONAME	"no name specified for site id %d"
 #define NOTUSD	"unused site identifier %d"
-#define	UNKPOT	"unknown type of potential %s (lennard-jones, buckingham, mcy)"
+#define	UNKPOT	"unknown type of potential %s (lennard-jones, buckingham, mcy, generic, hiw, morse)"
 #define NOPAIR	"site id pair is required"
 #define NOPOTP	"insufficient potential parameters supplied (%d needed)"
 #define IDOUTR	"site id %d out of range"
@@ -109,7 +109,7 @@ rotational degrees of freedom (%d vs %d)"
 #define	FEWQUA  "Too few quaternions for species \"%s\" - 4 needed"
 #define FRACCO  "Fractional co-ordinates must be in range [0,1) - (%f,%f,%f)"
 #define QNORM   "Quaternion (%f,%f,%f,%f) is not normalised"
-#define QNORM2  "Quaternion %d (%f,%f,%f,%f) - normalisation error in beeman"
+#define QNORM2  "Quaternion %d (%f,%f,%f,%f) - normalisation error"
 #define Qconst  "Quaternion %d - constraint error (%g)"
 #define NIMOLS  "Wrong number of molecules of %s - given %d, expected %d"
 #define INITER  "Initialisation file contains %d error%c"
@@ -145,7 +145,7 @@ rotational degrees of freedom (%d vs %d)"
 correction of %g kJmol(-1) added to self energy"
 #define	FRACHG	"Framework has net electric charge of %.2g - \
 correction of %g kJmol(-1) added to self energy"
-#define WDPTR	"Arralloc called for object with size (%ul) not an integral\
+#define WDPTR	"Arralloc called for object with size (%lu) not an integral \
 number of words"
 #define NCNVRG  "Do_step: velocities failed to converge after %d iterations \
 - dist = %f"

@@ -10,3 +10,8 @@ Dump legacy restart file reading.
 
 Update UNKPOT message in messages.h.
 QNORM2 & UNKPOT should be changed.
+WDPTR missing a space and incorrect (%ul)
+
+Fix alloc.c to work for systems where sizeof(float) < sizeof(int), namley T3E.
+Use "configure"?
+
