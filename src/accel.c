@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.35  2001/06/28 15:48:22  keith
+ *       Fixed bug in implementation of Nose-poincare thermostat to do with
+ *       update of smom in rotational update stage.
+ *
  *       Revision 2.34  2001/05/24 16:26:43  keith
  *       Updated program to store and use angular momenta, not velocities.
  *        - added conversion routines for old restart files and dump files.
@@ -313,7 +317,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.34 2001/05/24 16:26:43 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.35 2001/06/28 15:48:22 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -1005,7 +1009,26 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
                             + control.pressure*det(sys->h);
    }
 
+#ifdef DEBUG_THERMOSTAT
+   leapf_all_momenta(0.5*control.step, sys, species, force, torque);
+   if( control.istep%control.print_interval == 0 && ithread == 0 )
+   {
+      double H, HP, HS, HHP, HHS;
+      HS = sys->d_of_f*kB*control.temp * log(sys->ts);
+      HP = SQR(sys->tsmom)/(2.0*control.ttmass);
+      HHP = ke_cell(sys->hmom, control.pmass);
+      HHS = control.pressure*det(sys->h);
+      ke = tot_ke(sys, species,1);
+      H = ke + pe[0] + pe[1] + HP + HS + HHP + HHS;
+      fprintf(stderr,
+             "do_step:  s= %7.4g          ps= %9.5g      H= %12.7g  HK= %12.7g  HV= %12.7g  \n          HP= %12.7g    HS= %12.7g   HHP= %12.7g  HHS= %12.7g   (H-H_0)s= %12.7g\n",
+             sys->ts,sys->tsmom, H,ke, pe[0] + pe[1], HP, HS,HHP, HHS, 
+	      (H-sys->H_0)*sys->ts); 
+   }
+   leapf_all_momenta(0.5*control.step, sys, species, force, torque);
+#else
    leapf_all_momenta(control.step, sys, species, force, torque);
+#endif
 
    if( control.const_temp )
       sys->tsmom -= control.step*(pe[0]+pe[1] - sys->H_0);
@@ -1036,22 +1059,6 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    if( control.const_temp )
       gleap_therm(0.5*control.step, control.ttmass, sys->d_of_f*kB*control.temp, 
 		  &sys->ts, &sys->tsmom);
-#ifdef DEBUG_THERMOSTAT
-   if( control.istep%control.print_interval == 0 && ithread == 0 )
-   {
-      double H, HP, HS, HHP, HHS;
-      HS = sys->d_of_f*kB*control.temp * log(sys->ts);
-      HP = SQR(sys->tsmom)/(2.0*control.ttmass);
-      HHP = ke_cell(sys->hmom, control.pmass);
-      HHS = control.pressure*det(sys->h);
-      ke = tot_ke(sys, species,1);
-      H = ke + pe[0] + pe[1] + HP + HS + HHP + HHS;
-      fprintf(stderr,
-             "do_step:  s= %7.4g          ps= %9.5g      H= %12.7g  HK= %12.7g  HV= %12.7g  \n          HP= %12.7g    HS= %12.7g   HHP= %12.7g  HHS= %12.7g   (H-H_0)s= %12.7g\n",
-             sys->ts,sys->tsmom, H,ke, pe[0] + pe[1], HP, HS,HHP, HHS, 
-	      (H-sys->H_0)*sys->ts); 
-   }
-#endif
 
 /*
  *  Apply constraint to any framework molecules.
