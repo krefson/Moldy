@@ -1,5 +1,6 @@
 /* MOLecular DYnamics simulation code, Moldy.
-Copyright (C) 1988, 1992, 1993 Keith Refson
+Copyright (C) 1997 Craig Fisher
+Copyright (C) 1988, 1992, 1993, 1997 Keith Refson
  
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
@@ -422,7 +423,7 @@ system_mt *system;
 void mat_vec_mul3(m, vec, number)
 int             number;         /* Number of vectors to be multiplied         */
 real            m[3][3];        /* Matrix                                     */
-real            **vec;          /* Output vector.  CAN BE SAME AS INPUT  (out)*/
+vec_mt          *vec;           /* Output vector.  CAN BE SAME AS INPUT  (out)*/
 {
    int i;
    register double        a0, a1, a2;
@@ -443,8 +444,8 @@ void
 traj_con(system, species, prev_cofm, traj_cofm, sp_range)
 system_mt	*system;
 spec_mt		species[];
-real		**prev_cofm,
-		**traj_cofm;
+vec_mt		*prev_cofm;
+vec_mt		*traj_cofm;
 int		sp_range[3];
 {
    spec_mt	*spec;
@@ -468,7 +469,7 @@ void
 traj_out(system, species, traj_cofm, nslices, range, sp_range)
 system_mt	*system;
 spec_mt		species[];
-real		***traj_cofm;
+vec_mt		**traj_cofm;
 real		range[3][2];
 int		nslices, sp_range[3];
 {
@@ -494,6 +495,48 @@ int		nslices, sp_range[3];
    }
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
+}
+/***********************************************************************
+ * msd_calc. Calculate msd					       *
+ ***********************************************************************/    
+msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, traj_cofm, msd)
+spec_mt		species[];
+vec_mt		**traj_cofm;
+real            ***msd;
+int		sp_range[3];
+int             mstart, mfinish, minc, max_av, it_inc;
+{
+   int it, irec, totmol, imsd, ispec, imol, nmols, i;
+   spec_mp      spec;
+   double       msdtmp, stmp;
+   vec_mt	*tct0, *tct1;
+   /* Outer loop for selecting initial time slice */
+   for(it = 0; it <= (max_av-1)*it_inc; it+=it_inc)
+
+      /* Inner loop for calculating displacement from initial slice */ 
+      for(irec = mstart; irec <= mfinish; irec+=minc)
+      {
+	 imsd = (irec-mstart)/minc;
+	 tct0 = traj_cofm[it];
+	 tct1 = traj_cofm[it+irec];
+	 for(i=0; i<3; i++)
+	 {
+	    totmol=0;
+	    for( ispec = sp_range[0], spec = species; ispec <= sp_range[1];
+		 spec += sp_range[2], ispec += sp_range[2])
+	    {
+	       nmols = spec->nmols;
+	       msdtmp = 0.0;
+	       for( imol = 0; imol < nmols; totmol++, imol++)
+	       {
+		  stmp = tct1[totmol][i] - tct0[totmol][i] ;
+		  msdtmp += SQR(stmp);
+	       }
+	       msd[imsd][ispec][i] += msdtmp / nmols;
+	    }
+	 }
+      }
+
 }
 /******************************************************************************
  * msd_out().  Output routine for displaying msd results                      *
@@ -569,7 +612,8 @@ char	*argv[];
    restrt_mt	restart_header;
    system_mt	sys;
    spec_mt	*species, *spec;
-   real 	***traj_cofm;
+   vec_mt 	**traj_cofm;
+   mat_mt	*hmat;
    real		range[3][2];
    int		range_flag[3]={0,0,0};
    site_mt	*site_info;
@@ -817,8 +861,11 @@ char	*argv[];
    nslices = (finish-start)/inc+1; /* no. of time slices in traj_cofm*/
 
   /* Allocate memory for trajectory data and zero */
-   traj_cofm = arralloc(sizeof(real),3,0,nslices-1,0,sys.nmols-1,0,2);
-   zero_real(traj_cofm[0][0], nslices*sys.nmols*3);
+   traj_cofm = arralloc(sizeof(vec_mt),2,0,nslices-1,0,sys.nmols-1);
+   zero_real(traj_cofm[0], nslices*sys.nmols*3);
+
+  /* Allocate array to store unit cell matrices */
+   hmat = arralloc(sizeof(mat_mt),1,0,nslices-1);
 
    if( outsw == MSD)
    {
@@ -858,6 +905,8 @@ char	*argv[];
               irec, strerror(errno));
         dump_to_moldy(dump_buf, &sys);  /*read dump data */
 
+	memcpy(hmat[irec/inc], sys.h, sizeof(mat_mt));
+
         if( irec == 0)
 	{
           range_in(&sys, range, range_flag);
@@ -882,28 +931,14 @@ char	*argv[];
 
 /* Convert trajectories from frac coords to Cartesian coords */
    for( it = 0; it < nslices; it++)
-      mat_vec_mul3(sys.h, traj_cofm[it], sys.nmols);
+      mat_vec_mul3(hmat[it], traj_cofm[it], sys.nmols);
 
 /*
  * Calculate and print msd values
  */
    if( outsw == MSD)
    {
-     /* Outer loop for selecting initial time slice */
-     for(it = 0; it <= (max_av-1)*it_inc; it+=it_inc)
-
-     /* Inner loop for calculating displacement from initial slice */ 
-       for(irec = mstart; irec <= mfinish; irec+=minc)
-       {
-         totmol=0;
-         imsd = (irec-mstart)/minc;
-         for( ispec = sp_range[0], spec = species; ispec <= sp_range[1];
-                                  spec += sp_range[2], ispec += sp_range[2])
-           for( imol = 0; imol < spec->nmols; totmol++, imol++)
-             for( i = 0; i < 3; i++)
-               msd[imsd][ispec][i] += SQR(traj_cofm[it+irec][totmol][i] -
-                               traj_cofm[it][totmol][i]) / spec->nmols;
-       }
+     msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, traj_cofm, msd);
      msd_out(species, msd, max_av, nmsd, sp_range);
    }
    else /* Otherwise output trajectories */
