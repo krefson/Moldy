@@ -23,6 +23,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.22  2001/02/15 15:55:09  keith
+ *       Fixed bug where qsincos  could incorrectly attempt to use
+ *       cache coshxky etc on first iteration when unassigned.
+ *
  *       Revision 2.21  2000/12/06 17:45:29  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -244,7 +248,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.21 2000/12/06 17:45:29 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.22 2001/02/15 15:55:09 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -363,8 +367,6 @@ void      qsincos(real *coshx, real *sinhx, real *cosky,
 	 qcoskr[is] = qckr;
       }
    }
-   hlast = h;
-   klast = k;
 }
 
 /******************************************************************************
@@ -750,6 +752,7 @@ void	ewald(real **site,              /* Site co-ordinate arrays       (in) */
        */
       qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,
 	      qcoskr,qsinkr,sinhxky, coshxky, h, k, l, hlast, klast, nsites);
+      hlast = h; klast = k;
       sqcoskrn = sum(nsitesxf, qcoskr, 1);
       sqsinkrn = sum(nsitesxf, qsinkr, 1);
       sqcoskrf = sum(nsites-nsitesxf, qcoskr+nsitesxf, 1);
