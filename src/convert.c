@@ -23,6 +23,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: convert.c,v $
+ *       Revision 2.9  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.8  1995/12/07 17:47:59  keith
  *       Reworked V. Murashov's thermostat code.
  *       Convert mass params from kJ/mol ps^2 to prog units. Defaults=1.
@@ -84,7 +89,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/convert.c,v 2.8 1995/12/07 17:47:59 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/convert.c,v 2.9 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -93,6 +98,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/convert.c,v 
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
+#ifdef lint
+#define const /**/
+#endif
 /*========================== External data references ========================*/
 extern	      contr_mt	control;            /* Main simulation control parms. */
 extern  const dim_mt	pot_dim[][NPOTP];    /* Pot'l dimension specification */
@@ -109,9 +117,9 @@ void	message();			/* Write a warning or error message   */
 typedef struct
 {
   double	*d;			/* Pointer to item to be converted    */
-  dim_mt		dim;			/* Dimensions of quantity (eg MLT(-2))*/
+  dim_mt	dim;			/* Dimensions of quantity (eg MLT(-2))*/
   unit_mt	unit;			/* Units (in MKS) for conversion from */
-}  conv_mt,  *conv_mp;
+}  conv_mt;
 /*========================== Global variables ================================*/
 #define TMUNIT (MUNIT/CONV_TM)
 static const conv_mt 
@@ -133,8 +141,8 @@ static const conv_mt
  ******************************************************************************/
 #define	MAX_SCALE	80			/* 1e35 - safe for any machine*/
 static double	unit_scale(dim, unit_from, unit_to)
-const dim_mp	dim;			/* Dimensions			      */
-unit_mp	unit_from, unit_to;		/* Units to convert from/to	      */
+const dim_mt	*dim;			/* Dimensions			      */
+unit_mt	*unit_from, *unit_to;		/* Units to convert from/to	      */
 {
    double	lnscale = 	dim->m*(log(unit_from->m) - log(unit_to->m))
 			      + dim->l*(log(unit_from->l) - log(unit_to->l))
@@ -150,7 +158,7 @@ unit_mp	unit_from, unit_to;		/* Units to convert from/to	      */
  ******************************************************************************/
 void	conv_potentials(unit_from, unit_to, potpar, npotpar, ptype,
 			   site_info, max_id)
-const unit_mp	unit_from, unit_to;	/* Values of units for conversion     */
+const unit_mt	*unit_from, *unit_to;	/* Values of units for conversion     */
 pot_mt		potpar[];		/* Array of potpar records[max_id**2] */
 int		npotpar;		/* Number of 'active' parameters      */
 int		ptype;			/* Potential type		      */
@@ -183,7 +191,7 @@ int		max_id;			/* How many site id's		      */
  *   'conv' which contains a pointer to the data and a dimension struct.      *
  ******************************************************************************/
 void	conv_control(unit, direction)
-const unit_mp	unit;  			/* Units conversion is to/from	      */
+const unit_mt	*unit; 			/* Units conversion is to/from	      */
 boolean		direction;		/* True=from input, false=to input    */
 {
    int		ic;			/* Counter			      */
