@@ -3,6 +3,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.9  90/01/01  20:07:20  keith
+ * Parcelled up generation of qcoskr etc into separate function and
+ * created temp's site_fx etc to point at site_force[0] etc.
+ * - Generates substabtially better code on Stellar.
+ * 
  * Revision 1.8  89/12/22  19:31:53  keith
  * New version of arralloc() orders memory so that pointers come FIRST.
  * This means you can simply free() the pointer returned (if l.b. = 0).
@@ -39,7 +44,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/ewald.c,v 1.8 89/12/22 19:31:53 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.9 90/01/01 20:07:20 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -60,7 +65,7 @@ void	invert();			/* Inverts a 3x3 matrix		      */
 void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
 double	sum();				/* Sum of elements of 'real' vector   */
 void	saxpy();			/* A*x+y, x, y are long vectors	      */
-void	*arralloc();			/* Allocates a dope vector array      */
+char	*arralloc();			/* Allocates a dope vector array      */
 void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 /*========================== External data references ========================*/
