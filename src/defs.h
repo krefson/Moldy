@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 2.6 1994/02/17 16:38:16 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 2.7 1994/06/08 13:10:43 keith Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.7  1994/06/08  13:10:43  keith
+ * New macro "balloc(n,size)" for cases when type isn't explicit.
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -179,8 +182,8 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 2.6 $"
-#define		 REVISION_DATE    "$Date: 1994/02/17 16:38:16 $"
+#define          REVISION         "$Revision: 2.7 $"
+#define		 REVISION_DATE    "$Date: 1994/06/08 13:10:43 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -213,6 +216,10 @@ what you give them.   Help stamp out software-hoarding!  */
 #   ifndef VMS
 #      define VMS
 #   endif
+#endif
+#ifdef ardent
+#   define ARDENT
+#   define NEED_XDR_VECTOR
 #endif
 /*
  * Define operating-system dependant default filenames
