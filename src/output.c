@@ -37,6 +37,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.16.2.3  2001/01/25 16:26:30  keith
+ *       Added Wentzcovitch/Cleveland constant-pressure dynamics
+ *       and univorm (Andersen) variant.
+ *
+ *       Fixed bug in uniform(P-R) case which effectively made the mass
+ *       parameter W 3 times too small.
+ *
  *       Revision 2.16.2.2  2000/12/11 12:33:33  keith
  *       Incorporated site-pbc branch "bekker" into main "Beeman" branch.
  *
@@ -210,7 +217,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.16.2.2 2000/12/11 12:33:33 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.16.2.3 2001/01/25 16:26:30 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -549,7 +556,7 @@ restrt_mt	*restart_header;
    format_long("Final step",control.nsteps);
    format_dbl("Size of step",control.step,TUNIT_N);
    format_dbl("CPU limit",control.cpu_limit,"s");
-   if(control.scale_interval > 0 && control.istep <= control.scale_end)
+   if(control.scale_interval > 0 && control.istep < control.scale_end)
    {
       if( control.scale_options & 0x8 )
       {
@@ -581,8 +588,6 @@ restrt_mt	*restart_header;
       format_long("No. steps between scalings",control.scale_interval);
       format_long("End scaling at step",control.scale_end);
    }
-   if((control.scale_interval > 0) || (control.const_temp != 0))
-      format_dbl("Applied Temperature",control.temp,"K");
    if(control.const_temp)
    {
       (void)printf(" %s thermostat will be used", control.const_temp == 1
@@ -611,6 +616,8 @@ restrt_mt	*restart_header;
 		    control.rtmass*CONV_TM, CONV_TM_N);
       }
    }
+   if((control.scale_interval > 0) || (control.const_temp != 0))
+      format_dbl("Applied Temperature",control.temp,"K");
 
    if(control.const_pressure)
    {
