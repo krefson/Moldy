@@ -21,6 +21,10 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  *  Time.h   replacement for ANSI one
  */
+#ifdef ANSI_LIBS
+#include <time.h>
+#else
+
 #ifndef __time_h
 #ifndef _TIME_H
 #ifndef _TIME_H_
@@ -30,7 +34,6 @@ what you give them.   Help stamp out software-hoarding!  */
 #ifndef _TIME_INCLUDED
 
 #include <time.h>
-#ifndef ANSI_LIBS
 #   if defined(unix) || defined(__unix__)
 /*
  *  We must protect the inclusion of <sys/types.h>.  
@@ -42,7 +45,6 @@ what you give them.   Help stamp out software-hoarding!  */
        extern time_t	time();
        extern char * ctime();
 #   endif
-#endif
 #define __time_h
 #define _TIME_H
 #define _TIME_H_
@@ -58,3 +60,10 @@ what you give them.   Help stamp out software-hoarding!  */
 #endif
 #endif
 #endif
+
+#endif
+
+
+
+
+

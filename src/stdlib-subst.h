@@ -18,6 +18,10 @@ Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
+#ifdef ANSI_LIBS
+#   include <stdlib.h>
+#else
+
 #ifndef __stdlib_h
 #ifndef _STDLIB_H
 #ifndef _STDLIB_H_
@@ -25,9 +29,6 @@ what you give them.   Help stamp out software-hoarding!  */
 #ifndef __STDLIB_H__
 #ifndef _H_STDLIB
 #ifndef _STDLIB_INCLUDED
-#ifdef ANSI_LIBS
-#   include <stdlib.h>
-#else
 
 #  include "stddef.h"
 
@@ -40,8 +41,6 @@ what you give them.   Help stamp out software-hoarding!  */
    extern int abs ();
    extern int atoi ();
    extern long strtol();
-#endif
-
 #define __stdlib_h
 #define __STDLIB_H__
 #define __STDLIB_H
@@ -57,6 +56,8 @@ what you give them.   Help stamp out software-hoarding!  */
 #endif /* _STDLIB_H_ */
 #endif /* _STDLIB_H_ */
 #endif /* _STDLIB_H_ */
+
+#endif
 
 
 

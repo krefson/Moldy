@@ -19,6 +19,9 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 
+#ifdef ANSI_LIBS
+#   include <stddef.h>
+#else
 #ifndef __stddef_h
 #ifndef _STDDEF_H
 #ifndef _STDDEF_H_
@@ -26,13 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
 #ifndef __STDDEF_H__
 #ifndef _STDDEF_INCLUDED
 
-#ifdef ANSI_LIBS
-#   include <stddef.h>
-#else
 #   ifndef NULL
 #      define NULL 0
 #   endif
-#endif
 
 #endif
 #endif
@@ -40,4 +39,9 @@ what you give them.   Help stamp out software-hoarding!  */
 #endif
 #endif
 #endif
+#endif
+
+
+
+
 

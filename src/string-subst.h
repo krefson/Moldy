@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 2.6 1994/02/17 16:38:16 keith Exp $
+ * $Header: /home/eeyore_data/keith/md/moldy/RCS/string.h,v 2.7 1994/06/08 13:22:31 keith stab $
  *
  * $Log: string.h,v $
+ * Revision 2.7  1994/06/08 13:22:31  keith
+ * Null update for version compatibility
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Added RS6000 macro for inclusion protection.
  *
@@ -70,6 +73,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  * 
  */
+#ifdef ANSI_LIBS
+#   include <string.h>
+#else
+
 #ifndef __string_h
 #ifndef _STRING_H
 #ifndef _STRING_H_
@@ -77,10 +84,6 @@ what you give them.   Help stamp out software-hoarding!  */
 #ifndef _H_STRING
 #ifndef __STRING_H__
 #ifndef _STRING_INCLUDED
-
-#ifdef ANSI_LIBS
-#   include <string.h>
-#else
 
 #include "stddef.h"
 
@@ -108,8 +111,6 @@ extern gptr
 	*memcpy(),
 	*memset();
 
-#endif
-
 #define __string_h
 #define _STRING_H
 #define _STRING_H_
@@ -118,6 +119,8 @@ extern gptr
 #define  _H_STRING
 #define _STRING_INCLUDED
 
+
+#endif
 #endif
 #endif
 #endif
