@@ -29,6 +29,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *		module (kernel.c) for ease of modification.		      *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.11  1996/01/17 17:12:47  keith
+ *       Incorporated rdf accumulation into forces and parallelized.
+ *       New functions rdf_inner(), calls rdf_accum() from rdf.c
+ *
  * Revision 1.8.1.8  89/11/01  17:34:15  keith
  * Modified to use SPAXPY vectorised scattered add.
  * 
@@ -92,7 +96,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.12 1996/01/16 17:59:34 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.12 1996/04/25 14:10:47 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -166,7 +170,7 @@ static          int nx = 0, ny = 0, nz = 0, onx = 0, ony = 0, onz = 0;
 /*
  * Maximum cutoff radius relative to MD cell dimension.
  */
-#define		NSH 1
+#define		NSH 2
 /*
  * Multiplication factor for size of neighbour list arrays.  If you need
  * to increase this from 1, your system must be *highly* inhomogeneous
@@ -614,7 +618,8 @@ int   	*work;                          /* Workspace                         */
       jy = iy + nabor[jnab].j;
       jz = iz + nabor[jnab].k;
 #ifdef DEBUG1
-      if(jx<-nx || jx>=2*nx || jy<-ny || jy>=2*ny || jz<-nz || jz>=2*nz)
+      if(jx<-NSH*nx || jx>=2*NSH*nx || jy<-NSH*ny || jy>=2*NSH*ny || 
+	                               jz<-NSH*nz || jz>=2*NSH*nz)
 	 message(NULLI,NULLP,FATAL,"Bounds error on reloc (%d,%d,%d)",jx,jy,jz);
 #endif
       jcell = reloc[jx][jy][jz].ncell;
@@ -701,11 +706,13 @@ mat_mt          stress;                 /* Stress virial                (out) */
 		 * This may be too small for inhomogeneous systems, but at
 		 * least it scales with the cutoff radius.
 		 */
+   double	mol_diam = 2.0*mol_radius(species, system->nspecies),
+                cutoff = control.cutoff + (control.strict_cutoff?mol_diam:0);
    int		n_nab_sites = nsites*		/* Max # sites in n'bor list  */
 #ifdef DEBUG2 
-                    MAX(1.0,NMULT*4.19*CUBE(control.cutoff)/det(system->h));
+                    MAX(1.0,NMULT*4.19*CUBE(cutoff)/det(system->h));
 #else
-                            NMULT*4.19*CUBE(control.cutoff)/det(system->h);
+                            NMULT*4.19*CUBE(cutoff)/det(system->h);
 #endif
    static	int n_cell_list = 1;
    cell_mt      *c_ptr = aalloc(n_cell_list, cell_mt );
@@ -717,7 +724,7 @@ mat_mt          stress;                 /* Stress virial                (out) */
    static boolean       init = true;
    static int           n_nabors;
    static reloc_mt      ***reloc = 0;
-   double               reloc_lim;
+   double               reloc_lim, reloc_lim_sc;
    double	subcell = control.subcell;	/* Local copy. May change it. */
 
 #ifdef DEBUG2
@@ -736,17 +743,18 @@ mat_mt          stress;                 /* Stress virial                (out) */
    {
       note("MD cell divided into %d subcells (%dx%dx%d)",ncells,nx,ny,nz);
 
-      reloc_lim = NSH*MIN3(system->h[0][0]*(nx-1)/nx,
-			   system->h[1][1]*(ny-1)/ny,
-			   system->h[2][2]*(nz-1)/nz);
-      if(control.cutoff >= reloc_lim)
+      reloc_lim_sc = NSH*MIN3(system->h[0][0]*(nx-1)/nx,
+			      system->h[1][1]*(ny-1)/ny,
+			      system->h[2][2]*(nz-1)/nz)  - mol_diam;
+      reloc_lim = NSH*MIN3(system->h[0][0], system->h[1][1], system->h[2][2]);
+      if(control.cutoff >= (control.strict_cutoff?reloc_lim_sc:reloc_lim))
 	 if( ithread == 0 )
 	    message(NULLI, NULLP, FATAL, CUTOFF, NSH);
 #ifdef SPMD
          else
 	    par_abort(3);
 #endif
-      if(control.limit >= reloc_lim)
+      if(control.limit >= reloc_lim_sc)
 	 if( ithread == 0 )
 	    message(NULLI, NULLP, FATAL, CUTRDF, NSH);
 #ifdef SPMD
@@ -783,10 +791,9 @@ mat_mt          stress;                 /* Stress virial                (out) */
       init = false;
    }
    if( control.strict_cutoff )
-      nabor = strict_neighbour_list(&n_nabors, system->h, control.cutoff
-			       +2.0*mol_radius(species, system->nspecies), 1);
+      nabor = strict_neighbour_list(&n_nabors, system->h, cutoff, 1);
    else
-      nabor = neighbour_list(&n_nabors, system->h, control.cutoff, 1);
+      nabor = neighbour_list(&n_nabors, system->h, cutoff, 1);
    
    cell = aalloc(ncells, cell_mt *);
    for( icell=0; icell < ncells; icell++)
@@ -865,9 +872,9 @@ NOVECTOR
        control.istep >= control.begin_rdf &&
        control.istep % control.rdf_interval == 0)
    {
-      n_nab_sites = nsites*NMULT*4.19*CUBE(control.limit)/det(system->h);
-      rdf_nabor = strict_neighbour_list(&n_rdf_nabors, system->h, control.limit
-				    +2.0*mol_radius(species, system->nspecies),0);
+      n_nab_sites = nsites*NMULT*4.19*CUBE(control.limit+mol_diam)/det(system->h);
+      rdf_nabor = strict_neighbour_list(&n_rdf_nabors, system->h, 
+					control.limit+mol_diam,0);
       rdf_inner(ithread, nthreads, site, id,
 		n_nab_sites, n_rdf_nabors, rdf_nabor, cell, reloc, n_frame_types, 
 		system);
