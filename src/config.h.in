@@ -120,6 +120,8 @@
 
 #undef SHMEM
 
+#undef HAVE_SHMEM_LONG_GET
+
 #undef HAVE_GLOBALEXIT
 
 #undef HAVE_SBREAK
