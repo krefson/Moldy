@@ -22,6 +22,12 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.14  1996/01/17 17:08:42  keith
+ *       Added "par_isum()" for rdf calculation.
+ *       Added security "exit()" call to par_abort().
+ *       Corrected bug where par_dsum called vradd.
+ *       Added "init_rdf" call for all threads.
+ *
  *       Revision 2.13  1995/12/22 11:42:04  keith
  *       Modified buffer handling for BSP interface.  It used to complain and
  *       stop if buffer was too small. Now it divides data into chunks smaller
@@ -54,11 +60,18 @@ what you give them.   Help stamp out software-hoarding!  */
 /*========================== system  include files ===========================*/
 #include	<signal.h>
 #include	"string.h"
+#ifdef DEBUG
+#include        <stdio.h>
+#endif
 #ifdef TCGMSG
 #include	<sndrcv.h>
 #endif
 #ifdef MPI
 #include	<mpi.h>
+#endif
+#ifdef SHMEM
+#include	<malloc.h>
+#include	<mpp/shmem.h>
 #endif
 static long	lval;
 #define		ADDR(expr) (lval=(expr),&lval)
@@ -81,6 +94,20 @@ extern int 	ithread, nthreads;
 #define NBUFMAX 1048576
 static char tmpbuf[NBUFMAX];
 #endif
+#ifdef SHMEM
+/*
+ * SHMEM  doesn't handle auto & heap vars either. Handle as
+ * for BSP.  But overallocate by 8 bytes for broadcast fn.
+ */
+#define NBUFMAX 1048576
+static char tmpbuf[NBUFMAX+8];
+/*
+ * SHMEM synchronization and work arrays.
+ */
+static char pWrk[NBUFMAX/2+sizeof(double)+_SHMEM_REDUCE_MIN_WRKDATA_SIZE];
+static long pSync[2][_SHMEM_BCAST_SYNC_SIZE];
+static int  psi = 0;
+#endif
 /*====================== Parallel lib interface functions ====================*
  *  The following set of functions define the interface between moldy and     *
  *  a message-passing parallel library.  To port to a new library it suffices *
@@ -97,8 +124,8 @@ static char tmpbuf[NBUFMAX];
  *  par_abort(int code) :  Terminate the run abnormally.  Return code if poss.*
  *  par_broadcast(void *buf, int n, size_mt size, int ifrom)		      *
  *			:  Broadcast the specified buffer from ifrom to all.  *
- *  par_{r,d,i}sum(void *buf, int n) :  Perform a global sum reduction        *
- *			   on the buffer containing n {reals,doubles,ints}.   *
+ *  par_{r,d}sum(void *buf, int n) :  Perform a global parallel sum reduction *
+ *			   on the buffer containing n {reals,doubles}.	      *
  *  par_imax(int *idat) :  Perform a global "maximum" reduction on the single *
  *       		   int argument.				      *
  *									      *
@@ -121,6 +148,13 @@ par_sigintreset()
 }
 #endif
 #ifdef BSP
+void
+par_sigintreset()
+{
+   signal(SIGINT, SIG_DFL);
+}
+#endif
+#ifdef SHMEM
 void
 par_sigintreset()
 {
@@ -158,6 +192,16 @@ par_imax(idat)
 int *idat;
 {
    bspreduce(imax, idat, idat, sizeof(int));
+}
+#endif
+#ifdef SHMEM
+void
+par_imax(idat)
+int *idat;
+{
+   static int ipWrk[_SHMEM_REDUCE_MIN_WRKDATA_SIZE];
+   shmem_int_max_to_all(idat, idat, 1, 0, 0, nthreads, ipWrk, pSync[psi]);
+   psi = ! psi;
 }
 #endif
 #ifdef MPI
@@ -215,6 +259,33 @@ int  n;
    }
 }
 #endif
+#ifdef SHMEM
+void
+par_isum(buf, n)
+int *buf;
+int  n;
+{
+   int m;
+   
+   /*
+    * BSP only allows operations on statically allocated buffers. *sigh*
+    * Use loop to perform general operation copying in and out of a
+    * fixed-size, static buffer.
+    */
+   while( n > 0 )
+   {
+      barrier();
+      m = MIN(n, NBUFMAX/sizeof(int));
+      memcp(tmpbuf, buf, m*sizeof(int));
+      shmem_int_sum_to_all((int*)tmpbuf, (int*)tmpbuf, m, 0, 0, nthreads, 
+			   (int*)pWrk, pSync[psi]);
+      memcp(buf, tmpbuf, m*sizeof(int));
+      psi = ! psi;
+      buf += m;
+      n -= m;
+   }
+}
+#endif
 #ifdef MPI
 /*
  * MPI demands seperate send and receive buffers.  Malloc one and keep
@@ -227,6 +298,9 @@ int  n;
 {
    static int *tmpbuf = 0;
    static int  tmpsize = 0;
+
+   if( n <= 0 )
+      return;
    if(n > tmpsize)
    {
       if( tmpbuf )
@@ -320,6 +394,76 @@ int  n;
    }
 }
 #endif
+#ifdef SHMEM
+void
+par_rsum(buf, n)
+real *buf;
+int  n;
+{
+   int m;
+   
+   if( sizeof(real) == sizeof(float))
+   {
+      /*
+       * BSP only allows operations on statically allocated buffers. *sigh*
+       * Use loop to perform general operation copying in and out of a
+       * fixed-size, static buffer.
+       */
+      while( n > 0 )
+      {
+	 barrier();
+         m = MIN(n, NBUFMAX/sizeof(real));
+         memcp(tmpbuf, buf, m*sizeof(real));
+         shmem_float_sum_to_all((float*)tmpbuf, (float*)tmpbuf, m,0,0, 
+				nthreads, (float*)pWrk, pSync[psi]);
+         memcp(buf, tmpbuf, m*sizeof(real));
+	 psi = ! psi;
+         buf += m;
+         n -= m;
+      }
+    }
+    else if ( sizeof(real) == sizeof(double))
+    {
+      while( n > 0 )
+      {
+	 barrier();
+         m = MIN(n, NBUFMAX/sizeof(real));
+         memcp(tmpbuf, buf, m*sizeof(real));
+         shmem_double_sum_to_all((double*)tmpbuf, (double*)tmpbuf, m,0,0, 
+				 nthreads, (double*)pWrk, pSync[psi]);
+         memcp(buf, tmpbuf, m*sizeof(real));
+	 psi = ! psi;
+         buf += m;
+         n -= m;
+      }
+    }      
+}
+void
+par_dsum(buf, n)
+double *buf;
+int  n;
+{
+   int m;
+   
+   /*
+    * BSP only allows operations on statically allocated buffers. *sigh*
+    * Use loop to perform general operation copying in and out of a
+    * fixed-size, static buffer.
+    */
+   while( n > 0 )
+   {
+      barrier();
+      m = MIN(n, NBUFMAX/sizeof(double));
+      memcp(tmpbuf, buf, m*sizeof(double));
+      shmem_double_sum_to_all((double*)tmpbuf, (double*)tmpbuf, m, 0, 0, 
+			      nthreads, (double*)pWrk, pSync[psi]);
+      memcp(buf, tmpbuf, m*sizeof(double));
+      psi = ! psi;
+      buf += m;
+      n -= m;
+   }
+}
+#endif
 #ifdef MPI
 /*
  * MPI demands seperate send and receive buffers.  Malloc one and keep
@@ -404,6 +548,40 @@ int	ifrom;
    }
 }
 #endif
+#ifdef SHMEM
+void
+par_broadcast(buf, n, size, ifrom)
+gptr	*buf;
+int	n;
+size_mt	size;
+int	ifrom;
+{
+   int m;
+   long nbyt = n*size;	/* Must have a signed type for loop test */
+   
+   /*
+    * Usual comments about fixed-size buffers apply.  The shmem
+    * broadcast routine works in 8 byte word units, but that's OK
+    * since we copy the exact lengh in and out of the real arrays.
+    * But we must overallocate tmpbuf by at least 7 bytes.
+    */
+   while( nbyt > 0 )
+   {
+      barrier();
+      m = MIN(nbyt, NBUFMAX);
+      if( ithread == ifrom )
+	 memcp(tmpbuf, buf, m);
+      shmem_broadcast((long*)tmpbuf, (long*)tmpbuf, 
+		      (m+sizeof(long)-1)/sizeof(long), 
+		      ifrom, 0, 0, nthreads,pSync[psi]);
+      if( ithread != ifrom )
+	 memcp(buf, tmpbuf, m);
+      psi = ! psi;
+      buf = (char*)buf + m;
+      nbyt -= m;
+   }
+}
+#endif
 #ifdef MPI
 void
 par_broadcast(buf, n, size, ifrom)
@@ -450,6 +628,23 @@ int	*nthreads;
    bspstart(*argc, *argv, 0, nthreads, ithread);
 }
 #endif
+#ifdef SHMEM
+void
+par_begin(argc, argv, ithread, nthreads)
+int	*argc;
+char	***argv;
+int	*ithread;
+int	*nthreads;
+{
+   int i;
+   *nthreads = _num_pes();
+   *ithread  = _my_pe();
+   
+   for(i=0; i < _SHMEM_BCAST_SYNC_SIZE; i++)
+     pSync[0][i] = pSync[1][i] =  _SHMEM_SYNC_VALUE;
+   barrier();
+}
+#endif
 #ifdef MPI
 void
 par_begin(argc, argv, ithread, nthreads)
@@ -480,6 +675,13 @@ par_finish()
    bspfinish();
 }
 #endif
+#ifdef SHMEM
+void
+par_finish()
+{
+  barrier();
+}
+#endif
 #ifdef MPI
 void
 par_finish()
@@ -507,7 +709,16 @@ int code;
 #ifdef NOTYET
    bspabort(code);
 #endif
+   bspfinish();
    exit(code);
+}
+#endif
+#ifdef SHMEM
+void
+par_abort(code)
+int code;
+{
+   globalexit(code);
 }
 #endif
 #ifdef MPI
