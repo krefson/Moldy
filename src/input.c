@@ -9,6 +9,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	input.c,v $
+ * Revision 1.5  89/06/21  13:36:42  keith
+ * Moved pot. par. defs arrays types[], npotp[] and npott to kernel.c
+ * Moved print_sysdef() to output.c
+ * Made match[] external and its dimension nmatch into an external int
+ * 
  * Revision 1.4  89/06/16  16:56:08  keith
  * Corrected bug in lattice_start() which crashed for point atoms/ions
  * Added message for successful lattice start
@@ -24,7 +29,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: input.c,v 1.5 89/06/20 18:23:46 keith Exp $";
+static char *RCSid = "$Header: input.c,v 1.7 89/06/23 15:32:15 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<ctype.h>
@@ -58,7 +63,7 @@ match_t	match[] = {
 		{"title",	    	SFORM,	 control.title},
                 {"nsteps",	    	"%d",	(char*)&control.nsteps},
                 {"step",	    	"%lf",	(char*)&control.step},
-                {"print-sys-spec",  	"%d",	(char*)&control.print_sysdef},
+                {"text-mode-save",  	"%d",	(char*)&control.print_sysdef},
                 {"new-sys-spec",    	"%d",	(char*)&control.new_sysdef},
 		{"lattice-start",	"%d",	(char*)&control.lattice_start},
                 {"sys-spec-file",   	SFORM,	 control.sysdef},
@@ -161,7 +166,7 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
    int		nspecies = 0,		/* Number of distinct species         */
    		max_id = 0,		/* Largest site identifier index      */
    		id, idi, idj,		/* Temp. site identifier index        */
-   		ispec, isite,		/* species and site counters	      */
+   		isite,			/* species and site counters	      */
 		sflag,			/* Temporary flag		      */
 		i,			/* Counter			      */
 		n_potpar,		/* Number of parameters for this pot'l*/
@@ -214,7 +219,7 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
       message(NULLI, NULLP, FATAL, SEFAIL, "control file");
    nsites = &nsites_base;
    /* Pass 2.  read system definition and set up species and site_info arrays */
-   for(ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+   for (spec = species; spec < &species[system->nspecies]; spec++)
    {						/* Loop over all species.     */
       n_items = sscanf(get_line(line,LLEN,file),"%s %d", name, &spec->nmols);
       name[sizeof spec->name-1] = '\0';		/* Truncate before copying    */
@@ -377,6 +382,7 @@ quat_t	qpf;				/* Princ frame rotation quaternion    */
    init_t	*cur, *init = NULL;		/* Current and header of list */
    double	a, b, c, alpha, beta, gamma;	/* Unit cell lengths, angles  */
    int		ix, iy, iz, nx, ny, nz;		/* Number of unit cells in MDC*/
+   spec_p	spec;
    char		line[LLEN], name[LLEN];
    int		n_items, nerrs = 0, ispec, imol, i;
    int		*nmols = ialloc(system->nspecies);
@@ -412,14 +418,14 @@ quat_t	qpf;				/* Princ frame rotation quaternion    */
 		       &cur->q[0], &cur->q[1], &cur->q[2], &cur->q[3]);
       if(n_items > 1)				/* Have name of molecule      */
       {
-	 for(ispec = 0; ispec < system->nspecies; ispec++)
-	    if(strcmp(strlower(name),strlower(species[ispec].name)) == 0)
+	 for (spec = species; spec < &species[system->nspecies]; spec++)
+	    if(strcmp(strlower(name),strlower(spec->name)) == 0)
 	       break;
-	 if(ispec >= system->nspecies)		/* Didn't find it	      */
+	 if(spec >= &species[system->nspecies])	/* Didn't find it	      */
 	    message(&nerrs,NULLP,ERROR,UNKSPE,name);
 	 else					/* Found it - check values    */
 	 {
-	    cur->species = ispec;
+	    cur->species = spec-species;
 	    if(n_items < 4)
 	       message(&nerrs, line, ERROR, FEWCOO, name);
 	    if(n_items < 8 && species[cur->species].rdof != 0)
@@ -436,11 +442,12 @@ quat_t	qpf;				/* Princ frame rotation quaternion    */
 	 }
       }
    }
-   for(ispec = 0; ispec < system->nspecies; ispec++)
+   for (spec = species; spec < &species[system->nspecies]; spec++)
    {
-      if(nmols[ispec] != species[ispec].nmols)
-         message(&nerrs,NULLP,ERROR,NIMOLS,species[ispec].name,
-		 nmols[ispec],species[ispec].nmols);
+      ispec = spec-species;
+      if(nmols[ispec] != spec->nmols)
+         message(&nerrs,NULLP,ERROR,NIMOLS,spec->name,
+		 nmols[ispec],spec->nmols);
       nmols[ispec] = 0;
    }
 
@@ -449,22 +456,22 @@ quat_t	qpf;				/* Princ frame rotation quaternion    */
 
    for(cur = init; cur != NULL; cur = cur->next)
    {
-      ispec = cur->species;
+      spec = species + cur->species;
       for(ix = 0; ix < nx; ix++)
          for(iy = 0; iy < ny; iy++)
             for(iz = 0; iz < nz; iz++)
 	    {
-	       imol = nmols[ispec];
-	       species[ispec].c_of_m[imol][0] = (cur->r[0]+ix)/nx - 0.5;
-	       species[ispec].c_of_m[imol][1] = (cur->r[1]+iy)/ny - 0.5;
-	       species[ispec].c_of_m[imol][2] = (cur->r[2]+iz)/nz - 0.5;
-	       if(species[ispec].rdof > 0 )
+	       imol = nmols[cur->species];
+	       spec->c_of_m[imol][0] = (cur->r[0]+ix)/nx - 0.5;
+	       spec->c_of_m[imol][1] = (cur->r[1]+iy)/ny - 0.5;
+	       spec->c_of_m[imol][2] = (cur->r[2]+iz)/nz - 0.5;
+	       if(spec->rdof > 0 )
 	       {
 		  for( i = 0; i < 4; i++ )
 		     q[i] = cur->q[i];		/* Convert type to 'real'     */
-		  q_mul_1(q, qpf, species[ispec].quat[imol]);
+		  q_mul_1(q, qpf, spec->quat[imol]);
 	       }
-	       nmols[ispec]++;
+	       nmols[cur->species]++;
 	    }
    }
    message(NULLI, NULLP, INFO, LATTIC);
@@ -491,16 +498,6 @@ FILE	*file;
       n_items = sscanf(line, " %[^= ] = %127[^#]",name, value);
       if(!strcmp(strlower(name),"end"))
          break;
-      if( !strcmp(name,"?") )
-      {
-	 for( i = 0; i < nmatch; i++ )
-	 {
-	    (void)printf(" %s =",match[i].key);
-	    (void)printf(match[i].format,match[i].ptr);
-	    (void)printf("\n");
-	 }
-	 continue;
-      }
       if( n_items < 1 )
          message(&nerrs,line,ERROR,NOVAL,name);
       else
