@@ -28,11 +28,13 @@
 /* Define to `long' if <time.h> doesn't define.  */
 #undef time_t
 
-/* Define to `long' if <time.h> doesn't define.  */
-#undef clock_t
-
 /* Define if you have the ANSI C header files.  */
 #undef STDC_HEADERS
+
+#ifndef STDC_HEADERS
+/* Define to `long' if <time.h> doesn't define.  */
+#undef clock_t
+#endif
 
 /* Define if you can safely include both <sys/time.h> and <time.h>.  */
 #undef TIME_WITH_SYS_TIME
