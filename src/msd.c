@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/msd.c,v 2.4.10.3 2003/07/31 02:55:58 moldydv Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/msd.c,v 2.4.10.4 2003/10/21 10:27:55 kr Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,9 @@ static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/msd.c,v 2.4.10.3 2003
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 2.4.10.4  2003/10/21 10:27:55  kr
+ *  Fixed a couple of bugs in the trajectory output
+ *
  *  Revision 2.4.10.3  2003/07/31 02:55:58  moldydv
  *  Removed obsolete variables.
  *  Updated function descriptions to reflect changes in input syntax.
@@ -191,11 +194,11 @@ static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/msd.c,v 2.4.10.3 2003
 #include "structs.h"
 #include "messages.h"
 #include "utlsup.h"
+
 int     in_region(real *pos, real (*range)[3]);
-int	getopt(int, char *const *, const char *);
-extern  int optind;
-/*======================== Global vars =======================================*/
+/*======================== Global variables ==================================*/
 int ithread=0, nthreads=1;
+
 #define MSD  0
 #define TRAJ 1
 #define GNU  0
@@ -210,8 +213,7 @@ void
 traj_gnu(spec_mt *species, vec_mt (**traj_cofm), int nslices, real (*range)[3],
 	       	char *spec_mask, int nspecies)
 {
-   int          totmol=0, imol, i, itime;
-   int		ispec=0;
+   register int totmol=0, imol, i, itime, ispec;
    spec_mp      spec;
 
    for( spec = species, ispec=0; spec < species+nspecies; spec++, ispec++)
@@ -244,8 +246,7 @@ void
 traj_idl(spec_mt *species, vec_mt (**traj_cofm), int nslices, real (*range)[3],
 	       	char *spec_mask, int nspecies)
 {
-   int		totmol, imol, i, itime;
-   int		ispec=0;
+   register int	totmol, imol, i, itime, ispec;
    spec_mp	spec;
 
    for( itime = 0; itime < nslices; itime++)
@@ -281,10 +282,10 @@ msd_calc(spec_mt *species,	/* Species data */
          vec_mt (**traj_cofm),	/* Continuous trajectory data */
          real ***msd)		/* Msd data for each time slice */
 {
-   int it, irec, totmol, imsd, ispec, imol, nmols, cmols, i;
-   int nspec, tmol;
+   register int it, irec, totmol, imsd, ispec, imol, nmols, cmols;
+   register int i, tmol;
+   register double       msdtmp, stmp;
    spec_mp      spec;
-   double       msdtmp, stmp;
    vec_mt	*tct0, *tct1;
 
    /* Outer loop for selecting initial time slice */
@@ -336,7 +337,7 @@ msd_out(spec_mt *species,	/* Species data */
         int nspecies,           /* No of species in system */
         double tstep)           /* Absolute time step in ps */
 {
-   int          ispec=0, imsd, i;
+   register int ispec=0, imsd, i;
    real         totmsd;
    spec_mp      spec;
 
@@ -384,21 +385,19 @@ msd_out(spec_mt *species,	/* Species data */
  *        when outputting trajectories. Molecules selected based on initial   *
  *	  positions.							      *
  ******************************************************************************/
-contr_mt                control;
-
 int
 main(int argc, char **argv)
 {
-   int	c, cflg = 0;
+   int	c;
    extern char	*optarg;
    int		errflg = 0;
    int		outsw = MSD, trajsw = GNU;
    int		start, finish, inc;			/* Range specifiers for dump files */
    int		mstart, mfinish, minc;			/* Range specifiers for msds */ 
    int		it_inc = 1;				/* Default increment for initial time slice */
-   int		dflag, iflag, sflag, mflag;
+   int		dflag, iflag, mflag;
    int		i, irec, ispec;				/* Counters */
-   char		*filename = NULL, *dump_base = NULL;
+   char		*dump_base = NULL;
    char		*dump_name = NULL, *dump_names = NULL;
    char		*dumplims = NULL;
    char		*msdlims = NULL;
@@ -406,7 +405,7 @@ main(int argc, char **argv)
    char		dumpcommand[256];
    int		dump_size;
    float	*dump_buf;
-   FILE         *Fp, *Dp, *dump_file;
+   FILE         *Dp, *dump_file;
    dump_mt	dump_header;
    dump_sysinfo_mt *dump_sysinfo;
    size_mt	sysinfo_size;
@@ -415,13 +414,10 @@ main(int argc, char **argv)
    vec_mt 	**traj_cofm;		/* Cofm data for continuous trajectories */
    mat_mt	*hmat;			/* h matrix for each slice */
    real		range[3][3];		/* Spatial range to include in msd calcs */
-   site_mt	*site_info;
-   pot_mt	*potpar;
-   quat_mt	*qpf;
    int          nmsd, max_av, nspecies, nslices;
    real         ***msd;			/* Calculated MSD data for each time slice and species */
-   char         *spec_list = "1-50";    /* List of species to calculate for (with default) */
-   char         spec_mask[MAX_SPECIES]; /* Mask for selecting species */
+   char         *spec_list = NULL;      /* List of species to calculate for (with default) */
+   char         *spec_mask = NULL;      /* Mask for selecting species */
    int          arglen, ind, genflg;
    int          xdr = 0;
    real		msd_step; 		/* Absolute msd time interval (in ps) */
@@ -429,7 +425,6 @@ main(int argc, char **argv)
    zero_real(range[0],9);
 
 #define MAXTRY 100
-   control.page_length=1000000;
 
    comm = argv[0];
    if( strstr(comm, "msd") )
@@ -437,12 +432,9 @@ main(int argc, char **argv)
    else if( strstr(comm, "mdtraj") )
       outsw = TRAJ;
 
-   while( (c = getopt(argc, argv, "cd:t:m:i:g:o:w:xXyYzZ") ) != EOF )
+   while( (c = getopt(argc, argv, "d:t:m:i:g:o:w:xXyYzZ") ) != EOF )
       switch(c)
       {
-       case 'c':
-         cflg++;
-         break;
        case 'd':
 	 dump_base = optarg;
 	 break;
@@ -453,7 +445,7 @@ main(int argc, char **argv)
 	 msdlims = mystrdup(optarg);
          break;
        case 'g':
-	 spec_list = optarg;
+	 spec_list = mystrdup(optarg);
 	 break;
        case 'i':
 	 it_inc = atoi(optarg);
@@ -495,15 +487,12 @@ main(int argc, char **argv)
    if( errflg )
    {
       fprintf(stderr,
-         "Usage: %s [-c] [-d dump-files] [-t s[-f[:n]]] ",comm);
+         "Usage: %s [-d dump-files] [-t s[-f[:n]]] ",comm);
       fputs("[-m s[-f[:n]]] [-g s[-f[:n]]] ",stderr);
       fputs("[-i initial-time-increment] [-w trajectory-format] ",stderr);
       fputs("[-x|-X] [-y|-Y] [-z|-Z] [-o output-file]\n",stderr);
       exit(2);
    }
-
-   if( tokenise(mystrdup(spec_list), spec_mask, MAX_SPECIES) == 0 )
-      error("Invalid species specification \"%s\": usage eg 1,3,5-9,4",spec_list);
 
    /* Prepare dump file name for reading */
    genflg = 0;
@@ -567,6 +556,14 @@ main(int argc, char **argv)
       + sizeof(mol_mt) * (dump_sysinfo->nspecies-1);
    (void)free(dump_sysinfo);
 
+/* Check dump file contains necessary data */
+    if( !(dump_header.dump_level & 1) )
+      {
+      fprintf(stderr, "C of M positions not contained in a dump of level %d\n", dump_header.dump_level);
+      fputs("Calculation aborted\n", stderr);
+      exit(2);
+      }
+
    /*
     * Allocate space for and read dump sysinfo.
     */
@@ -597,6 +594,15 @@ main(int argc, char **argv)
    }
 
    allocate_dynamics(&sys, species);
+
+/* Check species selection list */
+   spec_mask = (char*)calloc(sys.nspecies+1,sizeof(char));
+
+   if( spec_list == NULL)
+     sprintf(spec_list,"1-%d",sys.nspecies);
+
+   if( tokenise(mystrdup(spec_list), spec_mask, sys.nspecies) == 0 )
+      error("invalid species specification \"%s\" - choose from species 1 to %d",spec_list,sys.nspecies);
 
   /*
    *  Ensure that the dump limits start, finish, inc are set up,
@@ -703,8 +709,13 @@ main(int argc, char **argv)
         sys.nmols, sys.nmols_r, start, finish, inc, dump_names);
    
    if( (Dp = popen(dumpcommand,"r")) == 0)
-        error("Failed to execute \'dumpext\" command - \n%s",
+   {
+      if( !strcmp(strerror(errno),"Success") )
+         error("Failed to execute \"dumpext\" command\n");
+      else
+         error("Failed to execute \"dumpext\" command - \n%s",
             strerror(errno));
+   }
 #else
    tempname = tmpnam((char*)0);
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d -o %s %s",
