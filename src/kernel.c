@@ -14,6 +14,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 1.14  92/06/10  15:53:16  keith
+ * Added new potential type "generic" for Neal.
+ * 
  * Revision 1.13  91/08/16  15:25:35  keith
  * Checked error returns from fread, fwrite, fseek and fclose more
  * rigourously.   Called strerror() to report errors.
@@ -68,7 +71,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.13 91/08/16 15:25:35 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.14 92/06/10 15:53:16 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -163,7 +166,7 @@ real	r_sqr[];		/* Vector of site-site distances (**2).  (in) */
 real	nab_chg[];		/* Vector of charges of neighbour sites. (in) */
 real	*pot[];			/* Vectors of potential parameters.	 (in) */
 {
-   register real t;			/* Argument of erfc() polynomial.     */
+   register real t, ar;			/* Argument of erfc() polynomial.     */
    register real r;			/* Site-site distance.		      */
    register real r_r, r_6_r, r_sqr_r, r_12_r,	/* Reciprocal powers of r.    */
                  r_4_r, r_8_r;
@@ -188,9 +191,10 @@ VECTORIZE
 	     * Calculate r and coulombic part
 	     */
 	    r       = sqrt(r_sqr[jsite]);
+	    ar	    = alpha*r;
 	    r_r	 = 1.0 / r;
-	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(alpha*r));
-	    t = 1.0/(1.0+PP*(alpha*r));
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+	    t = 1.0/(1.0+PP*ar);
 	    t = POLY5(t) * erfc_term * r_r;
 	    erfc_term = t + norm * erfc_term;
 	    r_sqr_r = SQR(r_r);
@@ -213,9 +217,10 @@ VECTORIZE
 	     * Calculate r and coulombic part
 	     */
 	    r       = sqrt(r_sqr[jsite]);
+	    ar	    = alpha*r;
 	    r_r	 = 1.0 / r;
-	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(alpha*r));
-	    t = 1.0/(1.0+PP*(alpha*r));
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+	    t = 1.0/(1.0+PP*ar);
 	    t = POLY5(t) * erfc_term * r_r;
 	    erfc_term = t + norm * erfc_term;
 	    r_sqr_r = SQR(r_r);
@@ -237,9 +242,10 @@ VECTORIZE
 	     * Calculate r and coulombic part
 	     */
 	    r       = sqrt(r_sqr[jsite]);
+	    ar	    = alpha*r;
 	    r_r	 = 1.0 / r;
-	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(alpha*r));
-	    t = 1.0/(1.0+PP*(alpha*r));
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+	    t = 1.0/(1.0+PP*ar);
 	    t = POLY5(t) * erfc_term * r_r;
 	    erfc_term = t + norm * erfc_term;
 	    r_sqr_r = SQR(r_r);
@@ -261,9 +267,10 @@ VECTORIZE
 	     * Calculate r and coulombic part
 	     */
 	    r       = sqrt(r_sqr[jsite]);
+	    ar	    = alpha*r;
 	    r_r	 = 1.0 / r;
-	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(alpha*r));
-	    t = 1.0/(1.0+PP*(alpha*r));
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+	    t = 1.0/(1.0+PP*ar);
 	    t = POLY5(t) * erfc_term * r_r;
 	    erfc_term = t + norm * erfc_term;
 	    r_sqr_r = SQR(r_r);
