@@ -19,9 +19,36 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 2.6 1994/02/17 16:38:16 keith Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
+ * Got rid of all global (external) data items except for
+ * "control" struct and constant data objects.  The latter
+ * (pot_dim, potspec, prog_unit) are declared with CONST
+ * qualifier macro which evaluates to "const" or nil
+ * depending on ANSI/K&R environment.
+ * Also moved as many "write" instantiations of "control"
+ * members as possible to "startup", "main" leaving just
+ * "dump".
+ *
+ * Declared as "static"  all functions which should be.
+ *
+ * Added CONST qualifier to (re-)declarations of ANSI library
+ * emulation routines to give reliable compilation even
+ * without ANSI_LIBS macro. (#define's away for K&R
+ * compilers)
+ *
+ *
+ * Now recognises _UNICOS macro and defines "unix".
+ * Specific MSDOS file names added on __MSDOS__ macro.
+ * Evaluates CONST macro to const or nil depending on
+ * ANSI/KR environment.
+ * Added size_mt typedef (ulong) for interfacing with lib fns.
+ *
  * Revision 2.5  94/01/25  16:49:41  keith
  * Incorporated all portability experience to multiple platforms since 2.2.
  * Including ports to VAX/VMS and Open VMS on Alpha AXP and Solaris.
@@ -152,8 +179,8 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 2.5.1.1 $"
-#define		 REVISION_DATE    "$Date: 1994/02/03 18:36:12 $"
+#define          REVISION         "$Revision: 2.6 $"
+#define		 REVISION_DATE    "$Date: 1994/02/17 16:38:16 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -404,8 +431,9 @@ typedef quat_mt	*quat_mp;
 typedef real    mat_mt[3][3];
 typedef vec_mt	*mat_mp;
 
-#define aalloc(n, type) (type *)talloc((int)(n),(size_mt)sizeof(type),\
-				       __LINE__, __FILE__)
+#define balloc(n,size)  talloc((int)(n),(size_mt)(size), __LINE__, __FILE__)
+#define aalloc(n, type) (type *)balloc((n), sizeof(type))
+				       
 #define ialloc(n) aalloc(n, int)
 #define dalloc(n) aalloc(n, real)
 #define ralloc(n) aalloc(n, vec_mt)
