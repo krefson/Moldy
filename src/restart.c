@@ -31,6 +31,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.8  1995/12/04 11:45:49  keith
+ *       Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
+ *       Thanks to V. Murashov.
+ *
  * Revision 2.7  1994/06/08  13:22:31  keith
  * Null update for version compatibility
  *
@@ -141,7 +145,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/restart.c,v 2.7 1994/06/08 13:22:31 keith stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/restart.c,v 2.8 1995/12/04 11:45:49 keith Exp keith $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -490,14 +494,16 @@ int		av_convert;
    gptr		*ap;			/* Pointer to averages database       */
    size_mt	asize;			/* Size of averages database	      */
    boolean	rdf_flag;		/* Indicates whether file contains rdf*/
-   int		rdf_size = control.nbins*system->max_id*(system->max_id-1)/2;
-   int		major,minor;
+   int   	rdf_size;
+   gptr		*rdf_base;
+
+   int		vmajor,vminor;
    xfp_mt	xfp;
 
    /*
     * Parse header version
     */
-   if( sscanf(vsn, "%d.%d", &major, &minor) < 2 )
+   if( sscanf(vsn, "%d.%d", &vmajor, &vminor) < 2 )
       message(NULLI, NULLP, FATAL, INRVSN, vsn);
       
    xfp.xp= &xdrs;
@@ -525,7 +531,7 @@ int		av_convert;
    cread(xfp,  (gptr*)system->hddoto,  lsizeof(real), 9, xdr_real);
    cread(xfp,  (gptr*)system->hddotvo, lsizeof(real), 9, xdr_real);
 
-   if( major > 2 || minor > 7) 
+   if( vmajor > 2 || vminor > 7) 
    {
       cread(xfp,  (gptr*)system->ta,      lsizeof(real), system->nspecies, xdr_real);
       cread(xfp,  (gptr*)system->tap,     lsizeof(real), system->nspecies, xdr_real);
@@ -547,7 +553,10 @@ int		av_convert;
    cread(xfp,  (gptr*)&rdf_flag, lsizeof rdf_flag, 1, xdr_bool); 
    				    /* Read flag signalling stored RDF data.  */
    if(rdf_flag && control.rdf_interval>0)/* Only read if data there and needed*/
-      cread(xfp, rdf_ptr(), lsizeof(int), rdf_size, xdr_int);
+   {
+      rdf_base = rdf_ptr(&rdf_size);
+      cread(xfp, rdf_base, lsizeof(int), rdf_size, xdr_int);
+   }
 #ifdef USE_XDR
    if( xdr_read )
       xdr_destroy(xfp.xp);
@@ -570,7 +579,8 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
    spec_mp	spec;
    gptr		*ap;			/* Pointer to averages database       */
    size_mt	asize;			/* Size of averages database	      */
-   int		rdf_size = control.nbins*system->max_id*(system->max_id-1)/2;
+   int  	rdf_size;
+   gptr		*rdf_base;
    int		zero = 0, one = 1;
    restrt_mt	save_header;
    FILE		*save;
@@ -656,7 +666,8 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
    if(control.rdf_interval > 0)			/* If we have rdf data	      */
    {
       cwrite(xfp,  (gptr*)&one, lsizeof(int), 1, xdr_bool);/* Flag rdf data   */
-      cwrite(xfp, rdf_ptr(), lsizeof(int), rdf_size, xdr_int);/* write data   */
+      rdf_base = rdf_ptr(&rdf_size);
+      cwrite(xfp, rdf_base, lsizeof(int), rdf_size, xdr_int);/* write data   */
    }
    else
       cwrite(xfp,  (gptr*)&zero, lsizeof(int), 1, xdr_bool);/*flag no rdf data*/
