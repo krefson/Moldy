@@ -29,14 +29,26 @@ what you give them.   Help stamp out software-hoarding!  */
  * make_sites()		Generate atomic site co-ordinates from c-of-m etc     *
  * newton()		Calculate accelerations from forces		      *
  * euler()		Calculate quaternion accelerations from torques	      *
- * parinello()		Calculate P&R c-of-m acceleration term		      *
+ * parinello()          Calculate P&R c-of-m acceleration term                * 
  * rahman()		Calculate unit cell matrix accelerations from stress  *
  * trans_ke()		Return translational kinetic energy.		      *
  * rot_ke()		Return rotational kinetic energy		      *
  * energy_dyad()	Calculate kinetic energy part of stress tensor	      *
+ * gaussiant()          Return alpha in Gaussian thermostat(trans)            *
+ * gaussianr1()         Return alpha1 in Gaussian thermostat(rot)             *
+ * gaussianr2()         Return alpha2 in Gaussian thermostat(rot)             *
+ * hoover_tr()          Calculate correction to the forces(accelerations)     *
+ * hoover_rot()         due to thermostat                                     *
  ******************************************************************************
  *      Revision Log
  *       $Log: algorith.c,v $
+ *       Revision 2.9  1995/12/04 11:45:49  keith
+ *       Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
+ *       Thanks to V. Murashov.
+ *
+ * Revision 2.8  1994/07/07  16:52:14  keith
+ * Performance optimization to mol_force.
+ *
  * Revision 2.7  1994/06/08  13:22:31  keith
  * Null update for version compatibility
  *
@@ -118,7 +130,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 2.7 1994/06/08 13:22:31 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/algorith.c,v 2.9 1995/12/04 11:45:49 keith Exp keith $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -344,7 +356,13 @@ int		nmols;		/* Number of molecules                   (in) */
    double	rmass = 1.0/mass;
    for(i=0; i < 3; i++)
       for(imol = 0; imol < nmols; imol++)
+      {
          acc[imol][i] = force[imol][i] * rmass;
+#ifdef DEBUG2
+   printf("Newton accelerations for %4i mol %4i orient %8.4f \n",imol,
+           i, acc[imol][i]);
+#endif
+      }
 }
 /******************************************************************************
  * euler  Use the Euler equations and the second-order quaternion method to   *
@@ -548,4 +566,90 @@ int	mask;				/* Mask constrained el's of h matrix  */
 	 hddot[0][i] = 0.0;		/* Access as [9] rather than [3][3]   */
       mask >>= 1;
    }
+}
+/******************************************************************************
+ * Hoover_tr() function corrects forces to realize thermostat                 *
+ * main formula: mass * accel = force - alpha * mass * vel                    *
+ * Function is added by VVMurashov on 22/10/95                                *
+ ******************************************************************************/
+void hoover_tr(alpha, accel_in, accel_out, vel, nmols)
+double  alpha;                  /* Thermostat  multiplier                     */
+vec_mp	vel,			/* Centre of mass scaled velocities      (in) */
+        accel_in,               /* Array of forces                   (in/out) */
+        accel_out;
+int	nmols;			/* Size of vel and force/number molecules(in) */
+{
+   int		i, j;   	/* Counters				      */
+
+   for(i = 0; i < 3; i++)                       /* Add correction term        */
+      for(j = 0; j < nmols; j++)                /* to accelerations           */
+         accel_out[j][i] = accel_in[j][i] - alpha*vel[j][i];
+}
+/******************************************************************************
+ * Hoover_rot() function corrects forces to realize thermostat                *
+ * main formula: inertia * accel = torque - alpha * inertia * omega           *
+ * Function is added by VVMurashov on 22/10/95                                *
+ ******************************************************************************/
+void hoover_rot(alpha, inertia, force_in, force_out, omega, nmols)
+double   alpha;                 /* Nose-Hoover multiplier                     */
+vec_mt   inertia;               /* Inertia vector                             */
+quat_mp	 omega;		        /* Angular velocities                    (in) */
+vec_mp   force_in,              /* Array of forces                   (in/out) */
+         force_out;
+int	 nmols;			/* Size of vel and force/number molecules(in) */
+{
+   int		i, imols;   	/* Counters				      */
+   for(i = 0; i < 3; i++)                       /* Add correction term        */
+      for(imols = 0; imols < nmols; imols++)    /* to accelerations           */
+         force_out[imols][i] = force_in[imols][i] - alpha*inertia[i]*
+                               omega[imols][i+1];
+}
+/*****************************************************************************
+ * Gaussiant() function calculates alpha1 or alpha2 for the Gaussian         * 
+ * thermostat. Principle formula: alpha = alpha1 / alpha2                    *
+ * alpha1 = (SUM force * vel), and alpha2 = (SUM mass * vel^2)               *
+ * Function is added by VVMurashov on 3/11/95                                *
+ *****************************************************************************/
+double gaussiant(vec1, vec2, nmols)
+vec_mp   vec1,                  /* First array                           (in) */
+         vec2;                  /* Second array                          (in) */
+int	 nmols; 		/* Size of arrays [nmols][n]             (in) */
+{
+   double   alpha = 0.0;        /* Sum of products                      (out) */
+   int		i;      	/* Counters				      */
+   for(i = 0; i < 3; i++)
+      alpha += vdot(nmols, vec1[0]+i, 3, vec2[0]+i, 3);
+   return(alpha);
+}
+/*****************************************************************************
+ * Gaussianr1() function is the same as above, but allows for dealing with   *
+ * quaternion array. Function is added by VVMurashov on 3/11/95              *
+ *****************************************************************************/
+double gaussianr1(vec1, vec2, nmols)
+vec_mp   vec1;                  /* First array                           (in) */
+quat_mp  vec2;                  /* Second array                          (in) */
+int	 nmols; 		/* Size of arrays [nmols][n]             (in) */
+{
+   double   alpha = 0.0;        /* Sum of products                      (out) */
+   int		i;      	/* Counters				      */
+   for(i = 0; i < 3; i++)
+      alpha += vdot(nmols, vec1[0]+i, 3, vec2[0]+i+1, 4);
+   return(alpha);
+}
+/*****************************************************************************
+ * Gaussianr2() function calculates alpha2 for the Gaussian thermostat       *
+ * Principle formula: alpha = alpha1/alpha2                                  *
+ * where alpha1 = (SUM torque * omega), and alpha2 = (SUM inertia * omega^2) *
+ * Function is added by VVMurashov on 3/11/95                                *
+ *****************************************************************************/
+double gaussianr2(omega, inertia, nmols)
+vec_mt   inertia;               /* Inertia vector                             */
+quat_mp	 omega;		        /* Angular velocities                    (in) */
+int	 nmols;			/* Size of vel and force/number molecules(in) */
+{
+   double   alpha = 0.0;        /* Gaussian multiplier                  (out) */
+   int		i;      	/* Counters				      */
+   for(i = 0; i < 3; i++)
+      alpha += inertia[i] * vdot(nmols, omega[0]+i+1, 4, omega[0]+i+1, 4);
+   return(alpha);
 }
