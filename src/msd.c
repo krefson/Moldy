@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.10 1997/11/26 10:06:00 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.11 1997/11/27 16:00:38 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,10 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.10
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 1.11  1997/11/27 16:00:38  keith
+ *  Lintified it to avoid compiler warnings and complaints from
+ *  nervous users.
+ *
  *  Revision 1.10  1997/11/26 10:06:00  keith
  *  Corrected usage message.
  *  Made -r and -s options mutually exclusive.
@@ -948,7 +952,7 @@ char	*argv[];
    nslices = (finish-start)/inc+1; /* no. of time slices in traj_cofm */
 
   /* Allocate memory for trajectory data and zero */
-   traj_cofm = arralloc(sizeof(vec_mt),2,0,nslices-1,0,sys.nmols-1);
+   traj_cofm = (vec_mt**)arralloc(sizeof(vec_mt),2,0,nslices-1,0,sys.nmols-1);
    zero_real(traj_cofm[0], nslices*sys.nmols*3);
 
   /* Allocate array to store unit cell matrices */
@@ -957,7 +961,7 @@ char	*argv[];
    if( (dump_buf = (float*)malloc(dump_size)) == 0)
       error("malloc failed to allocate dump record buffer (%d bytes)",
           dump_size);
-#if defined (unix) || defined (__unix__)
+#if defined (HAS_POPEN) 
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s",
         sys.nmols, sys.nmols_r, start, finish, inc, dump_name);
    
@@ -998,7 +1002,7 @@ char	*argv[];
    }
    xfree(dump_buf);
 
-#if defined (unix) || defined (__unix__)
+#if defined (HAS_POPEN) 
    pclose(Dp);
 #else
    fclose(Dp);
@@ -1019,7 +1023,7 @@ char	*argv[];
      max_av = (nslices - mfinish)/it_inc; /* Max no of msd calcs to average over */
 
   /* Allocate memory for msd array and zero */
-     msd = arralloc(sizeof(real),3,0,nmsd-1,0,sys.nspecies-1,0,2);
+     msd = (real***)arralloc(sizeof(real),3,0,nmsd-1,0,sys.nspecies-1,0,2);
      zero_real(msd[0][0],nmsd*sys.nspecies*3);
 
   /* Calculate and print msd values */
