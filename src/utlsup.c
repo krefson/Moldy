@@ -1,13 +1,9 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/utlsup.c,v 1.2 1999/10/29 16:44:28 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/utlsup.c,v 1.5 1999/11/25 14:26:17 keith Exp $";
 #endif
 
 #include "defs.h"
-#ifdef HAVE_STDARG_H
 #include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
 #include <errno.h>
 #include <math.h>
 #include "stdlib.h"
@@ -17,61 +13,46 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/utlsup.c,v 
 #include "structs.h"
 #include "messages.h"
 
-void mat_vec_mul();
-void invert();
+void mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
+void invert(real (*a)[3], real (*b)[3]);
 
 char	*comm;
 /******************************************************************************
  * Dummies of moldy routines so that utils may be linked with moldy library   *
  ******************************************************************************/
-void 	init_rdf()
+void 	init_rdf(void)
 {}
-gptr *rdf_ptr()
+gptr *rdf_ptr(void)
 {return 0;}
-void new_lins()
+void new_lins(void)
 {}
-int lines_left()
+int lines_left(void)
 {return 0;}
-void new_page()
+void new_page(void)
 {}
-void	new_line()
+void	new_line(void)
 {
    (void)putchar('\n');
 }
-void	banner_page()
+void	banner_page(void)
 {}
-void	note()
+void	note(void)
 {}
 
 /******************************************************************************
  *  message.   Deliver error message to possibly exiting.  It can be called   *
  *             BEFORE output file is opened, in which case output to stderr.  *
  ******************************************************************************/
-#ifdef HAVE_STDARG_H
-#   undef  va_alist
-#   define      va_alist int *nerrs, ...
-#   ifdef va_dcl
-#      undef va_dcl
-#   endif
-#   define va_dcl /* */
-#endif
 /*VARARGS*/
-void    message(va_alist)
-va_dcl
+void    message(int *nerrs, ...)
+
 {
    va_list      ap;
    char         *buff;
    int          sev;
    char         *format;
    static char  *sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
-#ifdef HAVE_STDARG_H
    va_start(ap, nerrs);
-#else
-   int          *nerrs;
-
-   va_start(ap);
-   nerrs = va_arg(ap, int *);
-#endif
    buff  = va_arg(ap, char *);
    sev   = va_arg(ap, int);
    format= va_arg(ap, char *);
@@ -95,27 +76,12 @@ va_dcl
 /******************************************************************************
  *  error.   Deliver error message to possibly exiting.                       *
  ******************************************************************************/
-#ifdef HAVE_STDARG_H
-#undef  va_alist
-#define	va_alist char *format, ...
-#ifdef  va_dcl
-#   undef  va_dcl
-#endif
-#define va_dcl /* */
-#endif
 /*VARARGS*/
-void	error(va_alist)
-va_dcl
+void	error(char *format, ...)
+
 {
    va_list	ap;
-#ifdef HAVE_STDARG_H
    va_start(ap, format);
-#else
-   char		*format;
-
-   va_start(ap);
-   format= va_arg(ap, char *);
-#endif
 
    (void)fprintf(stderr, "%s: ",comm);
    (void)vfprintf(stderr, format, ap);
@@ -127,8 +93,7 @@ va_dcl
 /******************************************************************************
  * mystrdup().  Routine for copying one string to another.                    *
  ******************************************************************************/
-char * mystrdup(s)
-char *s;
+char * mystrdup(char *s)
 {
    char * t = NULL;
    if(s) t=malloc(strlen(s)+1);
@@ -138,9 +103,7 @@ char *s;
  * get_int().  Read an integer from stdin, issuing a prompt and checking      *
  * validity and range.  Loop until satisfied, returning EOF if appropriate.   *
  ******************************************************************************/
-int get_int(prompt, lo, hi)
-char	*prompt;
-int	lo, hi;
+int get_int(char *prompt, int lo, int hi)
 {
    char		ans_str[80];
    int		ans_i, ans_flag;
@@ -163,9 +126,7 @@ int	lo, hi;
  * get_real().  Read a real from stdin, issuing a prompt and checking         *
  * validity and range.  Loop until satisfied, returning EOF if appropriate.   *
  ******************************************************************************/
-real get_real(prompt, lo, hi)
-char	*prompt;
-real 	lo, hi;
+real get_real(char *prompt, real lo, real hi)
 {
    char		ans_str[80];
    real		ans_r; 
@@ -187,9 +148,7 @@ real 	lo, hi;
 /******************************************************************************
  * get_sym().  Read a character from stdin and match to supplied set          *
  ******************************************************************************/
-int get_sym(prompt, cset)
-char	*prompt;
-char	*cset;
+int get_sym(char *prompt, char *cset)
 {
    char		ans_c, ans_str[80];
    int		ans_flag;
@@ -211,8 +170,7 @@ char	*cset;
 /******************************************************************************
  * get_str().  Read a string from stdin, issuing a prompt                     *
  ******************************************************************************/
-char	*get_str(prompt)
-char	*prompt;
+char	*get_str(char *prompt)
 {
    char		ans_str[80];
    char		*str = malloc(80);
@@ -237,9 +195,7 @@ char	*prompt;
  *          returning integer values of s,f,n. f defaults to s and n to 1     *
  ******************************************************************************/
 int
-forstr(instr, start, finish, inc)
-char	*instr;
-int	*start, *finish, *inc;
+forstr(char *instr, int *start, int *finish, int *inc)
 {
    char	*p, *pp, *str = mystrdup(instr);
    
@@ -296,9 +252,7 @@ int	*start, *finish, *inc;
            (3*sys.nmols + 4*sys.nmols_r + 9)+ (level>>3 & 1) * \
            (3*sys.nmols + 3*sys.nmols_r + 9) + (level & 1))
 void
-dump_to_moldy(buf, system)
-float	*buf;
-system_mt *system;
+dump_to_moldy(float *buf, system_mt *system)
 {
    int i;
    float	*c_of_m = buf;
@@ -335,10 +289,7 @@ system_mt *system;
  * traj_con().  Connect molecular c_of_m`s into continuous trajectories      *
  ******************************************************************************/
 void
-traj_con(system, prev_cofm, n)
-system_mt       *system;
-vec_mt          *prev_cofm;
-int		n;
+traj_con(system_mt *system, vec_mt (*prev_cofm), int n)
 {
     int		i, imol;
 
@@ -355,11 +306,7 @@ int		n;
  * traj_con2().  Connect molecular c_of_m`s into continuous trajectories      * 
  ******************************************************************************/
 void
-traj_con2(species, prev_cofm, traj_cofm, sp_range)
-spec_mt		species[];
-vec_mt		*prev_cofm;
-vec_mt		*traj_cofm;
-int		sp_range[3];
+traj_con2(spec_mt *species, vec_mt (*prev_cofm), vec_mt (*traj_cofm), int *sp_range)
 {
    spec_mt	*spec;
    int		i, imol, totmol=0;
@@ -378,9 +325,7 @@ int		sp_range[3];
  * range_in. Function for determining ranges of atom positions to include     *
  ******************************************************************************/
 int
-range_in(system, range)
-system_mt	*system;
-real		range[3][3];
+range_in(system_mt *system, real (*range)[3])
 {
    double	box[3], blimit;
    mat_mp	h = system->h;
@@ -422,9 +367,7 @@ real		range[3][3];
  * in_region. Function for checking if atom lies within/out region            *
  ******************************************************************************/
 int
-in_region(pos, range)
-vec_mt	        pos;
-real		range[3][3];
+in_region(real *pos, real (*range)[3])
 {
 int	xi, yi, zi;
 

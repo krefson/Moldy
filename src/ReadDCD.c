@@ -10,8 +10,8 @@
  * RCS INFORMATION:
  *
  *      $RCSfile: ReadDCD.c,v $
- *      $Author: dalke $        $Locker: keith $                $State: Exp $
- *      $Revision: 1.6 $      $Date: 1997/03/13 17:38:56 $
+ *      $Author: keith $        $Locker:  $                $State: Exp $
+ *      $Revision: 1.7 $      $Date: 1997/11/27 15:58:19 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -64,9 +64,7 @@
 /*			GLOBAL VARIABLES				*/
 extern int errno;
 
-void pad(s, len)
-     char *s;
-     int len;
+void pad(char *s, int len)
 {
 	int curlen;
 	int i;
@@ -112,16 +110,8 @@ void pad(s, len)
 /*								*/
 /****************************************************************/
 
-int read_dcdheader(fp, N, NSET, ISTART, NSAVC, DELTA, NAMNF, FREEINDEXES)
-     FILE *fp;
-     int *N;
-     int *NSET;
-     int *ISTART;
-     int *NSAVC;
-     double *DELTA;
-     int *NAMNF;
-     int **FREEINDEXES;
-
+int read_dcdheader(FILE *fp, int *N, int *NSET, int *ISTART, int *NSAVC, 
+		   double *DELTA, int *NAMNF, int **FREEINDEXES)
 {
 	int input_integer;	/*  Integer buffer space	*/
 	char bigbuf[256];	/*  A large string buffer	*/
@@ -341,16 +331,8 @@ int read_dcdheader(fp, N, NSET, ISTART, NSAVC, DELTA, NAMNF, FREEINDEXES)
 /*									*/
 /************************************************************************/
 
-int read_dcdstep(fp, N, X, Y, Z, num_fixed, first, indexes)
-     FILE *fp;
-     int N;
-     float *X;
-     float *Y;
-     float *Z;
-     int num_fixed;
-     int first;
-     int *indexes;
-
+int read_dcdstep(FILE *fp, int N, float *X, float *Y, float *Z, 
+		 int num_fixed, int first, int *indexes)
 {
 	int ret_val;		/*  Return value from read		*/
 	int input_integer;	/*  Integer buffer space		*/
@@ -558,13 +540,7 @@ int read_dcdstep(fp, N, X, Y, Z, num_fixed, first, indexes)
 /*									*/
 /************************************************************************/
 
-int write_dcdstep(fp, N, X, Y, Z)
-     FILE *fp;
-     int N;
-     float *X;
-     float *Y;
-     float *Z;
-
+int write_dcdstep(FILE *fp, int N, float *X, float *Y, float *Z)
 {
 	int out_integer;
 
@@ -603,14 +579,7 @@ int write_dcdstep(fp, N, X, Y, Z)
 /*									     */
 /*****************************************************************************/
 
-int write_dcdheader(fp, filename, N, NSET, ISTART, NSAVC, DELTA)
-     FILE *fp;
-     char *filename;
-     int N;
-     int NSET;
-     int ISTART;
-     int NSAVC;
-     double DELTA;
+int write_dcdheader(FILE *fp, char *filename, int N, int NSET, int ISTART, int NSAVC, double DELTA)
 {
 	int	out_integer;
 	char	title_string[200];
@@ -693,11 +662,7 @@ int write_dcdheader(fp, filename, N, NSET, ISTART, NSAVC, DELTA)
 /*								*/
 /****************************************************************/
 
-void close_dcd_read(fp, num_fixed, indexes)
-     FILE *fp;
-     int num_fixed;
-     int *indexes;
-
+void close_dcd_read(FILE *fp, int num_fixed, int *indexes)
 {
 	fclose(fp);
 
@@ -722,9 +687,7 @@ void close_dcd_read(fp, num_fixed, indexes)
 /*								*/
 /****************************************************************/
 
-void close_dcd_write(fp)
-     FILE *fp;
-
+void close_dcd_write(FILE *fp)
 {
 	fclose(fp);
 }

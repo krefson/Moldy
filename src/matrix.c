@@ -31,6 +31,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: matrix.c,v $
+ *       Revision 2.8  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.7  1994/06/08 13:22:31  keith
  *       Null update for version compatibility
  *
@@ -103,7 +108,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/matrix.c,v 2.7 1994/06/08 13:22:31 keith stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/matrix.c,v 2.8 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -111,22 +116,18 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/matrix.c,v 2
 /*========================== Library include files ===========================*/
 #include	"string.h"
 /*========================== External function declarations ==================*/
-#ifdef HAVE_STDARG_H
 void		message(int *, ...);	/* Write a warning or error message   */
-#else
-void		message();		/* Write a warning or error message   */
-#endif
 /*============================================================================*/
 #define ABS(x)		((x) > 0 ? (x) : -(x))
 /******************************************************************************
  * 3 x 3  Matrix - vector multiply  (of multiple vectors)                     *
  * The input and output vectors need not necessarily be distinct              *
  ******************************************************************************/
-void mat_vec_mul(m, in_vec, out_vec, number)
-int		number;		/* Number of vectors to be multiplied         */
-mat_mt		m;		/* Matrix                                     */
-vec_mp		in_vec,		/* Input vector, [number][3]          (in/out)*/
-		out_vec;	/* Output vector.  CAN BE SAME AS INPUT  (out)*/
+void mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number)
+   		       		/* Number of vectors to be multiplied         */
+      		  		/* Matrix                                     */
+      		       		/* Input vector, [number][3]          (in/out)*/
+		        	/* Output vector.  CAN BE SAME AS INPUT  (out)*/
 {
    int i;
    register real	a0, a1, a2;
@@ -171,10 +172,10 @@ VECTORIZE
 /******************************************************************************
  * mat_mul   Multiply two 3 x 3 matrices. Result can NOT overwrite input.     *
  ******************************************************************************/
-void mat_mul(a, b, c)
-mat_mt	a,					/* Input matrix 1        (in) */
-	b,					/* Input matrix 2        (in) */
-	c;					/* Result matrix        (out) */
+void mat_mul(real (*a)[3], real (*b)[3], real (*c)[3])
+      	  					/* Input matrix 1        (in) */
+	  					/* Input matrix 2        (in) */
+	  					/* Result matrix        (out) */
 {
    register int	i, j;				/* Counters		      */
    
@@ -188,10 +189,10 @@ mat_mt	a,					/* Input matrix 1        (in) */
 /******************************************************************************
  *  mat_sca_mul.  Multiply a 3x3 matrix by a scalar                           *
  ******************************************************************************/
-void mat_sca_mul(s, a, b)
-register real	s;			/* Scalar			(in)  */
-mat_mt	a, 				/* Input matrix			(in)  */
-	b;				/* Result matrix	       (out)  */
+void mat_sca_mul(register real s, real (*a)[3], real (*b)[3])
+             	  			/* Scalar			(in)  */
+      	   				/* Input matrix			(in)  */
+	  				/* Result matrix	       (out)  */
 {	 
    register int i, j;
    for(i = 0; i < 3; i++)
@@ -201,10 +202,10 @@ mat_mt	a, 				/* Input matrix			(in)  */
 /******************************************************************************
  * mat_add   Add two 3 x 3 matrices.                                          *
  ******************************************************************************/
-void mat_add(a, b, c)
-mat_mt	a,					/* Input matrix 1        (in) */
-	b,					/* Input matrix 2        (in) */
-	c;					/* Result matrix        (out) */
+void mat_add(real (*a)[3], real (*b)[3], real (*c)[3])
+      	  					/* Input matrix 1        (in) */
+	  					/* Input matrix 2        (in) */
+	  					/* Result matrix        (out) */
 {
    register int	i, j;				/* Counters		      */
    
@@ -215,9 +216,9 @@ mat_mt	a,					/* Input matrix 1        (in) */
 /******************************************************************************
  * Transpose  Transpose a 3 x 3 matrix.  Will handle case of a = b            *
  ******************************************************************************/
-void transpose(a, b)
-mat_mt	a,					/* Input matrix          (in) */
-	b;					/* Transposed matrix    (out) */
+void transpose(real (*a)[3], real (*b)[3])
+      	  					/* Input matrix          (in) */
+	  					/* Transposed matrix    (out) */
 {
    mat_mt tmp;
 
@@ -231,8 +232,8 @@ mat_mt	a,					/* Input matrix          (in) */
 /******************************************************************************
  *  Det.  Determinant of a 3 x 3 matrix   				      *
  ******************************************************************************/
-double det(a)
-mat_mt	a;					/* Matrix		 (in) */
+double det(real (*a)[3])
+      	  					/* Matrix		 (in) */
 {
    int	i, j, k;				/* Counters		      */
    register double	deter = 0.0;
@@ -244,9 +245,9 @@ mat_mt	a;					/* Matrix		 (in) */
 /******************************************************************************
  * invert.  Calculate the inverse of a 3x3 matrix.  Adjoint method.           *
  ******************************************************************************/
-void invert(a, b)
-mat_mt	a,					/* Input matrix          (in) */
-	b;					/* Inverse matrix	(out) */
+void invert(real (*a)[3], real (*b)[3])
+      	  					/* Input matrix          (in) */
+	  					/* Inverse matrix	(out) */
 {
    int	i, j, k, l, m, n;			/* Counters		      */
    register real	deter;			/* Reciprocal of determinant  */

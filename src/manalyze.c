@@ -19,11 +19,15 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/manalyze.c,v 2.7 1994/06/08 13:22:31 keith stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/manalyze.c,v 2.8 1996/11/05 09:53:50 keith Exp $";
 #endif
 
 /*
  * $Log: manalyze.c,v $
+ * Revision 2.8  1996/11/05 09:53:50  keith
+ * Fixed bug which reported last record twice.
+ * Now prints offsets too for ease of debugging.
+ *
  * Revision 2.7  1994/06/08 13:22:31  keith
  * Null update for version compatibility
  *
@@ -69,6 +73,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/manalyze.c,v
  * 
  */
 
+#include	"time.h"
 #include	"defs.h"
 #include	"stddef.h"
 #include	"structs.h"
@@ -76,11 +81,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/manalyze.c,v
 #include	<stdio.h>
 
 
-char	*ctime();
+char	*ctime(const time_t *);
 int
-main(argc, argv)
-int	argc;
-char	*argv[];
+main(int argc, char **argv)
 {
    FILE		*f = stdin;
    restrt_mt	restart_header;

@@ -29,6 +29,11 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force_parallel.c,v $
+ *       Revision 2.10  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.9  1997/07/09 14:45:19  keith
  *       Brought up to daye with main-line developments in force.c.
  *       (Actually, re-introduced compiler parallelism into force.c 2.14)
@@ -124,7 +129,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force_parallel.c,v 2.9 1997/07/09 14:45:19 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/force_parallel.c,v 2.10 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -141,34 +146,28 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force_parall
 #include        "structs.h"
 #include        "messages.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc();             /* Interface to memory allocator       */
-void            tfree();               /* Free allocated memory               */
-void            afree();               /* Free allocated array                */
-int             search_lt();            /* Search a vector for el. < scalar   */
-void            gather();               /* Interface to CRAY gather routine   */
-void            mat_mul();              /* Matrix multiplier                  */
-double          det();                  /* Determinant of 3x3 matrix          */
-void            invert();               /* 3x3 matrix inverter                */
-void            mat_vec_mul();          /* Matrix by vector multiplier        */
-void            transpose();            /* Generate 3x3 matrix transpose      */
-void            zero_real();            /* Initialiser                        */
-void    	zero_double();          /* Initialiser                        */
-void            force_inner();          /* Inner loop forward reference       */
-void            rdf_inner();            /* RDF calc forward reference         */
-double          precision();            /* Floating pt precision.             */
-void            kernel();               /* Force kernel routine               */
-double          mol_radius();           /* Radius of largest molecule.        */
-void            rdf_accum();            /* Bin distances for rdf evaluation.  */
-#ifdef HAVE_STDARG_H
+gptr            *talloc(int n, size_mt size, int line, char *file);             /* Interface to memory allocator       */
+void            tfree(gptr *p);               /* Free allocated memory               */
+void            afree(gptr *p);               /* Free allocated array                */
+int             search_lt(int n, real *x, int ix, double s);            /* Search a vector for el. < scalar   */
+void            gather(int n, real *a, real *b, int *ix, int lim);               /* Interface to CRAY gather routine   */
+void            mat_mul(real (*a)[3], real (*b)[3], real (*c)[3]);              /* Matrix multiplier                  */
+double          det(real (*a)[3]);                  /* Determinant of 3x3 matrix          */
+void            invert(real (*a)[3], real (*b)[3]);               /* 3x3 matrix inverter                */
+void            mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);          /* Matrix by vector multiplier        */
+void            transpose(real (*a)[3], real (*b)[3]);            /* Generate 3x3 matrix transpose      */
+void            zero_real(real *r, int n);            /* Initialiser                        */
+void    	zero_double(double *r, int n);          /* Initialiser                        */
+void            force_inner(int ithread, int nthreads, real **site, real *chg, real ***potp, int *id, int n_nab_sites, int n_nabors, ivec_mt *nabor, int nx, int ny, int nz, cell_mt **cell, int n_frame_types, system_mt *system, real (*stress)[3], double *pe, real **site_force);          /* Inner loop forward reference       */
+void            rdf_inner(int ithread, int nthreads, real **site, int *id, int n_nab_sites, int n_nabors, ivec_mt *nabor, int nx, int ny, int nz, cell_mt **cell, int n_frame_types, system_mt *system);            /* RDF calc forward reference         */
+double          precision(void);            /* Floating pt precision.             */
+void            kernel(int jmin, int nnab, real *forceij, double *pe, real *r_sqr, real *nab_chg, double chg, double norm, double alpha, int ptype, real **pot);               /* Force kernel routine               */
+double          mol_radius(spec_mt *species, int nspecies);           /* Radius of largest molecule.        */
+void            rdf_accum(int lo, int hi, real *rsq, int iid, int *id, int *nab);            /* Bin distances for rdf evaluation.  */
 gptr            *arralloc(size_mt,int,...); /* Array allocator                */
 void            note(char *, ...);      /* Write a message to the output file */
 void            message(int *, ...);    /* Write a warning or error message   */
-#else
-gptr            *arralloc();            /* Array allocator                    */
-void            note();                 /* Write a message to the output file */
-void            message();              /* Write a warning or error message   */
-#endif
-int     	nprocessors();          /* Return no. of procs to execute on. */
+int     	nprocessors(void);          /* Return no. of procs to execute on. */
 /*========================== External data references ========================*/
 extern  contr_mt control;                   /* Main simulation control parms. */
 /*========================== Structs local to module =========================*/
@@ -224,9 +223,7 @@ static irvec_mt *ifloor; /*Lookup tables for int "floor()"    */
  *          contain duplicate entries.  This occurs if a site interacts with  *
  *          more than one periodic copy of another site.                      *
  ******************************************************************************/
-static void spxpy(n, sx, sy, ix)
-int     n, ix[];
-real    sx[], sy[];
+static void spxpy(int n, real *sx, real *sy, int *ix)
 {
    int i;
 NOVECTOR
@@ -244,9 +241,7 @@ NOVECTOR
  *  Any error at the boundaries is disasterous and hard to detect.            *
  *  Results may depend on machine-dependant rounding etc.                     *
  ******************************************************************************/
-int cellbin(rc, nc, eps)
-double rc, eps;
-int nc;
+int cellbin(double rc, int nc, double eps)
 {
    int ibin;
 
@@ -296,12 +291,7 @@ void histout()
 /******************************************************************************
  *  Neighbour_list.  Build the list of cells within cutoff radius of cell 0   *
  ******************************************************************************/
-static ivec_mt   *neighbour_list(nnabor, h, cutoff, nx, ny, nz, icheck)
-int     *nnabor;
-mat_mt  h;
-double  cutoff;
-int     nx, ny, nz;
-int     icheck;
+static ivec_mt   *neighbour_list(int *nnabor, real (*h)[3], double cutoff, int nx, int ny, int nz, int icheck)
 {
    double               dist;
    int                  i, j, ix, iy, iz, mx, my, mz, inabor = 0, nnab;
@@ -404,12 +394,7 @@ int     icheck;
  *         coincide with the corner points, the edges or none of the faces.   *
  *  4) The final list is built by scanning the map.                           *
  ******************************************************************************/
-static ivec_mt   *strict_neighbour_list(nnabor, h, cutoff, nx, ny, nz, icheck)
-int     *nnabor;
-mat_mt  h;
-double  cutoff;
-int     nx, ny, nz;
-int     icheck;
+static ivec_mt   *strict_neighbour_list(int *nnabor, real (*h)[3], double cutoff, int nx, int ny, int nz, int icheck)
 {
    double               dist;
    int                  i, j, k, ix, iy, iz, mx, my, mz, inabor = 0, nnab;
@@ -558,17 +543,16 @@ int     icheck;
  *  Fill_cells.  Allocate all the sites to cells depending on their centre of *
  *  mass co-ordinate by binning.                                              *
  ******************************************************************************/
-static void    fill_cells(c_of_m, nmols, site, species, h, nx, ny, nz, 
-                          lst, cell, frame_type)
-vec_mt  c_of_m[];                       /* Centre of mass co-ords        (in) */
-int     nmols;                          /* Number of molecules           (in) */
-real    **site;                         /* Atomic site co-ordinates      (in) */
-spec_mp species;                        /* Pointer to species array      (in) */
-mat_mt  h;                              /* Unit cell matrix              (in) */
-int     nx, ny, nz;
-cell_mt *lst;                           /* Pile of cell structs          (in) */
-cell_mt *cell[];                        /* Array of cells (assume zeroed)(out)*/
-int     *frame_type;                    /* Framework type counter        (out)*/
+static void    fill_cells(vec_mt (*c_of_m), int nmols, real **site, spec_mp species, real (*h)[3], int nx, int ny, int nz, cell_mt *lst, cell_mt **cell, int *frame_type)
+                                        /* Centre of mass co-ords        (in) */
+                                        /* Number of molecules           (in) */
+                                        /* Atomic site co-ordinates      (in) */
+                                        /* Pointer to species array      (in) */
+                                        /* Unit cell matrix              (in) */
+                   
+                                        /* Pile of cell structs          (in) */
+                                        /* Array of cells (assume zeroed)(out)*/
+                                        /* Framework type counter        (out)*/
 {
    int icell, imol, im=0, is, isite = 0;
    double eps = 8.0*precision();
@@ -623,17 +607,16 @@ int     *frame_type;                    /* Framework type counter        (out)*/
  *  site_neightbour list.  Build the list of sites withing interaction radius *
  *                         from the lists of sites in cells.                  *
  ******************************************************************************/
-int     site_neighbour_list(nab, reloc, n_nab_sites, nfnab, n_frame_types,
-                            n_nabors, ix, iy, iz, nx, ny, nz, nabor, cell)
-int     *nab;                           /* Array of sites in list      (out) */
-rvec_mt reloc[];                        /* Relocation indices for list (out) */
-int     n_nab_sites;                    /* Size of above arrays         (in) */
-int     nfnab[];                        /* N frame sites index by type (out) */
-int     n_frame_types;                  /* Number of distinct frameworks(in) */
-int     n_nabors;                       /* Number of neighbour cells    (in) */
-int     ix, iy, iz, nx, ny, nz;         /* Labels of current cell       (in) */
-ivec_mt *nabor;                         /* List of neighbour cells      (in) */
-cell_mt **cell;                         /* Head of cell list            (in) */
+int     site_neighbour_list(int *nab, rvec_mt *reloc, int n_nab_sites, int *nfnab, int n_frame_types, int n_nabors, int ix, int iy, int iz, int nx, int ny, int nz, ivec_mt *nabor, cell_mt **cell)
+                                        /* Array of sites in list      (out) */
+                                        /* Relocation indices for list (out) */
+                                        /* Size of above arrays         (in) */
+                                        /* N frame sites index by type (out) */
+                                        /* Number of distinct frameworks(in) */
+                                        /* Number of neighbour cells    (in) */
+                                        /* Labels of current cell       (in) */
+                                        /* List of neighbour cells      (in) */
+                                        /* Head of cell list            (in) */
 {
    int  jx, jy, jz;                     /* Labels of cell in neighbour list  */
    int  j0, jnab, jsite;                /* Counters for cells etc            */
@@ -768,15 +751,15 @@ cell_mt **cell;                         /* Head of cell list            (in) */
  * Force_calc.   This is the main intermolecular site force calculation       *
  * routine                                                                    *
  ******************************************************************************/
-void force_calc(site, site_force, system, species, chg, potpar, pe, stress)
-real            **site,                 /* Site co-ordinate arrays       (in) */
-                **site_force;           /* Site force arrays            (out) */
-system_mt       *system;                /* System struct                 (in) */
-spec_mt         species[];              /* Array of species records      (in) */
-real            chg[];                  /* Array of site charges         (in) */
-pot_mt          potpar[];               /* Array of potential parameters (in) */
-double          *pe;                    /* Potential energy             (out) */
-mat_mt          stress;                 /* Stress virial                (out) */
+void force_calc(real **site, real **site_force, system_mt *system, spec_mt *species, real *chg, pot_mt *potpar, double *pe, real (*stress)[3])
+                                        /* Site co-ordinate arrays       (in) */
+                                        /* Site force arrays            (out) */
+                                        /* System struct                 (in) */
+                                        /* Array of species records      (in) */
+                                        /* Array of site charges         (in) */
+                                        /* Array of potential parameters (in) */
+                                        /* Potential energy             (out) */
+                                        /* Stress virial                (out) */
 {
    int          isite, imol, i,         /* Site counter i,j                   */
                 i_id, ipot;             /* Miscellaneous                      */
@@ -1069,24 +1052,22 @@ VECTORIZE
  *  called once for each parallel thread.                                     *
  ******************************************************************************/
 void
-force_inner(ithread, nthreads, site, chg, potp, id, n_nab_sites, n_nabors, 
-            nabor, nx, ny, nz, cell, n_frame_types, system,
-            stress, pe, site_force)
-int             ithread, nthreads;      /* Parallel node variables.      (in) */
-real            **site;                 /* Site co-ordinate arrays       (in) */
-real            chg[];                  /* Array of site charges         (in) */
-real            ***potp;                /* Expanded potential parameter array */
-int             id[];                   /* Array of site_id[nsites]      (in) */
-int             n_nab_sites;            /* Dimension of site n'bor list arrays*/
-int             n_nabors;               /* Number of elements in lists.   (in)*/
-ivec_mt         *nabor;                 /* Lists of neighbour cells       (in)*/
-int             nx, ny, nz;             /* Number of subcells in MD cell  (in)*/
-cell_mt         **cell;                 /* Array of list heads of subcells(in)*/
-int             n_frame_types;          /* ==1 for no fw, 2 if fw present (in)*/
-system_mt       *system;                /* System struct                 (in) */
-mat_mt          stress;                 /* Stress virial                (out) */
-double          *pe;                    /* Potential energy             (out) */
-real            **site_force;           /* Site force arrays            (out) */
+force_inner(int ithread, int nthreads, real **site, real *chg, real ***potp, int *id, int n_nab_sites, int n_nabors, ivec_mt *nabor, int nx, int ny, int nz, cell_mt **cell, int n_frame_types, system_mt *system, real (*stress)[3], double *pe, real **site_force)
+                                        /* Parallel node variables.      (in) */
+                                        /* Site co-ordinate arrays       (in) */
+                                        /* Array of site charges         (in) */
+                                        /* Expanded potential parameter array */
+                                        /* Array of site_id[nsites]      (in) */
+                                        /* Dimension of site n'bor list arrays*/
+                                        /* Number of elements in lists.   (in)*/
+                                        /* Lists of neighbour cells       (in)*/
+                                        /* Number of subcells in MD cell  (in)*/
+                                        /* Array of list heads of subcells(in)*/
+                                        /* ==1 for no fw, 2 if fw present (in)*/
+                                        /* System struct                 (in) */
+                                        /* Stress virial                (out) */
+                                        /* Potential energy             (out) */
+                                        /* Site force arrays            (out) */
 {
                 /*
                  * The following arrays are for 'neighbour site list'
@@ -1315,18 +1296,17 @@ VECTORIZE
  *     but only calls rdf_accum().                                            *
  ******************************************************************************/
 void
-rdf_inner(ithread, nthreads, site, id, n_nab_sites, n_nabors, 
-            nabor, nx, ny, nz, cell, n_frame_types, system)
-int             ithread, nthreads;      /* Parallel node variables.      (in) */
-real            **site;                 /* Site co-ordinate arrays       (in) */
-int             id[];                   /* Array of site_id[nsites]      (in) */
-int             n_nab_sites;            /* Dimension of site n'bor list arrays*/
-int             n_nabors;               /* Number of elements in lists.   (in)*/
-ivec_mt         *nabor;                 /* Lists of neighbour cells       (in)*/
-int             nx, ny, nz;             /* Number of subcells in MD cell  (in)*/
-cell_mt         **cell;                 /* Array of list heads of subcells(in)*/
-int             n_frame_types;          /* ==1 for no fw, 2 if fw present (in)*/
-system_mt       *system;                /* System struct                  (in)*/
+rdf_inner(int ithread, int nthreads, real **site, int *id, int n_nab_sites, int n_nabors, ivec_mt *nabor, int nx, int ny, int nz, cell_mt **cell, int n_frame_types, system_mt *system)
+                                        /* Parallel node variables.      (in) */
+                                        /* Site co-ordinate arrays       (in) */
+                                        /* Array of site_id[nsites]      (in) */
+                                        /* Dimension of site n'bor list arrays*/
+                                        /* Number of elements in lists.   (in)*/
+                                        /* Lists of neighbour cells       (in)*/
+                                        /* Number of subcells in MD cell  (in)*/
+                                        /* Array of list heads of subcells(in)*/
+                                        /* ==1 for no fw, 2 if fw present (in)*/
+                                        /* System struct                  (in)*/
 {
    int          *nab  = ialloc(n_nab_sites);    /* Neigbour site gather vector*/
    rvec_mt      *reloc = aalloc(n_nab_sites, rvec_mt); /* Site PBC shifts     */

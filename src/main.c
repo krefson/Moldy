@@ -27,6 +27,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  * $Log: main.c,v $
+ * Revision 2.14  1999/10/08 10:53:34  keith
+ * Added checks to behave sensibly if rdf-interval changed during accumulation
+ * of RDF data upon restart and to discard excess data if begin-rdf changed.
+ *
  * Revision 2.13  1998/05/07 17:06:11  keith
  * Reworked all conditional compliation macros to be
  * feature-specific rather than OS specific.
@@ -167,7 +171,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/main.c,v 2.13 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/main.c,v 2.14 1999/10/08 10:53:34 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -177,44 +181,40 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/main.c,v 2.
 #define SIGXCPU SIGCPULIM
 #endif		/* Unicos uses SIGCPULIM not SIGXCPU. */
 #include	<stdio.h>
+#include	<string.h>
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
 /*========================== External function declarations ==================*/
-void	start_up();
-void	do_step();
-void	values();
-double	value();
-void	averages();
-void	output();
-void	rescale();
-void	dump();
-void	print_rdf();
-void	print_config();
-double	cpu();
-void	write_restart();
-void	purge();
-double  rt_clock();
-gptr    *talloc();		       /* Interface to memory allocator       */
-void    tfree();		       /* Free allocated memory	      	      */
+void	start_up(char *contr_name, char *out_name, system_mp system, spec_mp *species, site_mp *site_info, pot_mp *potpar, restrt_mt *restart_header, int *backup_restart);
+void	do_step(system_mp sys, spec_mt *species, site_mt *site_info, pot_mt *potpar, vec_mt (*meansq_f_t)[2], double *pe, real *dip_mom, real (*stress)[3], restrt_mt *restart_header, int backup_restart);
+void	values(system_mp system, spec_mt *species, vec_mt (*meansq_f_t)[2], double *pe, real *dipole, real (*stress_vir)[3]);
+double	value(av_n type, int comp);
+void	averages(void);
+void	output(void);
+void	rescale(system_mp system, spec_mp species);
+void	dump(system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3], double pe, restrt_mt *restart_header, int backup_restart);
+void	print_rdf(system_mt *system, spec_mt *species, site_mt *site_info);
+void	print_config(char *save_name, system_mp system, spec_mp species, site_mp site_info, pot_mp potpar);
+double	cpu(void);
+void	write_restart(char *save_name, restrt_mt *header, system_mp system, spec_mp species, site_mp site_info, pot_mp potpar);
+void	purge(char *file);
+double  rt_clock(void);
+gptr    *talloc(int n, size_mt size, int line, char *file);		       /* Interface to memory allocator       */
+void    tfree(gptr *p);		       /* Free allocated memory	      	      */
 #ifdef SPMD
-void    par_begin();
-void    par_sigintreset();
-void    par_finish();
-void    par_isum();
-void    par_imax();
-void    par_broadcast();
-void    replicate();
+void    par_begin(int *argc, char ***argv, int *ithread, int *nthreads);
+void    par_sigintreset(void);
+void    par_finish(void);
+void    par_isum(int *buf, int n);
+void    par_imax(int *idat);
+void    par_broadcast(gptr *buf, int n, size_mt size, int ifrom);
+void    replicate(contr_mt *control, system_mt *system, spec_mt **spec_ptr, site_mt **site_info, pot_mt **pot_ptr, restrt_mt *restart_header);
 #endif
-#ifdef HAVE_STDARG_H
 void	note(char *, ...);		/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
-#else
-void	note();				/* Write a message to the output file */
-void	message();			/* Write a warning or error message   */
-#endif
-void	rmlockfiles();			/* Delete all lock files.	      */
-gptr    *rdf_ptr();                     /* Return ptr to start of rdf data    */
+void	rmlockfiles(void);			/* Delete all lock files.	      */
+gptr    *rdf_ptr(int *size);                     /* Return ptr to start of rdf data    */
 /*========================== External data definition ========================*/
 contr_mt control;                           /* Main simulation control parms. */
 int ithread=0, nthreads=1;
@@ -224,14 +224,12 @@ int ithread=0, nthreads=1;
  ******************************************************************************/
 static int	sig_flag = 0;
 static
-void	shutdown(sig)
-int sig;
+void	shutdown(int sig)
 {
    sig_flag = sig;
 }
 static
-void	siglock(sig)
-int sig;
+void	siglock(int sig)
 {
    rmlockfiles();
 #ifdef SPMD
@@ -245,9 +243,7 @@ int sig;
 /******************************************************************************
  *  Main program.							      *
  ******************************************************************************/
-int main(argc, argv)
-int	argc;
-char	*argv[];
+int main(int argc, char **argv)
 {
    system_mt	system;
    spec_mt	*species;

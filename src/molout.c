@@ -1,13 +1,9 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/molout.c,v 1.3 1999/11/01 17:24:49 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/molout.c,v 1.4 1999/11/29 10:48:56 keith Exp $";
 #endif
 
 #include "defs.h"
-#ifdef HAVE_STDARG_H
 #include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
 #include <errno.h>
 #include <math.h>
 #include "stdlib.h"
@@ -17,17 +13,13 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/molout.c,v 
 #include "structs.h"
 #include "messages.h"
 #include "ReadDCD.h"
-#ifdef HAVE_STDARG_H
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
-#else
-gptr	*arralloc();	        	/* Array allocator		      */
-#endif
 
-void	invert();
-void	make_sites();
-void    error();
-void    afree();
-char    *atime();
+void	invert(real (*a)[3], real (*b)[3]);
+void	make_sites(real (*h)[3], vec_mp c_of_m_s, quat_mp quat, vec_mp p_f_sites, int framework, real **site, int nmols, int nsites);
+void    error(char *format, ...);
+void    afree(gptr *p);
+char    *atime(void);
 /*======================== Global vars =======================================*/
 extern contr_mt		control;
 #define OUTBIN 2
@@ -39,10 +31,10 @@ extern contr_mt		control;
 /******************************************************************************
  ******************************************************************************/
 void 
-mat_vec_mul3(m, vec, number)
-int             number;         /* Number of vectors to be multiplied         */
-real            m[3][3];        /* Matrix                                     */
-real            **vec;          /* Input vector.  Output vector same as input */
+mat_vec_mul3(real (*m)[3], real **vec, int number)
+                                /* Number of vectors to be multiplied         */
+                                /* Matrix                                     */
+                                /* Input vector.  Output vector same as input */
 {
    int i;
    register double        a0, a1, a2;
@@ -60,10 +52,7 @@ real            **vec;          /* Input vector.  Output vector same as input */
  * Centre_mass.  Shift system centre of mass to origin (in discrete steps),   *
  ******************************************************************************/
 static void
-centre_mass(species, nspecies, c_of_m)
-spec_mt		species[];
-int		nspecies;
-vec_mt		c_of_m;
+centre_mass(spec_mt *species, int nspecies, real *c_of_m)
 {
    double	mass;
    spec_mt	*spec;
@@ -94,10 +83,7 @@ vec_mt		c_of_m;
  * Shift.  Translate all co-ordinates.					      *
  ******************************************************************************/
 static
-void	shift(r, nmols, s)
-vec_mt	r[];
-int	nmols;
-vec_mt	s;
+void	shift(vec_mt (*r), int nmols, real *s)
 {
    int imol;
    for(imol = 0; imol < nmols; imol++)
@@ -112,13 +98,7 @@ vec_mt	s;
  * input data file for the graphics program SCHAKAL88.			      *
  ******************************************************************************/
 static void
-schakal_out(system, h, species, site_info, insert, n)
-int	n;
-system_mt	*system;
-mat_mp          h;
-spec_mt		species[];
-site_mt		site_info[];
-char		*insert;
+schakal_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char *insert, int n)
 {
    double	**site = (double**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
@@ -172,13 +152,7 @@ char		*insert;
  * Brookhaven Protein Data Bank (pdb) file                                    *
  ******************************************************************************/
 static void
-pdb_out(system, h, species, site_info, insert, intyp)
-system_mt	*system;
-mat_mp		h;
-site_mt		site_info[];
-char		*insert;
-spec_mt		species[];
-int		intyp;
+pdb_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char *insert, int intyp)
 {
    double	**site = (double**)arralloc(sizeof(double),2,
                                             0,2,0,system->nsites-1);
@@ -250,12 +224,7 @@ int		intyp;
  * input data file for the graphics program XYZ (rasmol -xyz file)	      *
  ******************************************************************************/
 static void
-xyz_out(system, h, species, site_info, insert)
-system_mt	*system;
-mat_mp          h;
-spec_mt		species[];
-site_mt		site_info[];
-char		*insert;
+xyz_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char *insert)
 {
    double	**site = (double**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
@@ -311,12 +280,7 @@ char		*insert;
  * DCD data file for the graphics program VMD                              *
  ******************************************************************************/
 static void
-dcd_out(system, h, species, site_info, n, irec, inc)
-int	n, irec, inc;
-system_mt	*system;
-mat_mp          h;
-spec_mt		species[];
-site_mt		site_info[];
+dcd_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, int n, int irec, int inc)
 {
    double	**site = (double**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
@@ -362,10 +326,7 @@ site_mt		site_info[];
  * binary atomic co-ordinates.						      *
  ******************************************************************************/
 static void
-atoms_out(system, h, species)
-system_mt	*system;
-mat_mp	        h;
-spec_mt		species[];
+atoms_out(system_mt *system, mat_mp h, spec_mt *species)
 {
    double	**site = (double**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
@@ -404,13 +365,7 @@ spec_mt		species[];
  * SERC Daresbury Lab's Cambridge Structure Search and Retrieval (cssr) file  *
  ******************************************************************************/
 static void
-cssr_out(system, h, species, site_info, insert, intyp)
-system_mt	*system;
-mat_mp          h;
-site_mt		site_info[];
-char		*insert;
-spec_mt		species[];
-int		intyp;
+cssr_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char *insert, int intyp)
 {
    double	**site = (double**)arralloc(sizeof(double),2,
                                             0,2,0,system->nsites-1);
@@ -490,15 +445,7 @@ int		intyp;
  * Translate system relative to either centre of mass of posn of framework.   *
  ******************************************************************************/
 void
-moldy_out(n, irec, inc, system, h, species, site_info, outsw, intyp, insert)
-int	n, irec, inc;
-system_mt	*system;
-mat_mp          h;
-spec_mt		species[];
-site_mt		site_info[];
-int		outsw;
-int		intyp;
-char		*insert;
+moldy_out(int n, int irec, int inc, system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, int outsw, int intyp, char *insert)
 {
    spec_mp	spec, frame_spec  = NULL;
    vec_mt	c_of_m;

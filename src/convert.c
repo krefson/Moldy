@@ -23,6 +23,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: convert.c,v $
+ *       Revision 2.10  1999/11/01 17:22:10  keith
+ *       Got rid of useless (and lint-unfriendly) _mp declarations.
+ *       Made "const" qualifier conditionally excluded if using lint.
+ *
  *       Revision 2.9  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -89,7 +93,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/convert.c,v 2.9 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/convert.c,v 2.10 1999/11/01 17:22:10 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -105,13 +109,8 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/convert.c,v
 extern	      contr_mt	control;            /* Main simulation control parms. */
 extern  const dim_mt	pot_dim[][NPOTP];    /* Pot'l dimension specification */
 /*========================== External function declarations ==================*/
-#ifdef HAVE_STDARG_H
 void	note(char *, ...);		/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
-#else
-void	note();				/* Write a message to the output file */
-void	message();			/* Write a warning or error message   */
-#endif
 /*========================== Structs local to module =========================*/
 /* This struct array contains all details for conversions in 'control' struct */
 typedef struct
@@ -140,9 +139,9 @@ static const conv_mt
  *  convert it to new units (unit_to).  Uses logarithms to avoid overflow.    *
  ******************************************************************************/
 #define	MAX_SCALE	80			/* 1e35 - safe for any machine*/
-static double	unit_scale(dim, unit_from, unit_to)
-const dim_mt	*dim;			/* Dimensions			      */
-unit_mt	*unit_from, *unit_to;		/* Units to convert from/to	      */
+static double	unit_scale(const dim_mt *dim, unit_mt *unit_from, unit_mt *unit_to)
+            	     			/* Dimensions			      */
+       	                     		/* Units to convert from/to	      */
 {
    double	lnscale = 	dim->m*(log(unit_from->m) - log(unit_to->m))
 			      + dim->l*(log(unit_from->l) - log(unit_to->l))
@@ -156,14 +155,13 @@ unit_mt	*unit_from, *unit_to;		/* Units to convert from/to	      */
  *  Convert_potentials   Scale potential parameters, site masses and charges  *
  *  from input units to program units.					      *
  ******************************************************************************/
-void	conv_potentials(unit_from, unit_to, potpar, npotpar, ptype,
-			   site_info, max_id)
-const unit_mt	*unit_from, *unit_to;	/* Values of units for conversion     */
-pot_mt		potpar[];		/* Array of potpar records[max_id**2] */
-int		npotpar;		/* Number of 'active' parameters      */
-int		ptype;			/* Potential type		      */
-site_mt		site_info[];		/* Site specification array[max_id]   */
-int		max_id;			/* How many site id's		      */
+void	conv_potentials(const unit_mt *unit_from, const unit_mt *unit_to, pot_mt *potpar, int npotpar, int ptype, site_mt *site_info, int max_id)
+             	                     	/* Values of units for conversion     */
+      		         		/* Array of potpar records[max_id**2] */
+   		        		/* Number of 'active' parameters      */
+   		      			/* Potential type		      */
+       		            		/* Site specification array[max_id]   */
+   		       			/* How many site id's		      */
 {
    int		idi, idj, ip;		/* Counters for id's and potpar	      */
    static dim_mt	mass_dim   = {1,0,0,0},	/* Dimensions of mass		      */
@@ -190,9 +188,9 @@ int		max_id;			/* How many site id's		      */
  *   input and program units.  Which to convert are indicated by the array    *
  *   'conv' which contains a pointer to the data and a dimension struct.      *
  ******************************************************************************/
-void	conv_control(unit, direction)
-const unit_mt	*unit; 			/* Units conversion is to/from	      */
-boolean		direction;		/* True=from input, false=to input    */
+void	conv_control(const unit_mt *unit, boolean direction)
+             	       			/* Units conversion is to/from	      */
+       		          		/* True=from input, false=to input    */
 {
    int		ic;			/* Counter			      */
    for(ic = 0; ic < NCONV; ic++)

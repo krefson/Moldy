@@ -31,6 +31,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.13  2000/04/26 16:01:02  keith
+ *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
+ *
  *       Revision 2.12  1999/12/20 15:19:26  keith
  *       Check for rdf-limit or nbinds changed on restart, and handle
  *       gracefully.
@@ -166,7 +169,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/restart.c,v 2.12 1999/12/20 15:19:26 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/restart.c,v 2.13 2000/04/26 16:01:02 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -180,20 +183,15 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/restart.c,v
 #include	"messages.h"
 #include	"xdr.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc();	       /* Interface to memory allocator       */
-void            tfree();	       /* Free allocated memory	      	      */
-int		replace();
-gptr		*av_ptr();
-char		*atime();
-char		*cctime();
-gptr		*rdf_ptr();
-#ifdef HAVE_STDARG_H
+gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+void            tfree(gptr *p);	       /* Free allocated memory	      	      */
+int		replace(char *file1, char *file2);
+gptr		*av_ptr(size_mt *size, int av_convert);
+char		*atime(void);
+char		*cctime(time_mt *timeloc);
+gptr		*rdf_ptr(int *size);
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
-#else
-void		note();			/* Write a message to the output file */
-void		message();		/* Write a warning or error message   */
-#endif
 /*========================== External data references ========================*/
 extern contr_mt control;		    /* Main simulation control parms. */
 /*============================================================================*/
@@ -205,8 +203,7 @@ static int    size_flg = 0;
  * creset() reset and rewind input stream.				      *
  ******************************************************************************/
 static
-void creset(fp)
-FILE 	*fp;
+void creset(FILE *fp)
 {
    size_flg = 0;
    if( fseek(fp,0L,0) )
@@ -217,8 +214,7 @@ FILE 	*fp;
  *   Leave file pointer unchanged.  ie do lookahead.			      *
  ******************************************************************************/
 static
-size_mt cnext(xfp)
-xfp_mt	xfp;
+size_mt cnext(xfp_mt xfp)
 {
    (void)fread((gptr*)&stored_size, sizeof stored_size, 1, xfp.fp);
    if(ferror(xfp.fp))
@@ -230,8 +226,7 @@ xfp_mt	xfp;
 }
 #ifdef USE_XDR
 static
-size_mt xdr_cnext(xfp)
-xfp_mt	xfp;
+size_mt xdr_cnext(xfp_mt xfp)
 {
    if( xdr_read ) {
       if(!xdr_u_long(xfp.xp,&stored_size))
@@ -249,12 +244,7 @@ xfp_mt	xfp;
  *   error and end of file						      *
  ******************************************************************************/
 static
-void	cread(xfp, ptr, size, nitems, proc)
-xfp_mt	xfp;
-gptr	*ptr;
-size_mt	size;
-int	nitems;
-xdrproc_t proc;
+void	cread(xfp_mt xfp, gptr *ptr, size_mt size, int nitems, xdrproc_t proc)
 {
    int status;
    if( size_flg )
@@ -283,12 +273,7 @@ xdrproc_t proc;
 }
 #ifdef USE_XDR
 static
-void	xdr_cread(xfp, ptr, size, nitems, proc)
-xfp_mt	xfp;
-gptr	*ptr;
-size_mt	size;
-int	nitems;
-xdrproc_t proc;
+void	xdr_cread(xfp_mt xfp, gptr *ptr, size_mt size, int nitems, xdrproc_t proc)
 {
    unsigned int	       begin_data, end_data;
 
@@ -330,12 +315,7 @@ xdrproc_t proc;
  *  cwrite.  opposite of cread.  write the length followed by the data	      *
  ******************************************************************************/
 static
-void	cwrite(xfp, ptr, size, nitems, proc)
-xfp_mt	xfp;
-gptr	*ptr;
-size_mt	size;
-int	nitems;
-xdrproc_t proc;
+void	cwrite(xfp_mt xfp, gptr *ptr, size_mt size, int nitems, xdrproc_t proc)
 {
    unsigned long       length = (unsigned long)size*nitems;
    if( fwrite((gptr*)&length, sizeof length, 1, xfp.fp) == 0 )
@@ -345,12 +325,7 @@ xdrproc_t proc;
 }
 #ifdef USE_XDR
 static
-void	xdr_cwrite(xfp, ptr, size, nitems, proc)
-xfp_mt	xfp;
-gptr	*ptr;
-size_mt	size;
-int	nitems;
-xdrproc_t proc;
+void	xdr_cwrite(xfp_mt xfp, gptr *ptr, size_mt size, int nitems, xdrproc_t proc)
 {
    unsigned long       length=0;
    unsigned int	       begin_length, begin_data, end_data;
@@ -392,10 +367,7 @@ xdrproc_t proc;
  *  restart header and control structs.                                       *
  ******************************************************************************/
 static   XDR		xdrs;
-void	re_re_header(restart, header, contr)
-FILE	  *restart;
-restrt_mt *header;
-contr_mt  *contr;
+void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr)
 {
    int		vmajor,vminor;
    xfp_mt	xfp;
@@ -441,10 +413,7 @@ contr_mt  *contr;
  *  conv_potsize    Convert potential parameters array if NPOTP has changed   *
  ******************************************************************************/
 static
-void conv_potsize(pot, old_pot_size, old_npotp, npotpar, npotrecs)
-pot_mt	*pot;
-size_mt   old_pot_size;
-int     old_npotp, npotpar, npotrecs;
+void conv_potsize(pot_mt *pot, size_mt old_pot_size, int old_npotp, int npotpar, int npotrecs)
 {
    int		i;
    char		*tmp_pot;
@@ -469,13 +438,13 @@ int     old_npotp, npotpar, npotrecs;
  *  structures system and species and arrays site_info and potpar (allocating *
  *  space) and read in the supplied values.  				      *
  ******************************************************************************/
-void	re_re_sysdef(restart, vsn, system, spec_ptr, site_info, pot_ptr)
-FILE		*restart;		/* File pointer to read info from     */
-char		*vsn;			/* Version string file written with */
-system_mp	system;			/* Pointer to system array (in main)  */
-spec_mp		*spec_ptr;		/* Pointer to be set to species array */
-site_mp		*site_info;		/* To be pointed at site_info array   */
-pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
+void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr)
+    		         		/* File pointer to read info from     */
+    		     			/* Version string file written with */
+         	       			/* Pointer to system array (in main)  */
+       		          		/* Pointer to be set to species array */
+       		           		/* To be pointed at site_info array   */
+      		         		/* To be pointed at potpar array      */
 {
    spec_mp	spec;
    size_mt	old_pot_size;
@@ -537,11 +506,11 @@ pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
 /******************************************************************************
  *  read_restart.   read the dynamic simulation variables from restart file.  *
  ******************************************************************************/
-void	read_restart(restart, vsn, system, av_convert)
-FILE		*restart;
-char		*vsn;			/* Version string file written with */
-system_mp	system;
-int		av_convert; 
+void	read_restart(FILE *restart, char *vsn, system_mp system, int av_convert)
+    		         
+    		     			/* Version string file written with */
+         	       
+   		            
 {
    gptr		*ap;			/* Pointer to averages database       */
    size_mt	asize;			/* Size of averages database	      */
@@ -606,13 +575,13 @@ int		av_convert;
  *  the 'restart_header' and 'control' structs, the system-specification      *
  *  (system species, site_info and potpar data) and the dynamic variables.    *
  ******************************************************************************/
-void	write_restart(save_name, header, system, species, site_info, potpar)
-char		*save_name;		/* Name of save file to be written    */
-restrt_mt	*header;		/* Restart header struct.	      */
-system_mp	system;			/* Pointer to system array (in main)  */
-spec_mp		species;		/* Pointer to be set to species array */
-site_mp		site_info;		/* To be pointed at site_info array   */
-pot_mp		potpar;			/* To be pointed at potpar array      */
+void	write_restart(char *save_name, restrt_mt *header, system_mp system, spec_mp species, site_mp site_info, pot_mp potpar)
+    		           		/* Name of save file to be written    */
+         	        		/* Restart header struct.	      */
+         	       			/* Pointer to system array (in main)  */
+       		        		/* Pointer to be set to species array */
+       		          		/* To be pointed at site_info array   */
+      		       			/* To be pointed at potpar array      */
 {
    spec_mp	spec;
    gptr		*ap;			/* Pointer to averages database       */
@@ -624,7 +593,7 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
    FILE		*save;
    XDR		xdrsw;
    xfp_mt	xfp;
-   char		*vsn = "$Revision: 2.12 $"+11;
+   char		*vsn = "$Revision: 2.13 $"+11;
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)

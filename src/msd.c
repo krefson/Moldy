@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 2.0 1999/11/18 09:58:33 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/msd.c,v 2.0 1999/11/18 09:58:33 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 2.0
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 2.0  1999/11/18 09:58:33  keith
+ *  checked in with -k by keith at 1999/11/25 14:27:58
+ *
  *  Revision 2.0  1999/11/25  14:05:33  craig
  *  Selection of positions outside of limits now possible with -X,-Y,-Z
  *  Added new function "in_region" to utlsup.c
@@ -148,11 +151,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 2.0
  *
  */
 #include "defs.h"
-#ifdef HAVE_STDARG_H
 #include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
 #include <errno.h>
 #include <math.h>
 #include "stdlib.h"
@@ -162,25 +161,21 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 2.0
 #include "structs.h"
 #include "messages.h"
 #include "utlsup.h"
-#ifdef HAVE_STDARG_H
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
-#else
-gptr	*arralloc();	        	/* Array allocator		      */
-#endif
 
-void	make_sites();
-char	*strlower();
-void	read_sysdef();
-void	initialise_sysdef();
-void	re_re_header();
-void	re_re_sysdef();
-void	allocate_dynamics();
-void	read_restart();
-void	init_averages();
-int	getopt();
-gptr	*talloc();
-void    tfree();
-void    zero_real();
+void	make_sites(real (*h)[3], vec_mp c_of_m_s, quat_mp quat, vec_mp p_f_sites, int framework, real **site, int nmols, int nsites);
+char	*strlower(char *s);
+void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_info, pot_mp *pot_ptr);
+void	initialise_sysdef(system_mp system, spec_mt *species, site_mt *site_info, quat_mt (*qpf));
+void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr);
+void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr);
+void	allocate_dynamics(system_mp system, spec_mt *species);
+void	read_restart(FILE *restart, char *vsn, system_mp system, int av_convert);
+void	init_averages(int nspecies, char *vsn, long int roll_interval, long int old_roll_interval, int *av_convert);
+int	getopt(int, char *const *, const char *);
+gptr	*talloc(int n, size_mt size, int line, char *file);
+void    tfree(gptr *p);
+void    zero_real(real *r, int n);
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 #define MSD  0
@@ -197,11 +192,7 @@ int ithread=0, nthreads=1;
  *		- coords vs time for each species/atom for GNUplot            * 
  ******************************************************************************/
 void
-traj_gnu(species, traj_cofm, nslices, range, sp_range)
-spec_mt         species[];
-vec_mt          **traj_cofm;
-real            range[3][3];
-int             nslices, sp_range[3];
+traj_gnu(spec_mt *species, vec_mt (**traj_cofm), int nslices, real (*range)[3], int *sp_range)
 {
    int          totmol=0, imol, i, itime;
    spec_mp      spec;
@@ -229,11 +220,7 @@ int             nslices, sp_range[3];
  *		- simple columnar format e.g. for IDL		              * 
  ******************************************************************************/
 void
-traj_idl(species, traj_cofm, nslices, range, sp_range)
-spec_mt		species[];
-vec_mt		**traj_cofm;
-real		range[3][3];
-int		nslices, sp_range[3];
+traj_idl(spec_mt *species, vec_mt (**traj_cofm), int nslices, real (*range)[3], int *sp_range)
 {
    int		totmol, imol, i, itime;
    spec_mp	spec;
@@ -257,13 +244,7 @@ int		nslices, sp_range[3];
  * msd_calc. Calculate msds from trajectory array		       *
  ***********************************************************************/    
 void
-msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, range, traj_cofm, msd)
-spec_mt		species[];
-vec_mt		**traj_cofm;
-real            ***msd;
-int		sp_range[3];
-real            range[3][3];
-int             mstart, mfinish, minc, max_av, it_inc;
+msd_calc(spec_mt *species, int *sp_range, int mstart, int mfinish, int minc, int max_av, int it_inc, real (*range)[3], vec_mt (**traj_cofm), real ***msd)
 {
    int it, irec, totmol, imsd, ispec, imol, nmols, cmols, i;
    spec_mp      spec;
@@ -307,11 +288,7 @@ int             mstart, mfinish, minc, max_av, it_inc;
  * msd_out().  Output routine for displaying msd results                      *
  ******************************************************************************/
 void
-msd_out(species, msd, max_av, nmsd, sp_range)
-spec_mt         *species;
-real            ***msd;
-int             max_av;
-int             nmsd, sp_range[3];
+msd_out(spec_mt *species, real ***msd, int max_av, int nmsd, int *sp_range)
 {
    int          ispec=0, imsd, i;
    real         totmsd;
@@ -349,9 +326,7 @@ int             nmsd, sp_range[3];
 contr_mt		control;
 
 int
-main(argc, argv)
-int	argc;
-char	*argv[];
+main(int argc, char **argv)
 {
    int	c, cflg = 0, ans_i, sym = 0;
    char 	line[80];

@@ -29,6 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: input.c,v $
+ *       Revision 2.11  1999/07/22 13:14:45  keith
+ *       SOme grammatical fixes to error messages.
+ *
  *       Revision 2.10  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -207,7 +210,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/input.c,v 2.10 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/input.c,v 2.11 1999/07/22 13:14:45 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -221,15 +224,11 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/input.c,v 2
 #include	"structs.h"
 #include	"messages.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc();	       /* Interface to memory allocator       */
-void            tfree();	       /* Free allocated memory	      	      */
-void		q_mul_1();
-void    	zero_real();            /* Initialiser                        */
-#ifdef HAVE_STDARG_H
+gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+void            tfree(gptr *p);	       /* Free allocated memory	      	      */
+void		q_mul_1(real *p, real *q, real *r);
+void    	zero_real(real *r, int n);            /* Initialiser                        */
 void		message(int *, ...);	/* Write a warning or error message   */
-#else
-void		message();		/* Write a warning or error message   */
-#endif
 /*========================== External data references ========================*/
 extern	      contr_mt	control;	/* Main simulation control record     */
 extern	const pots_mt	potspec[];	/* Potential type specification       */
@@ -247,10 +246,7 @@ extern	const pots_mt	potspec[];	/* Potential type specification       */
  *  get_line  read an input line skipping blank and comment lines	      *
  ******************************************************************************/
 static
-char	*get_line(line, len, file)
-char	*line;
-int	len;
-FILE	*file;
+char	*get_line(char *line, int len, FILE *file)
 {
    char	*s, *t;
    int  i;
@@ -270,8 +266,7 @@ FILE	*file;
 /******************************************************************************
  * strlower   convert a string to lowercase anr return a pointer to it        *
  ******************************************************************************/
-char	*strlower(s)
-char	*s;
+char	*strlower(char *s)
 {
    char	*t;
    for(t = s; *t != '\0'; t++)
@@ -282,9 +277,7 @@ char	*s;
  *  Sort array of species structs so frameworks are at end.		      *
 ******************************************************************************/
 static
-void sort_species(species, nspecies)
-spec_mt	*species;
-int	nspecies;
+void sort_species(spec_mt *species, int nspecies)
 {
    spec_mt tmp, *lo=species, *hi=species+nspecies-1;
 
@@ -316,12 +309,12 @@ int	nspecies;
  *  largest site identifier index in order to allocate the dynamic arrays.    *
  *  Pass 2 does the actual reading and checking.                              *
  ******************************************************************************/
-void	read_sysdef(file, system, spec_pp, site_info, pot_ptr)
-FILE		*file;			/* File pointer to read info from     */
-system_mp	system;			/* Pointer to system array (in main)  */
-spec_mp		*spec_pp;		/* Pointer to be set to species array */
-site_mp		*site_info;		/* To be pointed at site_info array   */
-pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
+void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_info, pot_mp *pot_ptr)
+    		      			/* File pointer to read info from     */
+         	       			/* Pointer to system array (in main)  */
+       		         		/* Pointer to be set to species array */
+       		           		/* To be pointed at site_info array   */
+      		         		/* To be pointed at potpar array      */
 {
    int		nspecies = 0,		/* Number of distinct species         */
    		max_id = 0,		/* Largest site identifier index      */
@@ -561,11 +554,11 @@ pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
  *    species  x  y  z  q0  q1  q2  q3                                        *
  * 'species'  is the name,  x, y, z are FRACTIONAL co-ords and 4 quaternions. *
  ******************************************************************************/
-void	lattice_start(file, system, species, qpf)
-FILE	*file; 				/* File to read info from	      */
-system_mp system;			/* System info struct		      */
-spec_mp	species;			/* Array of species info structs      */
-quat_mt	qpf[];				/* Princ frame rotation quaternion    */
+void	lattice_start(FILE *file, system_mp system, spec_mp species, quat_mt (*qpf))
+    	       				/* File to read info from	      */
+                 			/* System info struct		      */
+       	        			/* Array of species info structs      */
+       	      				/* Princ frame rotation quaternion    */
 {
    typedef struct init_s {int species;  struct init_s *next;
                   double r[3], q[4];} init_mt; 	/* For linked list of coords  */
@@ -677,9 +670,7 @@ quat_mt	qpf[];				/* Princ frame rotation quaternion    */
  * assign()  Convert string value by format and assign to pointer location.    *
  ******************************************************************************/
 static
-int assign(strval, fmt, ptr)
-char	*strval, *fmt;
-gptr	*ptr;
+int assign(char *strval, char *fmt, gptr *ptr)
 {
    int len = strlen(fmt);
    int code = fmt[MAX(0,len-1)];
@@ -711,9 +702,7 @@ gptr	*ptr;
  *  according to the format string and stores it at the value of the pointer  *
  *  in 'match'.	"name=" with no value means assign a null string. 	      *
  ******************************************************************************/
-void	read_control(file,match)
-FILE	 *file;
-const match_mt *match;
+void	read_control(FILE *file, const match_mt *match)
 {
    char		line[LLEN],
    		name[LLEN],

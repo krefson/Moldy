@@ -36,7 +36,7 @@ bindir = $(exec_prefix)/bin
 
 
 W32BIN=w32bin
-PRFLAGS=-c "-DUSE_XDR -DSPMD -D__MSDOS__"
+PRFLAGS=-c "-DUSE_XDR -DSPMD -D__MSDOS__ -DALLOC_SEPARATELY -DBSP -I/home/eeyore_data/keith/sc/BSP/include -DTCGMSG -DMP -I/usr/local/mpi/include -D_CRAY1 -D__convexc__ -Dalliant -Dardent  -DHAVE_TIMES -DHAVE_GETRUSAGE -DHAVE_GETTIMEOFDAY -Dvms -D_T3D"
 LINT=		lint
 TAR=		tar
 DCLAR=		dclar
@@ -179,8 +179,8 @@ $(FIGS):
 protoize:	$(CFILES) $(HFILES)
 		protoize -k $(PRFLAGS) $(CFILES)
 
-proto-mdshak:	mdshak.c $(SHAKC)
-		protoize mdshak.c $(SHAKC)
+proto-utils:	$(UTILC)
+		protoize $(UTILC) $(SHAKC)
 
 install:	moldy $(UTILS) $(UTILS2)
 		for file in $?; do $(INSTALL) $$file $(bindir); done

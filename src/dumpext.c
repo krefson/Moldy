@@ -29,7 +29,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #endif
 #include        "utlsup.h"
 
-int		getopt();
+int		getopt(int, char *const *, const char *);
 
 /******************************************************************************
  * strstr replacement for pre-ANSI machines which don't have it.              *
@@ -76,8 +76,7 @@ typedef struct cpt_mt
  * List manipulation procedures						      *
  ******************************************************************************/
 void
-insert(entry, head)
-list_mt	*entry, *head;
+insert(list_mt *entry, list_mt *head)
 {
    while( head->next != NULL && entry->i > head->next->i)
       head = head->next;
@@ -87,8 +86,7 @@ list_mt	*entry, *head;
 }
 
 void
-print_list(head)
-list_mt	*head;
+print_list(list_mt *head)
 {
    if(head == NULL)
       return;
@@ -100,10 +98,7 @@ list_mt	*head;
  * Put.  Write data in text or binary form.				      *
  ******************************************************************************/
 void
-put(buf, n, bflg)
-float *buf;
-int   n;
-int   bflg;
+put(float *buf, int n, int bflg)
 {
 #ifdef DEBUG2
    fprintf(stderr,"Put: %d at %8x (%s)\n", n, buf, bflg? "binary":"text");
@@ -119,14 +114,7 @@ int   bflg;
  * Extract.  Process one dump file, extracting and outputting data.	      *
  ******************************************************************************/
 void
-extract(dump_name, cpt_mask, molecules, cpt, ncpt, tslice, num, inc, 
-	bflg, nmols, xdr)
-char	*dump_name;
-int	cpt_mask;
-list_mt	*molecules;
-cpt_mt	cpt[];
-int	ncpt, tslice, num, inc;
-int	bflg, nmols, xdr;
+extract(char *dump_name, int cpt_mask, list_mt *molecules, cpt_mt *cpt, int ncpt, int tslice, int num, int inc, int bflg, int nmols, int xdr)
 {
    FILE		*dump_file;
    dump_mt	header;
@@ -230,9 +218,7 @@ int	bflg, nmols, xdr;
 }
 
 int
-main(argc, argv)
-int	argc;
-char	*argv[];
+main(int argc, char **argv)
 {
    int	c;
    extern int	optind;

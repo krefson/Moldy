@@ -23,7 +23,7 @@ typedef struct {
  * created ROOT structure, or return a NULL pointer if it cannot be created.
  */
 
-ROOT *make_root()
+ROOT *make_root(void)
 {
    ROOT *root;
 
@@ -40,8 +40,7 @@ ROOT *make_root()
  * A pointer to the new node is returned or NULL on error.
  */
 
-NODE *make_node(data)
-void	*data;
+NODE *make_node(void *data)
 {
    NODE		*node;
 
@@ -56,10 +55,7 @@ void	*data;
 /*
  * The following function creates and inserts a node in the list.
  */
-int insert_data(root, data, position)
-ROOT	**root;
-void	*data;
-int	position;
+int insert_data(ROOT **root, void *data, int position)
 {
    NODE		*new;
 
@@ -118,9 +114,7 @@ int	position;
  * or, in the case where the node is the first node in the list, then the address of
  * that first node is returned.
  */
-NODE *find_previous_node(root, this_node)
-ROOT	**root;
-NODE	*this_node;
+NODE *find_previous_node(ROOT **root, NODE *this_node)
 {
    NODE *previous_node, *current_node;
 
@@ -145,11 +139,7 @@ NODE	*this_node;
  * prior to the node pointed to by 'node', otherwise it will be inserted after
  * that node. 'data' must point to the object to be inserted into the list.
  */
-int insert_at_position(root, node, data, position)
-ROOT	**root;
-NODE	*node;
-void	*data;
-int	position;
+int insert_at_position(ROOT **root, NODE *node, void *data, int position)
 {
    int   flag = 0;
    NODE  *new, *prev;
@@ -190,9 +180,7 @@ int	position;
  * This function returns a pointer to the nth node of the linked list
  */
 
-NODE *select_node(root, n)
-ROOT	**root;
-int	n;
+NODE *select_node(ROOT **root, int n)
 {
    NODE		*node;
    int		i;
@@ -213,8 +201,7 @@ int	n;
  * success, the program's 'root' pointer is set to NULL and 0 is returned.
  */
 
-int delete_list(root)
-ROOT	**root;
+int delete_list(ROOT **root)
 {
    NODE		*this;          /* pointer to node to be deleted */
    NODE		*next;          /* pointer to next node to be deleted */

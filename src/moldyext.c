@@ -20,48 +20,28 @@ You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #include "defs.h"
 #include "string.h"
-#ifdef HAVE_STDARG_H
 #include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
 #include "stdlib.h"
 #include "stddef.h"
 #include <stdio.h>
 
-int	getopt();
+int	getopt(int, char *const *, const char *);
 
 #define NSIGNAL 8
 #define buf_inc 128
 
-#ifdef HAVE_STDARG_H
-#undef  va_alist
-#define	va_alist char *format, ...
-#ifdef  va_dcl
-#   undef  va_dcl
-#endif
-#define va_dcl /* */
-#endif
 /*VARARGS*/
-void error(va_alist)
-va_dcl
+void error(char *format, ...)
+
 {
    va_list p;
-#ifdef HAVE_STDARG_H
    va_start(p, format);
-#else
-   char	*format;
-
-   va_start(p);
-   format = va_arg(p, char *);
-#endif
    vfprintf(stderr,format,p);
    fputc('\n',stderr);
    va_end(p);
    exit(3);
 }
-static char * mystrdup(s)
-char *s;
+static char * mystrdup(char *s)
 {
    char * t=malloc(strlen(s)+1);
    return t?strcpy(t,s):0;
@@ -71,9 +51,7 @@ char *s;
  *  in a char array.  Format is 1,3,6-9,3 . . . ie comma-separated with cont- *
  *  iguous range specified with hyphen.  Numbering starts at 1.		      *
  ******************************************************************************/
-int	tokenise(fields, mask, len)
-char	*fields, *mask;
-int	len;
+int	tokenise(char *fields, char *mask, int len)
 {
    char	*s;
    int	lo, hi, i, n;
@@ -105,7 +83,7 @@ int	len;
  * line containing 8 '-' chars or a linefeed. It takes a char* pointer to a   *
  * malloc'ed buffer area, and realloc's this if it needs more space.          *
  *****************************************************************************/
-char	*read_record()
+char	*read_record(void)
 {
    static	char	*buf = NULL;
    static	int	buf_len = 132;
@@ -162,9 +140,7 @@ char	*read_record()
  ******************************************************************************/
 #define MAX_FIELDS 256
 int
-main(argc, argv)
-int	argc;
-char	*argv[];
+main(int argc, char **argv)
 {
    char *buf, *fields;
    char mask[MAX_FIELDS];

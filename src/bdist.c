@@ -6,6 +6,9 @@ Copyright (C) 1999 Craig Fisher */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: bdist.c,v $
+ *  Revision 1.5  1999/11/01 17:16:43  keith
+ *  Fixed lint complaints.
+ *
  *  Revision 1.4  1999/09/24 10:51:54  keith
  *  Minor changes to Usage message.
  *
@@ -72,8 +75,7 @@ typedef struct
 /*
  * strcpy with call to memory allocation
  */
-static char * mystrdup(s)
-char *s;
+static char * mystrdup(char *s)
 {
    char * t = NULL;
    if(s) t=malloc(strlen(s)+1);
@@ -83,12 +85,10 @@ char *s;
  * forstr.  Parse string str of format s-f:n  (final 2 parts optional),       *
  *          returning integer values of s,f,n.                                *
  ******************************************************************************/
-int forstr(instr, start, finish, inc)
-char    *instr;
-int     *start, *finish, *inc;
+int forstr(char *instr, int *start, int *finish, int *inc)
 {
    char *p, *pp, *str = mystrdup(instr);
-   long strtol();
+   long strtol(const char *, char **, int);
   
    if( (p = strchr(str,':')) != NULL)
    {
@@ -120,8 +120,7 @@ int     *start, *finish, *inc;
 /******************************************************************************
  * get_str().  Read a string from stdin, issuing a prompt.                    *
  ******************************************************************************/
-char    *get_str(prompt)
-char    *prompt;
+char    *get_str(char *prompt)
 {
    char         ans_str[80];
    char         *str = malloc(80);
@@ -144,10 +143,7 @@ char    *prompt;
 /****************************************************************************
  * check_bond(). compare atoms in bond list with those read from file       *
  ****************************************************************************/
-int check_bond(root, atom1, atom2)
-ROOT	**root;
-char	*atom1;
-char	*atom2;
+int check_bond(ROOT **root, char *atom1, char *atom2)
 {
    NODE    *node;
    BOND    *bd;
@@ -173,11 +169,7 @@ char	*atom2;
 /****************************************************************************
  * check_angle(). compare atoms in angle list with those read from file     *
  ****************************************************************************/
-int check_angle(root, atom1, atom2, atom3)
-ROOT	**root;
-char	*atom1;
-char	*atom2;
-char	*atom3;
+int check_angle(ROOT **root, char *atom1, char *atom2, char *atom3)
 {
    NODE    *node;
    ANGLE   *ang;
@@ -204,9 +196,7 @@ char	*atom3;
 /****************************************************************************
  * check_count(). compare counts in linked list with those read from file   *
  ****************************************************************************/
-int check_count(root, x)
-ROOT	**root;
-int	x;
+int check_count(ROOT **root, int x)
 {
    NODE    *node;
    COUNT   *ct;
@@ -234,10 +224,7 @@ int	x;
 /****************************************************************************
  * display_BOND(). print out bond distribution list                         *
  ****************************************************************************/
-void display_BOND(root, bstart, binc)
-ROOT	**root;
-int	bstart;
-int     binc;
+void display_BOND(ROOT **root, int bstart, int binc)
 {
    NODE         *node;
    NODE         *node_count;
@@ -275,10 +262,7 @@ int     binc;
 /****************************************************************************
  * display_ANGLE(). print out angle distribution list                       *
  ****************************************************************************/
-void display_ANGLE(root, astart, ainc)
-ROOT	**root;
-int	astart;
-int	ainc;
+void display_ANGLE(ROOT **root, int astart, int ainc)
 {
    NODE         *node;
    NODE		*node_count;
@@ -316,9 +300,7 @@ int	ainc;
 /******************************************************************************
  * main().   Driver program for accumulating distribution data                *
  ******************************************************************************/
-int main(argc, argv)
-int	argc;
-char	*argv[];
+int main(int argc, char **argv)
 {
    extern char	*optarg;
    int		errflg = 0;

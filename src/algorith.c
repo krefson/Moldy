@@ -42,6 +42,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: algorith.c,v $
+ *       Revision 2.12  2000/04/26 16:01:01  keith
+ *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
+ *
  *       Revision 2.11  1999/09/14 13:31:31  keith
  *       Experimental version implementing true const P (strain-mask=512).
  *
@@ -138,7 +141,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/algorith.c,v 2.11 1999/09/14 13:31:31 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/algorith.c,v 2.12 2000/04/26 16:01:01 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -148,28 +151,23 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/algorith.c,
 #include 	"string.h"
 #include	"stddef.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc();	       /* Interface to memory allocator       */
-void            tfree();	       /* Free allocated memory	      	      */
-void	mat_vec_mul();			/* 3 x 3 Matrix by Vector multiplier  */
-void	mat_mul();	          	/* 3 x 3 matrix multiplier	      */
-void	mat_add();			/* Add 2 3x3 matrices                 */
-void	mat_sca_mul();			/* Multiply 3x3 matrix by scalar      */
-void	transpose();			/* transpose a 3x3 matrix	      */
-void	invert();			/* invert a 3x3 matrix		      */
-double	det();				/* Determinant of 3x3 matrix	      */
-void	q_to_rot();			/* Make rotation matrix from quat'n   */
-void	q_mul();
-void	q_conj_mul();
-double	vdot();				/* Vector dot product		      */
-double	sum();				/* Vector sum			      */
-void	vscale();
-#ifdef HAVE_STDARG_H
+gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+void            tfree(gptr *p);	       /* Free allocated memory	      	      */
+void	mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);			/* 3 x 3 Matrix by Vector multiplier  */
+void	mat_mul(real (*a)[3], real (*b)[3], real (*c)[3]);	          	/* 3 x 3 matrix multiplier	      */
+void	mat_add(real (*a)[3], real (*b)[3], real (*c)[3]);			/* Add 2 3x3 matrices                 */
+void	mat_sca_mul(register real s, real (*a)[3], real (*b)[3]);			/* Multiply 3x3 matrix by scalar      */
+void	transpose(real (*a)[3], real (*b)[3]);			/* transpose a 3x3 matrix	      */
+void	invert(real (*a)[3], real (*b)[3]);			/* invert a 3x3 matrix		      */
+double	det(real (*a)[3]);				/* Determinant of 3x3 matrix	      */
+void	q_to_rot(real *quat, real (*rot)[3]);			/* Make rotation matrix from quat'n   */
+void	q_mul(quat_mp p, quat_mp q, quat_mp r, int n);
+void	q_conj_mul(quat_mp p, quat_mp q, quat_mp r, int n);
+double	vdot(int n, real *x, int ix, real *y, int iy);				/* Vector dot product		      */
+double	sum(register int n, register double *x, register int ix);				/* Vector sum			      */
+void	vscale(register int n, register double s, register real *x, register int ix);
 void	note(char *, ...);		/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
-#else
-void	note();				/* Write a message to the output file */
-void	message();			/* Write a warning or error message   */
-#endif
 /*========================== Macros ==========================================*/
 #define MATMUL(i, m, r, o) (m[i][0]*r[0][o] + m[i][1]*r[1][o] + m[i][2]*r[2][o])
 /*============================================================================*/
@@ -181,13 +179,13 @@ void	message();			/* Write a warning or error message   */
  *  Apply each rotation to nvec/nquat vectors.                                *
  ******************************************************************************/
 static
-void rotate(r_in, r_out, nvec, quat, nquat, inv_mat)
-vec_mp		r_in,		/* Co-ordinates to be rotated [n][3] (in)     */
-		r_out;		/* Resulting co-ordinates [n][3]    (out)     */
-quat_mp		quat;		/* Quaternions for the rotation.     (in)     */
-int		nvec,		/* Number of co-ordinates.           (in)     */
-		nquat;		/* Number of quaternions             (in)     */
-invrot		inv_mat;	/* Flag to do inverse rotations      (in)     */
+void rotate(vec_mp r_in, vec_mp r_out, int nvec, quat_mp quat, int nquat, invrot inv_mat)
+      		     		/* Co-ordinates to be rotated [n][3] (in)     */
+		      		/* Resulting co-ordinates [n][3]    (out)     */
+       		     		/* Quaternions for the rotation.     (in)     */
+   		     		/* Number of co-ordinates.           (in)     */
+		      		/* Number of quaternions             (in)     */
+      		        	/* Flag to do inverse rotations      (in)     */
 {
    mat_mt	rot;
    int		iquat;
@@ -206,10 +204,7 @@ invrot		inv_mat;	/* Flag to do inverse rotations      (in)     */
 /******************************************************************************
  *  mean_square  Calculate the mean square of list of vectors for each cmpnt  *
  ******************************************************************************/
-void	mean_square(x, meansq, nmols)
-vec_mt	x[];
-vec_mt	meansq;
-int	nmols;
+void	mean_square(vec_mt (*x), real *meansq, int nmols)
 {
    int		i;
    for(i = 0; i < 3; i++)
@@ -218,9 +213,9 @@ int	nmols;
 /******************************************************************************
  *   vec_dist      Return the normalised distance between 2 vectors           *
  ******************************************************************************/
-double	vec_dist(v1, v2, n)
-real	*v1, *v2;		/* Input vectors			      */
-int	n;			/* Length ie v1[n], v2[n]		      */
+double	vec_dist(real *v1, real *v2, int n)
+    	         		/* Input vectors			      */
+   	  			/* Length ie v1[n], v2[n]		      */
 {
    register	double s=0, s1=0,s2=0;	/* Accumulators for sums	      */
    while(n-- > 0)
@@ -240,11 +235,11 @@ int	n;			/* Length ie v1[n], v2[n]		      */
  *  molecule_force     Calculate the centre of mass forces on a number of     *
  *  molecules given the site forces and the site co-ordinates.                *
  ******************************************************************************/
-void mol_force(site_force, force, nsites, nmols)
-real		**site_force;	/* Site forces [nsites*nmols][3]        (in)  */
-vec_mp		force;		/* Centre of mass forces [nmols][3]    (out)  */
-int		nsites,		/* Number of sites on one molecule      (in)  */
-		nmols;		/* Number of molecules                  (in)  */
+void mol_force(real **site_force, vec_mp force, int nsites, int nmols)
+    		             	/* Site forces [nsites*nmols][3]        (in)  */
+      		      		/* Centre of mass forces [nmols][3]    (out)  */
+   		       		/* Number of sites on one molecule      (in)  */
+		      		/* Number of molecules                  (in)  */
 {
    int	i,  imol, isite;
    double	f;
@@ -262,13 +257,13 @@ int		nsites,		/* Number of sites on one molecule      (in)  */
  *  molecule_torque    Calculate the torque on a number of identical          *
  *  molecules given the space frame site forces and co-ordinates.             *
  ******************************************************************************/
-void mol_torque(site_force, site, torque, quat, nsites, nmols)
-real		**site_force;	/* Principal frame site forces          (in)  */
-vec_mp		site,		/* Principal frame site co-ordinates    (in)  */
-		torque;		/* Molecular torques [nmols][3]        (out)  */
-quat_mp		quat;		/* Molecular quaternions [nmols][4]     (in)  */
-int		nsites,		/* Number of sites on one molecule      (in)  */
-		nmols;		/* Number of molecules                  (in)  */
+void mol_torque(real **site_force, vec_mp site, vec_mp torque, quat_mp quat, int nsites, int nmols)
+    		             	/* Principal frame site forces          (in)  */
+      		     		/* Principal frame site co-ordinates    (in)  */
+		       		/* Molecular torques [nmols][3]        (out)  */
+       		     		/* Molecular quaternions [nmols][4]     (in)  */
+   		       		/* Number of sites on one molecule      (in)  */
+		      		/* Number of molecules                  (in)  */
 {
    vec_mp	princ_force = ralloc(nsites);
    int	i, j, k, imol, isite;
@@ -300,15 +295,15 @@ VECTORIZE
  *  molecules from the principal-frame sites, the quaternions and the centre  *
  *  of mass co-ordinates.  Called once for each molecular species.            *
  ******************************************************************************/
-void make_sites(h, c_of_m_s , quat, p_f_sites, framework, site, nmols, nsites)
-mat_mt		h;		/* Unit cell matrix h		     (in)     */
-vec_mp		c_of_m_s,	/* Centre of mass co-ords [nmols][3] (in)     */
-		p_f_sites;	/* Principal-frame sites [nsites][3] (in)     */
-real		**site;		/* Sites [nmols*nsites][3]          (out)     */
-int		framework;	/* Flag to signal framework structure (in)    */
-quat_mp		quat;		/* Quaternions [nmols][4]            (in)     */
-int		nmols,		/* Number of molecules                        */
-		nsites;		/* Number of sites on each molecule           */
+void make_sites(real (*h)[3], vec_mp c_of_m_s, quat_mp quat, vec_mp p_f_sites, int framework, real **site, int nmols, int nsites)
+      		  		/* Unit cell matrix h		     (in)     */
+      		         	/* Centre of mass co-ords [nmols][3] (in)     */
+		          	/* Principal-frame sites [nsites][3] (in)     */
+    		       		/* Sites [nmols*nsites][3]          (out)     */
+   		          	/* Flag to signal framework structure (in)    */
+       		     		/* Quaternions [nmols][4]            (in)     */
+   		      		/* Number of molecules                        */
+		       		/* Number of sites on each molecule           */
 {
    int		imol, isite, i;	/* Counters				      */
    vec_mt	c_of_m;		/* Unscaled centre of mass co-ordinates       */
@@ -354,11 +349,11 @@ int		nmols,		/* Number of molecules                        */
  *  newton   Apply newton's equation to calculate the acceleration of a       *
  *  number of molecules given the force.                                      *
  ******************************************************************************/
-void newton(force, acc, mass, nmols)
-vec_mp		force,		/* Centre of mass forces [nmols][3]      (in) */
-		acc;		/* Accelerations [nmols][3]             (out) */
-double		mass;		/* Molecular mass                        (in) */
-int		nmols;		/* Number of molecules                   (in) */
+void newton(vec_mp force, vec_mp acc, double mass, int nmols)
+      		      		/* Centre of mass forces [nmols][3]      (in) */
+		    		/* Accelerations [nmols][3]             (out) */
+      		     		/* Molecular mass                        (in) */
+   		      		/* Number of molecules                   (in) */
 {
    int	imol, i;
    double	rmass = 1.0/mass;
@@ -377,12 +372,12 @@ int		nmols;		/* Number of molecules                   (in) */
  *  accelerations in the Parinello and Rahman zero-stress method.             *
  *  Parinello M. and Rahman A. J. Appl. Phys. 52(12), 7182-7190 (1981)        *
  ******************************************************************************/
-void parinello(h, h_dot, vel, acc, acc_out, nmols)
-mat_mt	h,			/* P and R's unit cell matrix            (in) */
-	h_dot;			/* Derivative of h matrix                (in) */
-vec_mp	vel,			/* Centre of mass scaled velocities      (in) */
-	acc, acc_out;		/* C of M accelerations              (in/out) */
-int	nmols;			/* Size of vel and acc/ number molecules (in) */
+void parinello(real (*h)[3], real (*h_dot)[3], vec_mp vel, vec_mp acc, vec_mp acc_out, int nmols)
+      	  			/* P and R's unit cell matrix            (in) */
+	      			/* Derivative of h matrix                (in) */
+      	    			/* Centre of mass scaled velocities      (in) */
+	             		/* C of M accelerations              (in/out) */
+   	      			/* Size of vel and acc/ number molecules (in) */
 {
    mat_mt	h_tr,		/* Transpose of h			      */
    		h_tr_dot,	/* Transpose of h_dot			      */
@@ -415,11 +410,11 @@ int	nmols;			/* Size of vel and acc/ number molecules (in) */
 /******************************************************************************
  *  Trans_ke  calculate and return the translational kinetic energy           *
  ******************************************************************************/
-double	trans_ke(h, vel_s, mass, nmols)
-mat_mt	h;			/* Unit cell matrix			 (in) */
-vec_mt	vel_s[];		/* Scaled c of m velocities		 (in) */
-double	mass;			/* Mass of a molecule of this species	 (in) */
-int	nmols;			/* Number of molecules			 (in) */
+double	trans_ke(real (*h)[3], vec_mt (*vel_s), double mass, int nmols)
+      	  			/* Unit cell matrix			 (in) */
+      	        		/* Scaled c of m velocities		 (in) */
+      	     			/* Mass of a molecule of this species	 (in) */
+   	      			/* Number of molecules			 (in) */
 {
    double	ke;
    vec_mp	vel = ralloc(nmols);	/* Unscaled (real) velocities         */
@@ -435,10 +430,10 @@ int	nmols;			/* Number of molecules			 (in) */
 /******************************************************************************
  *  rot_ke  calculate and return the rotational kinetic energy                *
  ******************************************************************************/
-double	rot_ke(omega_p, inertia, nmols)
-quat_mt	omega_p[];		/* Principal angular velocities    */
-vec_mt	inertia;		/* Principal moments of inertia		 (in) */
-int	nmols;			/* Number of molecules			 (in) */
+double	rot_ke(quat_mt (*omega_p), real *inertia, int nmols)
+       	          		/* Principal angular velocities    */
+      	        		/* Principal moments of inertia		 (in) */
+   	      			/* Number of molecules			 (in) */
 {
    double	ke = 0.0;
    int		i;
@@ -451,12 +446,12 @@ int	nmols;			/* Number of molecules			 (in) */
 /******************************************************************************
  * energy_dyad.  Calculate the dyadic sum m V V (dyad over V) for zero stress *
  ******************************************************************************/
-void energy_dyad(ke_dyad, h, vels, mass, nmols)
-mat_mt	ke_dyad,			/* Dyad is accumulated here  (in/out) */
-	h;				/* Unit cell matrix		(in)  */
-vec_mp	vels;				/* Scaled velocities		(in)  */
-double	mass;				/* Mass of particles		(in)  */
-int	nmols;				/* Number of molecules		(in)  */
+void energy_dyad(real (*ke_dyad)[3], real (*h)[3], vec_mp vels, double mass, int nmols)
+      	        			/* Dyad is accumulated here  (in/out) */
+	  				/* Unit cell matrix		(in)  */
+      	     				/* Scaled velocities		(in)  */
+      	     				/* Mass of particles		(in)  */
+   	      				/* Number of molecules		(in)  */
 {
    int		i, j;				/* Counters		      */
    vec_mp	vel = ralloc(nmols);		/* Real velocities	      */
@@ -471,22 +466,21 @@ int	nmols;				/* Number of molecules		(in)  */
 
    xfree(vel);
 }
-double trace(mat)
-mat_mt  mat;
+double trace(real (*mat)[3])
 {
   return(mat[0][0] + mat[1][1] + mat[2][2]);
 }
 /******************************************************************************
  * Rahman   Calculate the unit cell matrix accelerations                      *
  ******************************************************************************/
-void rahman(stress_vir, h, hddot, ke_dyad, press, W, mask)
-mat_mt	stress_vir,			/* Stress virial		      */
-	h,				/* Unit cell matrix		      */
-	hddot,				/* Unit cell accelerations            */
-	ke_dyad;			/* Translational kinetic energy dyad  */
-double	press,				/* Externally applied pressure	      */
-	W;				/* Piston mass parameter	      */
-int	mask;				/* Mask constrained el's of h matrix  */
+void rahman(real (*stress_vir)[3], real (*h)[3], real (*hddot)[3], real (*ke_dyad)[3], double press, double W, int mask)
+      	           			/* Stress virial		      */
+	  				/* Unit cell matrix		      */
+	      				/* Unit cell accelerations            */
+	        			/* Translational kinetic energy dyad  */
+      	      				/* Externally applied pressure	      */
+	  				/* Piston mass parameter	      */
+   	     				/* Mask constrained el's of h matrix  */
 {
    double	vol = det(h);		/* Unit cell volume		      */
    double       cpscale;                /* Scale factor for uniform scale case*/
@@ -535,12 +529,12 @@ int	mask;				/* Mask constrained el's of h matrix  */
  * main formula: mass * accel = force - alpha * mass * vel                    *
  * Function is added by VVMurashov on 22/10/95                                *
  ******************************************************************************/
-void hoover_tr(alpha, accel_in, accel_out, vel, nmols)
-double  alpha;                  /* Thermostat  multiplier                     */
-vec_mp	vel,			/* Centre of mass scaled velocities      (in) */
-        accel_in,               /* Array of forces                   (in/out) */
-        accel_out;
-int	nmols;			/* Size of vel and force/number molecules(in) */
+void hoover_tr(double alpha, vec_mp accel_in, vec_mp accel_out, vec_mp vel, int nmols)
+                                /* Thermostat  multiplier                     */
+      	    			/* Centre of mass scaled velocities      (in) */
+                                /* Array of forces                   (in/out) */
+                  
+   	      			/* Size of vel and force/number molecules(in) */
 {
    int		i, j;   	/* Counters				      */
 
@@ -553,13 +547,13 @@ int	nmols;			/* Size of vel and force/number molecules(in) */
  * main formula: inertia * accel = torque - alpha * inertia * omega           *
  * Function is added by VVMurashov on 22/10/95                                *
  ******************************************************************************/
-void hoover_rot(alpha, inertia, force_in, force_out, omega, nmols)
-double   alpha;                 /* Nose-Hoover multiplier                     */
-vec_mt   inertia;               /* Inertia vector                             */
-quat_mp	 omega;		        /* Angular velocities                    (in) */
-vec_mp   force_in,              /* Array of forces                   (in/out) */
-         force_out;
-int	 nmols;			/* Size of vel and force/number molecules(in) */
+void hoover_rot(double alpha, real *inertia, vec_mp force_in, vec_mp force_out, quat_mp omega, int nmols)
+                                /* Nose-Hoover multiplier                     */
+                                /* Inertia vector                             */
+       	       		        /* Angular velocities                    (in) */
+                                /* Array of forces                   (in/out) */
+                   
+   	       			/* Size of vel and force/number molecules(in) */
 {
    int		i, imols;   	/* Counters				      */
    for(i = 0; i < 3; i++)                       /* Add correction term        */
@@ -573,10 +567,10 @@ int	 nmols;			/* Size of vel and force/number molecules(in) */
  * alpha1 = (SUM force * vel), and alpha2 = (SUM mass * vel^2)               *
  * Function is added by VVMurashov on 3/11/95                                *
  *****************************************************************************/
-double gaussiant(vec1, vec2, nmols)
-vec_mp   vec1,                  /* First array                           (in) */
-         vec2;                  /* Second array                          (in) */
-int	 nmols; 		/* Size of arrays [nmols][n]             (in) */
+double gaussiant(vec_mp vec1, vec_mp vec2, int nmols)
+                                /* First array                           (in) */
+                                /* Second array                          (in) */
+   	        		/* Size of arrays [nmols][n]             (in) */
 {
    double   alpha = 0.0;        /* Sum of products                      (out) */
    int		i;      	/* Counters				      */
@@ -588,10 +582,10 @@ int	 nmols; 		/* Size of arrays [nmols][n]             (in) */
  * Gaussianr1() function is the same as above, but allows for dealing with   *
  * quaternion array. Function is added by VVMurashov on 3/11/95              *
  *****************************************************************************/
-double gaussianr1(vec1, vec2, nmols)
-vec_mp   vec1;                  /* First array                           (in) */
-quat_mp  vec2;                  /* Second array                          (in) */
-int	 nmols; 		/* Size of arrays [nmols][n]             (in) */
+double gaussianr1(vec_mp vec1, quat_mp vec2, int nmols)
+                                /* First array                           (in) */
+                                /* Second array                          (in) */
+   	        		/* Size of arrays [nmols][n]             (in) */
 {
    double   alpha = 0.0;        /* Sum of products                      (out) */
    int		i;      	/* Counters				      */
@@ -605,10 +599,10 @@ int	 nmols; 		/* Size of arrays [nmols][n]             (in) */
  * where alpha1 = (SUM torque * omega), and alpha2 = (SUM inertia * omega^2) *
  * Function is added by VVMurashov on 3/11/95                                *
  *****************************************************************************/
-double gaussianr2(omega, inertia, nmols)
-vec_mt   inertia;               /* Inertia vector                             */
-quat_mp	 omega;		        /* Angular velocities                    (in) */
-int	 nmols;			/* Size of vel and force/number molecules(in) */
+double gaussianr2(quat_mp omega, real *inertia, int nmols)
+                                /* Inertia vector                             */
+       	       		        /* Angular velocities                    (in) */
+   	       			/* Size of vel and force/number molecules(in) */
 {
    double   alpha = 0.0;        /* Gaussian multiplier                  (out) */
    int		i;      	/* Counters				      */

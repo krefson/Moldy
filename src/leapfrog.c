@@ -34,9 +34,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: leapfrog.c,v $
+ *       Revision 2.1  2000/04/26 16:03:54  keith
+ *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
+ *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/leapfrog.c,v 2.10 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/leapfrog.c,v 2.1 2000/04/26 16:03:54 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -46,20 +49,15 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/leapfrog.c,
 #include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
-gptr	*talloc();
-void	q_mul();
-void	q_conj_mul();
-void	q_mul_conj();
-void	vscale();
-void	tfree();
+gptr	*talloc(int n, size_mt size, int line, char *file);
+void	q_mul(quat_mp p, quat_mp q, quat_mp r, int n);
+void	q_conj_mul(quat_mp p, quat_mp q, quat_mp r, int n);
+void	q_mul_conj(quat_mp p, quat_mp q, quat_mp r, int n);
+void	vscale(register int n, register double s, register real *x, register int ix);
+void	tfree(gptr *p);
 
-#ifdef HAVE_STDARG_H
 void	note(char *, ...);		/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
-#else
-void	note();				/* Write a message to the output file */
-void	message();			/* Write a warning or error message   */
-#endif
 /*========================== External data references ========================*/
 extern	contr_mt	control;            /* Main simulation control parms. */
 /*========================== Macros ==========================================*/
@@ -75,9 +73,9 @@ extern	contr_mt	control;            /* Main simulation control parms. */
 /******************************************************************************
  *   Normalise the new quaternions                                            *
  ******************************************************************************/
-static void normalise(quat,n)
-int		n;			/* Number of quaternions  (in)        */
-quat_mp		quat;			/* Quaternions       (update)         */
+static void normalise(quat_mp quat, int n)
+   		  			/* Number of quaternions  (in)        */
+       		     			/* Quaternions       (update)         */
 {
    register int		i, j;
    register double	norm;
@@ -97,9 +95,9 @@ quat_mp		quat;			/* Quaternions       (update)         */
  *   Apply periodic boundary conditions to put particles back in MD box       *
  ******************************************************************************/
 static
-void escape(c_of_m, nmols)
-int		nmols;		/* First dimension of c-of-m                  */
-vec_mp		c_of_m;		/* Centre of mass co-ordinates (updat)        */
+void escape(vec_mp c_of_m, int nmols)
+   		      		/* First dimension of c-of-m                  */
+      		       		/* Centre of mass co-ordinates (updat)        */
 
 {
    int	imol;			/* Molecule counter			      */
@@ -114,11 +112,7 @@ vec_mp		c_of_m;		/* Centre of mass co-ordinates (updat)        */
 /******************************************************************************
  * leapf_coml(). Perform the centre-of-mass update of the leapfrog integration *
  ******************************************************************************/
-void leapf_com(step, c_of_m, vel, nmols)
-real	step;
-vec_mt	c_of_m[],
-        vel[];
-int	nmols;
+void leapf_com(real step, vec_mt (*c_of_m), vec_mt (*vel), int nmols)
 {
    int imol;
    real *com = c_of_m[0], *vm=vel[0];
@@ -130,13 +124,7 @@ int	nmols;
 /******************************************************************************
  * leapf_vel().  Perform the velocity update of the leapfrog integration      *
  ******************************************************************************/
-void leapf_vel(step, hinv, vel, force, mass, nmols)
-real	step;
-mat_mt	hinv;
-vec_mt	vel[],
-        force[];
-real	mass;
-int	nmols;
+void leapf_vel(real step, real (*hinv)[3], vec_mt (*vel), vec_mt (*force), real mass, int nmols)
 {
    int	imol;
    real	srmass = step/mass;
@@ -158,13 +146,7 @@ int	nmols;
  * make_rot()  Construct the quaternion representing a rotation about a given *
  *    axis (x,y,z) by angle h*omega_i.                                        *
  ******************************************************************************/
-void make_rot(step, axis, amom, rinertia, rot, nmols)
-double	step;
-int	axis;
-quat_mt	amom[];
-real	rinertia;
-quat_mt rot[];
-int	nmols;   
+void make_rot(double step, int axis, quat_mt (*amom), real rinertia, quat_mt (*rot), int nmols)
 {
    int imol;
    double angle, ca, sa;
@@ -182,12 +164,7 @@ int	nmols;
  * make_rot_amom().  Construct the quaternions representing rotation about the*
  *   axis parallel to the angular momentum by angle h*|L|/I                   *
  ******************************************************************************/
-void make_rot_amom(step, amom, rinertia, rot, nmols)
-double	step;
-quat_mt	amom[];
-real	rinertia;
-quat_mt rot[];
-int	nmols;   
+void make_rot_amom(double step, quat_mt (*amom), real rinertia, quat_mt (*rot), int nmols)
 {
    int imol;
    double samom, ramom, angle, ca, sa;
@@ -209,11 +186,7 @@ int	nmols;
  *     quaternions, implementing Equation 6 of Dullweber et al.  N.B. We use  *
  *     the opposite conversion and so our rotations are inverse to theirs.    *
  ******************************************************************************/
-void rot_substep(rot, amom, quat, nmols)
-quat_mt	rot[],
-        amom[],
-        quat[];
-int     nmols;
+void rot_substep(quat_mt (*rot), quat_mt (*amom), quat_mt (*quat), int nmols)
 {
    q_conj_mul(rot, amom, amom, nmols);
    q_mul(amom, rot, amom, nmols);
@@ -228,12 +201,7 @@ int     nmols;
  *    exact for the case of a free rotor with two equal moments of inertia.   *
  *    Adapted for use with quaternions by K.R.				      *
  ******************************************************************************/
-void leapf_quat_b(step, quat, avel, inertia, nmols)
-real	step;
-quat_mt	quat[],
-	avel[];
-real	inertia[3];
-int	nmols;
+void leapf_quat_b(real step, quat_mt (*quat), quat_mt (*avel), real *inertia, int nmols)
 {
    int imol,i;
    double idmin, idiff;
@@ -322,12 +290,7 @@ int	nmols;
  *    outlined in Dullweber et al (1997) J. Chem. Phys 107, 5840-5851.        *
  *    Adapted for use with quaternions by K.R.				      *
  ******************************************************************************/
-void leapf_quat_a(step, quat, avel, inertia, nmols)
-real	step;
-quat_mt	quat[],
-	avel[];
-real	inertia[3];
-int	nmols;
+void leapf_quat_a(real step, quat_mt (*quat), quat_mt (*avel), real *inertia, int nmols)
 {
    int imol,i;
    quat_mt	*rot  = qalloc(nmols);
@@ -379,12 +342,7 @@ int	nmols;
 /******************************************************************************
  * leapf_quat().  Chooses which symplectic splitting method to use.           *
  ******************************************************************************/
-void leapf_quat(step, quat, avel, inertia, nmols)
-real	step;
-quat_mt	quat[],
-	avel[];
-real	inertia[3];
-int	nmols;
+void leapf_quat(real step, quat_mt (*quat), quat_mt (*avel), real *inertia, int nmols)
 {
 #define SYMM_BODY
 #ifdef SYMM_BODY
@@ -397,12 +355,7 @@ int	nmols;
  * leapf_avel().  Perform the angular velocity update step of the leapfrog    *
  *    integration algorithm.                                                  *
  ******************************************************************************/
-void leapf_avel(step, avel, torque, inertia, nmols)
-real	step;
-quat_mt	avel[];
-vec_mt	torque[];
-real	inertia[3];
-int	nmols;
+void leapf_avel(real step, quat_mt (*avel), vec_mt (*torque), real *inertia, int nmols)
 {
    int imol, i;
    real rinertia[3];

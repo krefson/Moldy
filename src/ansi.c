@@ -28,11 +28,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #   define _POSIX_SOURCE
 #endif
 /*========================== Library include files ===========================*/
-#ifdef HAVE_STDARG_H
 #include 	<stdarg.h>
-#else
-#include 	<varargs.h>
-#endif
 #include 	"string.h"
 #include	"stddef.h"
 #include	"stdlib.h"

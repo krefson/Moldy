@@ -29,6 +29,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: rdf.c,v $
+ *       Revision 2.9  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.8  1996/01/15 15:19:12  keith
  *       New function rdf_accum for parallel accululation or RDF data.
  *       rdf_ptr() now takes one param, *size, which returns # items.
@@ -148,7 +153,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/rdf.c,v 2.8 1996/01/15 15:19:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/rdf.c,v 2.9 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -163,22 +168,21 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/rdf.c,v 2.8 
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc();	       /* Interface to memory allocator       */
-void            tfree();	       /* Free allocated memory	      	      */
-double	det();
-void	invert();
-void	new_line();
-void	put_line();
-double	precision();
-void	inhibit_vectorization();		/* Self-explanatory dummy     */
+gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+void            tfree(gptr *p);	       /* Free allocated memory	      	      */
+double	det(real (*a)[3]);
+void	invert(real (*a)[3], real (*b)[3]);
+void	new_line(void);
+void	put_line(int c);
+double	precision(void);
+void	inhibit_vectorization(void);		/* Self-explanatory dummy     */
 /*========================== External data references ========================*/
 extern contr_mt	control;    		    /* Main simulation control parms. */
 /*====================================data definitions  ======================*/
 static int	***rdf;				/* The RDF 'array'	      */
 static   int	*rdf_base;			/* base of data area          */
 static   int    rdf_size;
-gptr *rdf_ptr(size)
-int *size;
+gptr *rdf_ptr(int *size)
 {
    *size = rdf_size;
    return (gptr*)rdf_base;
@@ -191,8 +195,8 @@ int *size;
 /******************************************************************************
  *  rdf_init.  Prepare to bin rdf's.  Allocate memory and pointers	      *
  ******************************************************************************/
-void	init_rdf(system)
-system_mp	system;				/* System info struct	      */
+void	init_rdf(system_mp system)
+         	       				/* System info struct	      */
 {
    int		max_id = system->max_id;
    int		idi, idj;
@@ -214,10 +218,10 @@ system_mp	system;				/* System info struct	      */
 /******************************************************************************
  *  rdf_calc.  Calculate site pair distances and bin for RDF.                 *
  ******************************************************************************/
-void	rdf_calc(site, system, species)
-real		**site;				/* Site co-ordinate array     */
-system_mp	system;				/* System info struct	      */
-spec_mt	species[];			/* Species info struct array  */
+void	rdf_calc(real **site, system_mp system, spec_mt *species)
+    		       				/* Site co-ordinate array     */
+         	       				/* System info struct	      */
+       	          			/* Species info struct array  */
 {
    spec_mp	spec;
    register double	t;
@@ -277,12 +281,7 @@ VECTORIZE
 /******************************************************************************
  *  rdf_accum.  Calculate site pair distances and bin for RDF.                *
  ******************************************************************************/
-void	rdf_accum(lo, hi, rsq, iid, id, nab)
-int	lo, hi;
-real	rsq[];
-int	iid;
-int	id[];
-int	nab[];
+void	rdf_accum(int lo, int hi, real *rsq, int iid, int *id, int *nab)
 {
    int  j, bin;
    int  *nj = nab + lo;
@@ -303,10 +302,7 @@ int	nab[];
  * bins B(ib) for this id and b = bin width then:-			      *
  * 	g(r) = B(ib)/(4 pi r**2 rho b) * (n-1)/sum,  where r(ib) =b*(ib+1/2)  *
  ******************************************************************************/
-void	print_rdf(system, species, site_info)
-system_mt	*system;
-spec_mt		species[];
-site_mt		site_info[];
+void	print_rdf(system_mt *system, spec_mt *species, site_mt *site_info)
 {
    int		idi, idj, col, ibin, is;
    int		*nfrac = ialloc(system->max_id);  /* Per site count of system*/

@@ -19,15 +19,11 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 2.20 1999/10/29 16:44:28 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/mdshak.c,v 2.21 1999/11/29 10:48:56 keith Exp $";
 #endif
 
 #include "defs.h"
-#ifdef HAVE_STDARG_H
 #include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
 #include <errno.h>
 #include <math.h>
 #include "stdlib.h"
@@ -38,26 +34,22 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 
 #include "messages.h"
 #include "ReadDCD.h"
 #include "utlsup.h"
-#ifdef HAVE_STDARG_H
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
-#else
-gptr	*arralloc();	        	/* Array allocator		      */
-#endif
 
-void    moldy_out();
-void	make_sites();
-char	*strlower();
-void	read_sysdef();
-void	initialise_sysdef();
-void	re_re_header();
-void	re_re_sysdef();
-void	allocate_dynamics();
-void	lattice_start();
-void	read_restart();
-void	init_averages();
-int	getopt();
-gptr	*talloc();
-void    zero_real();
+void    moldy_out(int n, int irec, int inc, system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, int outsw, int intyp, char *insert);
+void	make_sites(real (*h)[3], vec_mp c_of_m_s, quat_mp quat, vec_mp p_f_sites, int framework, real **site, int nmols, int nsites);
+char	*strlower(char *s);
+void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_info, pot_mp *pot_ptr);
+void	initialise_sysdef(system_mp system, spec_mt *species, site_mt *site_info, quat_mt (*qpf));
+void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr);
+void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr);
+void	allocate_dynamics(system_mp system, spec_mt *species);
+void	lattice_start(FILE *file, system_mp system, spec_mp species, quat_mt (*qpf));
+void	read_restart(FILE *restart, char *vsn, system_mp system, int av_convert);
+void	init_averages(int nspecies, char *vsn, long int roll_interval, long int old_roll_interval, int *av_convert);
+int	getopt(int, char *const *, const char *);
+gptr	*talloc(int n, size_mt size, int line, char *file);
+void    zero_real(real *r, int n);
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 contr_mt		control;
@@ -79,9 +71,7 @@ contr_mt		control;
  * neither specified on command line, user is interrogated.		      *
  ******************************************************************************/
 int
-main(argc, argv)
-int	argc;
-char	*argv[];
+main(int argc, char **argv)
 {
    int	c, cflg = 0, ans_i, sym, data_source = 0;
    char 	line[80];

@@ -26,6 +26,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.17  1999/09/09 11:32:59  keith
+ *       Got rid of #ifdef unix and rely on HAVE_FEATURE macros to
+ *       conditionally compile the timers.  This enables compilation
+ *       on cygwin.  One remaining use of unix macros is to test for
+ *       allowable filenames - this remains for now as there's no
+ *       autoconf test.
+ *
  *       Revision 2.16  1998/12/07 18:15:34  keith
  *       Fixed bug which meant non-unix systems did not include <time.h>
  *       and failed to compile as a result.
@@ -275,7 +282,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2.16 1998/12/07 18:15:34 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/auxil.c,v 2.17 1999/09/09 11:32:59 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -321,8 +328,8 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2
 #   define  CLOCKS_PER_SEC CLK_TCK
 #endif
 /*========================== External function declarations ==================*/
-gptr            *talloc();	       /* Interface to memory allocator       */
-void            tfree();	       /* Free allocated memory	      	      */
+gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+void            tfree(gptr *p);	       /* Free allocated memory	      	      */
 /*============================================================================*/
 /******************************************************************************
  *  Vector routines - special cases for cray and convex to call vectorised    *
@@ -332,46 +339,29 @@ void            tfree();	       /* Free allocated memory	      	      */
 #if defined(_CRAY1)
 #define VECTS_DEFINED
 
-double vdot(n,x,ix,y,iy)
-int	n;
-real	*x, *y;
-int	ix, iy;
+double vdot(int n, real *x, int ix, real *y, int iy)
 {
    double SDOT();
    return(SDOT(&n, x, &ix, y, &iy));
 }
-double sum(n,x,ix)
-int	n;
-real	*x;
-int	ix;
+double sum(int n, real *x, int ix)
 {
    double SSUM();
    return(SSUM(&n, x, &ix));
 }
-void	vscale(n,s,x,ix)
-int	n;
-double	s;
-real	*x;
-int	ix;
+void	vscale(int n, double s, real *x, int ix)
 {
    void SSCAL();
    SSCAL(&n, &s, x, &ix);
 }
-int	search_lt(n, x, ix, s)
-int	n;
-real	x[];
-int	ix;
-double	s;
+int	search_lt(int n, real *x, int ix, double s)
 {
    int	ISRCHFLT();
    if( n <= 0 )
       return(0);
    return( ISRCHFLT(&n, x, &ix, &s) - 1);
 }
-void	gather(n, a, b, ix, lim)
-int	n;
-real	a[], b[];
-int	ix[];
+void	gather(int n, real *a, real *b, int *ix, int lim)
 {
    void GATHER();
    GATHER(&n, a, b+1, ix);
@@ -384,10 +374,7 @@ int	ix[];
 #define VECTS_DEFINED
 
 #define SINGLE (sizeof(real) == sizeof(float))
-double vdot(n,x,ix,y,iy)
-int	n;
-real	*x, *y;
-int	ix, iy;
+double vdot(int n, real *x, int ix, real *y, int iy)
 {
    double ddot_(); float sdot_();
    if(SINGLE)
@@ -395,10 +382,7 @@ int	ix, iy;
    else
      return(ddot_(&n, x, &ix, y, &iy));
 }
-double sum(n,x,ix)
-int	n;
-real	*x;
-int	ix;
+double sum(int n, real *x, int ix)
 {
    double dsum_(); float ssum_();
    if(SINGLE)
@@ -406,11 +390,7 @@ int	ix;
    else
       return(dsum_(&n, x, &ix));
 }
-void	vscale(n,s,x,ix)
-int	n;
-double	s;
-real	*x;
-int	ix;
+void	vscale(int n, double s, real *x, int ix)
 {
    float s2 = s;
    void dscal_(), sscal_();
@@ -419,11 +399,7 @@ int	ix;
    else
       dscal_(&n, &s, x, &ix);
 }
-int	search_lt(n, x, ix, s)
-int	n;
-real	x[];
-int	ix;
-double	s;
+int	search_lt(int n, real *x, int ix, double s)
 {
    float s2 = s;
    int	i, idsvlt_(), issvlt_();
@@ -433,10 +409,7 @@ double	s;
       return( (i = idsvlt_(&n, x, &ix, &s)) ? i - 1 : n);
 }
                             /*ARGSUSED*/
-void	gather(n, a, b, ix, lim)
-int	n;
-real	a[], b[];
-int	ix[];
+void	gather(int n, real *a, real *b, int *ix, int lim)
 {
    void dgthr_(), sgthr_();
    if(SINGLE)
@@ -451,45 +424,28 @@ int	ix[];
 #if defined(alliant)
 #define VECTS_DEFINED
 
-double vdot(n,x,ix,y,iy)
-int	n;
-real	*x, *y;
-int	ix, iy;
+double vdot(int n, real *x, int ix, real *y, int iy)
 {
    double sdot_();
    return(sdot_(&n, x, &ix, y, &iy));
 }
-double sum(n,x,ix)
-int	n;
-real	*x;
-int	ix;
+double sum(int n, real *x, int ix)
 {
    double ssum_();
    return(ssum_(&n, x, &ix));
 }
-void	vscale(n,s,x,ix)
-int	n;
-double	s;
-real	*x;
-int	ix;
+void	vscale(int n, double s, real *x, int ix)
 {
    void sscal_();
    sscal_(&n, &s, x, &ix);
 }
-int	search_lt(n, x, ix, s)
-int	n;
-real	x[];
-int	ix;
-double	s;
+int	search_lt(int n, real *x, int ix, double s)
 {
    int	isrchflt_();
    return( isrchflt_(&n, x, &ix, &s) - 1);
 }
                             /*ARGSUSED*/
-void	gather(n, a, b, ix, lim)
-int	n;
-real	a[], b[];
-int	ix[];
+void	gather(int n, real *a, real *b, int *ix, int lim)
 {
    void gather_();
    gather_(&n, a, b+1, ix);
@@ -499,10 +455,7 @@ int	ix[];
  *  Vector handling functions - C versions. 		     		      *
  ******************************************************************************/
 #ifndef VECTS_DEFINED
-double vdot(n,x,ix,y,iy)
-int	n;
-real	x[], y[];
-int	ix, iy;
+double vdot(int n, real *x, int ix, real *y, int iy)
 {
    register double	dot=0.0;
    register int i, j;
@@ -523,10 +476,7 @@ VECTORIZE
    }
    return(dot);
 }
-double sum(n,x,ix)
-register int	n;
-register double	x[];
-register int	ix;
+double sum(register int n, register double *x, register int ix)
 {
    register double	sa=0.0,sb=0.0,sc=0.0,sd=0.0,s1=0.0,s2=0.0,s3=0.0,s4=0.0;
    int i;
@@ -562,11 +512,7 @@ register int	ix;
    return(s1+s2+s3+s4);
 }
 
-void	vscale(n,s,x,ix)
-register int	n;
-register double	s;
-register real	x[];
-register int	ix;
+void	vscale(register int n, register double s, register real *x, register int ix)
 {
    int i;
 VECTORIZE
@@ -581,11 +527,7 @@ VECTORIZE
  *  smallest value,, the second that of the first one less than s.
  */
 #ifdef ardent
-int	search_lt(n, x, ix, s)
-int	n;
-real 	x[];
-int	ix;
-double	s;
+int	search_lt(int n, real *x, int ix, double s)
 {
    int i, im=n*ix;
    double min = x[0];
@@ -602,11 +544,7 @@ VECTORIZE
       return n;
 }
 #else
-int	search_lt(n, x, ix, s)
-int	n;
-real	x[];
-int	ix;
-double	s;
+int	search_lt(int n, real *x, int ix, double s)
 {
    int i,j, im=n*ix;
    if ( ix == 1 ) 
@@ -626,10 +564,7 @@ VECTORIZE
 }
 #endif
                             /*ARGSUSED*/
-void	gather(n, a, b, ix, lim)
-int	n, lim;
-real	a[], b[];
-int	ix[];
+void	gather(int n, real *a, real *b, int *ix, int lim)
 {
    int i;
 VECTORIZE
@@ -654,12 +589,11 @@ VECTORIZE
 #define  ia  2416L
 #define  ic  374441L
 static unsigned long jran = 1;
-void	smdrand(seed)
-unsigned long seed;
+void	smdrand(long unsigned int seed)
 {
    jran = seed;
 }
-double	mdrand()
+double	mdrand(void)
 {
    jran = (jran*ia + ic) % im;
    return (double)jran/(double)im;
@@ -667,7 +601,7 @@ double	mdrand()
 /******************************************************************************
  *  Precision. Return smallest eps s.t. 1.0+eps > 1			      *
  ******************************************************************************/
-double	precision()
+double	precision(void)
 {
    static	int	first=1;
    static	double	eps = 0.5;
@@ -691,7 +625,7 @@ double	precision()
  *  cpu.  Return (double) the current cpu time in seconds.		      *
  ******************************************************************************/
 #if defined(HAVE_TIMES) && defined(HAVE_SYS_TIMES_H)
-double        cpu()
+double        cpu(void)
 {
    struct tms buf;
  
@@ -701,10 +635,10 @@ double        cpu()
 }
 #else
 #   if defined HAVE_GETRUSAGE
-double  cpu()   /* The standard unix 'clock' wraps after 36 mins.            */
+double  cpu(void)   /* The standard unix 'clock' wraps after 36 mins.            */
 {
    struct rusage ru;
-   int getrusage();
+   int getrusage(int, struct rusage *);
  
    (void)getrusage(RUSAGE_SELF, &ru);
 
@@ -712,7 +646,7 @@ double  cpu()   /* The standard unix 'clock' wraps after 36 mins.            */
           + 1.0e-6 * (ru.ru_utime.tv_usec + ru.ru_stime.tv_usec));
 }
 #   else
-double	cpu()
+double	cpu(void)
 {
    return((double)clock() / CLOCKS_PER_SEC);
 }
@@ -722,7 +656,7 @@ double	cpu()
  *  rt_clock(). Return elapsed time in s.				      *
  ******************************************************************************/
 #if defined(HAVE_TIMES) && defined(HAVE_SYS_TIMES_H) && !defined(TIMES_RETURNS_STATUS)
-double rt_clock()
+double rt_clock(void)
 {
    struct tms buf;
    static int use_time=0;
@@ -741,9 +675,9 @@ double rt_clock()
 #else
 #   if defined(HAVE_GETTIMEOFDAY)
 
-double rt_clock()
+double rt_clock(void)
 {
-   int gettimeofday();
+   int gettimeofday(struct timeval *, void *);
    struct timeval tp;
    (void)gettimeofday(&tp,(struct timezone *)0);
    return(tp.tv_sec + tp.tv_usec*0.000001);
@@ -751,7 +685,7 @@ double rt_clock()
 
 #   else 
 
-double rt_clock()
+double rt_clock(void)
 {
    return time((time_t *)0);
 }
@@ -761,8 +695,7 @@ double rt_clock()
 /******************************************************************************
  *  cctime()  Return ctime() but without the newline			      *
  ******************************************************************************/
-char	*cctime(timeloc)
-time_mt	*timeloc;
+char	*cctime(time_mt *timeloc)
 {
    time_t  loc = *timeloc;
    char	*p = ctime(&loc);
@@ -772,7 +705,7 @@ time_mt	*timeloc;
 /******************************************************************************
  *  atime.  Return a pointer to the time and date string		      *
  ******************************************************************************/
-char	*atime()
+char	*atime(void)
 {
    time_mt t = time((time_t*)0);
    return(cctime(&t));
@@ -780,27 +713,21 @@ char	*atime()
 /******************************************************************************
  * Zero real.  Set array to floating-point zero.			      *
  ******************************************************************************/
-void	zero_real(r,n)
-real	r[];
-int	n;
+void	zero_real(real *r, int n)
 {
    int i;
 VECTORIZE
    for(i = 0; i < n; i++)
       r[i] = 0.0;
 }
-void	zero_double(r,n)
-double	r[];
-int	n;
+void	zero_double(double *r, int n)
 {
    int i;
 VECTORIZE
    for(i = 0; i < n; i++)
       r[i] = 0.0;
 }
-void	zero_dbls(r,n)
-double	r[];
-size_mt	n;
+void	zero_dbls(double *r, size_mt n)
 {
    long i;
 VECTORIZE
@@ -811,8 +738,7 @@ VECTORIZE
  *  replace - replace file1 by file2, renaming or overwriting		      *
  ******************************************************************************/
 #if defined(unix) || defined(__unix) || defined(__unix__)
-int	replace(file1, file2)
-char	*file1, *file2;
+int	replace(char *file1, char *file2)
 {
    int f;
    char *backup = aalloc(strlen(file2)+2, char);
@@ -824,12 +750,11 @@ char	*file1, *file2;
    return(f);
 }
 #   else
-int	replace(file1, file2)
-char	*file1, *file2;
+int	replace(char *file1, char *file2)
 {
    int f;
-   int rename();
-   f = rename(file1, file2);
+   int rename(const char *, const char *);
+   f = rename(const char *, const char *);
    if(f != 0 && remove(file2) == 0)	/* If already exists try remove target*/
       f = rename(file1, file2);
    return(f);
@@ -850,10 +775,9 @@ char	*file;
 }
 #else				/*  VMS				*/
 #   if defined(unix) || defined(__unix) || defined(__unix__)
-void	purge(file)
-char	*file;
+void	purge(char *file)
 {
-   int unlink();
+   int unlink(const char *);
    char *name = aalloc(strlen(file)+2,char);
    (void)strcat(strcpy(name, file), "%");
 
@@ -862,8 +786,7 @@ char	*file;
 }
 #      else
 /*ARGSUSED*/
-void	purge(file)
-char	*file;
+void	purge(char *file)
 {
 }
 #   endif			
@@ -880,8 +803,7 @@ char	*file;
 #define PP	 0.3275911
 #define POLY5(t)   ((t)*(E1 + (t)*(E2 + (t)*(E3 + (t)*(E4 + (t)*E5)))))
 
-double	err_fn(x)
-double	x;
+double	err_fn(double x)
 {
    double t = 1.0/(1.0 + PP * x);
    if ( x >= 0.0 )
@@ -892,6 +814,6 @@ double	x;
 /******************************************************************************
  * inhibit_vectorization().  Self explanatory dummy function		      *
  ******************************************************************************/
-void inhibit_vectorization()
+void inhibit_vectorization(void)
 {
 }

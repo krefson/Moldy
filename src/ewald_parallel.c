@@ -23,6 +23,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald_parallel.c,v $
+ *       Revision 2.10  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.9  1994/12/30 11:58:42  keith
  *       Fixed bug hwhich caused core dump for small k-cutoff (hmax=0)
  *
@@ -181,7 +186,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald_parallel.c,v 2.9 1994/12/30 11:58:42 keith stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/ewald_parallel.c,v 2.10 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -201,29 +206,23 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald_parall
 #include 	"structs.h"
 #include 	"messages.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc();	       /* Interface to memory allocator       */
-void            tfree();	       /* Free allocated memory	      	      */
-void            afree();	       /* Free allocated array	      	      */
-double	err_fn();			/* Error function		      */
-double	det();				/* Determinant of 3x3 matrix	      */
-void	invert();			/* Inverts a 3x3 matrix		      */
-void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
-void	mat_sca_mul();			/* Multiplies a 3x3 matrix by scalar  */
-void	transpose();			/* Transposes a 3x3 matrix	      */
-void    zero_real();            	/* Initialiser                        */
-void    zero_double();          	/* Initialiser                        */
-double	sum();				/* Sum of elements of 'real' vector   */
-void	ewald_inner();			/* Inner loop forward reference       */
-int	nprocessors();			/* Return no. of procs to execute on. */
-#ifdef HAVE_STDARG_H
+gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+void            tfree(gptr *p);	       /* Free allocated memory	      	      */
+void            afree(gptr *p);	       /* Free allocated array	      	      */
+double	err_fn(double x);			/* Error function		      */
+double	det(real (*a)[3]);				/* Determinant of 3x3 matrix	      */
+void	invert(real (*a)[3], real (*b)[3]);			/* Inverts a 3x3 matrix		      */
+void	mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);			/* Multiplies a 3x3 matrix by 3xN vect*/
+void	mat_sca_mul(register real s, real (*a)[3], real (*b)[3]);			/* Multiplies a 3x3 matrix by scalar  */
+void	transpose(real (*a)[3], real (*b)[3]);			/* Transposes a 3x3 matrix	      */
+void    zero_real(real *r, int n);            	/* Initialiser                        */
+void    zero_double(double *r, int n);          	/* Initialiser                        */
+double	sum(register int n, register double *x, register int ix);				/* Sum of elements of 'real' vector   */
+void	ewald_inner(int ithread, int nthreads, int nhkl, struct _hkl *hkl, int nsites, int nsitesxf, real **chx, real **cky, real **clz, real **shx, real **sky, real **slz, real *chg, double *volp, double *r_4_alphap, real (*stress)[3], double *pe, real **site_force);			/* Inner loop forward reference       */
+int	nprocessors(void);			/* Return no. of procs to execute on. */
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 void	note(char *, ...);		/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
-#else
-gptr	*arralloc();	        	/* Array allocator		      */
-void	note();				/* Write a message to the output file */
-void	message();			/* Write a warning or error message   */
-#endif
 /*========================== External data references ========================*/
 extern	contr_mt	control;       	/* Main simulation control record     */
 /*========================== Macros ==========================================*/
@@ -241,11 +240,7 @@ extern	contr_mt	control;       	/* Main simulation control record     */
  * vector code this way. 						     *
  *****************************************************************************/
 static
-void      qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,chg,
-		  qcoskr,qsinkr,k,l,nsites)
-real coshx[], sinhx[], cosky[], sinky[], coslz[], sinlz[],
-     chg[], qcoskr[], qsinkr[];
-int  k,l,nsites;
+void      qsincos(real *coshx, real *sinhx, real *cosky, real *sinky, real *coslz, real *sinlz, real *chg, real *qcoskr, real *qsinkr, int k, int l, int nsites)
 {
    int is;
    real qckr;
@@ -330,14 +325,14 @@ VECTORIZE
 #pragma pproc ewald_inner
 #endif
 #endif
-void	ewald(site,site_force,system,species,chg,pe,stress)
-real		**site,			/* Site co-ordinate arrays	 (in) */
-		**site_force;		/* Site force arrays		(out) */
-system_mp	system;			/* System record		 (in) */
-spec_mt	species[];			/* Array of species records	 (in) */
-real		chg[];			/* Array of site charges	 (in) */
-double		*pe;			/* Potential energy		(out) */
-mat_mt		stress;			/* Stress virial		(out) */
+void	ewald(real **site, real **site_force, system_mp system, spec_mt *species, real *chg, double *pe, real (*stress)[3])
+    		       			/* Site co-ordinate arrays	 (in) */
+		             		/* Site force arrays		(out) */
+         	       			/* System record		 (in) */
+       	          			/* Array of species records	 (in) */
+    		      			/* Array of site charges	 (in) */
+      		    			/* Potential energy		(out) */
+      		       			/* Stress virial		(out) */
 {
    mat_mt	hinvp;			/* Matrix of reciprocal lattice vects*/
    register	int	h, k, l;	/* Recip. lattice vector indices     */
@@ -696,19 +691,17 @@ VECTORIZE
  *  responsibility to provide a separte area and accumulate the grand totals *
  *****************************************************************************/
 void
-ewald_inner(ithread, nthreads, nhkl, hkl, nsites, nsitesxf, 
-            chx, cky, clz, shx, sky, slz,
-	    chg, volp, r_4_alphap, stress, pe, site_force)
-int ithread, nthreads, nhkl;
-struct _hkl hkl[];
-int nsites;
-int nsitesxf;			/* N sites excluding framework sites.	      */
-real **chx, **cky, **clz, **shx, **sky, **slz;
-double *volp, *r_4_alphap;
-mat_mt	stress;
-double *pe;
-real	chg[];
-real	**site_force;
+ewald_inner(int ithread, int nthreads, int nhkl, struct _hkl *hkl, int nsites, int nsitesxf, real **chx, real **cky, real **clz, real **shx, real **sky, real **slz, real *chg, double *volp, double *r_4_alphap, real (*stress)[3], double *pe, real **site_force)
+                            
+                  
+           
+             			/* N sites excluding framework sites.	      */
+                                              
+                          
+      	       
+           
+    	      
+    	             
 {
    vec_mt	kv;
    double ksq, coeff, coeff2, pe_k;
@@ -809,7 +802,7 @@ VECTORIZE
 xfree(qcoskr); xfree(qsinkr);
 }
 
-char *getenv();
+char *getenv(const char *);
 #ifdef titan
 int nprocessors()
 {
@@ -853,7 +846,7 @@ int nprocessors()
    return n;
 }
 #else			/* GS1000/2000 but should compile on any unix */
-int nprocessors()
+int nprocessors(void)
 {
    char *env;
    static int n = 0;

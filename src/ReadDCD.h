@@ -11,7 +11,7 @@
  *
  *      $RCSfile: ReadDCD.h,v $
  *      $Author: keith $        $Locker:  $                $State: Exp $
- *      $Revision: 1.4 $      $Date: 1997/11/27 15:58:19 $
+ *      $Revision: 1.5 $      $Date: 1999/09/21 11:05:44 $
  *
  ***************************************************************************
  * DESCRIPTION:
@@ -40,17 +40,17 @@
 
 
 /*			FUNCTION ALLUSIONS				*/
-int read_dcdheader();	
+int read_dcdheader(FILE *fp, int *N, int *NSET, int *ISTART, int *NSAVC, double *DELTA, int *NAMNF, int **FREEINDEXES);	
 				/*  Read the DCD header			*/
-int read_dcdstep();	
+int read_dcdstep(FILE *fp, int N, float *X, float *Y, float *Z, int num_fixed, int first, int *indexes);	
 				/*  Read a timestep's values		*/
-int write_dcdstep();
+int write_dcdstep(FILE *fp, int N, float *X, float *Y, float *Z);
 				/*  Write out a timesteps values	*/
-int write_dcdheader();	
+int write_dcdheader(FILE *fp, char *filename, int N, int NSET, int ISTART, int NSAVC, double DELTA);	
 				/*  Write a dcd header			*/
-void close_dcd_read();
+void close_dcd_read(FILE *fp, int num_fixed, int *indexes);
 				/*  Close a dcd file open for reading   */
-void close_dcd_write();	/*  Close a dcd file open for writing   */
+void close_dcd_write(FILE *fp);	/*  Close a dcd file open for writing   */
 
 #endif /* ! DCDLIB_H */
 

@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.14  2000/04/26 16:01:03  keith
+ *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
+ *
  *       Revision 2.13  2000/04/24 15:06:17  keith
  *       Fixed bug where ints were stored as booleans, losing value.
  *
@@ -92,7 +95,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/xdr.c,v 2.12 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/xdr.c,v 2.14 2000/04/26 16:01:03 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -103,9 +106,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/xdr.c,v 2.1
 
 #ifdef USE_XDR
 
-bool_t xdr_real(xdrs, rp)
-XDR     *xdrs;
-real    *rp;
+bool_t xdr_real(XDR *xdrs, real *rp)
 {
    if( sizeof(real) == sizeof(double) )
       return xdr_double(xdrs, (double*)rp);
@@ -115,9 +116,7 @@ real    *rp;
       return FALSE;
 }
 
-bool_t xdr_contr(xdrs, cp)
-XDR      *xdrs;
-contr_mt *cp;
+bool_t xdr_contr(XDR *xdrs, contr_mt *cp)
 {
    return
       xdr_opaque(xdrs, cp->title, L_name) &&
@@ -147,9 +146,7 @@ contr_mt *cp;
       xdr_vector(xdrs, (gptr*)&cp->temp, 10, sizeof(double), (xdrproc_t)xdr_double);
 }
 
-bool_t xdr_system(xdrs, sp)
-XDR      *xdrs;
-system_mt *sp;
+bool_t xdr_system(XDR *xdrs, system_mt *sp)
 {
    return
       xdr_vector(xdrs, (gptr*)&sp->nsites, 8, sizeof(int), (xdrproc_t)xdr_int) &&
@@ -167,18 +164,14 @@ system_mt *sp;
 /*
  * This version for reading restart files written by 2.10 or before.
  */
-bool_t xdr_system_2(xdrs, sp)
-XDR      *xdrs;
-system_mt *sp;
+bool_t xdr_system_2(XDR *xdrs, system_mt *sp)
 {
    return
       xdr_vector(xdrs, (gptr*)&sp->nsites, 8, sizeof(int), (xdrproc_t)xdr_int) &&
       xdr_opaque(xdrs, (gptr*)&sp->c_of_m, 18*XDR_4PTR_SIZE);
 }
 
-bool_t xdr_species(xdrs, sp)
-XDR      *xdrs;
-spec_mt *sp;
+bool_t xdr_species(XDR *xdrs, spec_mt *sp)
 {
    return
       xdr_vector(xdrs, (gptr*)sp->inertia, 6, sizeof(real), (xdrproc_t)xdr_real) &&
@@ -195,9 +188,7 @@ spec_mt *sp;
       xdr_opaque(xdrs, (gptr*)&sp->site_id, 8*XDR_4PTR_SIZE);
 }
 
-bool_t xdr_site(xdrs, sp)
-XDR      *xdrs;
-site_mt  *sp;
+bool_t xdr_site(XDR *xdrs, site_mt *sp)
 {
    return
       xdr_double(xdrs, &sp->mass) &&
@@ -209,15 +200,12 @@ site_mt  *sp;
 
 static unsigned int xdr_npotpar;
 
-void xdr_set_npotpar(npotpar)
-int	npotpar;
+void xdr_set_npotpar(int npotpar)
 {
    xdr_npotpar = npotpar;
 }
 
-bool_t xdr_pot(xdrs, sp)
-XDR      *xdrs;
-pot_mt   *sp;
+bool_t xdr_pot(XDR *xdrs, pot_mt *sp)
 {
    return
       xdr_int(xdrs, &sp->flag) &&
@@ -226,9 +214,7 @@ pot_mt   *sp;
 }
 
 
-bool_t xdr_restrt(xdrs, sp)
-XDR         *xdrs;
-restrt_mt   *sp;
+bool_t xdr_restrt(XDR *xdrs, restrt_mt *sp)
 {
    return
       xdr_u_long(xdrs, &sp->timestamp) &&
@@ -237,9 +223,7 @@ restrt_mt   *sp;
       xdr_int(xdrs, &sp->seq);
 }
 
-bool_t xdr_dump(xdrs, sp)
-XDR         *xdrs;
-dump_mt   *sp;
+bool_t xdr_dump(XDR *xdrs, dump_mt *sp)
 {
    return
       xdr_opaque(xdrs, sp->title, L_name+16) &&
@@ -249,9 +233,7 @@ dump_mt   *sp;
 }
 
 static
-bool_t xdr_av_head_t(xdrs,ap)
-XDR	  *xdrs;
-av_head_mt *ap;
+bool_t xdr_av_head_t(XDR *xdrs, av_head_mt *ap)
 {
    return
       xdr_vector(xdrs, (gptr*)&ap->nav, 4, sizeof(int), (xdrproc_t)xdr_int) &&
@@ -259,9 +241,7 @@ av_head_mt *ap;
 }
 
 static
-bool_t xdr_old_av_u_t(xdrs,ap)
-XDR	  *xdrs;
-old_av_u_mt *ap;
+bool_t xdr_old_av_u_t(XDR *xdrs, old_av_u_mt *ap)
 {
    return
       xdr_vector(xdrs, (gptr*)&ap->cnt.av, 2, sizeof(int), (xdrproc_t)xdr_int) &&
@@ -272,17 +252,13 @@ old_av_u_mt *ap;
 static size_mt  xdr_av_size;
 static int    av_convert;
 
-void   xdr_set_av_size_conv(size, av_conv)
-size_mt	   size;
-int	   av_conv;
+void   xdr_set_av_size_conv(size_mt size, int av_conv)
 {
    xdr_av_size = size;
    av_convert = av_conv;
 }
 
-bool_t xdr_averages(xdrs, ap)
-XDR	   *xdrs;
-gptr	   *ap;
+bool_t xdr_averages(XDR *xdrs, gptr *ap)
 {
    /*
     * The global flag av_convert requires explanation.  It is
@@ -345,17 +321,20 @@ xdr_vector(xdrs, basep, nelem, elemsize, xdr_elem)
 }
 #endif
 #else
-void	xdr_set_npotpar (npotpar) int npotpar; {}
-void	xdr_set_av_size_conv (size, av_conv) size_mt size; int av_conv; {}
-bool_t	xdr_site () {return 0;}
-bool_t	xdr_restrt () {return 0;}
-bool_t	xdr_averages () {return 0;}
-bool_t	xdr_real () {return 0;}
-bool_t	xdr_contr () {return 0;}
-bool_t	xdr_system () {return 0;}
-bool_t	xdr_system_2 () {return 0;}
-bool_t	xdr_species () {return 0;}
-bool_t	xdr_pot () {return 0;}
-bool_t	xdr_int () {return 0;}
-bool_t	xdr_bool () {return 0;}
+
+bool_t xdr_averages(XDR *xdrs, gptr *ap){return 0;}
+bool_t xdr_contr(XDR *xdrs, contr_mt *cp){return 0;}
+bool_t xdr_dump(XDR *xdrs, dump_mt *sp){return 0;}
+bool_t xdr_pot(XDR *xdrs, pot_mt *sp){return 0;}
+bool_t xdr_real(XDR *xdrs, real *rp){return 0;}
+bool_t xdr_restrt(XDR *xdrs, restrt_mt *sp){return 0;}
+bool_t xdr_site(XDR *xdrs, site_mt *sp){return 0;}
+bool_t xdr_species(XDR *xdrs, spec_mt *sp){return 0;}
+bool_t xdr_system(XDR *xdrs, system_mt *sp){return 0;}
+bool_t xdr_system_2(XDR *xdrs, system_mt *sp){return 0;}
+void   xdr_set_av_size_conv(size_mt size, int av_conv);
+void   xdr_set_npotpar(int npotpar);
+
+bool_t	xdr_bool (void) {return 0;}
+bool_t	xdr_int (void) {return 0;}
 #endif

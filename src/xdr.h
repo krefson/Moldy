@@ -26,6 +26,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.h,v $
+ *       Revision 2.10  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.9  1996/09/25 16:29:12  keith
  *       Fixed restart structure correctly - broken in prev version.
  *       Thermostat parameters may not be properly read.
@@ -65,7 +70,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSidh = "$Header: /home/eeyore_data/keith/md/moldy/RCS/xdr.h,v 2.9 1996/09/25 16:29:12 keith Exp $";
+static char *RCSidh = "$Header: /home/eeyore_data/keith/CVS/moldy/src/xdr.h,v 2.10 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef USE_XDR
@@ -110,22 +115,22 @@ typedef bool_t (*xdrproc_t)();
 #endif
 /*============================================================================*/
 
-bool_t xdr_real();
-bool_t xdr_contr();
-bool_t xdr_system();
-bool_t xdr_system_2();
-bool_t xdr_species();
-bool_t xdr_site();
-void   xdr_set_npotpar();
-bool_t xdr_pot();
-bool_t xdr_restrt();
-bool_t xdr_dump();
-void   xdr_set_av_size_conv();
-bool_t xdr_averages();
+bool_t xdr_real(XDR *xdrs, real *rp);
+bool_t xdr_contr(XDR *xdrs, contr_mt *cp);
+bool_t xdr_system(XDR *xdrs, system_mt *sp);
+bool_t xdr_system_2(XDR *xdrs, system_mt *sp);
+bool_t xdr_species(XDR *xdrs, spec_mt *sp);
+bool_t xdr_site(XDR *xdrs, site_mt *sp);
+void   xdr_set_npotpar(int npotpar);
+bool_t xdr_pot(XDR *xdrs, pot_mt *sp);
+bool_t xdr_restrt(XDR *xdrs, restrt_mt *sp);
+bool_t xdr_dump(XDR *xdrs, dump_mt *sp);
+void   xdr_set_av_size_conv(size_mt size, int av_conv);
+bool_t xdr_averages(XDR *xdrs, gptr *ap);
 
 #ifndef USE_XDR
-bool_t	xdr_int();
-bool_t  xdr_bool();
+bool_t	xdr_int(void);
+bool_t  xdr_bool(void);
 #endif
 
 #define XDR_INT_SIZE 4

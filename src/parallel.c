@@ -22,6 +22,9 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.22  2000/04/26 16:01:01  keith
+ *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
+ *
  *       Revision 2.21  1998/07/17 14:54:06  keith
  *       Ported SHMEM version to IRIX 6/ SGI Origin 2000
  *
@@ -79,7 +82,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/parallel.c,v 2.21 1998/07/17 14:54:06 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/parallel.c,v 2.22 2000/04/26 16:01:01 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -114,11 +117,11 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/parallel.c,
 #endif
 #endif
 /*========================== External function declarations ==================*/
-gptr            *talloc();	       /* Interface to memory allocator       */
-gptr		*av_ptr();
-gptr            *rdf_ptr();
-void		init_averages();
-void		allocate_dynamics();
+gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+gptr		*av_ptr(size_mt *size, int av_convert);
+gptr            *rdf_ptr(int *);
+void		init_averages(int nspecies, char *vsn, long int roll_interval, long int old_roll_interval, int *av_convert);
+void		allocate_dynamics(system_mp system, spec_mt *species);
 extern int 	ithread, nthreads;
 /*====================== Utilities for interface functions ===================*/
 #ifdef TCGMSG
@@ -192,35 +195,35 @@ static int  psi = 0;
 extern	void    SigintHandler();
 
 void
-par_sigintreset()
+par_sigintreset(void)
 {
    signal(SIGINT, SigintHandler);
 }
 #endif
 #ifdef BSP0
 void
-par_sigintreset()
+par_sigintreset(void)
 {
    signal(SIGINT, SIG_DFL);
 }
 #endif
 #ifdef BSP
 void
-par_sigintreset()
+par_sigintreset(void)
 {
    signal(SIGINT, SIG_DFL);
 }
 #endif
 #ifdef SHMEM
 void
-par_sigintreset()
+par_sigintreset(void)
 {
    signal(SIGINT, SIG_DFL);
 }
 #endif
 #ifdef MPI
 void
-par_sigintreset()
+par_sigintreset(void)
 {
    signal(SIGINT, SIG_DFL);
 }
@@ -230,39 +233,33 @@ par_sigintreset()
  ******************************************************************************/
 #ifdef TCGMSG
 void
-par_imax(idat)
-int *idat;
+par_imax(int *idat)
 {
        IGOP_(ADDR(10+MSGINT), idat, ADDR(1), "max");
 }
 #endif
 #ifdef BSP
 void
-par_imax(idat)
-int *idat;
+par_imax(int *idat)
 {
    *idat = bsp_maxI(*idat);
 }
 #endif
 #ifdef BSP0
-static void imax(i1, i2, i3, size)
-int *i1, *i2, *i3;
-int	size;
+static void imax(int *i1, int *i2, int *i3, int size)
 {
   *i1 = MAX(*i2,*i3);
 }
 
 void
-par_imax(idat)
-int *idat;
+par_imax(int *idat)
 {
    bspreduce(imax, idat, idat, sizeof(int));
 }
 #endif
 #ifdef SHMEM
 void
-par_imax(idat)
-int *idat;
+par_imax(int *idat)
 {
    shmem_int_max_to_all(idat, idat, 1, 0, 0, nthreads, (int*)pWrk[psi], pSync[psi]);
    psi = ! psi;
@@ -273,8 +270,7 @@ int *idat;
 #endif
 #ifdef MPI
 void
-par_imax(idat)
-int *idat;
+par_imax(int *idat)
 {
    int result;
    MPI_Allreduce(idat, &result, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
@@ -286,17 +282,13 @@ int *idat;
  ******************************************************************************/
 #ifdef TCGMSG
 void
-par_isum(buf, n)
-int *buf;
-int  n;
+par_isum(int *buf, int n)
 {
    IGOP_(ADDR(MSGINT), buf, &n, "+");
 }
 #endif
 #ifdef BSP
-static void viadd(res, x, y, nb)
-int res[], x[], y[];
-int *nb;
+static void viadd(int *res, int *x, int *y, int *nb)
 {
    int i, n=*nb/sizeof(int);
    for(i = 0; i < n; i++)
@@ -304,17 +296,13 @@ int *nb;
 }
 
 void
-par_isum(buf, n)
-int *buf;
-int  n;
+par_isum(int *buf, int n)
 {
    bsp_fold(viadd, buf, buf, n*sizeof(int));
 }
 #endif
 #ifdef BSP0
-static void viadd(res, x, y, nb)
-int res[], x[], y[];
-int nb;
+static void viadd(int *res, int *x, int *y, int nb)
 {
    int i, n=nb/sizeof(int);
    for(i = 0; i < n; i++)
@@ -322,9 +310,7 @@ int nb;
 }
 
 void
-par_isum(buf, n)
-int *buf;
-int  n;
+par_isum(int *buf, int n)
 {
    int m;
    
@@ -346,9 +332,7 @@ int  n;
 #endif
 #ifdef SHMEM
 void
-par_isum(buf, n)
-int *buf;
-int  n;
+par_isum(int *buf, int n)
 {
    int m;
    
@@ -379,9 +363,7 @@ int  n;
  * it around.  Extend if necessary.
  */
 void
-par_isum(buf, n)
-int *buf;
-int  n;
+par_isum(int *buf, int n)
 {
    static int *tmpbuf = 0;
    static int  tmpsize = 0;
@@ -404,32 +386,24 @@ int  n;
  ******************************************************************************/
 #ifdef TCGMSG
 void
-par_rsum(buf, n)
-real *buf;
-int  n;
+par_rsum(real *buf, int n)
 {
    DGOP_(ADDR(MSGDBL), buf, &n, "+");
 }
 void
-par_dsum(buf, n)
-real *buf;
-int  n;
+par_dsum(real *buf, int n)
 {
    DGOP_(ADDR(MSGDBL), buf, &n, "+");
 }
 #endif
 #ifdef BSP
-static void vradd(res, x, y, nb)
-real res[], x[], y[];
-int *nb;
+static void vradd(real *res, real *x, real *y, int *nb)
 {
    int i, n=*nb/sizeof(real);
    for(i = 0; i < n; i++)
       res[i] = x[i] + y[i];
 }
-static void vdadd(res, x, y, nb)
-double res[], x[], y[];
-int *nb;
+static void vdadd(double *res, double *x, double *y, int *nb)
 {
    int i, n=*nb/sizeof(double);
    for(i = 0; i < n; i++)
@@ -437,32 +411,24 @@ int *nb;
 }
 
 void
-par_rsum(buf, n)
-real *buf;
-int  n;
+par_rsum(real *buf, int n)
 {
    bsp_fold(vradd, buf, buf, n*sizeof(real));
 }
 void
-par_dsum(buf, n)
-double *buf;
-int  n;
+par_dsum(double *buf, int n)
 {
    bsp_fold(vradd, buf, buf, n*sizeof(double));
 }
 #endif
 #ifdef BSP0
-static void vradd(res, x, y, nb)
-real res[], x[], y[];
-int nb;
+static void vradd(real *res, real *x, real *y, int nb)
 {
    int i, n=nb/sizeof(real);
    for(i = 0; i < n; i++)
       res[i] = x[i] + y[i];
 }
-static void vdadd(res, x, y, nb)
-double res[], x[], y[];
-int nb;
+static void vdadd(double *res, double *x, double *y, int nb)
 {
    int i, n=nb/sizeof(double);
    for(i = 0; i < n; i++)
@@ -470,9 +436,7 @@ int nb;
 }
 
 void
-par_rsum(buf, n)
-real *buf;
-int  n;
+par_rsum(real *buf, int n)
 {
    int m;
    
@@ -492,9 +456,7 @@ int  n;
    }
 }
 void
-par_dsum(buf, n)
-double *buf;
-int  n;
+par_dsum(double *buf, int n)
 {
    int m;
    
@@ -516,9 +478,7 @@ int  n;
 #endif
 #ifdef SHMEM
 void
-par_rsum(buf, n)
-real *buf;
-int  n;
+par_rsum(real *buf, int n)
 {
    int m;
    
@@ -562,9 +522,7 @@ int  n;
     }      
 }
 void
-par_dsum(buf, n)
-double *buf;
-int  n;
+par_dsum(double *buf, int n)
 {
    int m;
    
@@ -600,9 +558,7 @@ int  n;
  * in which case recompile with -DUNSYMM.
  */
 void
-par_rsum(buf, n)
-real *buf;
-int  n;
+par_rsum(real *buf, int n)
 {
    static real *tmpbuf = 0;
    static int  tmpsize = 0;
@@ -622,9 +578,7 @@ int  n;
    memcp(buf, tmpbuf, n*sizeof(real));
 }
 void
-par_dsum(buf, n)
-double *buf;
-int  n;
+par_dsum(double *buf, int n)
 {
    static double *tmpbuf = 0;
    static int  tmpsize = 0;
@@ -649,11 +603,7 @@ int  n;
  ******************************************************************************/
 #ifdef TCGMSG
 void
-par_broadcast(buf, n, size, ifrom)
-gptr	*buf;
-int	n;
-size_mt	size;
-int	ifrom;
+par_broadcast(gptr *buf, int n, size_mt size, int ifrom)
 {
    long type = 0;
    long	lenbuf = n*size;
@@ -663,11 +613,7 @@ int	ifrom;
 #endif
 #ifdef BSP
 void
-par_broadcast(buf, n, size, ifrom)
-gptr	*buf;
-int	n;
-size_mt	size;
-int	ifrom;
+par_broadcast(gptr *buf, int n, size_mt size, int ifrom)
 {
    bsp_push_reg(buf, n*size);
    bsp_bcast(ifrom, buf, buf, n*size);
@@ -676,11 +622,7 @@ int	ifrom;
 #endif
 #ifdef BSP0
 void
-par_broadcast(buf, n, size, ifrom)
-gptr	*buf;
-int	n;
-size_mt	size;
-int	ifrom;
+par_broadcast(gptr *buf, int n, size_mt size, int ifrom)
 {
    int m;
    long nbyt = n*size;	/* Must have a signed type for loop test */
@@ -703,11 +645,7 @@ int	ifrom;
 #endif
 #ifdef SHMEM
 void
-par_broadcast(buf, n, size, ifrom)
-gptr	*buf;
-int	n;
-size_mt	size;
-int	ifrom;
+par_broadcast(gptr *buf, int n, size_mt size, int ifrom)
 {
    int m;
    long nbyt = n*size;	/* Must have a signed type for loop test */
@@ -735,11 +673,7 @@ int	ifrom;
 #endif
 #ifdef MPI
 void
-par_broadcast(buf, n, size, ifrom)
-gptr	*buf;
-int	n;
-size_mt	size;
-int	ifrom;
+par_broadcast(gptr *buf, int n, size_mt size, int ifrom)
 {
    MPI_Bcast(buf, n*size, MPI_BYTE, ifrom, MPI_COMM_WORLD);
 }
@@ -749,9 +683,7 @@ int	ifrom;
  ******************************************************************************/
 #ifdef BSP
 void
-par_collect_all(send, recv, n, stride, nblk)
-real	*send, *recv;
-int	n, nblk, stride;
+par_collect_all(real *send, real *recv, int n, int stride, int nblk)
 {
    int  i, right, left, iblk, ibeg;
    
@@ -793,9 +725,7 @@ int	n, nblk, stride;
 #endif
 #ifdef BSP0
 void
-par_collect_all(send, recv, n, stride, nblk)
-real	*send, *recv;
-int	n, nblk, stride;
+par_collect_all(real *send, real *recv, int n, int stride, int nblk)
 {
    int  i, right, left, iblk, ibeg;
    real *recvbuf = (real*)tmpbuf;
@@ -836,9 +766,7 @@ int	n, nblk, stride;
 #ifdef SHMEM
 #define NSYNC 16
 void
-par_collect_all(send, recv, n, stride, nblk)
-real	*send, *recv;
-int	n, nblk, stride;
+par_collect_all(real *send, real *recv, int n, int stride, int nblk)
 {
    int  i, right, left, iblk, ibeg, iSync;
    static long *recvs;
@@ -924,9 +852,7 @@ int	n, nblk, stride;
 #endif
 #ifdef MPI
 void
-par_collect_all(send, recv, n, stride, nblk)
-real	*send, *recv;
-int	n, nblk, stride;
+par_collect_all(real *send, real *recv, int n, int stride, int nblk)
 {
    int i;
    int  blens[2];
@@ -958,11 +884,7 @@ int	n, nblk, stride;
  ******************************************************************************/
 #ifdef TCGMSG
 void
-par_begin(argc, argv, ithread, nthreads)
-int	*argc;
-char	***argv;
-int	*ithread;
-int	*nthreads;
+par_begin(int *argc, char ***argv, int *ithread, int *nthreads)
 {
    int i;
    PBEGIN_(*argc, *argv);
@@ -979,11 +901,7 @@ int	*nthreads;
 #endif
 #ifdef BSP
 void
-par_begin(argc, argv, ithread, nthreads)
-int	*argc;
-char	***argv;
-int	*ithread;
-int	*nthreads;
+par_begin(int *argc, char ***argv, int *ithread, int *nthreads)
 {
    bsp_begin(bsp_nprocs());
    *nthreads = bsp_nprocs();
@@ -992,22 +910,14 @@ int	*nthreads;
 #endif
 #ifdef BSP0
 void
-par_begin(argc, argv, ithread, nthreads)
-int	*argc;
-char	***argv;
-int	*ithread;
-int	*nthreads;
+par_begin(int *argc, char ***argv, int *ithread, int *nthreads)
 {
    bspstart(*argc, *argv, 0, nthreads, ithread);
 }
 #endif
 #ifdef SHMEM
 void
-par_begin(argc, argv, ithread, nthreads)
-int	*argc;
-char	***argv;
-int	*ithread;
-int	*nthreads;
+par_begin(int *argc, char ***argv, int *ithread, int *nthreads)
 {
    int i;
    start_pes(0);
@@ -1023,11 +933,7 @@ int	*nthreads;
 #endif
 #ifdef MPI
 void
-par_begin(argc, argv, ithread, nthreads)
-int	*argc;
-char	***argv;
-int	*ithread;
-int	*nthreads;
+par_begin(int *argc, char ***argv, int *ithread, int *nthreads)
 {
    MPI_Init(argc, argv);
    MPI_Comm_size(MPI_COMM_WORLD, nthreads);
@@ -1039,35 +945,35 @@ int	*nthreads;
  ******************************************************************************/
 #ifdef TCGMSG
 void
-par_finish()
+par_finish(void)
 {
    PEND_();
 }
 #endif
 #ifdef BSP
 void
-par_finish()
+par_finish(void)
 {
    bsp_end();
 }
 #endif
 #ifdef BSP0
 void
-par_finish()
+par_finish(void)
 {
    bspfinish();
 }
 #endif
 #ifdef SHMEM
 void
-par_finish()
+par_finish(void)
 {
   shmem_barrier_all();
 }
 #endif
 #ifdef MPI
 void
-par_finish()
+par_finish(void)
 {
    MPI_Finalize();
 }
@@ -1077,8 +983,7 @@ par_finish()
  ******************************************************************************/
 #ifdef TCGMSG
 void
-par_abort(code)
-int code;
+par_abort(int code)
 {
    Error("",code);
    exit(code);
@@ -1086,8 +991,7 @@ int code;
 #endif
 #ifdef BSP
 void
-par_abort(code)
-int code;
+par_abort(int code)
 {
    bsp_abort("");
    exit(code);
@@ -1095,8 +999,7 @@ int code;
 #endif
 #ifdef BSP0
 void
-par_abort(code)
-int code;
+par_abort(int code)
 {
 #ifdef NOTYET
    bspabort(code);
@@ -1115,8 +1018,7 @@ int code;
 }
 #  else
 void
-par_abort(code)
-int code;
+par_abort(int code)
 {
    kill(getpid(),SIGKILL);
 }
@@ -1125,8 +1027,7 @@ int code;
 #endif
 #ifdef MPI
 void
-par_abort(code)
-int code;
+par_abort(int code)
 {
    MPI_Abort(MPI_COMM_WORLD, code);
    exit(code);
@@ -1135,11 +1036,11 @@ int code;
 /******************************************************************************
  *  copy_sysdef                                                            *
  ******************************************************************************/
-void	copy_sysdef(system, spec_ptr, site_info, pot_ptr)
-system_mp	system;			/* Pointer to system array (in main)  */
-spec_mp		*spec_ptr;		/* Pointer to be set to species array */
-site_mp		*site_info;		/* To be pointed at site_info array   */
-pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
+void	copy_sysdef(system_mp system, spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr)
+         	       			/* Pointer to system array (in main)  */
+       		          		/* Pointer to be set to species array */
+       		           		/* To be pointed at site_info array   */
+      		         		/* To be pointed at potpar array      */
 {
    spec_mp	spec;
    int		n_pot_recs;
@@ -1182,8 +1083,7 @@ pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
 /******************************************************************************
  *  copy_dynamics()							      *
  ******************************************************************************/
-void	copy_dynamics(system)
-system_mp	system;
+void	copy_dynamics(system_mp system)
 {
    gptr		*ap;			/* Pointer to averages database       */
    size_mt	asize;			/* Size of averages database	      */
@@ -1223,13 +1123,7 @@ system_mp	system;
  *               This is for parallel implementations and allows "start_up"   *
  *		 to be called on one processor.                               *
  ******************************************************************************/
-void replicate(control, system, spec_ptr, site_info, pot_ptr, restart_header)
-contr_mt  *control;
-system_mt *system;
-spec_mt   **spec_ptr;
-site_mt	  **site_info;
-pot_mt    **pot_ptr;
-restrt_mt *restart_header;
+void replicate(contr_mt *control, system_mt *system, spec_mt **spec_ptr, site_mt **site_info, pot_mt **pot_ptr, restrt_mt *restart_header)
 {
    int av_convert;
    /*

@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.17  2000/04/26 16:01:02  keith
+ *      Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
+ *
  *      Revision 2.16  1999/12/20 15:19:26  keith
  *      Check for rdf-limit or nbinds changed on restart, and handle
  *      gracefully.
@@ -256,7 +259,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/startup.c,v 2.16 1999/12/20 15:19:26 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/startup.c,v 2.17 2000/04/26 16:01:02 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -270,40 +273,34 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/startup.c,v
 #include	"structs.h"
 #include	"messages.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc();	       /* Interface to memory allocator       */
-void            tfree();	       /* Free allocated memory	      	      */
-void		read_control();
-void		read_sysdef();
-void		lattice_start();
-void		conv_control();
-void		conv_potentials();
-void		init_averages();
-void		convert_averages();
-void		init_rdf();
-void		re_re_header();
-void		re_re_sysdef();
-void		read_restart();
-void		banner_page();
-void		zero_real();
-void		eigens();
-void		transpose();
-void		mat_vec_mul();
-double          det();
-void		q_mul();
-void		rot_to_q();
-void		print_sysdef();
-char		*atime();
-double		mdrand();
-double		precision();
-void		smdrand();
-void		inhibit_vectorization();	/* Self-explanatory dummy     */
-#ifdef HAVE_STDARG_H
+gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+void            tfree(gptr *p);	       /* Free allocated memory	      	      */
+void		read_control(FILE *file, const match_mt *match);
+void		read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_info, pot_mp *pot_ptr);
+void		lattice_start(FILE *file, system_mp system, spec_mp species, quat_mt (*qpf));
+void		conv_control(const unit_mt *unit, boolean direction);
+void		conv_potentials(const unit_mt *unit_from, const unit_mt *unit_to, pot_mt *potpar, int npotpar, int ptype, site_mt *site_info, int max_id);
+void		init_averages(int nspecies, char *vsn, long int roll_interval, long int old_roll_interval, int *av_convert);
+void		convert_averages(long int roll_interval, long int old_roll_interval, int av_convert);
+void		init_rdf(system_mp system);
+void		re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr);
+void		re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr);
+void		read_restart(FILE *restart, char *vsn, system_mp system, int av_convert);
+void		banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header);
+void		zero_real(real *r, int n);
+void		eigens(real *A, real *RR, real *E, int N);
+void		transpose(real (*a)[3], real (*b)[3]);
+void		mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
+double          det(real (*a)[3]);
+void		q_mul(quat_mp p, quat_mp q, quat_mp r, int n);
+void		rot_to_q(real (*rot)[3], real *quat);
+char		*atime(void);
+double		mdrand(void);
+double		precision(void);
+void		smdrand(long unsigned int seed);
+void		inhibit_vectorization(void);	/* Self-explanatory dummy     */
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
-#else
-void		note();			/* Write a message to the output file */
-void		message();		/* Write a warning or error message   */
-#endif
 /*========================== External data references ========================*/
 extern	contr_mt	control;       /* Main simulation control parms. */
 extern int 		ithread, nthreads;
@@ -390,7 +387,7 @@ const match_mt	match[] = {
 /*============================================================================*
  * Functions for external access to globals.		      *
  *============================================================================*/
-void	rmlockfiles()
+void	rmlockfiles(void)
 {
    if( backup_lockname[0] )
       (void)remove(backup_lockname);
@@ -402,7 +399,7 @@ void	rmlockfiles()
  *  default_control.   Initialise 'control' with default values from 'match' *
  ******************************************************************************/
 static
-void	default_control()
+void	default_control(void)
 {
    const match_mt	*match_p;
    char	tmp[64];
@@ -416,7 +413,7 @@ void	default_control()
  * variance.  After Press, Plannery, Teulkolsk & Vetterling p202.             *
  ******************************************************************************/
 static
-double	gauss_rand()
+double	gauss_rand(void)
 {
    static int		set = 1;
    static double	gset;
@@ -447,9 +444,9 @@ double	gauss_rand()
  * distribution p(theta) = sin(theta) 					      *
  ******************************************************************************/
 static
-void	random_quat(q, n)
-quat_mp	q;				/* First quaternion		(out) */
-int	n;				/* Number to be generated.       (in) */
+void	random_quat(quat_mp q, int n)
+       	  				/* First quaternion		(out) */
+   	  				/* Number to be generated.       (in) */
 {
    double	phi, cos_theta, sin_theta, st2;
    while(n-- > 0)
@@ -469,9 +466,7 @@ int	n;				/* Number to be generated.       (in) */
  *  select_spec  Choose a species at random, weighted by proportion of whole  *
  ******************************************************************************/
 static
-spec_mp	select_spec(system, species)
-system_mp	system;
-spec_mt		species[];
+spec_mp	select_spec(system_mp system, spec_mt *species)
 {
    int		sel = mdrand() * system->nmols;
    spec_mp	spec;
@@ -491,9 +486,7 @@ spec_mt		species[];
  *  number allowed as in a lattice start.                                     *
  ******************************************************************************/
 static
-void	skew_start(system, species)
-system_mp	system;
-spec_mt	species[];
+void	skew_start(system_mp system, spec_mt *species)
 {
    int		ispec, imol;		/* Counters for species, molecules etc*/
    spec_mp	spec;
@@ -563,9 +556,7 @@ spec_mt	species[];
  *  thermalise  set velocities and quaternion derivatives to values sampled   *
  *  at random from the Boltzmann distribution for the required temperature.   *
  ******************************************************************************/
-void	thermalise(system, species)
-system_mp	system;
-spec_mt	species[];
+void	thermalise(system_mp system, spec_mt *species)
 {
    int		imol, i;		/* Counters for species, molecules etc*/
    spec_mp	spec;			/* Pointer to species[ispec]	      */
@@ -635,11 +626,11 @@ spec_mt	species[];
  *  frame.								      *
  ******************************************************************************/
 #define LTR(i,j) (((i)*(i)+(i))/2+(j))
-void	initialise_sysdef(system, species, site_info, qpf)
-system_mp	system;
-spec_mt		species[];
-site_mt		site_info[];
-quat_mt		qpf[];			/* Quaternion rotation to princ.frame*/
+void	initialise_sysdef(system_mp system, spec_mt *species, site_mt *site_info, quat_mt (*qpf))
+         	       
+       		          
+       		            
+       		      			/* Quaternion rotation to princ.frame*/
 {
    vec_mt	c_of_m;			/* Co-ordinates of centre of mass    */
    vec_mt	dipole;			/* Molecular dipole moment	     */
@@ -760,9 +751,7 @@ quat_mt		qpf[];			/* Quaternion rotation to princ.frame*/
 /******************************************************************************
  *  allocate_dynamics	 Allocate memory for the dynamic MD variables         *
  ******************************************************************************/
-void	allocate_dynamics(system, species)
-system_mp	system;
-spec_mt	species[];
+void	allocate_dynamics(system_mp system, spec_mt *species)
 {
    spec_mp	spec;			/* Alias for species[ispec]           */
    int		nmol_cum = 0,		/* Cumulative number of molecules     */
@@ -850,10 +839,10 @@ spec_mt	species[];
  *  Interpolate_derivatives calls it for all the dynamic variables.	      *
  ******************************************************************************/
 static
-void	interp(ratio, x, xo, xvo, n)
-double	ratio;				/* Between old and new timesteps      */
-real	*x, *xo, *xvo;			/* Pointers to 1st dynamic variable   */
-int	n;				/* Size of arrays x, xo, xvo          */
+void	interp(double ratio, real *x, real *xo, real *xvo, int n)
+      	      				/* Between old and new timesteps      */
+    	              			/* Pointers to 1st dynamic variable   */
+   	  				/* Size of arrays x, xo, xvo          */
 {
    double	c1 = 1.0 - 1.5*ratio + 0.5*SQR(ratio),
    		c2 = 2.0*ratio - SQR(ratio),
@@ -872,9 +861,7 @@ int	n;				/* Size of arrays x, xo, xvo          */
    }
 }
 static
-void	interpolate_derivatives(sys, step, step1)
-system_mp	sys;
-double		step, step1;
+void	interpolate_derivatives(system_mp sys, double step, double step1)
 {
    double	ratio;
    if( step == 0.0 )
@@ -905,11 +892,11 @@ double		step, step1;
  *  of freedom.  The number of sites can change subject to c).                *
  ******************************************************************************/
 static
-void	check_sysdef(restart, vsn, system, species)
-FILE		*restart;		/* Restart file pointer		      */
-char            *vsn;                   /* restart file version.              */
-system_mp	system;			/* NEW 'system' struct		      */
-spec_mt	species[];		        /* NEW 'species' struct array	      */
+void	check_sysdef(FILE *restart, char *vsn, system_mp system, spec_mt *species)
+    		         		/* Restart file pointer		      */
+                                        /* restart file version.              */
+         	       			/* NEW 'system' struct		      */
+       	          		        /* NEW 'species' struct array	      */
 {
    system_mt	sys_tmp;		/* Local temporaries of system,       */
    spec_mp	spec_tmp, spec;		/* species, site_info and potpar      */
@@ -945,10 +932,7 @@ spec_mt	species[];		        /* NEW 'species' struct array	      */
  ******************************************************************************/
 #define LOGACC   11.5 /* p =11.5 <=> acc = 10^-5 */
 #define TRoverTF 5.5  /* Ratio of indiv. interaction times - approx */
-void      init_cutoffs(alpha, cutoff, k_cutoff, h, nsites)
-double   *alpha, *cutoff, *k_cutoff;
-mat_mt   h;
-int      nsites;
+void      init_cutoffs(double *alpha, double *cutoff, double *k_cutoff, real (*h)[3], int nsites)
 {
    double max_cutoff = MIN3(h[0][0], h[1][1], h[2][2]);
    double vol = det(h);
@@ -975,7 +959,7 @@ int      nsites;
 /******************************************************************************
  * validate_control.  Determine whether control parameters are sensible.      *
  ******************************************************************************/
-void validate_control()
+void validate_control(void)
 {   
    int nerrs = 0;
    if( control.nsteps < 0 )
@@ -1048,16 +1032,15 @@ void validate_control()
  *  mass & moments of inertia and evaluation of 'whole system' quantities eg  *
  *  number of molecules.  						      *
  ******************************************************************************/
-void	start_up(contr_name, out_name, system, species, site_info, 
-		 potpar, restart_header, backup_restart)
-char		*contr_name,		/* Name of control file "" for stdin  */
-   		*out_name;		/* Name of output file "" for stdout  */
-system_mp	system;			/* Pointer to system struct	      */
-spec_mp		*species;		/* Pointer to species array	      */
-site_mp		*site_info;		/* Pointer to site_info array	      */
-pot_mp		*potpar;		/* Pointer to pot'l parameter array   */
-restrt_mt	*restart_header;	/* Pointer to restart hdr info (out)  */
-int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
+void	start_up(char *contr_name, char *out_name, system_mp system, spec_mp *species, site_mp *site_info, pot_mp *potpar, restrt_mt *restart_header, int *backup_restart)
+    		            		/* Name of control file "" for stdin  */
+   		          		/* Name of output file "" for stdout  */
+         	       			/* Pointer to system struct	      */
+       		         		/* Pointer to species array	      */
+       		           		/* Pointer to site_info array	      */
+      		        		/* Pointer to pot'l parameter array   */
+         	                	/* Pointer to restart hdr info (out)  */
+   		                	/* (ptr to) flag said purpose   (out) */
 {
    FILE		*contr_file,		/* File pointer for control read      */
    		*sysdef,		/* File pointer for sysdef file read  */

@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.10  1999/09/20 10:27:30  keith
+ *       Updated comments to assist with adding a new potential.
+ *
  *       Revision 2.9  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -147,7 +150,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/kernel.c,v 2.9 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/kernel.c,v 2.10 1999/09/20 10:27:30 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -165,11 +168,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/kernel.c,v 
 #include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
-#ifdef HAVE_STDARG_H
 void	message(int *,...);		/* Write a warning or error message   */
-#else
-void	message();			/* Write a warning or error message   */
-#endif
 /*========================== Potential type specification ====================*/
 const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 		              {"buckingham",3},
@@ -209,10 +208,10 @@ const dim_mt   pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
  *  dist_pot   return attractive part of potential integrated outside cutoff. *
  *  dist_pot = - int_{r_c}^{infty} r^2 U(r) dr                                *
  ******************************************************************************/
-double	dist_pot(potpar, cutoff, ptype)
-real	potpar[];			/* Array of potential parameters      */
-double	cutoff;				/* Cutoff distance		      */
-int	ptype;				/* Potential type selector	      */
+double	dist_pot(real *potpar, double cutoff, int ptype)
+    	         			/* Array of potential parameters      */
+      	       				/* Cutoff distance		      */
+   	      				/* Potential type selector	      */
 {
    switch(ptype)
    {
@@ -237,17 +236,16 @@ int	ptype;				/* Potential type selector	      */
  *  atomic distances (r_sqr), charges (chg) , pot'l parameters (pot[which]),  *
  *  and returns a vector of forces (forceij) and the potential energy (pe)    *
  ******************************************************************************/
-void	kernel(jmin, nnab, forceij, pe, r_sqr, nab_chg, chg, norm,
-	       alpha, ptype, pot)
-int	jmin, nnab;		/* Lower and upper limits for vectors.   (in) */
-int	ptype;			/* Index of potential type in potspec[]. (in) */
-double	*pe;			/* Potential energy accumulator.     (in/out) */
-double	alpha, norm;		/* Ewald parameter and 2*alpha/sqrt(pi). (in) */
-double	chg;			/* Electric charge of reference site.    (in) */
-real	forceij[];		/* Vector of -1/r * dU(r)/dr            (out) */
-real	r_sqr[];		/* Vector of site-site distances (**2).  (in) */
-real	nab_chg[];		/* Vector of charges of neighbour sites. (in) */
-real	*pot[];			/* Vectors of potential parameters.	 (in) */
+void	kernel(int jmin, int nnab, real *forceij, double *pe, real *r_sqr, real *nab_chg, double chg, double norm, double alpha, int ptype, real **pot)
+   	           		/* Lower and upper limits for vectors.   (in) */
+   	      			/* Index of potential type in potspec[]. (in) */
+      	    			/* Potential energy accumulator.     (in/out) */
+      	            		/* Ewald parameter and 2*alpha/sqrt(pi). (in) */
+      	    			/* Electric charge of reference site.    (in) */
+    	          		/* Vector of -1/r * dU(r)/dr            (out) */
+    	        		/* Vector of site-site distances (**2).  (in) */
+    	          		/* Vector of charges of neighbour sites. (in) */
+    	       			/* Vectors of potential parameters.	 (in) */
 {
    register real t, ar;			/* Argument of erfc() polynomial.     */
    register real r;			/* Site-site distance.		      */

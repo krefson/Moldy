@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: quaterns.c,v $
+ *       Revision 2.9  2000/04/26 16:01:02  keith
+ *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
+ *
  *       Revision 2.8  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -51,24 +54,24 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/quaterns.c,v 2.8 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/quaterns.c,v 2.9 2000/04/26 16:01:02 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include <math.h>
 /*========================== Program include files ===========================*/
 #include "defs.h"
 /*========================== External function declarations ==================*/
-double precision();
+double precision(void);
 /*============================================================================*/
 /******************************************************************************
  * Quaternion multiplier.  Multiplies arrays of quaternions p by q to give r  *
  * Can be called with  r the same as p or q.                                  *
  ******************************************************************************/
-void q_mul(p, q, r, n)
-quat_mp	p,			/* First Quaternion array [n][4]        (in)  */
-	q,			/* Second quaternion array [n][4]       (in)  */
-	r;			/* Resultant quaternions [n][4]        (out)  */
-int	n;			/* Number of quaternions in the arrays  (in)  */
+void q_mul(quat_mp p, quat_mp q, quat_mp r, int n)
+       	  			/* First Quaternion array [n][4]        (in)  */
+	  			/* Second quaternion array [n][4]       (in)  */
+	  			/* Resultant quaternions [n][4]        (out)  */
+   	  			/* Number of quaternions in the arrays  (in)  */
 {
    register	int	i;
    register	real	p0, p1, p2, p3;
@@ -89,10 +92,10 @@ int	n;			/* Number of quaternions in the arrays  (in)  */
  * Quaternion multiplier.  Multiplies quaternions p by q to give r  	      *
  * Can be called with  r the same as p or q.                                  *
  ******************************************************************************/
-void q_mul_1(p, q, r)
-quat_mt	p,			/* First Quaternion array [n][4]        (in)  */
-	q,			/* Second quaternion array [n][4]       (in)  */
-	r;			/* Resultant quaternions [n][4]        (out)  */
+void q_mul_1(real *p, real *q, real *r)
+       	  			/* First Quaternion array [n][4]        (in)  */
+	  			/* Second quaternion array [n][4]       (in)  */
+	  			/* Resultant quaternions [n][4]        (out)  */
 {
    register	real	p0, p1, p2, p3;
    register	real	q0, q1, q2, q3;
@@ -109,11 +112,11 @@ quat_mt	p,			/* First Quaternion array [n][4]        (in)  */
  * Quaternion multiplier.  Multiplies arrays of quaternions p(-1) by q to     *
  * give r. Can be called with  r the same as p or q.                          *
  ******************************************************************************/
-void q_conj_mul(p, q, r, n)
-quat_mp	p,			/* First Quaternion array [n][4]        (in)  */
-	q,			/* Second quaternion array [n][4]       (in)  */
-	r;			/* Resultant quaternions [n][4]        (out)  */
-int	n;			/* Number of quaternions in the arrays  (in)  */
+void q_conj_mul(quat_mp p, quat_mp q, quat_mp r, int n)
+       	  			/* First Quaternion array [n][4]        (in)  */
+	  			/* Second quaternion array [n][4]       (in)  */
+	  			/* Resultant quaternions [n][4]        (out)  */
+   	  			/* Number of quaternions in the arrays  (in)  */
 {
    register	int	i;
    register	real	p0, p1, p2, p3;
@@ -134,11 +137,11 @@ int	n;			/* Number of quaternions in the arrays  (in)  */
  * Quaternion multiplier.  Multiplies arrays of quaternions p(-1) by q to     *
  * give r. Can be called with  r the same as p or q.                          *
  ******************************************************************************/
-void q_mul_conj(p, q, r, n)
-quat_mp	p,			/* First Quaternion array [n][4]        (in)  */
-	q,			/* Second quaternion array [n][4]       (in)  */
-	r;			/* Resultant quaternions [n][4]        (out)  */
-int	n;			/* Number of quaternions in the arrays  (in)  */
+void q_mul_conj(quat_mp p, quat_mp q, quat_mp r, int n)
+       	  			/* First Quaternion array [n][4]        (in)  */
+	  			/* Second quaternion array [n][4]       (in)  */
+	  			/* Resultant quaternions [n][4]        (out)  */
+   	  			/* Number of quaternions in the arrays  (in)  */
 {
    register	int	i;
    register	real	p0, p1, p2, p3;
@@ -158,9 +161,9 @@ int	n;			/* Number of quaternions in the arrays  (in)  */
 /******************************************************************************
  *  q_to_mat  Make the rotation matrix corresponding to quaternion q          *
  ******************************************************************************/
-void q_to_rot(quat, rot)
-quat_mt	quat;				/* Input quaternion              (in) */
-mat_mt	rot;				/* Rotation matrix		(out) */
+void q_to_rot(real *quat, real (*rot)[3])
+       	     				/* Input quaternion              (in) */
+      	    				/* Rotation matrix		(out) */
 {
    register	real	q0, q1, q2, q3;
    register	real	a01, a02, a03,
@@ -188,9 +191,9 @@ mat_mt	rot;				/* Rotation matrix		(out) */
 /******************************************************************************
  * rot_to_q. Inverse of above.  Will fall over badly If rot is not orthogonal.*
  ******************************************************************************/
-void	rot_to_q(rot, quat)
-mat_mt	rot;				/* Rotation matrix		 (in) */
-quat_mt	quat;				/* Input quaternion             (out) */
+void	rot_to_q(real (*rot)[3], real *quat)
+      	    				/* Rotation matrix		 (in) */
+       	     				/* Input quaternion             (out) */
 {
    int i, j, k;
    real sign;

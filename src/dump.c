@@ -43,6 +43,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.11  2000/04/26 16:01:01  keith
+ *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
+ *
  *       Revision 2.10  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -172,7 +175,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/dump.c,v 2.10 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/dump.c,v 2.11 2000/04/26 16:01:01 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -187,20 +190,15 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/dump.c,v 2.
 #include	"messages.h"
 #include	"xdr.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc();	       /* Interface to memory allocator       */
-void            tfree();	       /* Free allocated memory	      	      */
-static char	*mutate();
-double		mdrand();
-void		mat_vec_mul();
-static void	dump_convert();
-static void	real_to_float();
-#ifdef HAVE_STDARG_H
+gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+void            tfree(gptr *p);	       /* Free allocated memory	      	      */
+static char	*mutate(char *name);
+double		mdrand(void);
+void		mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
+static void	dump_convert(float *buf, system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3], double pe);
+static void	real_to_float(real *b, float *a, int n);
 void	note(char *, ...);		/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
-#else
-void	note();				/* Write a message to the output file */
-void	message();			/* Write a warning or error message   */
-#endif
 /*========================== External data references ========================*/
 extern contr_mt	control;                    /* Main simulation control parms. */
 #ifdef USE_XDR
@@ -214,11 +212,7 @@ static   XDR		xdrs;
 			     (level & 1))
 /*============================================================================*/
 static
-int read_dump_hdr(fname, dumpf, hdr_p, xdr_write)
-char	*fname;
-FILE	**dumpf;
-dump_mt	*hdr_p;
-boolean	*xdr_write;
+int read_dump_hdr(char *fname, FILE **dumpf, dump_mt *hdr_p, boolean *xdr_write)
 {
    int      errflg = true;	/* Provisionally !!   */
 
@@ -260,13 +254,7 @@ boolean	*xdr_write;
 
 /*============================================================================*/
 
-void	dump(system, force, torque, stress, pe, restart_header, backup_restart)
-restrt_mt	*restart_header;
-int		backup_restart;
-system_mp	system;
-vec_mt		force[], torque[];
-mat_mt		stress;
-double		pe;
+void	dump(system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3], double pe, restrt_mt *restart_header, int backup_restart)
 {
    FILE		*dumpf=NULL;		/* File pointer to dump files	      */
    dump_mt	dump_header,		/* Header record proforma	      */
@@ -378,7 +366,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 2.10 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 2.11 $"+11,
 		                     sizeof dump_header.vsn-1);
 #ifdef USE_XDR
       if( control.xdr_write )
@@ -516,8 +504,7 @@ double		pe;
  *  before the percent.							      *
  ******************************************************************************/
 #define	N_MUTATE	3			/* Max number of mutated chars*/
-static char	*mutate(name)
-char	*name;
+static char	*mutate(char *name)
 {
    char	*pc_pos = strchr(name,'%'),
    	*begin  = pc_pos;
@@ -544,12 +531,7 @@ char	*name;
  *  All quantities are converted to floats (from real, whatever that is) and  *
  *  c_of_m and its derivatives are converted to unscaled co-ordinates.	      *
  ******************************************************************************/
-static void	dump_convert(buf, system, force, torque, stress, pe)
-float		*buf;
-system_mp	system;
-vec_mt		force[], torque[];
-mat_mt		stress;
-double		pe;
+static void	dump_convert(float *buf, system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3], double pe)
 {
    int		nmols   = system->nmols,
    		nmols_r = system->nmols_r;
@@ -595,10 +577,7 @@ double		pe;
  *  real_to_float  Copy data from one array to another, converting from       *
  *  typedef real to type float in the interests of space.  (may be null op'n) *
  ******************************************************************************/
-static void	real_to_float(b, a, n)
-float	a[];
-real	b[];
-int	n;
+static void	real_to_float(real *b, float *a, int n)
 {
    int i;
    for( i=0; i<n; i++)

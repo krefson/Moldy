@@ -25,6 +25,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.20  2000/04/26 16:01:00  keith
+ *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
+ *
  *       Revision 2.19  1999/10/08 15:49:58  keith
  *       Fully implemented new constant-pressure algorithm.
  *       Select by "const-pressure=2" in control.
@@ -230,7 +233,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/accel.c,v 2.19 1999/10/08 15:49:58 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/accel.c,v 2.20 2000/04/26 16:01:00 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -245,63 +248,56 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/accel.c,v 2
 #include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc();	       /* Interface to memory allocator       */
-void            tfree();	       /* Free allocated memory	      	      */
-void            afree();	       /* Free allocated array	      	      */
-void		leapf_com();
-void		leapf_vel();
-void		leapf_quat();
-void		leapf_avel();
-void            make_sites();	       /* Construct site coordinate arrays    */
-void            mol_force();	       /* Calculare molecular from site force */
-void            mol_torque();	       /* Calculate torques from site forces  */
-void            rotate();	       /* Perform rotations given quaternions */
-void            newton();	       /* Calculate accelerations from forces */
-void            euler();	       /* Get quat 2nd derivatives            */
-void            parinello();	       /* Get correction to c of m accns      */
-void            rahman();	       /* Get h 2nd derivatives	              */
-void            energy_dyad();	       /* Calculate mvv for stress term       */
-void            force_calc();	       /* Calculate direct-space forces       */
-double          dist_pot();	       /* Returns integrated potential fn     */
-void            ewald();	       /* Get Ewald sum forces		      */
-void            dump();		       /* Maintain and write dump data files  */
-void            zero_real();	       /* Clear area of memory		      */
-void            zero_double();	       /* Clear area of memory		      */
-void            invert();	       /* Matrix inverter		      */
-double          det();		       /* Returns matrix determinant	      */
-void            mat_vec_mul();	       /* 3 x 3 Matrix by Vector multiplier   */
-void            mean_square();	       /* Caluculates mean square of args     */
-void            rdf_calc();	       /* Accumulate and bin rdf	      */
-double 		value();	       /* Return thermodynamic average	      */
-double 		roll_av();	       /* Return thermodynamic average	      */
-double          vdot();		       /* Fast vector dot product	      */
-double		sum();		       /* Fast vector sum.		      */
-void            vscale();	       /* Vector by constant multiply	      */
-double          vec_dist();	       /* normalised vector distance	      */
-void		thermalise();	       /* Randomize velocities to given temp  */
-double		trans_ke();	       /* Compute translational kinetic en.   */
-double		rot_ke();	       /* Compute rotational kinetic en.      */
-void            hoover_tr();           /* Corrects forces due to thermostat   */
-void            hoover_rot();          /* Corrects forces due to thermostat   */
-double          gaussiant();           /* Return Force*vel                    */
-double          gaussianr1();          /* Return Torque*omega                 */
-double          gaussianr2();          /* Return omega*I*omega                */
-void            q_conj_mul();          /* Quat. conjugated x by quat. dot     */
-void	inhibit_vectorization();       /* Self-explanatory dummy              */
-void            kernel();              /* Potential function evaluation       */
+gptr            *talloc(int n, size_mt size, int line, char *file); 
+				       /* Interface to memory allocator       */
+void            tfree(gptr *p);	       /* Free allocated memory	      	      */
+void            afree(gptr *pp);       /* Free allocated array	      	      */
+void		leapf_com(real step, vec_mt (*c_of_m), vec_mt (*vel), int nmols);
+void		leapf_vel(real step, real (*hinv)[3], vec_mt (*vel), vec_mt (*force), real mass, int nmols);
+void		leapf_quat(real step, quat_mt (*quat), quat_mt (*avel), real *inertia, int nmols);
+void		leapf_avel(real step, quat_mt (*avel), vec_mt (*torque), real *inertia, int nmols);
+void            make_sites(real (*h)[3], vec_mp c_of_m_s, quat_mp quat, vec_mp p_f_sites, int framework, real **site, int nmols, int nsites);	       /* Construct site coordinate arrays    */
+void            mol_force(real **site_force, vec_mp force, int nsites, int nmols);	       /* Calculare molecular from site force */
+void            mol_torque(real **site_force, vec_mp site, vec_mp torque, quat_mp quat, int nsites, int nmols);	       /* Calculate torques from site forces  */
+void            newton(vec_mp force, vec_mp acc, double mass, int nmols);	       /* Calculate accelerations from forces */
+void            parinello(real (*h)[3], real (*h_dot)[3], vec_mp vel, vec_mp acc, vec_mp acc_out, int nmols);	       /* Get correction to c of m accns      */
+void            rahman(real (*stress_vir)[3], real (*h)[3], real (*hddot)[3], real (*ke_dyad)[3], double press, double W, int mask);	       /* Get h 2nd derivatives	              */
+void            energy_dyad(real (*ke_dyad)[3], real (*h)[3], vec_mp vels, double mass, int nmols);	       /* Calculate mvv for stress term       */
+void            force_calc(real **site, real **site_force, system_mt *system, spec_mt *species, real *chg, pot_mt *potpar, double *pe, real (*stress)[3]);	       /* Calculate direct-space forces       */
+double          dist_pot(real *potpar, double cutoff, int ptype);	       /* Returns integrated potential fn     */
+void            ewald(real **site, real **site_force, system_mp system, spec_mt *species, real *chg, double *pe, real (*stress)[3]);	       /* Get Ewald sum forces		      */
+void            dump(system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3], double pe, restrt_mt *restart_header, int backup_restart);		       /* Maintain and write dump data files  */
+void            zero_real(real *r, int n);	       /* Clear area of memory		      */
+void            zero_double(double *r, int n);	       /* Clear area of memory		      */
+void            invert(real (*a)[3], real (*b)[3]);	       /* Matrix inverter		      */
+double          det(real (*a)[3]);		       /* Returns matrix determinant	      */
+void            mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);	       /* 3 x 3 Matrix by Vector multiplier   */
+void            mean_square(vec_mt (*x), real *meansq, int nmols);	       /* Caluculates mean square of args     */
+void            rdf_calc(real **site, system_mp system, spec_mt *species);	       /* Accumulate and bin rdf	      */
+double 		value(av_n type, int comp);	       /* Return thermodynamic average	      */
+double 		roll_av(av_n type, int comp);	       /* Return thermodynamic average	      */
+double          vdot(int n, real *x, int ix, real *y, int iy);		       /* Fast vector dot product	      */
+double		sum(register int n, register double *x, register int ix);		       /* Fast vector sum.		      */
+void            vscale(register int n, register double s, register real *x, register int ix);	       /* Vector by constant multiply	      */
+double          vec_dist(real *v1, real *v2, int n);	       /* normalised vector distance	      */
+void		thermalise(system_mp system, spec_mt *species);	       /* Randomize velocities to given temp  */
+double		trans_ke(real (*h)[3], vec_mt (*vel_s), double mass, int nmols);	       /* Compute translational kinetic en.   */
+double		rot_ke(quat_mt (*omega_p), real *inertia, int nmols);	       /* Compute rotational kinetic en.      */
+void            hoover_tr(double alpha, vec_mp accel_in, vec_mp accel_out, vec_mp vel, int nmols);           /* Corrects forces due to thermostat   */
+void            hoover_rot(double alpha, real *inertia, vec_mp force_in, vec_mp force_out, quat_mp omega, int nmols);          /* Corrects forces due to thermostat   */
+double          gaussiant(vec_mp vec1, vec_mp vec2, int nmols);           /* Return Force*vel                    */
+double          gaussianr1(vec_mp vec1, quat_mp vec2, int nmols);          /* Return Torque*omega                 */
+double          gaussianr2(quat_mp omega, real *inertia, int nmols);          /* Return omega*I*omega                */
+void            q_conj_mul(quat_mp p, quat_mp q, quat_mp r, int n);          /* Quat. conjugated x by quat. dot     */
+void		inhibit_vectorization(void);       /* Self-explanatory dummy              */
+void            kernel(int jmin, int nnab, real *forceij, double *pe, real *r_sqr, real *nab_chg, double chg, double norm, double alpha, int ptype, real **pot);              /* Potential function evaluation       */
 #ifdef SPMD
-void		par_rsum();
-void		par_dsum();
+void		par_rsum(real *buf, int n);
+void		par_dsum(double *buf, int n);
 #endif
-#ifdef HAVE_STDARG_H
 gptr		*arralloc(size_mt,int,...); /* Array allocator		      */
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
-#else
-gptr		*arralloc();	        /* Array allocator		      */
-void		note();			/* Write a message to the output file */
-void		message();		/* Write a warning or error message   */
-#endif
 /*========================== External data references ========================*/
 extern contr_mt control;                    /* Main simulation control parms. */
 extern int 	ithread, nthreads;
@@ -332,9 +328,7 @@ extern int 	ithread, nthreads;
  *	bit 3:  don't scale at all, but re-initialize from MB distribution.   *
  ******************************************************************************/
 void
-rescale(system, species)
-system_mp	system;
-spec_mp		species;
+rescale(system_mp system, spec_mp species)
 {
    spec_mp	spec;
    int		ispec, imol, i;
@@ -689,10 +683,10 @@ vec_mp		torque[];
  * Poteval	      Return potential evaluated at a single point.           *
  ******************************************************************************/
 static double
-poteval(potpar, r, ptype)
-real	potpar[];			/* Array of potential parameters      */
-double	r;				/* Cutoff distance		      */
-int	ptype;				/* Potential type selector	      */
+poteval(real *potpar, double r, int ptype)
+    	         			/* Array of potential parameters      */
+      	  				/* Cutoff distance		      */
+   	      				/* Potential type selector	      */
 {
    double pe = 0.0;
    real f,rr;
@@ -713,12 +707,7 @@ int	ptype;				/* Potential type selector	      */
  *  If Iflag == 0, return potential correction, == 1, pressure correction.    *
  ******************************************************************************/
 static double 
-distant_const(system, species, potpar, cutoff, iflag)
-system_mp       system;
-spec_mt         species[];
-pot_mt          potpar[];
-double          cutoff;
-int		iflag;
+distant_const(system_mp system, spec_mt *species, pot_mt *potpar, double cutoff, int iflag)
 {
    int             isite, id, jd;	/* Counters		      */
    spec_mp         spec;	       		/* pointer to current species */
@@ -776,18 +765,17 @@ NOVECTOR
  *   11) Deallocates all the dynamic arrays and returns the space to the heap *
  ******************************************************************************/
 void 
-do_step(sys, species, site_info, potpar, meansq_f_t, pe, dip_mom, stress,
-	restart_header, backup_restart)
-system_mp       sys;		       /* Pointer to system info	 (in) */
-spec_mt         species[];	       /* Array of species info	 (in) */
-site_mt         site_info[];	       /* Array of site info structures (in) */
-pot_mt          potpar[];	       /* Array of potential parameters (in) */
-vec_mt          meansq_f_t[][2];       /* Mean square force and torque (out) */
-double          pe[];		       /* Potential energy real/Ewald  (out) */
-vec_mt          dip_mom;	       /* Total system dipole moment   (out) */
-mat_mt          stress;		       /* Virial part of stress	(out) */
-restrt_mt	*restart_header;       /* What the name says. (in)	     */
-int		backup_restart;	       /* Flag signalling backup restart (in)*/
+do_step(system_mp sys, spec_mt *species, site_mt *site_info, pot_mt *potpar, vec_mt (*meansq_f_t)[2], double *pe, real *dip_mom, real (*stress)[3], restrt_mt *restart_header, int backup_restart)
+                    		       /* Pointer to system info	 (in) */
+                          	       /* Array of species info	 (in) */
+                            	       /* Array of site info structures (in) */
+                         	       /* Array of potential parameters (in) */
+                                       /* Mean square force and torque (out) */
+                     		       /* Potential energy real/Ewald  (out) */
+                        	       /* Total system dipole moment   (out) */
+                       		       /* Virial part of stress	(out) */
+         	                       /* What the name says. (in)	     */
+   		               	       /* Flag signalling backup restart (in)*/
 {
 /*
  * The following declarations are arrays of pointers to the forces
@@ -899,8 +887,8 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
    zero_real(site_force[1], nsarray);
    zero_real(site_force[2], nsarray);
    zero_double(pe, NPE);
-   zero_real(force_base, sys->nmols);
-   zero_real(torque_base, sys->nmols_r);
+   zero_real(force_base[0], sys->nmols);
+   zero_real(torque_base[0], sys->nmols_r);
    
    invert(sys->h, hinv);
 /*
@@ -1080,9 +1068,7 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
  *  Mol_radius.  Determine and return the greatest molecular radius of any     *
  *  species in the system.  That is, the largest c-of-mass - site distance.    *
  *******************************************************************************/
-double mol_radius(species, nspecies)
-spec_mt	species[];
-int	nspecies;
+double mol_radius(spec_mt *species, int nspecies)
 {
    spec_mp spec;
    static double radius = -1.0;

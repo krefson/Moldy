@@ -19,11 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/dumpanal.c,v 2.8 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/dumpanal.c,v 2.9 1999/12/20 15:23:32 keith Exp $";
 #endif
 
 /*
  * $Log: dumpanal.c,v $
+ * Revision 2.9  1999/12/20 15:23:32  keith
+ * Removed parenthesis from check
+ *
  * Revision 2.8  1998/05/07 17:06:11  keith
  * Reworked all conditional compliation macros to be
  * feature-specific rather than OS specific.
@@ -80,7 +83,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/dumpanal.c,
 #endif
 
 #ifdef USE_XDR
-bool_t xdr_dump();
+bool_t xdr_dump(XDR *xdrs, dump_mt *sp);
 #endif
 /******************************************************************************
  * strstr replacement for pre-ANSI machines which don't have it.              *
@@ -97,13 +100,11 @@ char *cs, *ct;
 }
 #endif
 
-char	*ctime();
-void	analyze();
-void	print_header();
+char	*ctime(const time_t *);
+void	analyze(char *file);
+void	print_header(dump_mt *header);
 int
-main(argc, argv)
-int	argc;
-char	*argv[];
+main(int argc, char **argv)
 {
    int	i;
    for(i = 1; i < argc; i++)
@@ -111,8 +112,7 @@ char	*argv[];
    return 0;
 }
 
-void analyze(file)
-char *file;
+void analyze(char *file)
 {
    FILE *f;
    dump_mt header;
@@ -161,8 +161,7 @@ char *file;
       (void)fclose(f);
    }
 }
-void	print_header(header)
-dump_mt	*header;
+void	print_header(dump_mt *header)
 {
    printf("Title\t\t\t= \"%s\"\n",header->title);
    printf("RCS Revision\t\t= %.*s\n", (int)strlen(header->vsn)-1, header->vsn);

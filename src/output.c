@@ -37,6 +37,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.16  2000/04/24 15:07:48  keith
+ *       Added extra output to banner_page.  Now ALL important control-file
+ *       options are logged in the output.
+ *       Added sanity check for surface-dipole when ions are present.
+ *
  *       Revision 2.15  1999/10/08 15:49:58  keith
  *       Fully implemented new constant-pressure algorithm.
  *       Select by "const-pressure=2" in control.
@@ -193,16 +198,12 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/leapfrog/RCS/output.c,v 2.15 1999/10/08 15:49:58 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/output.c,v 2.16 2000/04/24 15:07:48 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
 /*========================== Library include files ===========================*/
-#ifdef HAVE_STDARG_H
 #include 	<stdarg.h>
-#else
-#include 	<varargs.h>
-#endif
 #include 	<math.h>
 #include 	"stdlib.h"
 #include	"stddef.h"
@@ -212,10 +213,11 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/leapfrog/RCS/ou
 #include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
-void	conv_control();			/* Unit conversion for 'control'      */
-char	*atime();			/* Current date and time in ASCII     */
-char	*cctime();			/* Convert long time to ASCII.	      */
-void	rmlockfiles();
+void	conv_potentials(const unit_mt *unit_from, const unit_mt *unit_to, pot_mt *potpar, int npotpar, int ptype, site_mt *site_info, int max_id);
+void	conv_control(const unit_mt *unit, boolean direction);			/* Unit conversion for 'control'      */
+char	*atime(void);			/* Current date and time in ASCII     */
+char	*cctime(time_mt *timeloc);			/* Convert long time to ASCII.	      */
+void	rmlockfiles(void);
 /*========================== External data references ========================*/
 extern	      contr_mt 	control;	    /* Main simulation control parms. */
 extern	const match_mt	match[];	    /* Control file keyword table.    */
@@ -240,7 +242,7 @@ static	const int	nspecial = sizeof(special) / sizeof(match_mt);
 /******************************************************************************
  * lines_left().  How many lines are left on page?			      *
  ******************************************************************************/
-int lines_left()
+int lines_left(void)
 {
    if( control.page_length > 0) 
       return MAX(0,control.page_length - out_line);
@@ -250,15 +252,14 @@ int lines_left()
 /******************************************************************************
  * new_line.   print a newline and update line counter                        *
  ******************************************************************************/
-void	new_line()
+void	new_line(void)
 {
-   void	new_page();
+   void	new_page(void);
    (void)putchar('\n');
    out_line++;
    if(out_line > control.page_length && control.page_length > 0)   new_page();
 }
-void	new_lins(n)
-int	n;
+void	new_lins(int n)
 {
    while(n-- > 0)
       new_line();
@@ -266,7 +267,7 @@ int	n;
 /******************************************************************************
  * new_page   Take a new page on the output and print a header                * 
  ******************************************************************************/
-void	new_page()
+void	new_page(void)
 {
    (void)putchar('\f');					/* Take new page      */
    out_line = 0;					/* Print page header  */
@@ -276,8 +277,7 @@ void	new_page()
 /******************************************************************************
  *  Banner line.							      *
  ******************************************************************************/
-void	put_line(c)
-int	c;
+void	put_line(int c)
 {
    int n = control.page_width;
    while(n-- > 0)
@@ -288,31 +288,16 @@ int	c;
  *  message.   Deliver error message to possibly exiting.  It can be called   *
  *	       BEFORE output file is opened, in which case outt to stderr.    *
  ******************************************************************************/
-#ifdef HAVE_STDARG_H
-#   undef  va_alist
-#   define	va_alist int *nerrs, ...
-#   ifdef va_dcl
-#      undef va_dcl
-#   endif
-#   define va_dcl /* */
-#endif
 /*VARARGS*/
-void	message(va_alist)
-va_dcl
+void	message(int *nerrs, ...)
+
 {
    va_list	ap;
    char		*buff;
    int		sev;
    char		*format;
    static char	*sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
-#ifdef HAVE_STDARG_H
    va_start(ap, nerrs);
-#else
-   int		*nerrs;
-
-   va_start(ap);
-   nerrs = va_arg(ap, int *);
-#endif
 
    buff  = va_arg(ap, char *);
    sev   = va_arg(ap, int);
@@ -347,24 +332,12 @@ va_dcl
 /******************************************************************************
  *  note   write a message to the output file				      *
  ******************************************************************************/
-#ifdef HAVE_STDARG_H
-#undef  va_alist
-#define	va_alist char *text, ...
-#define va_dcl /* */
-#endif
 /*VARARGS*/
-void	note(va_alist)
-va_dcl
+void	note(char *text, ...)
+
 {
    va_list	ap;
-#ifdef HAVE_STDARG_H
    va_start(ap, text);
-#else
-   char		*text;
-
-   va_start(ap);
-   text = va_arg(ap, char *);
-#endif
 
    if( ithread > 0 )
       return;
@@ -376,9 +349,7 @@ va_dcl
 /******************************************************************************
  *  Print_array    Print out an array of strings in a common format 	      *
  ******************************************************************************/
-static void	print_array(text, n)
-char	*text[];
-size_mt	n;
+static void	print_array(char **text, size_mt n)
 {
    int i;
    for(i=0; i<n; i++)
@@ -391,9 +362,7 @@ size_mt	n;
 /******************************************************************************
  *   Format_int     Print the name and value of some parameter in same format *
  ******************************************************************************/
-static void	format_int(text,value)
-char	*text;
-int	value;
+static void	format_int(char *text, int value)
 {
    (void)printf("\t%-32s = %d",text,value);
    new_line();
@@ -401,9 +370,7 @@ int	value;
 /******************************************************************************
  *   Format_long     Print the name and value of some parameter in same format *
  ******************************************************************************/
-static void	format_long(text,value)
-char	*text;
-long	value;
+static void	format_long(char *text, long int value)
 {
    (void)printf("\t%-32s = %ld",text,value);
    new_line();
@@ -411,10 +378,7 @@ long	value;
 /******************************************************************************
  *   Format_dbl     Print the name and value of some parameter in same format *
  ******************************************************************************/
-static void	format_dbl(text,value,units)
-char	*text;
-double	value;
-char	*units;
+static void	format_dbl(char *text, double value, char *units)
 {
    (void)printf("\t%-32s = %g %s",text,value,units);
    new_line();
@@ -422,10 +386,7 @@ char	*units;
 /******************************************************************************
  *   Format_vec     Print the name and value of some parameter in same format *
  ******************************************************************************/
-static void	format_vec(text,value1,value2,value3,units)
-char	*text;
-double	value1,value2,value3;
-char	*units;
+static void	format_vec(char *text, double value1, double value2, double value3, char *units)
 {
    (void)printf("\t%-32s = %g %g %g %s",
 		 text,value1,value2,value3,units);
@@ -461,10 +422,7 @@ static char	*copy_notice[] = {"Moldy Copyright (C) Keith Refson 1988, 1992, 1993
 /******************************************************************************
  *  banner_page   Write the banner and relevant system/run information        *
  ******************************************************************************/
-void	banner_page(system, species, restart_header)
-system_mp	system;
-spec_mt		species[];
-restrt_mt	*restart_header;
+void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
 {
    spec_mp	spec;
    mat_mp	h = system->h;
@@ -673,12 +631,12 @@ restrt_mt	*restart_header;
  *  read_sysdef can interpret.                                                *
  ******************************************************************************/
 static
-void    print_sysdef(file, system, species, site_info, potpar)
-FILE		*file;
-system_mp       system;                 /* Pointer to system array (in main)  */
-spec_mt         species[];              /* Pointer to species array           */
-site_mp        site_info;              /* pointer to site_info array         */
-pot_mt          potpar[];               /* Potential parameter array          */
+void    print_sysdef(FILE *file, system_mp system, spec_mt *species, site_mp site_info, pot_mt *potpar)
+    		      
+                                        /* Pointer to system array (in main)  */
+                                        /* Pointer to species array           */
+                                       /* pointer to site_info array         */
+                                        /* Potential parameter array          */
 {
    spec_mp      spec;
    int  isite, idi, idj, idij, ip;
@@ -718,12 +676,12 @@ pot_mt          potpar[];               /* Potential parameter array          */
  * format.  Control parameters system definition and 'lattice start' are      *
  * output allowing a portable restart.					      *
  ******************************************************************************/
-void	print_config(save_name, system, species, site_info, potpar)
-char		*save_name;		/* Name of save file to be written    */
-system_mp	system;			/* Pointer to system array (in main)  */
-spec_mp		species;		/* Pointer to be set to species array */
-site_mp		site_info;		/* To be pointed at site_info array   */
-pot_mp		potpar;			/* To be pointed at potpar array      */
+void	print_config(char *save_name, system_mp system, spec_mp species, site_mp site_info, pot_mp potpar)
+    		           		/* Name of save file to be written    */
+         	       			/* Pointer to system array (in main)  */
+       		        		/* Pointer to be set to species array */
+       		          		/* To be pointed at site_info array   */
+      		       			/* To be pointed at potpar array      */
 {
    FILE 	*out;
    const match_mt	*match_p, *cur, *special_p;

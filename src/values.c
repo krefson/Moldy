@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ *       Revision 2.9  2000/04/26 16:01:03  keith
+ *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
+ *
  *       Revision 2.8  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -140,7 +143,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/values.c,v 2.8 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/values.c,v 2.9 2000/04/26 16:01:03 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -152,32 +155,27 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/values.c,v 
 #include	"stddef.h"
 #include	<stdio.h>
 /*========================== External function declarations ==================*/
-void	mat_vec_mul();
-void	q_conj_mul();			/* Quaternion multiply conjugated     */
-double	det();				/* Determinant of 3x3 matrix	      */
-double	vdot();				/* Vector dot product		      */
-double	sum();				/* Vector sum			      */
-void	zero_real();
-void	zero_double();
-void	zero_dbls();
-void	energy_dyad();
-double	trans_ke();
-double	rot_ke();
-double	precision();			/* Machine precision constant	      */
-char	*atime();
-void	new_line();
-void	new_lins();
-void	new_page();
-gptr    *talloc();		       /* Interface to memory allocator       */
-void    tfree();		       /* Free allocated memory	      	      */
-int	lines_left();		       /* on current page of output	      */
-#ifdef HAVE_STDARG_H
+void	mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
+void	q_conj_mul(quat_mp p, quat_mp q, quat_mp r, int n);			/* Quaternion multiply conjugated     */
+double	det(real (*a)[3]);				/* Determinant of 3x3 matrix	      */
+double	vdot(int n, real *x, int ix, real *y, int iy);				/* Vector dot product		      */
+double	sum(register int n, register double *x, register int ix);				/* Vector sum			      */
+void	zero_real(real *r, int n);
+void	zero_double(double *r, int n);
+void	zero_dbls(double *r, size_mt n);
+void	energy_dyad(real (*ke_dyad)[3], real (*h)[3], vec_mp vels, double mass, int nmols);
+double	trans_ke(real (*h)[3], vec_mt (*vel_s), double mass, int nmols);
+double	rot_ke(quat_mt (*omega_p), real *inertia, int nmols);
+double	precision(void);			/* Machine precision constant	      */
+char	*atime(void);
+void	new_line(void);
+void	new_lins(int n);
+void	new_page(void);
+gptr    *talloc(int n, size_mt size, int line, char *file);		       /* Interface to memory allocator       */
+void    tfree(gptr *p);		       /* Free allocated memory	      	      */
+int	lines_left(void);		       /* on current page of output	      */
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
-#else
-void		note();			/* Write a message to the output file */
-void		message();		/* Write a warning or error message   */
-#endif
 /*========================== External data references ========================*/
 extern	contr_mt	control;            /* Main simulation control parms. */
 /*========================== Structs local to module =========================*/
@@ -243,11 +241,7 @@ static  gptr    *av_tmp;
  *  following rule - a positive entry is the true multiplicity and a negative *
  *  one is multiplied by the number of species for the true multiplicity.     *
  ******************************************************************************/
-void	init_averages(nspecies, vsn, roll_interval, old_roll_interval,av_convert)
-int	nspecies;
-char	*vsn;
-long	roll_interval, old_roll_interval;
-int	*av_convert;
+void	init_averages(int nspecies, char *vsn, long int roll_interval, long int old_roll_interval, int *av_convert)
 {
    av_mt		*av_mp;
    int		i, imult;
@@ -315,9 +309,7 @@ int	*av_convert;
  * if restart file written using old "static" scheme.			      *
  * Also a convenient place to implement reset_averages.			      *
  ******************************************************************************/
-void	convert_averages(roll_interval, old_roll_interval, av_convert)
-long	roll_interval, old_roll_interval;
-int	av_convert;
+void	convert_averages(long int roll_interval, long int old_roll_interval, int av_convert)
 {
    int iav, old_nroll, old_iroll, rbl;
    size_mt prev_av_mt_size;
@@ -399,9 +391,7 @@ int	av_convert;
 /******************************************************************************
  * av_ptr   Return a pointer to averages database and its size (for restart)  *
  ******************************************************************************/
-gptr	*av_ptr(size, av_convert)
-size_mt	*size;
-int	av_convert;
+gptr	*av_ptr(size_mt *size, int av_convert)
 {
    switch(av_convert)
    {
@@ -422,10 +412,10 @@ int	av_convert;
 /******************************************************************************
  * add_average  update the averages database with new datum                   *
  ******************************************************************************/
-static void	add_average(datum, type, offset)
-double	datum;				/* Datum to store and accumulate sums */
-av_n	type;				/* What kind (ie where to store)      */
-int	offset;				/* Sub-type or which component        */
+static void	add_average(double datum, av_n type, int offset)
+      	      				/* Datum to store and accumulate sums */
+    	     				/* What kind (ie where to store)      */
+   	       				/* Sub-type or which component        */
 {
    av_mt		*av_mp;
    if(offset < 0 || offset > av_info[(int)type].mult - 1)
@@ -445,13 +435,13 @@ int	offset;				/* Sub-type or which component        */
  * values   Calculate the values of the thermodynamic quantities, maintain and*
  * if necessary print them, their averages and rolling averages.              *
  ******************************************************************************/
-void	values(system, species, meansq_f_t, pe, dipole, stress_vir)
-system_mp	system;		/* record of system info		      */
-spec_mt	species[];	/* Records of info for each species	      */
-vec_mt		meansq_f_t[][2];/* mean square forces and torques             */
-double		pe[];		/* potential energy real/reciprocal space     */
-vec_mt		dipole;		/* dipole moment of whole system              */
-mat_mt		stress_vir;	/* 'Potential' part of stress, or virial      */
+void	values(system_mp system, spec_mt *species, vec_mt (*meansq_f_t)[2], double *pe, real *dipole, real (*stress_vir)[3])
+         	       		/* record of system info		      */
+       	          	/* Records of info for each species	      */
+      		                /* mean square forces and torques             */
+      		     		/* potential energy real/reciprocal space     */
+      		       		/* dipole moment of whole system              */
+      		           	/* 'Potential' part of stress, or virial      */
 {
    spec_mp	spec;
    int		ispec, ipe;
@@ -580,16 +570,12 @@ mat_mt		stress_vir;	/* 'Potential' part of stress, or virial      */
  *  value,  roll_av,  roll_sd.   Functions returning the value, rolling       *
  *  average, or s.d for rolling average indicated by pointer p.               *
  ******************************************************************************/
-double value(type, comp)
-av_n	type;
-int	comp;
+double value(av_n type, int comp)
 {
    return(av_info[(int)type].p[comp]->value);
 }
 
-double	roll_av(type, comp)
-av_n	type;
-int	comp;
+double	roll_av(av_n type, int comp)
 {
    int	i;
    double	mean = 0.0;
@@ -600,9 +586,7 @@ int	comp;
 }
 
 static
-double	roll_sd(type, comp)
-av_n	type;
-int	comp;
+double	roll_sd(av_n type, int comp)
 {
    int	i;
    double	*roll, ssq = 0.0, mean = roll_av(type, comp), var,
@@ -626,10 +610,7 @@ int	comp;
  *  the field width and format to use for each data type.                     *
  ******************************************************************************/
 static
-void print_frame(header_sym, header_text, f)
-int	header_sym;
-char	*header_text;
-double	(*f)();
+void print_frame(int header_sym, char *header_text, double (*f) (/* ??? */))
 {
    int	row, col, icol;
    static int	out_width = 1;
@@ -673,7 +654,7 @@ double	(*f)();
  *  output    Main output routine to be called periodically.                  *
  *  Calls print_frame which does most of the real work.                       *
  ******************************************************************************/
-void	output()
+void	output(void)
 {
    char	s[64];
 
@@ -688,7 +669,7 @@ void	output()
 /******************************************************************************
  *  averages   calculate and print averages, reset counter.		      *
  ******************************************************************************/
-void	averages()
+void	averages(void)
 {
    int	i, iav, col;
    double	variance,

@@ -28,6 +28,9 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdbond.c,v $
+ *  Revision 1.8  1999/12/07 13:24:29  keith
+ *  checked in with -k by keith at 1999/12/08 09:39:13
+ *
  *  Revision 1.8  1999/12/08 15:52:36  craig
  *  Reduced blim and alim arrays to two elements each , viz. min and max.
  *  Replaced unnecessary blim[2] / alim[2] elements with dummy variable in call to forstr.
@@ -80,14 +83,10 @@ what you give them.   Help stamp out software-hoarding! */
  */
 
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 1.8 1999/12/07 13:24:29 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/mdbond.c,v 1.8 1999/12/07 13:24:29 keith Exp $";
 #endif
 #include "defs.h"
-#ifdef HAVE_STDARG_H
 #include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
 #include <errno.h>
 #include <math.h>
 #include "stdlib.h"
@@ -98,11 +97,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 
 #include "messages.h"
 #include "list.h"
 #include "utlsup.h"
-#ifdef HAVE_STDARG_H
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
-#else
-gptr	*arralloc();	        	/* Array allocator		      */
-#endif
 
 /*
  * Default limits for bond intervals and angle intervals - integers only
@@ -143,18 +138,18 @@ typedef struct
    double	value;
 } ANGLE;
 
-void	make_sites();
-char	*strlower();
-void	read_sysdef();
-void	initialise_sysdef();
-void	re_re_header();
-void	re_re_sysdef();
-void	allocate_dynamics();
-void	lattice_start();
-void	read_restart();
-void	init_averages();
-int	getopt();
-gptr	*talloc();
+void	make_sites(real (*h)[3], vec_mp c_of_m_s, quat_mp quat, vec_mp p_f_sites, int framework, real **site, int nmols, int nsites);
+char	*strlower(char *s);
+void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_info, pot_mp *pot_ptr);
+void	initialise_sysdef(system_mp system, spec_mt *species, site_mt *site_info, quat_mt (*qpf));
+void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr);
+void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr);
+void	allocate_dynamics(system_mp system, spec_mt *species);
+void	lattice_start(FILE *file, system_mp system, spec_mp species, quat_mt (*qpf));
+void	read_restart(FILE *restart, char *vsn, system_mp system, int av_convert);
+void	init_averages(int nspecies, char *vsn, long int roll_interval, long int old_roll_interval, int *av_convert);
+int	getopt(int, char *const *, const char *);
+gptr	*talloc(int n, size_mt size, int line, char *file);
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 contr_mt	control;
@@ -162,9 +157,7 @@ contr_mt	control;
 /******************************************************************************
  * morethan_BOND(). Compare distances stored in BOND structure types          *
  ******************************************************************************/
-NODE  *morethan_BOND(root, data)
-ROOT    **root;
-BOND     *data;
+NODE  *morethan_BOND(ROOT **root, BOND *data)
 {
    NODE *node = NULL;
    BOND	*bd;
@@ -186,9 +179,7 @@ BOND     *data;
 /******************************************************************************
  * morethan_ANGLE(). Compare angles stored in ANGLE structure types           *
  ******************************************************************************/
-NODE *morethan_ANGLE(root, data)
-ROOT    **root;
-ANGLE    *data;
+NODE *morethan_ANGLE(ROOT **root, ANGLE *data)
 {
    NODE *node = NULL;
    ANGLE *ang;
@@ -210,9 +201,7 @@ ANGLE    *data;
 /******************************************************************************
  * angle_calc(). Calculate angle (in degrees) between two vectors             *
  ******************************************************************************/
-double angle_calc(vec1, vec2, a, b)
-vec_mt    vec1, vec2;
-double    a, b;
+double angle_calc(real *vec1, real *vec2, double a, double b)
 {
 double    dp, angle;
 
@@ -232,13 +221,7 @@ double    dp, angle;
  * bond_calc().  Read file and determine bonds and angles within limits       *
  ******************************************************************************/
 void
-bond_calc(system, species, site_info, broot, aroot, sp_range, blim, alim)
-system_mt	*system;
-spec_mt		species[];
-site_mt         site_info[];
-ROOT		**broot, **aroot;
-int		blim[3], alim[3];
-int		sp_range[3];
+bond_calc(system_mt *system, spec_mt *species, site_mt *site_info, ROOT **broot, ROOT **aroot, int *sp_range, int *blim, int *alim)
 {
    BOND		*bond;
    ANGLE        *angle;
@@ -459,9 +442,7 @@ int		sp_range[3];
  * data_out().  Output bonds and angles to file with same format as Shell by  *
  *              N. Allan and G. Barrera, Bristol Univ.                        *
  ******************************************************************************/
-void data_out(broot, aroot)
-ROOT    **broot;
-ROOT    **aroot;
+void data_out(ROOT **broot, ROOT **aroot)
 {
    NODE         *node;
    BOND         *bd;
@@ -507,9 +488,7 @@ ROOT    **aroot;
  * If neither specified on command line, user is interrogated.		      *
  ******************************************************************************/
 int
-main(argc, argv)
-int	argc;
-char	*argv[];
+main(int argc, char **argv)
 {
    int	c, cflg = 0, ans_i, sym = 0, data_source = 0;
    char 	line[80];

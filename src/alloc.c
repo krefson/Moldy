@@ -34,6 +34,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: alloc.c,v $
+ *       Revision 2.11  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.10  1998/01/27 15:41:42  keith
  *       Got rid of copying of arg ptr ap and replaced with a rescan of
  *       the argument list in 'arralloc()'.  This is because va_list
@@ -154,17 +159,13 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/alloc.c,v 2.10 1998/01/27 15:41:42 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/alloc.c,v 2.11 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
 #include "messages.h"
 /*========================== Library include files ===========================*/
-#ifdef HAVE_STDARG_H
 #   include <stdarg.h>
-#else
-#   include <varargs.h>
-#endif
 #include "stdlib.h"
 #include "stddef.h"
 #include "string.h"
@@ -176,18 +177,13 @@ typedef size_mt size_t;
 #include <dbmalloc.h>
 #endif
 /*========================== External function declarations ==================*/
-void	inhibit_vectorization();		/* Self-explanatory dummy     */
+void	inhibit_vectorization(void);		/* Self-explanatory dummy     */
 #ifdef	DEBUG
 int	malloc_verify();
 int	malloc_debug();
 #endif
-#ifdef HAVE_STDARG_H
 void	note(char *, ...);			/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
-#else
-void	note();				/* Write a message to the output file */
-void	message();			/* Write a warning or error message   */
-#endif
 /*============================================================================*/
 /******************************************************************************
  * word_mt								      *
@@ -208,11 +204,7 @@ typedef double wide_mt;
 /******************************************************************************
  * talloc()	Call Calloc to allocate memory, test result and stop if failed*
  ******************************************************************************/
-gptr	*talloc(n, size, line, file)
-int	n;
-size_mt	size;
-int	line;
-char	*file;
+gptr	*talloc(int n, size_mt size, int line, char *file)
 {
    gptr *p;
 #ifdef STDC_HEADERS
@@ -242,8 +234,7 @@ char	*file;
 /******************************************************************************
  * Cfree - synonym to free()						      *
  ******************************************************************************/
-void	tfree(p)
-gptr	*p;
+void	tfree(gptr *p)
 {
 #ifdef DEBUG
    if( ! malloc_verify() )
@@ -270,8 +261,7 @@ gptr *pp;
 }
       
 #else /* ALLOC_SEPARATELY*/
-void 	afree(p)
-gptr	*p;
+void 	afree(gptr *p)
 {
    tfree(p);
 }
@@ -288,10 +278,7 @@ gptr	*p;
  ******************************************************************************/
 #ifdef ALLOC_SEPARATELY
 
-word_mt **subarray(size, ndim, len, ap)
-size_mt	size;
-int	ndim, len;
-va_list	ap;
+word_mt **subarray(size_mt size, int ndim, int len, va_list ap)
 {
    word_mt **p;
    word_mt  *d;
@@ -323,31 +310,14 @@ va_list	ap;
    }      
 }
 
-#ifdef HAVE_STDARG_H
-#   undef va_alist
-#   define	va_alist size_mt size, int ndim, ...
-#   ifdef va_dcl
-#      undef va_dcl
-#   endif
-#   define va_dcl /* */
-#endif
                 /*VARARGS*/
-gptr		*arralloc(va_alist)
-va_dcl
+gptr		*arralloc(size_mt size, int ndim, ...)
+
 {
    va_list	ap;
    word_mt		*p;
    int		lb, ub;
-#ifdef HAVE_STDARG_H
    va_start(ap, ndim);
-#else
-   size_mt	size;			/* size of array element	      */
-   int		ndim;			/* Number of dimensions		      */
-
-   va_start(ap);
-   size = va_arg(ap, size_mt);
-   ndim = va_arg(ap, int);
-#endif
 
 #ifdef DEBUGY
    fprintf(stderr,"%dD array of %lu byte elements:", ndim, size);
@@ -375,12 +345,7 @@ va_dcl
 #define CSA(a) ((char*)(a))
 #define ALIGN(a,base,b)	((word_mt*)(CSA(base)+((CSA(a)-CSA(base))+(b)-1)/(b)*(b) ))
 static
-void 	subarray(size, ndim, prdim, pp, qq, base, ap)
-size_mt  size;
-int	ndim;
-long	prdim;
-word_mt	***pp, **qq, *base;
-va_list	ap;
+void 	subarray(size_mt size, int ndim, long int prdim, word_mt ***pp, word_mt **qq, word_mt *base, va_list ap)
 {
    word_mt	*dd = ALIGN(qq,base,size),	**dpp = (word_mt**)pp;
    int i,	lb = va_arg(ap, int),
@@ -401,32 +366,15 @@ va_list	ap;
 	 dpp[i] = dd + (i*dim - lb)*size/sizeof(word_mt);
 }
             
-#ifdef HAVE_STDARG_H
-#   undef va_alist
-#   define	va_alist size_mt size, int ndim, ...
-#   ifdef va_dcl
-#      undef va_dcl
-#   endif
-#   define va_dcl /* */
-#endif
                 /*VARARGS*/
-gptr		*arralloc(va_alist)
-va_dcl
+gptr		*arralloc(size_mt size, int ndim, ...)
+
 {
    va_list	ap;
    word_mt		**p, **start;
    int		lb, ub, idim;
    long		n_ptr = 0, n_data = 1;
-#ifdef HAVE_STDARG_H
    va_start(ap, ndim);
-#else
-   size_mt	size;			/* size of array element	      */
-   int		ndim;			/* Number of dimensions		      */
-
-   va_start(ap);
-   size = va_arg(ap, size_mt);
-   ndim = va_arg(ap, int);
-#endif
 
 #ifdef DEBUGY
    fprintf(stderr,"%dD array of %lu byte elements:", ndim, size);
@@ -469,13 +417,7 @@ va_dcl
     * Rescan argument list to pass to subarray()
     */
    va_end(ap);
-#ifdef HAVE_STDARG_H
    va_start(ap, ndim);
-#else
-   va_start(ap);
-   size = va_arg(ap, size_mt);
-   ndim = va_arg(ap, int);
-#endif
 
    /*
     * Set up pointers to form dope-vector array.

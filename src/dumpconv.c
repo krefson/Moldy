@@ -19,11 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/dumpconv.c,v 2.9 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/dumpconv.c,v 2.10 1998/05/22 11:11:47 keith Exp $";
 #endif
 
 /*
  * $Log: dumpconv.c,v $
+ * Revision 2.10  1998/05/22 11:11:47  keith
+ * Protected va_dcl redefinition.
+ *
  * Revision 2.9  1998/05/07 17:06:11  keith
  * Reworked all conditional compliation macros to be
  * feature-specific rather than OS specific.
@@ -104,17 +107,13 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/dumpconv.c,
 #include "stddef.h"
 #include "structs.h"
 #include "string.h"
-#ifdef HAVE_STDARG_H
 #include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
 #include <stdio.h>
 #ifdef USE_XDR
 #include "xdr.h"
 XDR	 xdrsr;
 XDR	 xdrsw;
-bool_t xdr_dump();
+bool_t xdr_dump(XDR *xdrs, dump_mt *sp);
 #endif
 
 /******************************************************************************
@@ -132,36 +131,19 @@ char *cs, *ct;
 }
 #endif
 
-#ifdef HAVE_STDARG_H
-#undef  va_alist
-#define	va_alist char *format, ...
-#ifdef va_dcl
-#   undef va_dcl
-#endif
-#define va_dcl /* */
-#endif
 /*VARARGS*/
-void error(va_alist)
-va_dcl
+void error(char *format, ...)
+
 {
    va_list p;
-#ifdef HAVE_STDARG_H
    va_start(p, format);
-#else
-   char	*format;
-
-   va_start(p);
-   format = va_arg(p, char *);
-#endif
    vfprintf(stderr,format,p);
    fputc('\n',stderr);
    va_end(p);
    exit(3);
 }
 
-void read_text(buf,buflen)
-float  *buf;
-int    buflen;
+void read_text(float *buf, int buflen)
 {
    int i;
 
@@ -171,9 +153,7 @@ int    buflen;
       error("Read error on input file (Error code %d).",ferror(stdin));
 }
 
-void write_text(buf,buflen)
-float  *buf;
-int    buflen;
+void write_text(float *buf, int buflen)
 {
    int i;
 
@@ -184,9 +164,7 @@ int    buflen;
       error("Write error on output file (Error code %d).",ferror(stdout));
 }
 
-void read_binary(buf,buflen,xdr)
-float  *buf;
-int    buflen, xdr;
+void read_binary(float *buf, int buflen, int xdr)
 {
 #ifdef USE_XDR
    if( xdr )
@@ -202,9 +180,7 @@ int    buflen, xdr;
       error("Read error on input file (Error code %d).",ferror(stdin));
 }
 
-void write_native(buf, buflen)
-float  *buf;
-int    buflen;
+void write_native(float *buf, int buflen)
 {
    fwrite(buf , sizeof(float), buflen, stdout);
    if( ferror(stdout) )
@@ -212,9 +188,7 @@ int    buflen;
 }
 
 #ifdef USE_XDR
-void write_xdr(buf, buflen)
-float  *buf;
-int    buflen;
+void write_xdr(float *buf, int buflen)
 {
    xdr_vector(&xdrsw, (char*)buf, buflen, XDR_FLOAT_SIZE, xdr_float);
    if( ferror(stdout) )
@@ -222,9 +196,7 @@ int    buflen;
 }
 #endif
 
-void read_bin_hdr(header, xdrw)
-dump_mt *header;
-int     *xdrw;
+void read_bin_hdr(dump_mt *header, int *xdrw)
 {
    int    xdr = 0, errflg = 0;
 
@@ -262,8 +234,7 @@ int     *xdrw;
    *xdrw = xdr;
 }
 
-int	read_header(header)
-dump_mt	*header;
+int	read_header(dump_mt *header)
 {
    int num;
    char *c;
@@ -284,8 +255,7 @@ dump_mt	*header;
    else            return -1;
 }
 
-void write_native_hdr(header)
-dump_mt *header;
+void write_native_hdr(dump_mt *header)
 {
    char *s;
    if( (s = strstr(header->vsn,"(XDR)") ) != 0 )
@@ -295,8 +265,7 @@ dump_mt *header;
 }
 
 #ifdef USE_XDR
-void write_xdr_hdr(header)
-dump_mt *header;
+void write_xdr_hdr(dump_mt *header)
 {
    strncat(header->vsn,"(XDR)",sizeof header->vsn);
    xdrstdio_create(&xdrsw, stdout, XDR_ENCODE);
@@ -305,8 +274,7 @@ dump_mt *header;
 }
 #endif
 
-void	print_header(header)
-dump_mt	*header;
+void	print_header(dump_mt *header)
 {
    char *s;
    if( (s = strstr(header->vsn,"(XDR)") ) != 0 )
@@ -319,9 +287,7 @@ dump_mt	*header;
 }
 
 int
-main(argc, argv)
-int	argc;
-char	*argv[];
+main(int argc, char **argv)
 {
    static char *ity[2] = {"rb","r"}, *oty[2] = {"w","wb"};
    dump_mt header;
