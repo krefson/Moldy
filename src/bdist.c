@@ -6,6 +6,9 @@ Copyright (C) 1999 Craig Fisher */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: bdist.c,v $
+ *  Revision 1.2  1999/09/14 13:30:35  keith
+ *  Fixed "return of ptr to stack var" error.
+ *
  *  Revision 1.1  1999/07/22 14:02:26  keith
  *  Initial revision
  *
@@ -16,8 +19,8 @@ Copyright (C) 1999 Craig Fisher */
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "stdlib.h"
+#include "string.h"
 #include "list.h"
 
 /*
@@ -367,7 +370,7 @@ char	*argv[];
    if( (Fp = fopen(filename,"r")) == NULL)
    {
       perror("Error: Couldn't open file for reading");
-      exit(EXIT_FAILURE);
+      exit(2);
    }
 
    /* Set default values for bond limits (x10) */
@@ -489,7 +492,7 @@ char	*argv[];
             if (node == NULL)
             {
                perror("Error: Failed to find bond record");
-               exit(EXIT_FAILURE);
+               exit(2);
             }
          }
          if( check_count(&(bond->root_count),u) < 0)
@@ -531,7 +534,7 @@ char	*argv[];
             if (node == NULL)
             {
                perror("Error: Failed to find angle record");
-               exit(EXIT_FAILURE);
+               exit(2);
             }
          }
          if( check_count(&(angle->root_count),u) < 0)
