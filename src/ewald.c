@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.10  90/01/15  12:24:05  keith
+ * Corrected declaration of arralloc from void* to char* to keep lint happy.
+ * 
  * Revision 1.9  90/01/01  20:07:20  keith
  * Parcelled up generation of qcoskr etc into separate function and
  * created temp's site_fx etc to point at site_force[0] etc.
@@ -44,7 +47,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.9 90/01/01 20:07:20 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.10 90/01/15 12:24:05 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -64,7 +67,9 @@ double	det();				/* Determinant of 3x3 matrix	      */
 void	invert();			/* Inverts a 3x3 matrix		      */
 void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
 double	sum();				/* Sum of elements of 'real' vector   */
+#ifdef VCALLS
 void	saxpy();			/* A*x+y, x, y are long vectors	      */
+#endif
 char	*arralloc();			/* Allocates a dope vector array      */
 void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
