@@ -43,6 +43,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 2.3  93/10/28  10:27:47  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.1  93/08/18  20:52:08  keith
  * Added support for dumps in XDR format.
  * 
@@ -126,7 +129,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 2.1 93/08/18 20:52:08 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 2.5 94/01/18 13:32:17 keith Exp Locker: keith $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -158,12 +161,61 @@ void	message();			/* Write a warning or error message   */
 /*========================== External data references ========================*/
 extern contr_mt	control;
 extern restrt_mt restart_header;
+extern int	backup_restart;
+#ifdef USE_XDR
+static   XDR		xdrs;
+#endif
 /*========================== Macros ==========================================*/
 #define DUMP_SIZE(level)  (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
 			            (3*system->nmols + 4*system->nmols_r + 9)+ \
 			     (level>>3 & 1) * \
 			            (3*system->nmols + 3*system->nmols_r + 9) +\
 			     (level & 1))
+/*============================================================================*/
+int read_dump_hdr(fname, dumpf, hdr_p, xdr_write)
+char	*fname;
+FILE	**dumpf;
+dump_mt	*hdr_p;
+boolean	*xdr_write;
+{
+   int      errflg = true;	/* Provisionally !!   */
+
+   *xdr_write = false;
+   if( (*dumpf = fopen(fname, "r+b")) == NULL)	/* Open dump file     */
+      message(NULLI, NULLP, WARNING, DOERRR, fname, strerror(errno));
+   else 
+   {
+#ifdef USE_XDR
+      /*
+       * Attempt to read dump header in XDR format
+       */
+      xdrstdio_create(&xdrs, *dumpf, XDR_DECODE);
+      if( xdr_dump(&xdrs, hdr_p) )
+      {
+	 hdr_p->vsn[sizeof hdr_p->vsn - 1] = '\0';
+	 if( strstr(hdr_p->vsn,"(XDR)") )
+	 {
+	    errflg = false;
+	    *xdr_write = TRUE;
+	 }
+      }
+#endif
+      /*
+       * If we failed, try to read header as native struct image.
+       */
+      if( ! *xdr_write )
+      {
+	 if( fseek(*dumpf, 0L, 0) ) 
+	    message(NULLI, NULLP, WARNING, SEFAIL, fname, strerror(errno));
+	 else if( fread((gptr*)&*hdr_p, sizeof(dump_mt), 1, *dumpf) == 0 )
+	    message(NULLI, NULLP, WARNING, DRERR, fname, strerror(errno));
+	 else
+	    errflg = false;
+      }
+   }
+   return errflg;
+}
+
 /*============================================================================*/
 
 void	dump(system, force, torque, stress, pe)
@@ -173,7 +225,8 @@ mat_mt		stress;
 double		pe;
 {
    FILE		*dumpf=NULL;		/* File pointer to dump files	      */
-   dump_mt	dump_header;		/* Header record proforma	      */
+   dump_mt	dump_header,		/* Header record proforma	      */
+   		hdr_tmp;
    char		cur_file[L_name],	/* Names of current and previous      */
    		prev_file[L_name],	/* dump files.			      */
    		*fname;			/* Pointer to one of above filenames  */
@@ -189,11 +242,9 @@ double		pe;
    		boolean errflg = false;
 #define		NMUTATES 10   		/* Max number of mutation attempts.   */
    int		nmutates = 0;   	/* Number of mutation attempts.	      */
+   int		junk;
    boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
-#ifdef USE_XDR
-   XDR		xdrs;
-#endif
 
    if( ! strchr(control.dump_file, '%') )
       	(void)strcat(control.dump_file, "%d");
@@ -205,47 +256,12 @@ double		pe;
       if( ndumps == 0 )		fname = prev_file;
                         else    fname = cur_file;
 
-      errflg = true;					/* Provisionally !!   */
-      if( (dumpf = fopen(fname, "r+b")) == NULL)	/* Open dump file     */
-	 message(NULLI, NULLP, WARNING, DOERRR, fname, strerror(errno));
-      else 
-      {
-#ifdef USE_XDR
-	 /*
-	  * Attempt to read dump header in XDR format
-	  */
-	 xdrstdio_create(&xdrs, dumpf, XDR_DECODE);
-	 if( xdr_dump(&xdrs, &dump_header) )
-	 {
-	    dump_header.vsn[sizeof dump_header.vsn - 1] = '\0';
-	    if( strstr(dump_header.vsn,"(XDR)") )
-	    {
-	       errflg = false;
-	       xdr_write = TRUE;
-	    }
-	 }
-#endif
-	 /*
-	  * If we failed, try to read header as native struct image.
-	  */
-	 if( ! xdr_write )
-	 {
-	    if( fseek(dumpf, 0L, 0) ) 
-	       message(NULLI, NULLP, WARNING, SEFAIL, fname, strerror(errno));
-	    else if( fread((gptr*)&dump_header, sizeof(dump_mt), 1, dumpf) == 0 )
-	       message(NULLI, NULLP, WARNING, DRERR, fname, strerror(errno));
-	    else
-	       errflg = false;
-	 }
-	 if( control.dump_level != dump_header.dump_level )
-	 {
-	    message(NULLI, NULLP, INFO, DMPALT);
-	    errflg = true;
-	 }
-      }
-
+      errflg = read_dump_hdr(fname, &dumpf, &dump_header, &xdr_write);
       if( !errflg )
       {
+	 if( control.dump_level != dump_header.dump_level )
+	    message(NULLI, NULLP, INFO, DMPALT);
+
 	 if( firsttime && dump_header.timestamp < restart_header.timestamp &&
 	    dump_header.restart_timestamp != restart_header.prev_timestamp &&
 	    dump_header.restart_timestamp != restart_header.timestamp )
@@ -295,7 +311,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 2.1 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 2.5 $"+11,
 		                     sizeof dump_header.vsn-1);
 #ifdef USE_XDR
       if( control.xdr_write )
@@ -324,9 +340,24 @@ double		pe;
 #endif
 	 (void)fclose(dumpf);
       }
-      while( (dumpf = fopen(cur_file, "r")) != 0 )
-      {
+      while( (dumpf = fopen(cur_file, "r")) != 0 )	/* File of that name */
+      { 						/* already exists    */
 	 (void)fclose(dumpf);
+	 /*
+	  *  Test whether existing file belongs to current dump
+	  *  sequence in case of run restarted from backup.  In that
+	  *  case, OVERWRITE it. 
+          */
+	 if( backup_restart )
+	 {
+	    errflg = read_dump_hdr(cur_file, &dumpf, &hdr_tmp, &junk);
+	    if( errflg == false && (hdr_tmp.dump_init == dump_header.dump_init) )
+	    {
+	       (void)fclose(dumpf);
+	       break;
+	    }
+	 }
+	 
 	 if( nmutates++ >= NMUTATES || mutate(control.dump_file) == NULL)
 	    message(NULLI, NULLP, FATAL, MUFAIL, control.dump_file, nmutates);
 	 message(NULLI, NULLP, WARNING, DMPEXS, cur_file, control.dump_file);
