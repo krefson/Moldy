@@ -22,7 +22,7 @@ CFLAGS=	-O  $(XDR) $(CFLAGS0)
 #INLINE=
 #  **** MIPS for SGI etc ****
 #CFLAGS=	-O2 -mips2  $(XDR) $(CFLAGS0)
-#LDFLAGS= $(LDFLAGS0) -lmalloc -lfastm
+#LDFLAGS= $(LDFLAGS0) -lsun -lmalloc -lfastm
 #INLINE=
 #  **** Sun (unbundled) CC -- fastest options & better than gcc 2.0
 #  About the same as gcc-2.3.3.
@@ -36,14 +36,16 @@ CFLAGS=	-O  $(XDR) $(CFLAGS0)
 #CFLAGSAUX=-funroll-loops
 #LDFLAGS= -L/usr/lang/SC1.0/ansi_lib -lansi $(LDFLAGS0)
 #INLINE=
+#  **** Solaris 2 using gcc  ****
+#CC=	gcc
+#CFLAGS= -O2 -ffast-math -DANSI_LIBS $(XDR) $(CFLAGS0)
+#CFLAGSAUX=-funroll-loops
+#LDFLAGS= $(LDFLAGS0) -lnsl
+#INLINE=
 #  **** DEC Alpha ****
-#CFLAGS=	-O2 $(XDR) $(CFLAGS0) -DANSI_LIBS -std
+#CFLAGS=	-O2 $(XDR) $(CFLAGS0) -D_FASTMATH -DANSI_LIBS -std
 #CFLAGS2=
 #LDFLAGS= $(LDFLAGS0)
-#  **** SGI ****
-#CFLAGS=	-O2 -mips2 -lfastm -lmalloc $(XDR) $(CFLAGS0)
-#CFLAGS2=
-#LDFLAGS= -lmalloc $(LDFLAGS0)
 #  **** HP 700 ****
 #CFLAGS=	+O3 +Om1 -J $(XDR) $(CFLAGS0)
 #CFLAGS2=
@@ -72,6 +74,7 @@ CFLAGS=	-O  $(XDR) $(CFLAGS0)
 #  ***** End *****
 LINT=		lint
 TAR=		tar
+DCLAR=		dclar
 PFLAGS=		-P
 EPFLAGS=	-2r
 A2FLAGS=
@@ -92,7 +95,7 @@ INFILES = control.water control.100 tips2.in\
 		control.mgclh2o mgclh2o.in control.clay
 
 SHAKS=	algorith alloc aux eigens kernel input matrix\
-		quaterns restart startup xdr
+		quaterns restart startup values xdr
 
 SHAKC= $(SHAKS:%=%.c)
 
@@ -107,23 +110,26 @@ HFILES=		structs.h defs.h string.h time.h stddef.h stdlib.h messages.h xdr.h
 DOC=		READ.ME BENCHMARK water-canon.out COPYING \
 			moldy.tex moldy.bbl
 
+VMSBUILD=	compile_moldy.com link_moldy.com defcomm.com\
+		compile_utils.com link_utils.com compile.com
+
 moldy:		$(OFILES) $(EXTRA_OBJ) $(HFILES)
 		$(CC)  $(OFILES) $(EXTRA_OBJ) $(LDFLAGS) -lm -o moldy
 
 moldyextract:	moldyextract.c $(HFILES)
-		$(CC) $(CFLAGS) $@.c -o $@
+		$(CC) $(CFLAGS) $@.c -o $@ $(LDFLAGS)
 
 moldyanalyze:	moldyanalyze.c $(HFILES)
-		$(CC) $(CFLAGS) $@.c -o $@
+		$(CC) $(CFLAGS) $@.c -o $@ $(LDFLAGS)
 
 dumpanalyze:	dumpanalyze.c xdr.o $(HFILES)
-		$(CC) $(CFLAGS) $@.c xdr.o -o $@
+		$(CC) $(CFLAGS) $@.c xdr.o -o $@ $(LDFLAGS)
 
 dumpextract:	dumpextract.c xdr.o $(HFILES)
-		$(CC) $(CFLAGS) $@.c xdr.o -o $@
+		$(CC) $(CFLAGS) $@.c xdr.o -o $@ $(LDFLAGS)
 
 dumpconvert:	dumpconvert.c xdr.o $(HFILES)
-		$(CC) $(CFLAGS) $@.c xdr.o -o $@
+		$(CC) $(CFLAGS) $@.c xdr.o -o $@ $(LDFLAGS)
 
 mdshak:		mdshak.o $(SHAKOBJS)
 		$(CC) -o mdshak mdshak.o $(SHAKOBJS) $(LDFLAGS) -lm
@@ -150,7 +156,9 @@ Makefile:	xmakefile
 				'\n}\n/^EXTRAS/  c\\\nEXTRAS='  $(EXTRAS)\
 				'\n}\n/^SHAKC/   c\\\nSHAKC='    $(SHAKC)\
 				'\n}\n/^SHAKOBJS/  c\\\nSHAKOBJS='  $(SHAKOBJS)\
-				'\n}\n/^%\.[ch]/,/..*/ d' \
+				'\n}\n/^%\.[a-z][a-z]*:	/,/^$$/ d\n'\
+				'/^moldy.bbl:	/,/^$$/ d\n' \
+				'/^moldy.aux:	/,/^$$/ d\n' \
 				 > make.sed 
 		sed -f make.sed ./xmakefile > Makefile
 
@@ -175,18 +183,17 @@ tags:		$(CFILES) $(HFILES)
 
 clean:		
 		/bin/rm -f $(OFILES) $(LFILES) moldy $(UTILS) mdshak\
-			mdshak.o moldy.dvi moldy.toc moldy.aux
+			mdshak.o moldy.dvi moldy.toc moldy.log
 
 spotless:	
 		$(MAKE) clean
 		/bin/rm -f moldy.shar* moldy.shar.Z* cray.job* cray.job.Z* \
-			   moldy.job* moldy.job.Z* compile.com* compile.com.Z*\
-			   moldy.com* moldy.com.Z*; /bin/true
+			   moldy.job* moldy.job.Z* \
+			   moldy.com* moldy.com.Z* moldy.aux; /bin/true
 annihilate:
 		$(MAKE) spotless
-		if ( [ -r RCS ] ) then\
-                    /bin/rm -f $(DOC) $(CFILES) $(HFILES)  Makefile\
-				      $(EXTRAS) $(INFILES) $(DOC);\
+		if ( [ -d RCS ] ) then\
+                    rcsclean $(CFILES) $(HFILES) $(EXTRAS) moldy.tex;\
                 else \
                    echo "RCS directory not present."\
                         "You don't REALLY want to delete the sources do you?";\
@@ -194,18 +201,18 @@ annihilate:
 #
 #  Export options
 #
-moldy.tar:	$(DOC) $(CFILES) $(HFILES)  Makefile \
+moldy.tar:	$(CFILES) $(HFILES)  Makefile \
 		$(EXTRAS) $(INFILES) $(DOC)
 		$(TAR) cf moldy.tar\
-		$(DOC) $(CFILES)  $(HFILES) Makefile \
+		$(CFILES)  $(HFILES) Makefile \
 		$(EXTRAS) $(INFILES) $(DOC)
 
 moldy.tar.Z:	moldy.tar
 		compress moldy.tar
 
-moldy.shar:	$(DOC) $(CFILES) $(HFILES)  Makefile \
+moldy.shar:	$(CFILES) $(HFILES)  Makefile \
 		$(EXTRAS) $(INFILES)  $(DOC)
-		shar $(DOC) $(CFILES)  $(HFILES) Makefile \
+		shar $(CFILES)  $(HFILES) Makefile \
 		$(EXTRAS) $(INFILES)  $(DOC) > moldy.shar
 
 moldy.shar.Z:	moldy.shar
@@ -217,13 +224,24 @@ cray:		$(CFILES) $(HFILES)
 moldy.job:	$(CFILES) $(HFILES)  
 		./make_cray $(CFILES)  $(HFILES) > moldy.job
 
-compile.com:	Makefile
-		./make_vms_compile $(CFILES) > compile.com
+compile_moldy.com:	Makefile
+		./make_vms_compile $(FILES) > compile_moldy.com
 
-moldy.com:	$(CFILES) $(HFILES)  compile.com  $(EXTRAS)\
-		$(INFILES) Aaaa_Read.Me $(DOC)
-		./make_vms Aaaa_Read.Me compile.com $(CFILES) $(HFILES)\
-		  $(INFILES)  $(EXTRAS) $(DOC) > moldy.com
+link_moldy.com:		Makefile
+		./make_vms_link moldy $(FILES) > link_moldy.com
+
+compile_utils.com:	Makefile
+		./make_vms_compile mdshak getopt $(UTILS) > compile_utils.com
+
+link_utils.com:	Makefile
+		./make_vms_link mdshak mdshak getopt $(SHAKS) > link_utils.com
+		for file in $(UTILS); do ./make_vms_link $$file $$file getopt>> \
+			link_utils.com; done
+
+moldy.com:	$(CFILES) $(HFILES) $(EXTRAS)\
+		$(INFILES) Aaaa_Read.Me $(DOC) $(VMSBUILD)
+		$(DCLAR) Aaaa_Read.Me compile.com $(CFILES) $(HFILES)\
+		$(INFILES) $(EXTRAS) getopt.c $(DOC) $(VMSBUILD) > moldy.com
 
 moldy.com.Z:	moldy.com
 		compress moldy.com
@@ -263,6 +281,10 @@ kernel.o:	kernel.c
 
 force.o:	force.c 
 	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSP) $(INLINE) -c $<
+
+
+%.tex:		RCS/%.tex,v
+		co $@
 
 %.c:		RCS/%.c,v
 		co $@
