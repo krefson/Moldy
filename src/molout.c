@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/molout.c,v 1.12.8.4 2003/11/28 09:35:26 moldydv Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/molout.c,v 1.12.8.5 2004/04/19 04:19:31 moldydv Exp $";
 #endif
 
 #include "defs.h"
@@ -158,6 +158,7 @@ static void xtl_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site
    double	a, b, c, alpha, beta, gamma;
    mat_mt	hinv;
    int		imol, isite, is;
+   int		charge;
 
    if( intyp == 'r' )
       qconv = CONV_Q;
@@ -178,7 +179,7 @@ static void xtl_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site
    printf("CELL \n%f %f %f %f %f %f\n", a, b, c, alpha, beta, gamma);
    printf("SYMMETRY  NUMBER 1  LABEL P1\n");
    printf("SYM MAT  1.0  0.0  0.0  0.0  1.0  0.0  0.0  0.0  1.0 0.0000 0.0000 0.0000\n");
-   printf("ATOMS\nNAME            X            Y           Z         CHARGE\n");
+   printf("ATOMS\nNAME       X          Y          Z     CHARGE   TEMP    OCCUP   SCAT\n");
    for(spec = species; spec < species+system->nspecies; spec++)
    {
       make_sites(system->h, spec->c_of_m, spec->quat, spec->p_f_sites,
@@ -191,11 +192,13 @@ static void xtl_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site
       {
 	 for(is = 0; is < spec->nsites; is++)
 	 {
+            charge = (int)abs(site_info[spec->site_id[is]].charge*qconv);
 	    if(fabs(site_info[spec->site_id[is]].mass) != 0)
-	       (void)printf("%-8s %12.8f %12.8f %12.8f %12.8f\n",
+	       (void)printf("%-4s %10.5f %10.5f %10.5f %7.4f   0.0000  1.0000   %-2s%d%c\n",
 			    site_info[spec->site_id[is]].name,
 			    site[0][isite], site[1][isite], site[2][isite],
-			    site_info[spec->site_id[is]].charge*qconv);
+			    site_info[spec->site_id[is]].charge*qconv,
+                            site_info[spec->site_id[is]].name, charge, (charge >=0 ? '+':'-'));
 	    isite++;
 	 }
       }
