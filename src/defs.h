@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/moldy/src/RCS/defs.h,v 2.12.1.5 1998/12/14 15:48:01 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.14 1999/09/09 11:42:37 keith Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.14  1999/09/09 11:42:37  keith
+ * Update for 2.14 release
+ *
  * Revision 2.12.1.5  1998/12/14 15:48:01  keith
  * Picky picky picky
  *
@@ -255,8 +258,8 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 2.12.1.5 $"
-#define		 REVISION_DATE    "$Date: 1998/12/14 15:48:01 $"
+#define          REVISION         "$Name$"
+#define		 REVISION_DATE    "$Date: 1999/09/09 11:42:37 $"
 #define		 REVISION_STATE   "$State: Exp $"
 
 #ifdef HAVE_CONFIG_H
