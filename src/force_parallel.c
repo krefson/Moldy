@@ -10,6 +10,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	force_parallel.c,v $
+ * Revision 1.2  90/03/09  17:30:29  keith
+ * Modified FKERNEL ifdefs for UNICOS.
+ * 
  * Revision 1.1  90/01/31  13:19:28  keith
  * Initial revision
  * 
@@ -67,7 +70,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.1 90/01/31 13:19:28 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.2 90/03/09 17:30:29 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -84,7 +87,7 @@ void    cfree();
 char	*realloc();
 /*========================== External function declarations ==================*/
 void    note();                         /* Make a note in output file         */
-void    *arralloc();                    /* General purpose array allocator    */
+char    *arralloc();                    /* General purpose array allocator    */
 int     search_lt();			/* Search a vector for el. < scalar   */
 double  vdot();                         /* Vector dot product                 */
 double  sum();                          /* Sum a vector                       */
@@ -377,18 +380,6 @@ real    reloc[][CUBE(NSHELL)];
          }
 }
 /******************************************************************************
- * Vadd vector addition							      *
- ******************************************************************************/
-static void vadd(n, a, b)
-int	n;
-real	a[], b[];
-{
-   int i;
-VECTORIZE
-   for(i=0; i<n; i++)
-      a[i] += b[i];
-}
-/******************************************************************************
  *  vaadd,calcdist. These are functions because of a compiler bug in cray C4.0*
  ******************************************************************************/
 #ifdef VCALLS
@@ -402,6 +393,7 @@ VECTORIZE
       forcej[jsite] += force_comp[jsite] = forceij[jsite]*r[jsite];
 }
 #endif
+#ifdef CC40
 static void calcdist(j0, nnab, r_sqr, rx, ry, rz, nab_sx, nab_sy, nab_sz,
 		     sitex, sitey, sitez)
 int j0, nnab;
@@ -419,6 +411,7 @@ VECTORIZE
                                                   + rz[jsite]*rz[jsite];
             }
 }
+#endif
 /******************************************************************************
  * Force_calc.   This is the main intermolecular site force calculation       *
  * routine                                                                    *
@@ -696,11 +689,17 @@ mat_t	stress;
       gather(nnab, nab_sz, site[2], nab);     /* list.                      */
 
       gather(nnab, R, reloc_v[0], reloc_i);
-      vadd(nnab, nab_sx, R);
+VECTORIZE
+      for(jsite=0; jsite<nnab; jsite++)
+	 nab_sx[jsite] += R[jsite];
       gather(nnab, R, reloc_v[1], reloc_i);
-      vadd(nnab, nab_sy, R);
+VECTORIZE
+      for(jsite=0; jsite<nnab; jsite++)
+	 nab_sy[jsite] += R[jsite];
       gather(nnab, R, reloc_v[2], reloc_i);
-      vadd(nnab, nab_sz, R);
+VECTORIZE
+      for(jsite=0; jsite<nnab; jsite++)
+	 nab_sz[jsite] += R[jsite];
 
       gather(nnab, nab_chg, chg, nab);       /* Gather site charges as well*/
       zero_real(forcejx,nnab);
@@ -731,9 +730,21 @@ mat_t	stress;
             for(jsite = jmin; jsite < jmax; jsite++)
                printf("%4d %4d\n", jsite,nab[jsite]);
 #endif
-
+#ifdef CC40
             calcdist(jmin, jmax, r_sqr, rx, ry, rz,nab_sx,nab_sy,nab_sz,
 		     site[0][isite],site[1][isite],site[2][isite]);
+#else
+	    site0=site[0][isite]; site1=site[1][isite]; site2=site[2][isite];
+VECTORIZE
+            for(jsite=jmin; jsite < jmax; jsite++)
+            {
+               rx[jsite] = nab_sx[jsite] - site0;
+               ry[jsite] = nab_sy[jsite] - site1;
+               rz[jsite] = nab_sz[jsite] - site2;
+               r_sqr[jsite] = rx[jsite]*rx[jsite] + ry[jsite]*ry[jsite]
+                                                  + rz[jsite]*rz[jsite];
+            }
+#endif
 #ifdef DEBUG2
 	    hist(jmin, jmax, r_sqr);
 #endif
