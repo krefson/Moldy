@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/msd.c,v 2.4.6.1 2003/07/29 08:30:12 moldydv Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/msd.c,v 2.5 2003/07/23 10:34:01 kr Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,10 @@ static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/msd.c,v 2.4.6.1 20
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 2.5  2003/07/23 10:34:01  kr
+ *  First go at making use of the new dump header information in msd.
+ *  "-r" and "-s" flags deleted as no longer necessary.
+ *
  *  Revision 2.4  2002/09/19 09:26:29  kr
  *  Tidied up header declarations.
  *  Changed old includes of string,stdlib,stddef and time to <> form
@@ -177,6 +181,7 @@ static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/msd.c,v 2.4.6.1 20
 #include "utlsup.h"
 int     in_region(real *pos, real (*range)[3]);
 int	getopt(int, char *const *, const char *);
+extern  int optind;
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 #define MSD  0
@@ -293,7 +298,6 @@ msd_calc(spec_mt *species, char *spec_mask, int nspecies, int mstart,
                      }
 	          }
 	          msd[imsd][ispec][i] += (cmols == 0 ? 0 : msdtmp / cmols);
-		  ispec++;
 	       }
 	       totmol += nmols;
 	    }
@@ -304,28 +308,47 @@ msd_calc(spec_mt *species, char *spec_mask, int nspecies, int mstart,
  * msd_out().  Output routine for displaying msd results                      *
  ******************************************************************************/
 void
-msd_out(spec_mt *species, real ***msd, int max_av, int nmsd, char *spec_mask, int nspecies)
+msd_out(spec_mt *species,	/* Species data */
+        real ***msd,            /* Msd data for each time slice */
+        int max_av,             /* No of time slices averaged over */
+        int nmsd,               /* No of msd time intervals */
+        char *spec_mask,        /* Species selection mask */
+        int nspecies,           /* No of species in system */
+        double tstep)           /* Absolute time step in ps */
 {
    int          ispec=0, imsd, i;
    real         totmsd;
    spec_mp      spec;
 
+   (void)printf("#          ");
    for(spec = species; spec < species+nspecies; spec++, ispec++)
       if( spec_mask[ispec] )
-      {
-         (void)printf("# %s\n",spec->name);
-         for( imsd = 0; imsd < nmsd; imsd++)
+         (void)printf("   %40s",spec->name);
+
+   (void)printf("\n#         t ");
+   for(spec = species, ispec=0; spec < species+nspecies; spec++, ispec++)
+      if( spec_mask[ispec] )
+         (void)printf("  dX(t)**2   dY(t)**2   dZ(t)**2   dR(t)**2    ");
+   (void)printf("\n");
+                                                                                                       
+   for( imsd = 0; imsd < nmsd; imsd++)
+   {
+      printf("%10.3f  ", imsd*tstep);
+      for(spec = species, ispec=0; spec < species+nspecies; spec++, ispec++)
+         if( spec_mask[ispec] )
          {
             totmsd = 0;
             for( i=0; i<3; i++)
             {
                msd[imsd][ispec][i] /= max_av;
                totmsd += msd[imsd][ispec][i];
-               (void)printf("%10.7f ", msd[imsd][ispec][i]);
+               (void)printf(" %10.6f", msd[imsd][ispec][i]);
             }
-            (void)printf("%10.7f\n",totmsd);
+            (void)printf(" %10.6f   ",totmsd);
          }
-      }
+      (void)printf("\n");
+   }
+
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
 }
@@ -348,35 +371,41 @@ main(int argc, char **argv)
    char 	line[80];
    extern char	*optarg;
    int		errflg = 0;
-   int		intyp = 0;
    int		outsw = MSD, trajsw = GNU;
-   int		start, finish, inc;
-   int		mstart, mfinish, minc;
-   int		i, nslices;
+   int		start, finish, inc;			/* Range specifiers for dump files */
+   int		mstart, mfinish, minc;			/* Range specifiers for msds */ 
+   int		it_inc = 1;				/* Default increment for initial time slice */
    int		dflag, iflag, sflag, mflag;
-   int		irec, it_inc = 1;
-   char		*filename = NULL, *dump_name = NULL;
+   int		i, irec, ispec;				/* Counters */
+   char		*filename = NULL, *dump_base = NULL;
+   char		*dump_name = NULL, *dump_names = NULL;
    char		*dumplims = NULL;
    char		*msdlims = NULL;
    char		*tempname = NULL;
    char		dumpcommand[256];
    int		dump_size;
    float	*dump_buf;
-   FILE		*Fp, *Dp;
+   FILE         *Fp, *Dp, *dump_file;
+   dump_mt	dump_header;
+   dump_sysinfo_mt *dump_sysinfo;
+   size_mt	sysinfo_size;
    restrt_mt	restart_header;
    system_mt	sys;
-   spec_mt	*species;
-   vec_mt 	**traj_cofm;
-   mat_mt	*hmat;
-   real		range[3][3];
+   spec_mt	*species, *spec;
+   vec_mt 	**traj_cofm;		/* Cofm data for continuous trajectories */
+   mat_mt	*hmat;			/* h matrix for each slice */
+   real		range[3][3];		/* Spatial range to include in msd calcs */
    site_mt	*site_info;
    pot_mt	*potpar;
    quat_mt	*qpf;
    contr_mt	control_junk;
-   int          nmsd, max_av, nspecies;
-   real         ***msd;
-   char         *spec_list = "1-50";
-   char         spec_mask[MAX_SPECIES];
+   int          nmsd, max_av, nspecies, nslices;
+   real         ***msd;			/* Calculated MSD data for each time slice and species */
+   char         *spec_list = "1-50";    /* List of species to calculate for (with default) */
+   char         spec_mask[MAX_SPECIES]; /* Mask for selecting species */
+   int          arglen, ind, genflg;
+   int          xdr = 0;
+   real		msd_step; 		/* Absolute msd time interval (in ps) */
 
    zero_real(range[0],9);
 
@@ -389,26 +418,14 @@ main(int argc, char **argv)
    else if( strstr(comm, "mdtraj") )
       outsw = TRAJ;
 
-   while( (c = getopt(argc, argv, "cr:s:d:t:m:i:g:o:w:xXyYzZ") ) != EOF )
+   while( (c = getopt(argc, argv, "cd:t:m:i:g:o:w:xXyYzZ") ) != EOF )
       switch(c)
       {
        case 'c':
          cflg++;
          break;
-       case 'r':
-	 if( intyp )
-	    errflg++;
-	 intyp = c;
-	 filename = optarg;
-	 break;
-       case 's':
-	 if( intyp )
-	    errflg++;
-	 intyp = c;
-	 filename = optarg;
-	 break;
        case 'd':
-	 dump_name = optarg;
+	 dump_base = optarg;
 	 break;
        case 't':
 	 dumplims = mystrdup(optarg);
@@ -459,9 +476,9 @@ main(int argc, char **argv)
    if( errflg )
    {
       fprintf(stderr,
-         "Usage: %s [-s sys-spec-file |-r restart-file] [-c] ",comm);
-      fputs("[-d dump-files] [-t s[-f[:n]]] [-m s[-f[:n]]] [-g s[-f[:n]]] ",stderr);
-      fputs("[-i initial-time-increment] [-j molecule-no] [-w trajectory-format] ",stderr);
+         "Usage: %s [-c] [-d dump-files] [-t s[-f[:n]]] ",comm);
+      fputs("[-m s[-f[:n]]] [-g s[-f[:n]]] ",stderr);
+      fputs("[-i initial-time-increment] [-w trajectory-format] ",stderr);
       fputs("[-x|-X] [-y|-Y] [-z|-Z] [-o output-file]\n",stderr);
       exit(2);
    }
@@ -469,62 +486,98 @@ main(int argc, char **argv)
    if( tokenise(mystrdup(spec_list), spec_mask, MAX_SPECIES) == 0 )
       error("Invalid species specification \"%s\": usage eg 1,3,5-9,4",spec_list);
 
-   if(intyp == 0)
-   {
-      fputs("How do you want to specify the simulated system?\n", stderr);
-      fputs("Do you want to use a system specification file (1)", stderr);
-      fputs(" or a restart file (2)\n", stderr);
-      if( (ans_i = get_int("? ", 1, 2)) == EOF )
-	 exit(2);
-      intyp = ans_i-1 ? 'r': 's';
-      if( intyp == 's' )
-      {
-	 fputs( "Do you need to skip 'control' information?\n", stderr);
-	 if( (sym = get_sym("y or n? ","yYnN")) == 'y' || sym == 'Y')
-	    cflg++;
-      }
+   /* Prepare dump file name for reading */
+   genflg = 0;
+   if( dump_base != 0 ) genflg++;
 
-      if( (filename = get_str("File name? ")) == NULL )
-	 exit(2);
+   if( genflg == 0 && optind < argc ) {
+      arglen = 0;
+      for(ind=optind; ind < argc; ind++) {
+	 arglen += strlen(argv[ind]) + 1;
+      }
+      dump_names=malloc(arglen);
+      dump_names[0] = 0;
+      for(ind=optind; ind < argc; ind++) {
+	 strcat(dump_names,argv[ind]);
+	 if(ind < argc-1) strcat(dump_names," ");
+      }
    }
 
-   switch(intyp)
-   {
-    case 's':
-      if( (Fp = fopen(filename,"r")) == NULL)
-	 error("Couldn't open sys-spec file \"%s\" for reading", filename);
-      if( cflg )
-      {
-	 do
-	 {
-	    fscanf(Fp, "%s",line);
-	    (void)strlower(line);
-	 }
-	 while(! feof(stdin) && strcmp(line,"end"));
-      }
-      read_sysdef(Fp, &sys, &species, &site_info, &potpar);
-      qpf = qalloc(sys.nspecies);
-      initialise_sysdef(&sys, species, site_info, qpf);
-      break;
-    case 'r':
-      if( (Fp = fopen(filename,"rb")) == NULL)
-	 error("Couldn't open restart file \"%s\" for reading -\n%s\n", 
-	       filename, strerror(errno));
-      re_re_header(Fp, &restart_header, &control_junk);
-      re_re_sysdef(Fp, restart_header.vsn, &sys, &species, &site_info, &potpar);
-      break;
-    default:
-      error("Internal error - invalid input type", "");
-   }
-   allocate_dynamics(&sys, species);
-
-  /* Dump dataset			      */
-   if( dump_name == 0 )
+   /* Dump dataset			      */
+   if( dump_base == 0 && dump_names == 0)
    {
 	fputs("Enter canonical name of dump files (as in control)\n",stderr);
-	if( (dump_name = get_str("Dump file name? ")) == NULL)
-	exit(2);
+	if( (dump_base = get_str("Dump file name? ")) == NULL) exit(2);
+	genflg++;
     }
+
+   if( dump_names == 0 ) dump_names = dump_base;
+
+   /* Prepare to read header info */
+   if( genflg )
+   {
+      dump_name = malloc(strlen(dump_base) + 2);
+      sprintf(dump_name, dump_base, 0);
+   }
+   else
+   {
+      dump_name = argv[optind];
+   }
+
+   if( (dump_file = open_dump(dump_name, "rb")) == NULL)
+   {
+      fprintf(stderr, "Failed to open dump file \"%s\"\n", dump_name);
+      exit(2);
+   }
+
+   /*
+    * Read dump header. On first call we need to read only the first
+    * part of sysinfo to determine nspecies and consequently the size
+    * of the buffer needed to hold all of it.
+    */
+   sysinfo_size = sizeof(dump_sysinfo_mt);
+   dump_sysinfo = (dump_sysinfo_mt*)malloc(sysinfo_size);
+   if( read_dump_header(dump_name, dump_file, &dump_header, &xdr, 
+			sysinfo_size, dump_sysinfo) 
+       || ferror(dump_file) || feof(dump_file) )
+   {
+      fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
+      exit(2);
+   }
+   sysinfo_size = sizeof(dump_sysinfo_mt) 
+      + sizeof(mol_mt) * (dump_sysinfo->nspecies-1);
+   (void)free(dump_sysinfo);
+
+   /*
+    * Allocate space for and read dump sysinfo.
+    */
+   dump_sysinfo = (dump_sysinfo_mt*)malloc(sysinfo_size);
+   /*
+    * Rewind and reread header, this time including sysinfo.
+    */
+   (void)rewind_dump(dump_file, xdr);
+   if( read_dump_header(dump_name, dump_file, &dump_header, &xdr, 
+			sysinfo_size, dump_sysinfo) 
+       || ferror(dump_file) || feof(dump_file) )
+   {
+      fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
+      exit(2);
+   }
+
+   sys.nspecies = dump_sysinfo->nspecies;
+   sys.nmols    = dump_sysinfo->nmols;
+   sys.nmols_r  = dump_sysinfo->nmols_r;
+
+   species = aalloc(dump_sysinfo->nspecies, spec_mt );
+   for( ispec = 0, spec = species; ispec < dump_sysinfo->nspecies; ispec++, spec++)
+   {
+      spec->nmols = dump_sysinfo->mol[ispec].nmols;
+      spec->rdof = dump_sysinfo->mol[ispec].rdof;
+      spec->framework = dump_sysinfo->mol[ispec].framework;
+      strncpy(spec->name, dump_sysinfo->mol[ispec].name, L_spec);
+   }
+
+   allocate_dynamics(&sys, species);
 
   /*
    *  Ensure that the dump limits start, finish, inc are set up,
@@ -628,7 +681,7 @@ main(int argc, char **argv)
           dump_size);
 #if defined (HAVE_POPEN) 
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s",
-        sys.nmols, sys.nmols_r, start, finish, inc, dump_name);
+        sys.nmols, sys.nmols_r, start, finish, inc, dump_names);
    
    if( (Dp = popen(dumpcommand,"r")) == 0)
         error("Failed to execute \'dumpext\" command - \n%s",
@@ -636,7 +689,7 @@ main(int argc, char **argv)
 #else
    tempname = tmpnam((char*)0);
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d -o %s %s",
-         sys.nmols, sys.nmols_r, start, finish, inc, tempname, dump_name);
+         sys.nmols, sys.nmols_r, start, finish, inc, tempname, dump_names);
    system(dumpcommand);
    if( (Dp = fopen(tempname,"rb")) == 0)
         error("Failed to open \"%s\"",tempname);
@@ -667,7 +720,7 @@ main(int argc, char **argv)
    }
    xfree(dump_buf);
 
-#if defined (HAVE_POPEN) 
+#if defined (HAS_POPEN) 
    pclose(Dp);
 #else
    fclose(Dp);
@@ -686,18 +739,19 @@ main(int argc, char **argv)
   /* Calculate msd parameters */
      nmsd = (mfinish-mstart)/minc+1; /* No of msd time intervals */
      max_av = (nslices - mfinish)/it_inc; /* Max no of msd calcs to average over */
+     msd_step = dump_sysinfo->deltat*inc*minc;
 
      if (max_av < 1)
           max_av = 1;
 
   /* Allocate memory for msd array and zero */
-         msd = (real***)arralloc(sizeof(real),3,0,nmsd-1,0,nspecies-1,0,2);
-         zero_real(msd[0][0],nmsd*nspecies*3);
+     msd = (real***)arralloc(sizeof(real),3,0,nmsd-1,0,nspecies-1,0,2);
+     zero_real(msd[0][0],nmsd*nspecies*3);
 
   /* Calculate and print msd values */
      msd_calc(species, spec_mask, nspecies,  mstart, mfinish, minc, max_av, it_inc,
 		     range, traj_cofm, msd);
-     msd_out(species, msd, max_av, nmsd, spec_mask, nspecies);
+     msd_out(species, msd, max_av, nmsd, spec_mask, nspecies, msd_step);
    }
    else /* Otherwise output trajectories in selected format */
      switch(trajsw)
