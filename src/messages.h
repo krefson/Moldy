@@ -1,7 +1,10 @@
 /*
- * $Header$
+ * $Header: messages.h,v 1.1 89/04/20 16:01:26 keith Exp $
  *
- * $Log$
+ * $Log:	messages.h,v $
+ * Revision 1.1  89/04/20  16:01:26  keith
+ * Initial revision
+ * 
  * 
  */
 
@@ -72,7 +75,7 @@ rotational degrees of freedom (%d vs %d)"
 #define CROWDED "Cells too large - multiple occupation (mol=%d, cell=%d)"
 #define NABORS  "Neighbour list contains %d cells"
 #define TONAB	"Too many sites in neighbour list (%d) - decrease cutoff"
-#define TOOCLS	"Sites closer than %fA, site %d"
+#define TOOCLS	"Sites %d and %d closer than %fA."
 #define TOODIM  "Arralloc request for %d dimensions - max %d"
 #define INSIDE  "Array bounds [%d...%d] inside out (from ARRALLOC)"
 #define UNKPTY  "KERNEL called with unkown potential type %d"
