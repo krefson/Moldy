@@ -328,7 +328,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/startup.c,v 2.32 2002/09/19 09:26:30 kr Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/startup.c,v 2.32 2002/09/19 09:26:30 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -369,7 +369,7 @@ void		eigens(real *A, real *RR, real *E, int N);
 void		transpose(mat_mt, mat_mt);
 void		mat_mul(mat_mt a, mat_mt b, mat_mt c); 
 void		mat_sca_mul(real s, mat_mt a, mat_mt b); 
-void		mat_vec_mul(mat_mt, vec_mp in_vec, vec_mp out_vec, 
+void		mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, 
 			    int number);
 double          det(mat_mt);
 double		trace_sqr(mat_mt);
@@ -382,6 +382,7 @@ void		smdrand(long unsigned int seed);
 void		inhibit_vectorization(void);	/* Self-explanatory dummy     */
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
+void		check_sym(mat_mt rot, spec_mp spec, double *m);
 /*========================== External data references ========================*/
 extern	contr_mt	control;       /* Main simulation control parms. */
 extern int 		ithread, nthreads;
@@ -414,7 +415,7 @@ static	char	afmt[] = "    %8s = %8X %8s = %8X %8s = %8X %8s = %8X\
 #define FICTICIOUS_MASS_TOL 1.0e-6
 /*========================== Control file keyword template ===================*/
 /*
- * format SFORM is defined as %NAMLENs in defs.h, to avoid overflow.
+ * format SFORM is defined as %NAMLENs in structs.h, to avoid overflow.
  */
 const match_mt	match[] = {
 {"title",            SFORM,  "Test Simulation",(gptr*) control.title},
@@ -536,7 +537,6 @@ double	gauss_rand(void)
  * vector, generated from spherical co-ordinates theta and phi with           *
  * distribution p(theta) = sin(theta) 					      *
  ******************************************************************************/
-static
 void	random_quat(quat_mp q, int n)
        	  				/* First quaternion		(out) */
    	  				/* Number to be generated.       (in) */
@@ -733,6 +733,7 @@ void	initialise_sysdef(system_mp system, spec_mt *species,
    boolean	flag;			/* Used to test for charges	     */
    double	imax;			/* Largest moment of inertia	     */
    double	eps = 10.0*precision(); /* Criterion for "zero" moment.	     */
+   vec_mt	mult;
 
    system->nsites  = 0;  system->nmols  = 0;
    system->nmols_r = 0;  system->d_of_f = 0;
@@ -791,13 +792,9 @@ void	initialise_sysdef(system_mp system, spec_mt *species,
                 spec-species, spec->mass, c_of_m[0], c_of_m[1], c_of_m[2]);
          print_mat(inertia, " *D* Inertia Tensor");
 #endif
-	 eigens(inertia,v[0],spec->inertia,3);
-	 /*	 eigensort(v[0], spec->inertia, 3);*/
-	 rot_to_q(v, qpf[spec-species]);	/* make equivalent quaternion*/
-#ifdef	DEBUG
-         print_mat(v," *D* Rotation Mat.");
-#endif
-	 imax = MAX3(spec->inertia[0],spec->inertia[1],spec->inertia[2]);
+	 eigens(inertia, v[0], spec->inertia, 3);
+	 eigensort(v[0], spec->inertia, 3, mult);
+	 imax = spec->inertia[0];
 	 nz = 0;
 	 for( i=0; i<3; i++)			 /* Count zero  moments.     */ 
 	    if( spec->inertia[i] < eps*imax )
@@ -805,7 +802,18 @@ void	initialise_sysdef(system_mp system, spec_mt *species,
 	       nz++;
 	       spec->inertia[i] = 0.0;
 	    }
-	    
+
+         if( nz > 0 )  /* Molecule is linear */
+         {
+	   mat_vec_mul(v, spec->p_f_sites, spec->p_f_sites, spec->nsites);
+           zero_real(v[0],9);
+           v[0][0] = 1.0; v[1][1] = 1.0; v[2][2] = 1.0;
+         }
+	 rot_to_q(v, qpf[spec-species]);	/* make equivalent quaternion*/
+#ifdef	DEBUG
+         print_mat(v," *D* Rotation Mat.");
+#endif
+
          spec->rdof = 3-nz;			/* Rotational deg. of freedom*/
 	 if( spec->framework )			/* Frameworks can't rotate   */
 	 {
@@ -816,6 +824,9 @@ void	initialise_sysdef(system_mp system, spec_mt *species,
 	 {
             system->nmols_r += spec->nmols;     /* rotational freedom.       */
 	    mat_vec_mul(v,spec->p_f_sites, spec->p_f_sites, spec->nsites);
+            for(isite=0; isite < spec->nsites; isite++)
+               for(i=0; i < 3; i++)
+                 spec->p_f_sites[isite][i] *= mult[i];
 	 }
          system->d_of_f += spec->rdof * spec->nmols;/* Count total d of f    */
 
