@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/mdshak.c,v 2.27 2002/09/19 09:26:29 kr Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/mdshak.c,v 2.27.8.1 2003/07/29 09:45:10 moldydv Exp $";
 #endif
 
 #include "defs.h"
@@ -165,7 +165,7 @@ main(int argc, char **argv)
 
    if(intyp == 0)
    {
-      fputs("How do you want to  specify the simulated system?\n", stderr);
+      fputs("How do you want to specify the simulated system?\n", stderr);
       fputs("Do you want to use a system specification file (1)", stderr);
       fputs(" or a restart file (2)\n", stderr);
       if( (ans_i = get_int("? ", 1, 2)) == EOF )
@@ -284,8 +284,8 @@ main(int argc, char **argv)
 	      (void)free(dumplims);
 	      dumplims = NULL;
 	   }
-	} while(rflag);   
-		
+	} while(rflag);
+
 	/*
 	 * Allocate buffer for data
          */
@@ -313,7 +313,6 @@ main(int argc, char **argv)
 #endif
 	for(irec = start; irec <= finish; irec+=inc)
 	{
-	   
 	   if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
               error("Error reading record %d in dump file - \n%s\n",
 		    irec, strerror(errno));
