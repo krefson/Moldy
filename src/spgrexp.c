@@ -24,6 +24,9 @@ what you give them.   Help stamp out software-hoarding! */
  **************************************************************************************
  *  Revision Log
  *  $Log: spgrexp.c,v $
+ *  Revision 2.1  2001/08/09 09:36:35  keith
+ *  Incorporated Craig's new "Syswrite" utility.
+ *
  * Revision 1.1  2001/03/23  06:32:03  fisher
  * Initial revision
  *
@@ -49,6 +52,7 @@ what you give them.   Help stamp out software-hoarding! */
 
 #define SPEC_TOL 0.005    /* Special Position Tolerance */
 
+void error(char *, ...);
 /******************************************************************************
  * Structure declarations                                                     *
  ******************************************************************************/
@@ -194,8 +198,8 @@ int BuildSgInfo(T_SgInfo *SgInfo, const char *SgName)
 int sgexpand(int maxnatoms, int natoms, vec_mt *a_lst, char (*label)[NLEN], double *charge, char *spgr)
 {
   T_SgInfo  SgInfo;
-  T_RTMx    inversion = {-1,0,0,0,-1,0,0,0,-1,0,0,0};
-  T_RTMx    centre    = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0,};
+  T_RTMx    inversion = {{{-1,0,0, 0,-1,0, 0,0,-1},{0,0,0}}};
+  T_RTMx    centre    = {{{1, 0, 0, 0, 1, 0, 0, 0, 1}, {0, 0, 0}}};
   int isymm;
 
   if(BuildSgInfo(&SgInfo, spgr) < 0)

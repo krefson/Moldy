@@ -27,6 +27,10 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.11  2001/08/08 16:31:52  keith
+ *  Incorporated Craig's modifications.
+ *  Compiles but not properly tested.
+ *
  *  Revision 1.7  2001/04/24 16:17:21  fisher
  *  elem.h renamed specdata.h to avoid confusion with other software packages.
  *  Modifications and improvements regarding options -y and -e.
@@ -101,7 +105,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /earth/users/jfcc/fisher/moldy-2.16c/source/RCS/ransub.c,v 2.1 2001/03/23 01:29:11 fisher Exp fisher $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ransub.c,v 1.11 2001/08/08 16:31:52 keith Exp $";
 #endif  
 
 #include "defs.h"
@@ -152,6 +156,9 @@ extern  const pots_mt   potspec[];          /* Potential type specification */
 /******************************************************************************
  * read_pot2().  Read potential data from file.                                *
  ******************************************************************************/
+
+extern int read_ele (spec_data *element, char *filename);
+
 int        read_pot2(char *potfile, pot_mp *pot_ptr, int idj, site_mt *site_info, spec_data *dopant)
                    
                                   /* To be pointed at potpar array      */
@@ -196,7 +203,7 @@ FILE       *Fpot;
                  && strcmp(strlower(name), "end") != 0)
     {
        n_items = 0;
-       if(sscanf(line,"%s %lf %s %lf %[^#]",&atom1,&chg1,&atom2,&chg2,pline) <= 2)
+       if(sscanf(line,"%4s %lf %4s %lf %[^#]",atom1,&chg1,atom2,&chg2,pline) <= 2)
             message(&nerrs,line,ERROR,NOPAIR);
        else
        {
@@ -411,7 +418,7 @@ int
 main(int argc, char **argv)
 {
    int	c, cflg = 0, ans_i, sym, data_source = 0;
-   char 	line[80];
+   char 	line[LLEN];
    extern char	*optarg;
    int		errflg = 0;
    int		intyp = 0;
@@ -529,7 +536,7 @@ main(int argc, char **argv)
       {
 	 do
 	 {
-	    fscanf(Fp, "%s",line);
+	    fscanf(Fp, "%132s",line);
 	    (void)strlower(line);
 	 }
 	 while(! feof(stdin) && strcmp(line,"end"));

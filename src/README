@@ -17,6 +17,11 @@ mineral surfaces.  However it is sufficiently flexible that it ought
 to be useful for a wide range of simulation calculations of atomic,
 ionic and molecular systems.
 
+Moldy is licensed under the GNU General Public License (see file
+COPYING) except for the modules sgclib.c sginfo.h and sgio.c which are
+contributed from the SgInfo package by Ralf W. Grosse-Kunstleve and
+licensed under separate terms (see file LICENSE-SGINFO).
+
 Moldy is available by anonymous file transfer from Oxford.  Connect to
 "ftp.earth.ox.ac.uk" using "ftp", with an account name of "anonymous" and
 your email address as password.  The relevant files are all in the

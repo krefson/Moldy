@@ -25,12 +25,15 @@ what you give them.   Help stamp out software-hoarding! */
  **************************************************************************************
  *  Revision Log
  *  $Log: syswrite.c,v $
+ *  Revision 2.1  2001/08/09 09:36:36  keith
+ *  Incorporated Craig's new "Syswrite" utility.
+ *
  * Revision 1.1  2001/04/25  18:27:41  fisher
  * Initial revision
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /earth/users/jfcc/fisher/moldy-2.16c/source/RCS/syswrite.c,v 1.1 2001/04/25 18:27:41 fisher Exp fisher $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/syswrite.c,v 2.1 2001/08/09 09:36:36 keith Exp $";
 #endif
 #include "defs.h"
 #ifdef HAVE_STDARG_H
@@ -69,6 +72,13 @@ extern  const pots_mt   potspec[];           /* Potential type specification  */
 /******************************************************************************
  * tokenize().                                                                *
  ******************************************************************************/
+
+int str_cut (char *in, char *out);
+extern int transformation_matrix (char *buf, T_RTMx *trans_matrix);
+extern int symm_gen (T_RTMx matrix, mat_mp apos, char (*atype)[32], double *charge, int max, int natoms, int abegin, int aend);
+extern void sgtransform (T_RTMx m, mat_mp x, mat_mp xp, int natoms);
+extern int sgexpand (int maxnatoms, int natoms, vec_mt (*a_lst), char (*label)[32], double *charge, char *spgr);
+
 int   tokenize(char *buf, char **linev)
 {
    char *p;
@@ -104,7 +114,7 @@ void space_minus(char *str, int n)
  * multi_char().  Return the value of a (run-time) string as if it had been   *
  *                declared as a multi-character constant. Up to 4-byte ints.  *
  ******************************************************************************/
-multi_char(char *s)
+int multi_char(char *s)
 {
    static int unity2[] = {'\1\0','\0\1'},
               unity3[] = {'\1\0\0','\0\1\0','\0\0\1'},
@@ -228,7 +238,7 @@ FILE       *Fpot;
                     && strcmp(strlower(name), "end") != 0)
     {
         n_items = 0;
-        if(sscanf(line,"%s %lf %s %lf %[^#]",&atom1,&chg1,&atom2,&chg2,pline) <= 2)
+        if(sscanf(line,"%4s %lf %4s %lf %[^#]",atom1,&chg1,atom2,&chg2,pline) <= 2)
            message(&nerrs,line,ERROR,NOPAIR);
         else
         { 
@@ -266,7 +276,7 @@ FILE       *Fpot;
  ******************************************************************************/
 int      read_cssr(char *filename, mat_mp h, char (*label)[32], vec_mp x, double *charge, char *title, char *spgr)
 {
-int      i,j, coord_sys=-1, nocell=0;
+int      i, coord_sys=-1, nocell=0;
 int      natoms;
 double   cell[6];                                       /* Cell parameters */
 mat_mt   hinv;
@@ -320,7 +330,7 @@ FILE     *Fp;
    for( i = 0; i < natoms; i++)
    {
       if( sscanf(get_line(line,LLEN,Fp),"%*4d %4s  %9lf %9lf %9lf %*4d%*4d%*4d%*4d%*4d%*4d%*4d%*4d %7lf",
-               &temp_name, &x[i][0], &x[i][1], &x[i][2], &chg) < 5 )
+               temp_name, &x[i][0], &x[i][1], &x[i][2], &chg) < 5 )
          error("EOF or unexpected format in atom definitions in \"%s\"", filename);
 
       charge[i] = chg; 
@@ -397,12 +407,12 @@ FILE     *Fp;
           if( natoms > MAX_ATOMS )
               fprintf(stderr,"Warning: \"%s\" contains too many atoms! (%d)\n", filename, natoms);
 
-          sscanf(line+12,"%4s%*1c%*3s%*2c%*4d%*4c%8lf%8lf%8lf", &temp_name,
+          sscanf(line+12,"%4s%*1c%*3s%*2c%*4d%*4c%8lf%8lf%8lf", temp_name,
                &x[natoms][0], &x[natoms][1], &x[natoms][2]);
           str_cut(temp_name, label[natoms]);
           trim(label[natoms]);
           strcpy(chg,"  ");
-          sscanf(line+78,"%2s", &chg);
+          sscanf(line+78,"%2s", chg);
           charge[natoms] = str_cut(chg, chg);
 
           natoms++;
@@ -439,7 +449,7 @@ FILE     *Fp;
  ******************************************************************************/
 int      read_shak(char *filename, mat_mt h, char (*label)[32], vec_mp x, double *charge, char *title, double *simbox)
 {
-int      i,j, coord_sys=-1, natoms = 0;
+int      i, natoms = 0;
 double   cell[6];                                    /* Cell parameters */
 double   box[6];
 char     line[LLEN], combuf[LLEN], *buf, *bufend, last;
@@ -747,7 +757,6 @@ main(int argc, char **argv)
    char		*potname = NULL;
    char		elefile[PATHLN];
    char		potfile[PATHLN];
-   char		name[NLEN];                   /* Temporary name variable */
    char		title[TITLE_SIZE];
    double	cell[6];                      /* Cell parameters */
    mat_mt	h;                            /* Hessian */
@@ -766,8 +775,6 @@ main(int argc, char **argv)
    double	x[MAX_ATOMS][3];              /* C of M coordinates */
    double       charge[MAX_ATOMS];            /* Site charge array */
    char         label[MAX_ATOMS][NLEN];       /* Site name array */
-
-   FILE		*Fp;
 
    comm = argv[0];
 

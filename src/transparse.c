@@ -40,6 +40,7 @@ what you give them.   Help stamp out software-hoarding! */
 
 #include "sginfo.h"
 
+void error(char *, ...);
 double 	strtod(const char *, char **);
 # define MAXCONST 127
 static float constant[MAXCONST];

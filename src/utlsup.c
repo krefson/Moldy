@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/utlsup.c,v 1.5.2.1 2000/12/11 12:33:36 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/utlsup.c,v 1.10 2001/08/08 16:31:52 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -63,7 +63,7 @@ void	note(void)
 #   define va_dcl /* */
 #endif
 /*VARARGS*/
-void    message(va_alist)
+void    message(int __builtin_va_alist)
 {
    va_list      ap;
    char         *buff;
@@ -109,7 +109,7 @@ void    message(va_alist)
 #define va_dcl /* */
 #endif
 /*VARARGS*/
-void	error(va_alist)
+void	error(int __builtin_va_alist)
 {
    va_list	ap;
 #ifdef HAVE_STDARG_H
@@ -208,10 +208,11 @@ int get_sym(char *prompt, char *cset)
 /******************************************************************************
  * get_str().  Read a string from stdin, issuing a prompt                     *
  ******************************************************************************/
+#define STRLEN 80
 char	*get_str(char *prompt)
 {
-   char		ans_str[80];
-   char		*str = malloc(80);
+   char		ans_str[STRLEN];
+   char		*str = malloc(STRLEN);
    int		ans_flag;
 
    ans_flag = 0;
@@ -454,7 +455,7 @@ FILE       *Fe;
 
      for( ele = element; ele < element+NELEM; ele++ )
      {
-        if( (sscanf(get_line(line,LLEN,Fe),"%s %s %lf %lf", &name, &symbol, &mass, &chg) < 4) && !feof(Fe) )
+        if( (sscanf(get_line(line,LLEN,Fe),"%32s %4s %lf %lf", name, symbol, &mass, &chg) < 4) && !feof(Fe) )
             error("Unexpected format in \"%s\"", filename);
         if( feof(Fe) )
             break;
