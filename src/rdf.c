@@ -8,6 +8,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.8  90/02/02  15:30:19  keith
+ * Split inner loop in rdf_calc() into one large, vectorisable loop and
+ * one smaller, unvectorisable binning loop. 
+ * Replaced library function floor() by (vectorisable) macro.
+ * 
  * Revision 1.7  89/12/21  16:30:02  keith
  * Reversed indices in 'site' and 'site_force' to allow stride of 1 in ewald.
  * 
@@ -32,7 +37,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/rdf.c,v 1.7 89/12/21 16:30:02 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.8 90/02/02 15:30:19 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -40,6 +45,7 @@ static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/rdf.c,v 1.7 89/12
 #else
 #include <math.h>
 #endif
+#include	<stdio.h>
 #include 	"string.h"
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -164,6 +170,7 @@ site_t		site_info[];
    		bincb = bin*bin*bin,
    		rho = system->nsites/det(system->h);
    double	norm;
+   char		buf[32];
    
    for(spec = species; spec < species+system->nspecies; spec++)
       for(is = 0; is < spec->nsites; is++)
@@ -186,14 +193,17 @@ site_t		site_info[];
 	    norm += norm;
          for(ibin = 0; ibin < control.nbins; ibin++)
          {
-            col += printf(" %7f",rdf[idi][idj][ibin]*norm/SQR(0.5+ibin));
-            if(col > control.page_width - 8 || ibin == control.nbins - 1) 
+            sprintf(buf, " %7f",rdf[idi][idj][ibin]*norm/SQR(0.5+ibin));
+	    col += strlen(buf);
+            if(col > control.page_width)
             {
-               col = 0;
+               col = strlen(buf);
 	       new_line();
 	    }
+	    fputs(buf, stdout);
             rdf[idi][idj][ibin] = 0;				/* Reset      */
          }
+	 new_line();
       }
    put_line('_');
    cfree((char*)nfrac);
