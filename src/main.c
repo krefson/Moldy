@@ -7,6 +7,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.3  89/05/22  14:05:34  keith
+ * Added rescale-separately option, changed 'contr_t' format.
+ * 
  * Revision 1.2  89/04/21  10:48:38  keith
  * Corrected bug which left step counter 1 too high at end of run
  * 
@@ -15,7 +18,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: main.c,v 1.2 89/04/21 10:48:38 keith Exp $";
+static char *RCSid = "$Header: main.c,v 1.3 89/05/22 14:05:34 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -67,30 +70,30 @@ contr_t	control = {
 	1234567,		/* Seed for random number generator	      */
 	132,			/* Line width for output file		      */
 	44,			/* Length of page on output file	      */
-	0,			/* Number of timesteps between scales	      */
+	10,			/* Number of timesteps between scales	      */
 	1000000,		/* Stop scaling after n timesteps	      */
-	1000,			/* Number of 'equilibration' steps	      */
+	1001,			/* Number of 'equilibration' steps	      */
 	0,			/* Whether to scale each species separately   */
 	100,			/* Frequency of averages calculation	      */
-	0,			/* Start of configuration dumps		      */
+	1,			/* Start of configuration dumps		      */
 	0,			/* Dump filename offset (internal use only)   */
-	0,			/* Frequency of configuration dumps	      */
+	20,			/* Frequency of configuration dumps	      */
 	0,			/* Level of dump to perform		      */
 	10,			/* How many dump records in a dump file	      */
 	100,			/* Frequency to write save configuration      */
 	10,			/* Number of timesteps for rolling avgs       */
 	10,			/* Number of timesteps between printouts      */
-        0,			/* When to start accumulating rdf data        */
-	0,			/* How frequently to perform binning          */
-	100,			/* How frequently to calculate & print rdf    */
+        1001,			/* When to start accumulating rdf data        */
+	20,			/* How frequently to perform binning          */
+	1000,			/* How frequently to calculate & print rdf    */
 	0,			/* Required temperature 		      */
 	0.0,			/* Required pressure			      */
 	50,			/* Parinello and Rahman W parameter	      */
 	10.0,			/* Cut off radius			      */
 	0.0,			/* Size of side of interaction cells	      */
         1.0,			/* Density 1g/cc			      */
-	0.5,			/* Convergence parameter for Ewald sum	      */
-        3.5,			/* K space cutoff for Ewald sum		      */
+	0.3,			/* Convergence parameter for Ewald sum	      */
+        2.0,			/* K space cutoff for Ewald sum		      */
 	10.0,			/* Limiting distance for RDF calculation      */
 	1.0e20};		/* Default CPU limit - very large	      */
 	
@@ -128,19 +131,24 @@ char	*argv[];
          output();
       
       if(control.scale_interval > 0)
-         if(control.istep < control.scale_end &&
+      {
+         if(control.istep <= control.scale_end &&
             control.istep % control.scale_interval == 0)
             rescale(&system, species);
-         else if(control.istep == control.scale_end)
-            note("temperature scaling turned off");
+         if(control.istep == control.scale_end)
+            note("Temperature scaling turned off after step %d", control.istep);
+      }
 
-      if(control.average_interval > 0 && 
-        (control.istep-control.begin_average) % control.average_interval == 0)
-           averages();
-
-      if(control.istep == control.begin_average)
-         note("started accumulating thermodynamic averages on timestep %d", 
-              control.istep);
+      if( control.average_interval > 0 &&
+	  control.istep >= control.begin_average && 
+	 (control.istep-control.begin_average) % control.average_interval == 0)
+      {
+         if( control.istep == control.begin_average )
+            note("started accumulating thermodynamic averages on timestep %d", 
+		 control.istep);
+         else
+            averages();
+      }
 
       if(control.rdf_interval > 0 && control.istep > control.begin_rdf && 
         (control.istep-control.begin_rdf) % control.rdf_out == 0)
