@@ -1,0 +1,178 @@
+/* config.h.in.  Generated automatically from configure.in by autoheader.  */
+
+/* Define if on AIX 3.
+   System headers sometimes define this.
+   We just want to avoid a redefinition error message.  */
+#ifndef _ALL_SOURCE
+#undef _ALL_SOURCE
+#endif
+
+/* Define to empty if the keyword does not work.  */
+#undef const
+
+/* Define if you don't have vprintf but do have _doprnt.  */
+#undef HAVE_DOPRNT
+
+/* Define if you have the strftime function.  */
+#undef HAVE_STRFTIME
+
+/* Define if you have the vprintf function.  */
+#undef HAVE_VPRINTF
+
+/* Define as the return type of signal handlers (int or void).  */
+#undef RETSIGTYPE
+
+/* Define to `unsigned' if <sys/types.h> doesn't define.  */
+#undef size_t
+
+/* Define if you have the ANSI C header files.  */
+#undef STDC_HEADERS
+
+/* Define if you can safely include both <sys/time.h> and <time.h>.  */
+#undef TIME_WITH_SYS_TIME
+
+/* Define if you have the getopt function.  */
+#undef HAVE_GETOPT
+
+/* Define if you have the getrusage function.  */
+#undef HAVE_GETRUSAGE
+
+/* Define if you have the gettimeofday function.  */
+#undef HAVE_GETTIMEOFDAY
+
+/* Define if you have the memcpy function.  */
+#undef HAVE_MEMCPY
+
+/* Define if you have the memset function.  */
+#undef HAVE_MEMSET
+
+/* Define if you have the popen function.  */
+#undef HAVE_POPEN
+
+/* Define if you have the raise function.  */
+#undef HAVE_RAISE
+
+/* Define if you have the remove function.  */
+#undef HAVE_REMOVE
+
+/* Define if you have the strchr function.  */
+#undef HAVE_STRCHR
+
+/* Define if you have the strdup function.  */
+#undef HAVE_STRDUP
+
+/* Define if you have the strerror function.  */
+#undef HAVE_STRERROR
+
+/* Define if you have the strstr function.  */
+#undef HAVE_STRSTR
+
+/* Define if you have the strtol function.  */
+#undef HAVE_STRTOL
+
+/* Define if you have the times function.  */
+#undef HAVE_TIMES
+
+/* Define unless the times function returns a wall-clock time */
+#undef TIMES_RETURNS_STATUS
+
+/* Define if you have the xdr_int function.  */
+#undef HAVE_XDR_INT
+
+/* Define if you have the <malloc.h> header file.  */
+#undef HAVE_MALLOC_H
+
+/* Define if you have the <rpc/xdr.h> header file.  */
+#undef HAVE_RPC_XDR_H
+
+/* Define if you have the <sys/resource.h> header file.  */
+#undef HAVE_SYS_RESOURCE_H
+
+/* Define if you have the <sys/time.h> header file.  */
+#undef HAVE_SYS_TIME_H
+
+/* Define if you have the <sys/times.h> header file.  */
+#undef HAVE_SYS_TIMES_H
+
+/* Define if you have the <sys/types.h> header file.  */
+#undef HAVE_SYS_TYPES_H
+
+/* Define if you have the <unistd.h> header file.  */
+#undef HAVE_UNISTD_H
+
+/* Define if you have the m library (-lm).  */
+#undef HAVE_LIBM
+
+/* Define if you have the nsl library (-lnsl).  */
+#undef HAVE_LIBNSL
+
+#undef HAVE_STDARG_H
+
+#undef C_NO_VOID_PTRS
+
+#undef TIMES_RETURNS_STATUS
+
+#undef SPMD
+
+#undef BSP
+
+#undef MPI
+
+#undef SHMEM
+
+#undef TCGMSG
+
+#undef BSP0
+
+#ifdef const
+#define volatile /**/
+#endif
+
+#ifdef _AIX
+#   define __unix__
+#endif
+
+/*
+ * To allow XDR stuff to work on HP.  Surely there's a more general
+ * way of doing this? I think that HPs header files are broken.
+ */
+#if defined(__hpux) && ! defined(__convex_spp)
+#   define _HPUX_SOURCE
+#   define __unix__
+#endif
+
+#ifdef __convexc__              /* For"-std" and "-str" ANSI modes. Sigh. */
+#   ifndef _POSIX_SOURCE
+#      define _POSIX_SOURCE
+#      define _CONVEX_SOURCE
+#   endif
+#endif
+
+#if defined(HAVE_XDR_INT) && defined(HAVE_RPC_XDR_H)
+#   define USE_XDR
+#endif
+/* 
+ * Vectorisation directive translation.  N.B. Most preprocessors munge 
+ * directives so the #define must substitute the preprocessor OUTPUT.
+ */
+#if defined(_CRAY1)	/* This seems to be defined for all CRI PVP systems */
+#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
+#endif
+#if defined(__convexc__) && ! defined(__convex_spp)
+#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
+#endif
+#ifdef stellar
+#   define VECTORIZE __dir NO_RECURRENCE :
+#   define NOVECTOR  __dir SCALAR :
+#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
+#endif
+#ifdef ardent
+#   define VECTORIZE # pragma ivdep
+#   define NOVECTOR  # pragma novector
+#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
+#endif
+
+#ifdef __unix__
+#   define LOCKEX		".lck"
+#   define ALLOC_ALIGN
+#endif
