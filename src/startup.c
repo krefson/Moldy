@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.31.2.1  2002/03/13 10:27:52  kr
+ *      Trial version incorporating reciprocal-space summation for r^-2 and r^-6
+ *      interactions.  This version implements a new potential "genpot46" to activate.
+ *
  *      Revision 2.31  2002/02/27 17:48:34  kr
  *      Reworked auto-setting of Ewald parameters.
  *        Added new control parameter "ewald-accuracy" to refine auto-setting.
@@ -324,14 +328,14 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/startup.c,v 2.31 2002/02/27 17:48:34 kr Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/startup.c,v 2.31.2.1 2002/03/13 10:27:52 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
 #include	<math.h>
-#include 	"string.h"
-#include	"stdlib.h"
+#include 	<string.h>
+#include	<stdlib.h>
 #include	<stdio.h>
 /*========================== Program include files ===========================*/
 #include	"structs.h"

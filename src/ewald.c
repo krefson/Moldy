@@ -23,6 +23,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.23.4.5  2002/06/20 17:50:59  kr
+ *       Patrick's mods to do 1/r**7 terms with an Ewald sum
+ *       (very slightly tidied up).
+ *
  *       Revision 2.23.4.1  2002/03/13 10:27:52  kr
  *       Trial version incorporating reciprocal-space summation for r^-2 and r^-6
  *       interactions.  This version implements a new potential "genpot46" to activate.
@@ -255,7 +259,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/ewald.c,v 2.23.4.1 2002/03/13 10:27:52 kr Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/ewald.c,v 2.23.4.5 2002/06/20 17:50:59 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -269,9 +273,9 @@ static char *RCSid = "$Header: /home/kr/CVS/moldy/src/ewald.c,v 2.23.4.1 2002/03
 #   include 	<math.h>
 #endif
 #endif
-#include	"stddef.h"
-#include 	"stdlib.h"
-#include        "string.h"
+#include	<stddef.h>
+#include 	<stdlib.h>
+#include        <string.h>
 /*========================== Program include files ===========================*/
 #include 	"structs.h"
 #include 	"messages.h"

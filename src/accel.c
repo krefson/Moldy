@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.39.4.4  2002/09/18 08:38:32  kr
+ *       Fixed bug in calculation of H_0 when pressure != 0 but NVT run.
+ *
  *       Revision 2.39.4.3  2002/06/21 11:42:16  kr
  *       Added some declarations
  *
@@ -357,13 +360,13 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/accel.c,v 2.39.4.3 2002/06/21 11:42:16 kr Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/accel.c,v 2.39.4.4 2002/09/18 08:38:32 kr Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
 #include	<math.h>
-#include	"string.h"
+#include	<string.h>
 #if defined(DEBUG10) || defined(DEBUG2) || defined(DEBUG_THERMOSTAT)
 #include	<stdio.h>
 #endif
