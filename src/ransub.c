@@ -27,6 +27,15 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.13  2002/06/17 08:58:12  kr
+ *   Modified sys-spec output routine to add dopant (solute) species to end of list.
+ *   Check added to see if dopant species already present in system.
+ *   Sorting of substituted positions list for improved efficiency.
+ *   If no potentials specified, assume same pots as first site of substituted species.
+ *   Substitution aborted if solute and solvent species have same name.
+ *   External data files now only read if no. of solute particles > 0
+ *    Tidied up error messages.
+ *
  *  Revision 1.13   2002/05/02 14:57:19  fisher
  *  Modified sys-spec output routine to add dopant (solute) species to end of list.
  *  Check added to see if dopant species already present in system.
@@ -119,15 +128,11 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/ransub.c,v 1.12 2001/08/09 11:46:55 keith Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/ransub.c,v 1.13 2002/06/17 08:58:12 kr Exp $";
 #endif  
 
 #include "defs.h"
-#ifdef HAVE_STDARG_H
 #include <stdarg.h>
-#else
-#include <varargs.h>
-#endif
 #include <errno.h>
 #include <math.h>
 #include "stdlib.h"
