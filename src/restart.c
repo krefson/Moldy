@@ -11,6 +11,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 1.6  89/11/01  17:40:36  keith
+ * Read_restart modified to allow skip of read of averages data -
+ * specified by asize=0.
+ * 
  * Revision 1.4  89/06/22  15:45:14  keith
  * Tidied up loops over species to use one pointer as counter.
  * 
@@ -26,16 +30,15 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/restart.c,v 1.5 89/11/01 17:05:13 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/restart.c,v 1.6 89/11/01 17:40:36 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
 #include 	"string.h"
+#include	"time.h"
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
-/*========================== Library declarations ============================*/
-time_t		time();
 /*========================== External function declarations ==================*/
 int		replace();
 void		message();
@@ -229,7 +232,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
    }
 
    (void)memcpy((char*)&save_header, (char*)&restart_header, sizeof(restrt_t));
-   (void)strncpy(save_header.vsn, "$Revision: 1.5 $"+11,
+   (void)strncpy(save_header.vsn, "$Revision: 1.6 $"+11,
 		                  sizeof save_header.vsn-1);
    save_header.prev_timestamp = restart_header.timestamp;
    save_header.timestamp = time((time_t*)0);		/* Update header      */

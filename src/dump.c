@@ -23,6 +23,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.8  90/04/25  17:09:23  keith
+ * Corrected test for mutation failure.
+ * 
  * Revision 1.7  90/04/17  10:49:47  keith
  * Corrected test for dump and restart consistency.
  * 
@@ -49,18 +52,18 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.8 90/04/25 17:04:57 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.8 90/04/25 17:09:23 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
 #include	<ctype.h>
 #include 	"string.h"
+#include	"time.h"
 /*========================== program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
 /*========================== Library declarations ============================*/
 void	cfree();			/* Free allocated memory	      */
-time_t	time();
 /*========================== External function declarations ==================*/
 static char	*mutate();
 double		mdrand();
