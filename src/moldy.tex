@@ -127,11 +127,11 @@
 %
 % Uncomment this for LaTeX2html translation
 %
-\usepackage{html}
+%\usepackage{html}
 %
 % Comment this out for LaTeX2html translation
 %
-%\usepackage[breaklinks]{hyperref}
+\usepackage[breaklinks]{hyperref}
 %begin{latexonly}
 \providecommand{\htmladdnormallink}[2]{#1}
 %end{latexonly}
@@ -156,7 +156,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.22 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.23 $ $}
 \newcommand{\moldyversion}{2.14}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1890,7 +1890,7 @@ Number of MD steps to execute. \\
 \Lit{cpu-limit} &              real &                  1e20 &
 Terminate run if excessive CPU time used. \\
 \Lit{step} &                   real &                  0.005 &
-Size of timestep \\ \hline
+Size of timestep (in ps)\\ \hline
 \Lit{sys-spec-file} &          character  &    null &
 Name of system specification file.  Appended to control file if null. \\
 \Lit{lattice-start} &          boolean &               false  &
@@ -2103,15 +2103,14 @@ with the six parameters $A_{ij}$ -- $F_{ij}$.
 \noindent
 Other types of potential may be easily added: see section~\ref{sec:newpot}.
 
-It is possible to specify the units in which these quantities are given
-by means of the control file parameters \Lit{mass-unit},
-\Lit{length-unit}, \Lit{time-unit} and \Lit{charge-unit} 
-(which are themselves specified in SI units). All quantities read from
-the system specification file (dimensions as well as potentials) are
-taken to be in those units. Their default values are amu, {\AA}, 0.1ps
-and $q_{e}$, which means that the unit of energy is kJ\,mol$^{-1}$.  So
-to read in {\AA}, amu and kcal mol$^{-1}$, specify
-\Lit{time-unit=4.8888213e-14}.
+It is possible to specify the units in which these quantities are
+given by means of the control file parameters \Lit{mass-unit},
+\Lit{length-unit}, \Lit{time-unit} and \Lit{charge-unit} (which are
+themselves specified in SI units). All potential parameters, site
+masses and charges, but not co-ordinates are taken to be in those
+units. Their default values are amu, {\AA}, 0.1ps and $q_{e}$, which means
+that the unit of energy is kJ\,mol$^{-1}$.  So to read in {\AA}, amu and
+kcal mol$^{-1}$, specify \Lit{time-unit=4.8888213e-14}.
 
 Once the system specification has been read in, all quantities are
 converted to `internal' units: a.m.u., {\AA}, ps, and $\insqrt (
@@ -5015,9 +5014,8 @@ The meanings of its arguments are
 \begin{Argdescription}
 \item[-R] the total number of molecules.  This argument is compulsory.
 \item[-Q] the number of polyatomic molecules.  This argument is compulsory.
-\item[-c] which pieces (``components'') of the information in dump
-record to extract.  This is a selector-format list and may list any
-combination of
+\item[-c] which piece (``component'') of the information in dump
+record to extract.  
 \begin{enumerate}
 \itemsep=0pt
 \parskip=0pt
@@ -5201,7 +5199,7 @@ specified in command line mode:
 \Lit{[-g} \textit{species-range} \Lit{]}
 \Lit{[-u]}
 \Lit{[-w} \textit{trajectory-output-format} \Lit{]}
-\Lit{[-x]} \Lit{[-y]} \Lit{[-z]}
+\Lit{[-x|-X]} \Lit{[-y|-Y]} \Lit{[-z|-Z]}
 \Lit{[-o} \textit{output-file} \Lit{]}
 \end{center}
 
@@ -5224,13 +5222,19 @@ calculation of msd for a given time interval. Defaults to 1.
 \item[-u] option to by-pass msd calculation and output the connected particle
 trajectories in the format selected by \Lit{-w}. 
 \item[-w] selects output format for trajectory data. Set to 
-        \Lit{0} for format readable by GNUPlot (default) or
-        \Lit{1} for generic format (simple matrix)
-      \item[-x, -y, -z] indicate that limits are to be specified in
-        the given direction. Only particles whose positions in the
-        first timeslice lie within these limits are included in the
-        trajectory output. The user is prompted at run time for the
-        limits. The default is to include all particles.
+  \Lit{0} for format readable by GNUPlot (default) or
+  \Lit{1} for generic format (simple matrix).
+\item[-x, -y, -z, -X, -Y, -Z] indicate that limits (in \AA) are to be
+  specified in the given cartesian direction. If the direction is in
+  lowercase, only particles whose initial positions lie \emph{within}
+  these limits are included in the msd calculation or trajectory
+  output. If the direction is in uppercase, the program will only
+  include particles lying \emph{outside} these limits. limits can be
+  imposed in one, two or all three directions in any possible
+  combination. However, if both options for a single direction (e.g.
+  \Lit{-x} and \Lit{-X}) are used, priority will be given to the
+  latter option entered on the command line. The user is prompted for
+  the limits at run time. The default is to include all particles.
 \item[-o] name of optional output file. Defaults to standard output.
 \end{Argdescription}
 
@@ -5262,13 +5266,85 @@ the generic matrix format in which a single row contains consecutive $x
 y z$ coordinates for all particles, with time increasing down the
 columns.
 
-The \Lit{-x}, \Lit{-y} and \Lit{-z} options only apply to the
-trajectory data and are useful for reducing the number of particle
-trajectories outputted by ``cutting'' the simulation box into more
-manageable slices.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Mdvaf}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Mdvaf is a utility for calculating the Velocity Autocorrelation 
+Function (VACF) from moldy dump files of at least level 2 (see 
+Section\ref{sec:dumping}). It can also, optionally, calculate the Velocity 
+Total Correlation Function (VTF) from the same data source.
+
+For a species of $N$ particles, the VACF, $Z(t)$ is defined as:
+\begin{equation}
+  Z(t) = \frac{1}{N N_t} \sum_{t_0=0}^{N_t} \sum_{n=1}^N v_n(t_0) \cdot v_n(t_0 + t)
+\end{equation}
+and the VTF as
+\begin{equation}
+  VTF(t)= \frac{1}{N_t} \sum_{t_0=0}^{N_t} \left ( \sum_{n=1}^N q_n v_n(t_0) 
+  \cdot  \sum_{n=1}^N  q_n v_n(t_0 + t) \right )
+\end{equation}
+where $q$ is the total charge of the species, $v(t)$ the
+velocity at time $t$.
+
+The self-diffusion coefficient of a species, $D$ can be
+obtained from the integral of its VACF
+\begin{equation}
+  D = \frac{1}{3} \int_0^\infty Z(t) dt .
+\end{equation}
+
+Similarly, the frequency-dependent ionic conductivity, $\sigma(\omega)$, can
+be calculated directly from the VTF via:
+\begin{equation}
+  \sigma(\omega) = \frac{1}{3 V k_B T}    \int_0^\infty VTF(t) e^{-i \omega t} dt
+\end{equation}
+
+where $V$ is the volume of the simulation box, $k_{B}$ is Boltzmann's
+constant and $T$ is temperature.
+
+The command line options are:\\
+\begin{center}
+\Lit{mdvaf}
+\Lit{[-s} \textit{system-specification} \Lit{]|}
+\Lit{[-r} \textit{restart-file} \Lit{]}
+\Lit{[-d} \textit{dump-file-format} \Lit{]}
+\Lit{[-t} \textit{dump-range} \Lit{]} \\
+\Lit{[-v} \textit{vaf-range}\Lit{]}
+\Lit{[-g} \textit{species-range}\Lit{]} 
+\Lit{[-c]}
+\Lit{[-q]} 
+\Lit{[-o} \textit{output-file}\Lit{]}
+\end{center}
+
+where the arguments have the following meanings:
+\begin{Argdescription}
+\item[-s] read the species data from a system specification file.
+\item[-r] read the species data from a restart file. Only one of \Lit{-s} 
+or \Lit{-r} may be given.
+\item[-c] if reading system specification file, skip any preceding control 
+parameter info.
+\item[-d] read the centre of mass velocities from a dump file (of dump-level 
+$>= 2$) given as a prototype name containing a printf() format 
+string -- see section~\ref{sec:dumping} .
+\item[-t] range of records in dump file, specified in ``selector'' format.
+\item[-v] time intervals to calculate the VACF or VTF values for, specified 
+in ``selector'' format. Default is 0 to half the number of dump 
+records selected, with an increment of 1.
+\item[-g] range of species to be included, given in ``selector'' format 
+where 0 represents the \emph{first} species. Defaults to all species.
+\item[-q] calculate the VTF instead of the VACF.
+\item[-o] name of optional output file. Defaults to standard output.
+\end{Argdescription}
+
+If the executable file is named mdvaf then the default calculation 
+is the VACF. If it is renamed to mdvtf, then the default is the 
+VTF. In both cases, the output is in the form of a single column 
+of data headed by the name of the species in question. The lines 
+down each column correspond to increasing time intervals. Similar 
+to msd, the time intervals selected using \Lit{-m} are taken relative 
+to the dump slices selected using \Lit{-t}. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Mdavpos}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Mdavpos}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Mdavpos is a utility for calculating the average positions of particles
