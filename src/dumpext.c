@@ -28,7 +28,14 @@ what you give them.   Help stamp out software-hoarding!  */
 #   include	"xdr.h"
 #endif
 
-extern	char * strdup();
+int		getopt();
+
+static char * mystrdup(s)
+char *s;
+{
+   char * t=malloc(strlen(s)+1);
+   return t?strcpy(t,s):0;
+}
 /******************************************************************************
  * strstr replacement for pre-ANSI machines which don't have it.              *
  ******************************************************************************/
@@ -184,7 +191,7 @@ char	*fmt, *range;
 
    for(i = start; i <= finish; i++)
    {
-      seq[iseq++] = strdup((sprintf(buf,fmt,i),buf));
+      seq[iseq++] = mystrdup((sprintf(buf,fmt,i),buf));
    }
    seq[iseq] = NULL;
    return seq;
@@ -316,6 +323,7 @@ int	bflg, nmols, xdr;
    (void)free((char*)buf);
 }
 
+int
 main(argc, argv)
 int	argc;
 char	*argv[];
@@ -457,7 +465,8 @@ char	*argv[];
    {
       if( (filelist = seqgen(argv[optind], filerange)) == NULL)
       {
-	 fprintf(stderr,"%s: invalid dump range \"%s\"\n", argv[0]);
+	 fprintf(stderr,"%s: invalid dump range \"%s\"\n", 
+		 argv[0],argv[optind]);
 	 errflg++;
       }
    }
@@ -536,7 +545,7 @@ char	*argv[];
 #endif
    }
 
-   if( ! (1 << xcpt-1 & level_mask[proto_header.dump_level]) )
+   if( ! (1 << (xcpt-1) & level_mask[proto_header.dump_level]) )
    {
       fprintf(stderr,"Sorry the component requested (%s)",cpt[xcpt-1].name);
       fprintf(stderr," is not contained in a dump of level %d\n",
@@ -638,7 +647,7 @@ char	*argv[];
    {
       if( cur->i <= tslice && tslice < MIN(cur->i + cur->num, numslice) )
       {
-	 extract(cur->p, 1<<xcpt-1, mol_head.next, cpt, NCPT, tslice-cur->i,
+	 extract(cur->p, 1<<(xcpt-1), mol_head.next, cpt, NCPT, tslice-cur->i,
 		 MIN(cur->num,numslice-cur->i), inc, bflg, nmols, xdr);
 	 tslice += (cur->i + cur->num - tslice - 1) / inc * inc + inc;
       }
