@@ -36,7 +36,11 @@ what you give them.   Help stamp out software-hoarding!  */
  * gauss_rand()		Return random sample from univariant gaussian         *
  ******************************************************************************
  *      Revision Log
- *       $Log: startup.c,v $
+ *      $Log: $
+ * Revision 2.10  1995/12/04 11:45:49  keith
+ * Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
+ * Thanks to V. Murashov.
+ *
  * Revision 2.9  1995/01/03  13:56:39  keith
  * Added auto-generation of Ewald Sum parameters using Fincham's formulae.
  *
@@ -222,7 +226,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/startup.c,v 2.9 1995/01/03 13:56:39 keith stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/startup.c,v 2.11 1995/12/22 13:57:38 keith Exp keith $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -338,19 +342,19 @@ CONST match_mt	match[] = {
 {"temperature",      "%lf",  "0.0",          (gptr*)&control.temp},
 {"pressure",         "%lf",  "0.0",          (gptr*)&control.pressure},
 {"w",                "%lf",  "100.0",        (gptr*)&control.pmass},
-{"rtmass",           "%lf",  "0.01",         (gptr*)&control.rtmass},
-{"ttmass",           "%lf",  "0.01",         (gptr*)&control.ttmass},
-{"cutoff",           "%lf",  "10.0",         (gptr*)&control.cutoff},
+{"rtmass",           "%lf",  "100.0",        (gptr*)&control.rtmass},
+{"ttmass",           "%lf",  "100.0",        (gptr*)&control.ttmass},
+{"cutoff",           "%lf",  "0.0",          (gptr*)&control.cutoff},
 {"subcell",          "%lf",  "0.0",          (gptr*)&control.subcell},
 {"density",          "%lf",  "1.0",          (gptr*)&control.density},
-{"alpha",            "%lf",  "0.3",          (gptr*)&control.alpha},
-{"k-cutoff",         "%lf",  "2.0",          (gptr*)&control.k_cutoff},
+{"alpha",            "%lf",  "0.0",          (gptr*)&control.alpha},
+{"k-cutoff",         "%lf",  "0.0",          (gptr*)&control.k_cutoff},
 {"rdf-limit",        "%lf",  "10.0",         (gptr*)&control.limit},
 {"cpu-limit",        "%lf",  "1.0e20",       (gptr*)&control.cpu_limit},
-{"mass-unit",        "%lf",  "1.6605655e-27",(gptr*)&input_unit.m},
+{"mass-unit",        "%lf",  AMUSTR,         (gptr*)&input_unit.m},
 {"length-unit",      "%lf",  "1.0e-10",      (gptr*)&input_unit.l},
 {"time-unit",        "%lf",  "1.0e-13",      (gptr*)&input_unit.t},
-{"charge-unit",      "%lf",  "1.6021892e-19",(gptr*)&input_unit.q},
+{"charge-unit",      "%lf",  ECSTR,          (gptr*)&input_unit.q},
 {0,0,0,0}	     }; 		/* Null termination essential.	*/
 
 /*============================================================================*
@@ -899,8 +903,8 @@ double		step, step1;
       interp(ratio, sys->qddot[0], sys->qddoto[0],sys->qddotvo[0], 
 	     4*sys->nmols_r);
    interp(ratio, sys->hddot[0], sys->hddoto[0],sys->hddotvo[0], 9);
-   interp(ratio, sys->tadot[0], sys->tadoto[0], sys->tadotvo[0], sys->nspecies);
-   interp(ratio, sys->radot[0], sys->radoto[0], sys->radotvo[0], sys->nspecies);
+   interp(ratio, sys->tadot, sys->tadoto, sys->tadotvo, sys->nspecies);
+   interp(ratio, sys->radot, sys->radoto, sys->radotvo, sys->nspecies);
 }
 /******************************************************************************
  *  check_sysdef.   		Read in system specification from the restart *
@@ -962,17 +966,22 @@ int      nsites;
 
    if( *alpha == 0.0 )
       *alpha = pow(nsites*CUBE(PI)/SQR(vol)*TRoverTF, 1.0/6.0);
-   if( *cutoff == 0.0 )
+   if( *alpha > 0.0 )
    {
-      *cutoff = sqrt(LOGACC)/ *alpha;
-      if( *cutoff > max_cutoff )
+      if( *cutoff == 0.0 )
       {
-	 message( NULLI, NULLP, WARNING, MAXCUT, *cutoff, max_cutoff);
-	 *cutoff = max_cutoff;
+	 *cutoff = sqrt(LOGACC)/ *alpha;
+	 if( *cutoff > max_cutoff )
+	 {
+	    message( NULLI, NULLP, WARNING, MAXCUT, *cutoff, max_cutoff);
+	    *cutoff = max_cutoff;
+	 }
       }
+      if( *k_cutoff == 0.0 )
+	 *k_cutoff = 2.0* (*alpha) * sqrt(LOGACC);
    }
-   if( *k_cutoff == 0.0 )
-      *k_cutoff = 2.0* (*alpha) * sqrt(LOGACC);
+   else if ( *cutoff <= 0.0 )
+      message(NULLI, NULLP, FATAL, NOCUT, *cutoff);
 }
 /******************************************************************************
  *  startup	This function sets up everything that is needed to start a    *
