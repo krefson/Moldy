@@ -110,6 +110,9 @@ dnl
      i?86-pc-linux*)      if test $CC = "pgcc" ; then
                            :  ${OPT=-O2} ${OPT2=$OPT} ${OPTAUX=$OPT2 -Munroll}
                           fi
+                          if test $CC = "mpicc" ; then
+                           :  ${OPT=-O} ${OPT2=$OPT} ${OPTAUX=$OPT2}
+                          fi
                           if test $CC = "icc" ; then
                            :  ${OPT=-O3 -tpp6} ${OPT2=$OPT} ${OPTAUX=$OPT2}
                           fi ;;
