@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.23.4.3  2002/04/03 08:41:42  kr
+ *       Optimized forces loop.  Now only called once even if multiple potentials are used.
+ *
  *       Revision 2.23.4.1  2002/03/13 10:27:52  kr
  *       Trial version incorporating reciprocal-space summation for r^-2 and r^-6
  *       interactions.  This version implements a new potential "genpot46" to activate.
@@ -255,7 +258,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/ewald.c,v 2.23.4.1 2002/03/13 10:27:52 kr Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/ewald.c,v 2.23.4.3 2002/04/03 08:41:42 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -1146,13 +1149,13 @@ void	ewald46(real **site,            /* Site co-ordinate arrays       (in) */
 	    if(dopot4) 
 	    {
 	       struct_factor_4_sq += pot4[idi][idj]*(scoskr[idi]*scoskr[idj]+ssinkr[idi]*ssinkr[idj]);
-	       coeff += pot4[idi][idj]*ak4;
+	       coeff += 2.0*pot4[idi][idj]*ak4;
 	    }
 
 	    if(dopot6) 
 	    {
 	       struct_factor_6_sq += pot6[idi][idj]*(scoskr[idi]*scoskr[idj]+ssinkr[idi]*ssinkr[idj]);
-	       coeff += pot6[idi][idj]*ak6;
+	       coeff += 2.0*pot6[idi][idj]*ak6;
 	    }
 	    if( dopot4 || dopot6 )
 	    {
