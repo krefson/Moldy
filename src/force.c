@@ -29,6 +29,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.23  2000/12/08 12:28:21  keith
+ *       Rewrote misleading intramolecular energy message
+ *       Corrected (silent) bug in arglist of kernel in poteval()
+ *
  *       Revision 2.22  2000/12/06 17:45:29  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -224,7 +228,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.22 2000/12/06 17:45:29 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.23 2000/12/08 12:28:21 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -1113,11 +1117,17 @@ void force_inner(int ithread,
                dump_neighbour_list(jmax,jmin,isite,nab,pbctrans,site0, site1, site2,
                                    rx, ry, rz, r_sqr,id);
 #endif
-            if( (jsite = jmin+search_lt(jmax-jmin, r_sqr+jmin, 1, TOO_CLOSE))
-                < jmax )
-               if( molmap[isite] != molmap[nab[jsite]])
-                  message(NULLI, NULLP, WARNING, TOOCLS,
-                          isite, nab[jsite], sqrt(TOO_CLOSE));
+	    jsite = jmin;
+	    do {
+	       jsite += search_lt(jmax-jsite, r_sqr+jsite, 1, TOO_CLOSE);
+	       if( jsite < jmax )
+	       {
+		  if( molmap[isite] != molmap[nab[jsite]])
+		     message(NULLI, NULLP, WARNING, TOOCLS,
+			     isite, nab[jsite], sqrt(TOO_CLOSE));
+		  jsite++;
+	       }
+	    } while (jsite < jmax );
                
             if( control.strict_cutoff )
                for(jsite = jmin; jsite < jmax; jsite++)

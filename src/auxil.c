@@ -26,6 +26,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.20  2000/12/06 17:45:28  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.19  2000/10/20 15:15:46  keith
  *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
  *
@@ -291,7 +298,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.19 2000/10/20 15:15:46 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.20 2000/12/06 17:45:28 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -529,49 +536,28 @@ VECTORIZE
       x[i] *= s;
 }
 
-/*
- *  Two alternatives for search_lt.  The first can vectorize using an
- *  IDFMIN type function, the second using an isrchtl.  They don't
- *  do QUITE the same thing; the first returns the index of the 
- *  smallest value,, the second that of the first one less than s.
- */
-#ifdef ardent
 int	search_lt(int n, real *x, int ix, double s)
 {
-   int i, im=n*ix;
-   double min = x[0];
-VECTORIZE
-   for( i = 0; i != n*ix; i += ix )
-      if( x[i] < min )
-      {
-	 im = i;
-	 min = x[i];
-      }
-   if ( min < s )
-      return(im/ix);
-   else
-      return n;
-}
-#else
-int	search_lt(int n, real *x, int ix, double s)
-{
-   int i,j, im=n*ix;
+   int i,j;
+
+   if( n < 0 )
+      n = 0;
+
    if ( ix == 1 ) 
    {
-      for( i = n-1; i >= 0; i -- )
+      for( i = 0; i < n; i ++ )
 	 if( x[i] < s )
-	    im = i;
+	    return i;
    }
    else
    {
 VECTORIZE
-      for( i = (n-1)*ix, j=n-1; i >= 0; i -= ix, j-- )
+      for( i = 0, j=0; i < n*ix; i += ix, j++ )
          if( x[i] < s )
-	    im = j;
+	    return j;
    }
-   return im;
+   return n;
 }
-#endif
                             /*ARGSUSED*/
 void	gather(int n, real *a, real *b, int *ix, int lim)
 {
