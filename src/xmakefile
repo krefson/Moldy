@@ -13,7 +13,7 @@ INSTALL = @INSTALL@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_DATA = @INSTALL_DATA@
 MAKEINFO = makeinfo
-GETOPT = getopt.o
+LIBOBJS = @LIBOBJS@
 
 # Things you might add to DEFS:
 # -DSTDC_HEADERS        If you have ANSI C headers and libraries.
@@ -117,8 +117,8 @@ all:		moldy utilities Makefile
 moldy:		$(OFILES) $(EXTRA_OBJ) $(HFILES)
 		$(CC) -o moldy $(LDFLAGS) $(OFILES) $(EXTRA_OBJ)  $(LIBS)
 
-moldyext:	moldyext.c $(GETOPT) $(HFILES)
-		$(CC) $(CFLAGS) -o moldyext $(OPT) $(DEFS) $(LDFLAGS1) moldyext.c $(GETOPT) $(LDFLAGS) $(LIBS)
+moldyext:	moldyext.c $(LIBOBJS) $(HFILES)
+		$(CC) $(CFLAGS) -o moldyext $(OPT) $(DEFS) $(LDFLAGS1) moldyext.c $(LIBOBJS) $(LDFLAGS) $(LIBS)
 
 manalyze:	manalyze.c $(HFILES)
 		$(CC) $(CFLAGS)  -o manalyze $(OPT) $(DEFS) $(LDFLAGS1) manalyze.c $(LDFLAGS) $(LIBS)
@@ -126,29 +126,29 @@ manalyze:	manalyze.c $(HFILES)
 dumpanal:	dumpanal.c xdr.o $(HFILES)
 		$(CC) $(CFLAGS) -o dumpanal $(OPT) $(DEFS) $(LDFLAGS1) dumpanal.c xdr.o  $(LDFLAGS) $(LIBS)
 
-dumpext:	dumpext.c xdr.o $(GETOPT) $(HFILES)
-		$(CC) $(CFLAGS) -o dumpext $(OPT) $(DEFS) $(LDFLAGS1) dumpext.c xdr.o $(GETOPT) $(LDFLAGS) $(LIBS)
+dumpext:	dumpext.c xdr.o $(LIBOBJS) $(HFILES)
+		$(CC) $(CFLAGS) -o dumpext $(OPT) $(DEFS) $(LDFLAGS1) dumpext.c xdr.o $(LIBOBJS) $(LDFLAGS) $(LIBS)
 
 dumpconv:	dumpconv.c xdr.o $(HFILES)
 		$(CC) $(CFLAGS) -o dumpconv $(OPT) $(DEFS) $(LDFLAGS1) dumpconv.c xdr.o $(LDFLAGS) $(LIBS)
 
-mdshak:		mdshak.o $(SHAKOBJS) $(GETOPT) 
-		$(CC) -o mdshak $(LDFLAGS) mdshak.o $(SHAKOBJS) $(GETOPT) $(LIBS)
+mdshak:		mdshak.o $(SHAKOBJS) $(LIBOBJS) 
+		$(CC) -o mdshak $(LDFLAGS) mdshak.o $(SHAKOBJS) $(LIBOBJS) $(LIBS)
 
-msd:		msd.o $(SHAKOBJS) $(GETOPT) 
-		$(CC) -o msd $(LDFLAGS1) msd.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) $(LIBS)
+msd:		msd.o $(SHAKOBJS) $(LIBOBJS) 
+		$(CC) -o msd $(LDFLAGS1) msd.o $(SHAKOBJS) $(LIBOBJS) $(LDFLAGS) $(LIBS)
 
-mdavpos:	mdavpos.o $(SHAKOBJS) $(GETOPT) 
-		$(CC) -o mdavpos $(LDFLAGS1) mdavpos.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS)  $(LIBS)
+mdavpos:	mdavpos.o $(SHAKOBJS) $(LIBOBJS) 
+		$(CC) -o mdavpos $(LDFLAGS1) mdavpos.o $(SHAKOBJS) $(LIBOBJS) $(LDFLAGS)  $(LIBS)
 
-mdbond:	mdbond.o $(SHAKOBJS) $(GETOPT) 
-		$(CC) -o mdbond $(LDFLAGS1) mdbond.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS)  $(LIBS)
+mdbond:	mdbond.o $(SHAKOBJS) $(LIBOBJS) 
+		$(CC) -o mdbond $(LDFLAGS1) mdbond.o $(SHAKOBJS) $(LIBOBJS) $(LDFLAGS)  $(LIBS)
 
 bdist:	bdist.c $(HFILES)
-		$(CC) $(CFLAGS)  -o bdist $(OPT) $(DEFS) $(LDFLAGS1) bdist.c $(GETOPT) $(LDFLAGS) $(LIBS)
+		$(CC) $(CFLAGS)  -o bdist $(OPT) $(DEFS) $(LDFLAGS1) bdist.c $(LIBOBJS) $(LDFLAGS) $(LIBS)
 
-ransub:	ransub.o $(SHAKOBJS) $(GETOPT) convert.o
-		$(CC) -o ransub $(LDFLAGS1) ransub.o convert.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS)  $(LIBS)
+ransub:	ransub.o $(SHAKOBJS) $(LIBOBJS) convert.o
+		$(CC) -o ransub $(LDFLAGS1) ransub.o convert.o $(SHAKOBJS) $(LIBOBJS) $(LDFLAGS)  $(LIBS)
 
 utilities:	$(UTILS) $(UTILS2)
 
@@ -267,7 +267,7 @@ tags:		$(CFILES) $(HFILES)
 		etags $(CFILES) $(HFILES)  
 
 clean:		
-		$(RM)    $(OFILES) $(LFILES) $(UTILO) $(GETOPT)\
+		$(RM)    $(OFILES) $(LFILES) $(UTILO) $(LIBOBJS)\
 			 moldy $(UTILS) $(UTILS2) \
 			 moldy.ps moldy.dvi moldy.log moldy.blg \
                          moldy.cflow moldy.cflow.r
@@ -354,11 +354,16 @@ moldy.com.Z:	moldy.com
 		compress moldy.com
 
 moldy.ps:	moldy.dvi
-		TEXINPUTS=figures:: dvips -t a4 moldy -o moldy.ps
+		TEXINPUTS=figures:: dvips -Pamz -Pcmz -t a4 moldy -o moldy.ps
 
 moldy.dvi:	moldy.tex moldy.bbl $(FIGS)
 		TEXINPUTS=figures:: latex moldy
 		TEXINPUTS=figures:: latex moldy
+		@touch moldy.bbl
+
+moldy.pdf:	moldy.tex moldy.bbl $(FIGS)
+		TEXPSHEADERS=figures:: pdflatex moldy
+		TEXPSHEADERS=figures:: pdflatex moldy
 		@touch moldy.bbl
 
 moldy.bbl:	moldy.aux
