@@ -34,7 +34,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: output.c,v 1.4 89/06/20 18:30:36 keith Exp $";
+static char *RCSid = "$Header: output.c,v 1.5 89/06/23 15:36:42 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
@@ -503,7 +503,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
 			  spec->quat[imol][0], spec->quat[imol][1],
 			  spec->quat[imol][2], spec->quat[imol][3]);
 	 else
-	    fputc('\n', out);
+	    (void)fputc('\n', out);
       }
    (void)fprintf(out, "end\n");
    
