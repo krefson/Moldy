@@ -30,6 +30,21 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: force.c,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
+ * Got rid of all global (external) data items except for
+ * "control" struct and constant data objects.  The latter
+ * (pot_dim, potspec, prog_unit) are declared with CONST
+ * qualifier macro which evaluates to "const" or nil
+ * depending on ANSI/K&R environment.
+ * Also moved as many "write" instantiations of "control"
+ * members as possible to "startup", "main" leaving just
+ * "dump".
+ *
+ * Declared as "static"  all functions which should be.
+ *
  * Revision 2.5  1994/01/18  13:32:31  keith
  * Null update for XDR portability release
  *
@@ -225,7 +240,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force.c,v 2.5 1994/01/18 13:32:31 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -243,6 +258,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force.c,v 2.5 199
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
+void            afree();	       /* Free allocated array	      	      */
 int     search_lt();			/* Search a vector for el. < scalar   */
 double  vdot();                         /* Vector dot product                 */
 double  sum();                          /* Sum a vector                       */
@@ -518,7 +534,8 @@ double  cutoff;
     * Allocate and clear array for map of cells
     */
    nnab = 4*(mx+1)*(my+1)*(mz+1);
-   cellmap = (int***)arralloc(sizeof ***cellmap, 3, 0, mx, -my-1, my, -mz-1, mz);
+   cellmap = (int***)arralloc((size_mt)sizeof ***cellmap, 3, 
+			      0, mx, -my-1, my, -mz-1, mz);
    memst(cellmap[0][-my-1]-mz-1,0, nnab*sizeof ***cellmap);
 
    /*
@@ -632,7 +649,7 @@ double  cutoff;
       note(NABORS,2 * inabor);
    onabor = inabor;
    *nnabor = inabor;
-   xfree(cellmap);
+   afree((gptr*)cellmap);
    return(nabor);
 }
 /******************************************************************************
@@ -819,7 +836,7 @@ mat_mt          stress;                 /* Stress virial                (out) */
    int		*id      = ialloc(nsites),   	/* Array of site_id[nsites]   */
    		*id_ptr;                /* Pointer to 'id' array              */
    real         ***potp				/* Expanded pot'l parameters  */
-   		= (real***)arralloc(sizeof(real), 3,
+   		= (real***)arralloc((size_mt)sizeof(real), 3,
                                     1, max_id-1, 0, n_potpar-1, 0, nsites-1);
    		/*
 		 * The following arrays are for 'neighbour site list'
@@ -855,7 +872,7 @@ mat_mt          stress;                 /* Stress virial                (out) */
    register	real rrx,rry,rrz;
    real         reloc_v[3][CUBE(NSHELL)];	/* PBC relocation vectors     */
    real         **nab_pot			/* Gathere'd pot par array    */
-   		= (real**)arralloc(sizeof(real), 2,
+   		= (real**)arralloc((size_mt)sizeof(real), 2,
 				   0, n_potpar-1, 0, n_nab_sites-1);
    double	subcell = control.subcell;	/* Local copy. May change it. */
    static	int n_cell_list = 1;
@@ -889,7 +906,7 @@ mat_mt          stress;                 /* Stress virial                (out) */
 	 message(NULLI, NULLP, FATAL, CUTOFF, NSH);
       if( reloc )
 	 xfree((reloc-NSH*onx));
-      reloc = (reloc_mt***)arralloc(sizeof(reloc_mt),3,
+      reloc = (reloc_mt***)arralloc((size_mt)sizeof(reloc_mt),3,
             -NSH*nx, (NSH+1)*nx-1, -NSH*ny, (NSH+1)*ny-1, -NSH*nz, (NSH+1)*nz-1);
  
       for(ix = 0; ix < nx; ix++)
@@ -1164,7 +1181,7 @@ VECTORIZE
 #ifdef DEBUG2
    histout();
 #endif
-   xfree((potp+1)); xfree(nab_pot); xfree(work);
+   afree((gptr*)(potp+1)); afree((gptr*)nab_pot); xfree(work);
    xfree(r_sqr);   xfree(nfnab);    xfree(c_ptr); 
    xfree(R);       xfree(reloc_i);  xfree(nab_chg);
    xfree(rx);      xfree(ry);       xfree(rz);

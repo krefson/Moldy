@@ -23,6 +23,26 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald_parallel.c,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
+ * Got rid of all global (external) data items except for
+ * "control" struct and constant data objects.  The latter
+ * (pot_dim, potspec, prog_unit) are declared with CONST
+ * qualifier macro which evaluates to "const" or nil
+ * depending on ANSI/K&R environment.
+ * Also moved as many "write" instantiations of "control"
+ * members as possible to "startup", "main" leaving just
+ * "dump".
+ *
+ * Declared as "static"  all functions which should be.
+ *
+ * Added CONST qualifier to (re-)declarations of ANSI library
+ * emulation routines to give reliable compilation even
+ * without ANSI_LIBS macro. (#define's away for K&R
+ * compilers)
+ *
  * Revision 2.5  1994/01/26  16:34:36  keith
  * Fixed non-ansi #endif.
  *
@@ -150,7 +170,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 2.5 1994/01/26 16:34:36 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -172,12 +192,15 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
+void            afree();	       /* Free allocated array	      	      */
 double	err_fn();			/* Error function		      */
 double	det();				/* Determinant of 3x3 matrix	      */
 void	invert();			/* Inverts a 3x3 matrix		      */
 void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
 void	mat_sca_mul();			/* Multiplies a 3x3 matrix by scalar  */
 void	transpose();			/* Transposes a 3x3 matrix	      */
+void    zero_real();            	/* Initialiser                        */
+void    zero_double();          	/* Initialiser                        */
 double	sum();				/* Sum of elements of 'real' vector   */
 void	ewald_inner();			/* Inner loop forward reference       */
 int	nprocessors();			/* Return no. of procs to execute on. */
@@ -239,12 +262,18 @@ mat_mt		stress;			/* Stress virial		(out) */
  * Arrays for cos & sin (h x(i)), (k y(i)) and (l z(i)) eg chx[h][isite]
  * and pointers to a particular h,k or l eg coshx[is] = chh[2][is]
  */
-   real		**chx = (real**)arralloc(sizeof(real),2, 0, hmax, 0, nsites-1),
-		**cky = (real**)arralloc(sizeof(real),2, 0, kmax, 0, nsites-1),
-		**clz = (real**)arralloc(sizeof(real),2, 0, lmax, 0, nsites-1),
-		**shx = (real**)arralloc(sizeof(real),2, 0, hmax, 0, nsites-1),
-		**sky = (real**)arralloc(sizeof(real),2, 0, kmax, 0, nsites-1),
-		**slz = (real**)arralloc(sizeof(real),2, 0, lmax, 0, nsites-1);
+   real		**chx = (real**)arralloc((size_mt)sizeof(real),2,
+					 0, hmax, 0, nsites-1),
+		**cky = (real**)arralloc((size_mt)sizeof(real),2,
+					 0, kmax, 0, nsites-1),
+		**clz = (real**)arralloc((size_mt)sizeof(real),2,
+					 0, lmax, 0, nsites-1),
+		**shx = (real**)arralloc((size_mt)sizeof(real),2,
+					 0, hmax, 0, nsites-1),
+		**sky = (real**)arralloc((size_mt)sizeof(real),2,
+					 0, kmax, 0, nsites-1),
+		**slz = (real**)arralloc((size_mt)sizeof(real),2,
+					 0, lmax, 0, nsites-1);
    real		*coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
    real               *c1, *s1, *cm1, *sm1;
    real		*sf0, *sf1, *sf2, *ssf0, *ssf1, *ssf2;
@@ -267,7 +296,8 @@ mat_mt		stress;			/* Stress virial		(out) */
    s_f_n[0] = site_force;
    for(ithread = 1; ithread < nthreads; ithread++)
    {
-      s_f_n[ithread] = (real**)arralloc(sizeof(real), 2, 0, 2, 0, nsites-1);
+      s_f_n[ithread] = (real**)arralloc((size_mt)sizeof(real), 2, 
+					0, 2, 0, nsites-1);
       zero_real(s_f_n[ithread][0],3*nsites);
    }
    zero_real(stress_n,9*nthreads);
@@ -523,12 +553,12 @@ VECTORIZE
       }
    }
    
-   xfree(chx); xfree(cky); xfree(clz); 
-   xfree(shx); xfree(sky); xfree(slz);
+   afree((gptr*)chx); afree((gptr*)cky); afree((gptr*)clz); 
+   afree((gptr*)shx); afree((gptr*)sky); afree((gptr*)slz);
    xfree(pe_n);   xfree(stress_n);
    xfree(hkl);
    for( ithread = 1; ithread < nthreads; ithread++)
-      xfree(s_f_n[ithread]);
+      afree(s_f_n[ithread]);
    xfree(s_f_n);
 }
 #ifdef titan

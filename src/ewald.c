@@ -23,6 +23,21 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
+ * Got rid of all global (external) data items except for
+ * "control" struct and constant data objects.  The latter
+ * (pot_dim, potspec, prog_unit) are declared with CONST
+ * qualifier macro which evaluates to "const" or nil
+ * depending on ANSI/K&R environment.
+ * Also moved as many "write" instantiations of "control"
+ * members as possible to "startup", "main" leaving just
+ * "dump".
+ *
+ * Declared as "static"  all functions which should be.
+ *
  * Revision 2.5  1994/01/18  13:32:27  keith
  * Null update for XDR portability release
  *
@@ -145,7 +160,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 2.5 1994/01/18 13:32:27 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -166,6 +181,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 2.5 199
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
+void            afree();	       /* Free allocated array	      	      */
 double	err_fn();			/* Error function		      */
 double	det();				/* Determinant of 3x3 matrix	      */
 void	invert();			/* Inverts a 3x3 matrix		      */
@@ -303,12 +319,18 @@ mat_mt		stress;			/* Stress virial		(out) */
  * Arrays for cos & sin (h x(i)), (k y(i)) and (l z(i)) eg chx[h][isite]
  * and pointers to a particular h,k or l eg coshx[is] = chh[2][is]
  */
-   real		**chx = (real**)arralloc(sizeof(real),2, 0, hmax, 0, nsites-1),
-		**cky = (real**)arralloc(sizeof(real),2, 0, kmax, 0, nsites-1),
-		**clz = (real**)arralloc(sizeof(real),2, 0, lmax, 0, nsites-1),
-		**shx = (real**)arralloc(sizeof(real),2, 0, hmax, 0, nsites-1),
-		**sky = (real**)arralloc(sizeof(real),2, 0, kmax, 0, nsites-1),
-		**slz = (real**)arralloc(sizeof(real),2, 0, lmax, 0, nsites-1);
+   real		**chx = (real**)arralloc((size_mt)sizeof(real),2,
+					 0, hmax, 0, nsites-1),
+		**cky = (real**)arralloc((size_mt)sizeof(real),2,
+					 0, kmax, 0, nsites-1),
+		**clz = (real**)arralloc((size_mt)sizeof(real),2,
+					 0, lmax, 0, nsites-1),
+		**shx = (real**)arralloc((size_mt)sizeof(real),2,
+					 0, hmax, 0, nsites-1),
+		**sky = (real**)arralloc((size_mt)sizeof(real),2,
+					 0, kmax, 0, nsites-1),
+		**slz = (real**)arralloc((size_mt)sizeof(real),2,
+					 0, lmax, 0, nsites-1);
    real		*coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
    real		*c1, *s1, *cm1, *sm1;
    real		*site0, *site1, *site2;
@@ -563,7 +585,7 @@ VECTORIZE
 /*
  * End of loop over K vectors.
  */
-   xfree(chx); xfree(cky); xfree(clz); 
-   xfree(shx); xfree(sky); xfree(slz);
+   afree((gptr*)chx); afree((gptr*)cky); afree((gptr*)clz); 
+   afree((gptr*)shx); afree((gptr*)sky); afree((gptr*)slz);
    xfree(qcoskr); xfree(qsinkr);
 }

@@ -92,7 +92,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 2.5 1994/01/18 13:41:57 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -110,6 +110,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
+void            afree();	       /* Free allocated array	      	      */
 int     	search_lt();            /* Search a vector for el. < scalar   */
 double  	vdot();                 /* Vector dot product                 */
 double  	sum();                  /* Sum a vector                       */
@@ -387,7 +388,8 @@ double  cutoff;
     * Allocate and clear array for map of cells
     */
    nnab = 4*(mx+1)*(my+1)*(mz+1);
-   cellmap = (int***)arralloc(sizeof ***cellmap, 3, 0, mx, -my-1, my, -mz-1, mz);
+   cellmap = (int***)arralloc((size_mt)sizeof ***cellmap, 3, 
+			      0, mx, -my-1, my, -mz-1, mz);
    memst(cellmap[0][-my-1]-mz-1,0, nnab*sizeof ***cellmap);
 
    /*
@@ -501,7 +503,7 @@ double  cutoff;
       note(NABORS,2 * inabor);
    onabor = inabor;
    *nnabor = inabor;
-   xfree(cellmap);
+   afree((gptr*)cellmap);
    return(nabor);
 }
 /******************************************************************************
@@ -684,7 +686,7 @@ mat_mt          stress;                 /* Stress virial                (out) */
    int		*id      = ialloc(nsites),   	/* Array of site_id[nsites]   */
    		*id_ptr;                /* Pointer to 'id' array              */
    real         ***potp				/* Expanded pot'l parameters  */
-   		= (real***)arralloc(sizeof(real), 3,
+   		= (real***)arralloc((size_mt)sizeof(real), 3,
                                     1, max_id-1, 0, n_potpar-1, 0, nsites-1);
    		/*
 		 * The following arrays are for 'neighbour site list'
@@ -728,7 +730,7 @@ mat_mt          stress;                 /* Stress virial                (out) */
    s_f_n[0] = site_force;
    for(ithread = 1; ithread < nthreads; ithread++)
    {
-      s_f_n[ithread] = (real**)arralloc(sizeof(real), 2, 0, 2, 0, nsites-1);
+      s_f_n[ithread] = (real**)arralloc((size_mt)sizeof(real),2,0,2,0,nsites-1);
       zero_real(s_f_n[ithread][0],3*nsites);
    }
    zero_real(stress_n[0][0],9*nthreads);
@@ -747,7 +749,7 @@ mat_mt          stress;                 /* Stress virial                (out) */
 	 message(NULLI, NULLP, FATAL, CUTOFF, NSH);
       if( reloc )
 	 xfree((reloc-NSH*onx));
-      reloc = (reloc_mt***)arralloc(sizeof(reloc_mt),3,
+      reloc = (reloc_mt***)arralloc((size_mt)sizeof(reloc_mt),3,
             -NSH*nx, (NSH+1)*nx-1, -NSH*ny, (NSH+1)*ny-1, -NSH*nz, (NSH+1)*nz-1);
  
       for(ix = 0; ix < nx; ix++)
@@ -914,12 +916,13 @@ VECTORIZE
 #ifdef DEBUG2
    histout();
 #endif
-   xfree((potp+1));  xfree(c_ptr); 
+   afree((gptr*)(potp+1));  xfree(c_ptr); 
    xfree(cell);        xfree(id); 
    xfree(pe_n);   xfree(stress_n);
    xfree(nabor);
    for( ithread = 1; ithread < nthreads; ithread++)
-      xfree(s_f_n[ithread]);
+      afree((gptr*)s_f_n[ithread]);
+   xfree(s_f_n);
 }
 #ifdef titan
 #ifdef PARALLEL
@@ -967,7 +970,7 @@ mat_mt	stress;
                 *forceij = dalloc(n_nab_sites),	/* -V'(r) / r		      */
                 *R = dalloc(n_nab_sites);    	/* pbc site relocation cpt    */
    real         **nab_pot			/* Gathere'd pot par array    */
-   		= (real**)arralloc(sizeof(real), 2,
+   		= (real**)arralloc((size_mt)sizeof(real), 2,
 				   0, system->n_potpar-1, 0, n_nab_sites-1);
    real         force_cpt, site0, site1, site2, s00, s01, s02, s11, s12, s22;
    register real rrx,rry,rrz;
@@ -1152,7 +1155,7 @@ VECTORIZE
    stress[1][2]  += s12;
    stress[2][2]  += s22;
 
-   xfree(nab_pot); xfree(work);  
+   afree((gptr*)nab_pot); xfree(work);  
    xfree(nab);     xfree(reloc_i);  xfree(nab_chg);
    xfree(r_sqr);   xfree(R);       xfree(forceij);
    xfree(rx);      xfree(ry);      xfree(rz);
