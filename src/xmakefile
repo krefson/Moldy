@@ -21,15 +21,16 @@ CFLAGS= -g -O $(CFLAGS0)
 #CFLAGS= -h vector,olevel_3,vmesg_1,ivdep  $(CFLAGS0)
 #CFLAGSF= -DFKERNEL
 #EXTRA_OBJ= kernelf.o
-#LDFLAGS= -lf -lio -lbsd -lsci
-#FC=	cft
+#LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" \
+#	-lf -lio -lbsd -lsci
+#FC=	cf77
 #  **** Cray **** (CC 5.n) - At last can compile C kernel
 #CFLAGS= -h vector,olevel_3,vmesg_1,ivdep  $(CFLAGS0)
-#LDFLAGS=  -l /usr/lib/libbsd.a -l /lib/libsci.a
+#LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" -lbsd -lsci
 #  **** Cray **** (SCC )
 #CC=scc
 #CFLAGS= -h vector,olevel_3,vreport,ivdep,fastaddr $(CFLAGS0)
-#LDFLAGS= -l /usr/lib/libbsd.a -l /lib/libsci.a
+#LDFLAGS= $(LDFLAGS0) -Wl,-D,"HEAP=50000+50000;STACK=10000+10000" -lsci
 #  ***** End *****
 LINT=		lint
 PFLAGS=		-p
@@ -46,7 +47,7 @@ OFILES = $(FILES:%=%.o)
 
 LFILES = $(FILES:%=%.ln)
 
-INFILES = control.water tips2.in\
+INFILES = control.water control.water.100 tips2.in\
 		control.tip4p tip4p.in\
 		methane.in mcy.in\
 		control.mgclh2o mgclh2o.in
@@ -145,15 +146,12 @@ moldy.com:	$(CFILES) $(HFILES) kernel.f compile.com moldy.tex $(EXTRAS)\
 		./make_vms Aaaa_Read.Me compile.com $(CFILES) $(HFILES)\
 		 kernel.f $(INFILES) moldy.tex $(EXTRAS) > moldy.com
 
-$(INFILES):	../input/$$@
-		cp ../input/$@ ./
-
 $(LFILES):	$(HFILES)
 
 $(OFILES):	structs.h defs.h
 
 kernelf.o:	kernel.f
-		$(FC) -o btreg,killtemp -a stack -b kernelf.o kernel.f
+		$(FC) -a stack -b kernelf.o kernel.f
 
 ewald.o:	ewald.c 
 	$(CC) $(CFLAGS) $(CFLAGS2) $(TARGET_ARCH) -c  $<
