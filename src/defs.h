@@ -19,9 +19,13 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 2.5 94/01/25 16:46:15 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $
  *
- * $Log:	defs.h,v $
+ * $Log: defs.h,v $
+ * Revision 2.5  94/01/25  16:49:41  keith
+ * Incorporated all portability experience to multiple platforms since 2.2.
+ * Including ports to VAX/VMS and Open VMS on Alpha AXP and Solaris.
+ * 
  * Revision 2.4  94/01/18  13:13:42  keith
  * Workaround for bugs and defined symbol _HPUX_SOURCE needed to compile xdr.
  * 
@@ -88,11 +92,11 @@ what you give them.   Help stamp out software-hoarding!  */
  * --Moved defn of NULL to stddef.h and included that where necessary.
  * --Eliminated clashes with ANSI library names
  * --Modified defs.h to recognise CONVEX ANSI compiler
- * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ * --Modified declaration of size_mt and inclusion of sys/types.h in aux.c
  *   for GNU compiler with and without fixed includes.
  * 
  * Revision 1.14  91/03/12  15:43:31  keith
- * Tidied up typedefs size_t and include file <sys/types.h>
+ * Tidied up typedefs size_mt and include file <sys/types.h>
  * Added explicit function declarations.
  * 
  * Revision 1.13  90/09/28  13:29:45  keith
@@ -108,7 +112,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * Corrected test for cray scc compiler in vectorization directives.
  * 
  * Revision 1.10  90/05/02  15:43:52  keith
- * Got rid of typedefs time_t and size_t. 
+ * Got rid of typedefs time_t and size_mt. 
  * 
  * Revision 1.9  90/04/12  16:23:44  keith
  * Used <errno.h> to check for Berkeley unix and define symbol BSD
@@ -148,8 +152,8 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 2.5 $"
-#define		 REVISION_DATE    "$Date: 94/01/25 16:46:15 $"
+#define          REVISION         "$Revision: 2.5.1.1 $"
+#define		 REVISION_DATE    "$Date: 1994/02/03 18:36:12 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -172,7 +176,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #define _HPUX_SOURCE
 #endif
 
-#if (defined(__unix__) || defined(__unix) || defined(_unix_) || defined(_unix)) && !defined(unix)
+#if (defined(__unix__) || defined(__unix) || defined(_unix_) || defined(_unix) || defined(_UNICOS)) && !defined(unix)
 #   define unix
 #endif
 #ifdef __vms
@@ -184,25 +188,13 @@ what you give them.   Help stamp out software-hoarding!  */
 #   endif
 #endif
 /*
- *  Set symbol USG to identify system V variant of unix, BSD for Berkeley.
- */
-#include <errno.h>
-/*
- * Berkeley error numbers appear to be very regular, so the following is
- * pretty likely to get it right.  If it doesn't, do the define by hand.
- * BSD is used to signal use of getrusage() rather than times() (unix only)
- * and absence of mem*() and strchr() functions from library.
- */
-#if defined(unix) && !defined(USG)
-#if EWOULDBLOCK==35 && EINPROGRESS==36 && EALREADY==37
-# define BSD
-#else
-# define USG
-#endif
-#endif
-/*
  * Define operating-system dependant default filenames
  */
+#ifdef __MSDOS__
+#   define BACKUP_FILE	"MDBCK"
+#   define TEMP_FILE	"MDTEMPX"
+#   define LOCKEX		"$LK"
+#endif
 #ifdef vms
 #   define BACKUP_FILE	"MDBACKUP.DAT"
 #   define TEMP_FILE	"MDTEMPXXXX.DAT"
@@ -263,6 +255,14 @@ what you give them.   Help stamp out software-hoarding!  */
 #if defined(convex) || defined(sequent)
 #define HAVE_DOPRNT
 #endif
+/*
+ *  Get rid of "const" keyword for non-ANSI compilers.
+ */
+#if defined(__STDC__) ||  defined(ANSI)
+#   define CONST const
+#else
+#   define CONST /* */
+#endif
 /* 
  * Vectorisation directive translation.  N.B. Most preprocessors munge 
  * directives so the #define must substiture the preprocessor OUTPUT.
@@ -292,6 +292,23 @@ what you give them.   Help stamp out software-hoarding!  */
 #   define NOVECTOR  /* */
 #endif
 #endif
+#endif
+#endif
+/*
+ *  Set symbol USG to identify system V variant of unix, BSD for Berkeley.
+ */
+#include <errno.h>
+/*
+ * Berkeley error numbers appear to be very regular, so the following is
+ * pretty likely to get it right.  If it doesn't, do the define by hand.
+ * BSD is used to signal use of getrusage() rather than times() (unix only)
+ * and absence of mem*() and strchr() functions from library.
+ */
+#if defined(unix) && !defined(USG)
+#if EWOULDBLOCK==35 && EINPROGRESS==36 && EALREADY==37
+# define BSD
+#else
+# define USG
 #endif
 #endif
 /******************************************************************************
@@ -361,11 +378,20 @@ what you give them.   Help stamp out software-hoarding!  */
 #define	CONV_D_N	"D"
 #define CONV_Q_N	"Qe"
 
-typedef	double			real;
-typedef	int			boolean;
+
 #define	false			0
 #define	true			1
 typedef	unsigned long int time_mt;/* Larger than any possible time_t */
+typedef unsigned long size_mt;    /* Wide type for passing sizeof	      */
+
+#if (defined(ANSI) || defined(__STDC__)) && !defined(VMS)
+typedef void	gptr;
+#else
+typedef char	gptr;
+#endif
+
+typedef	double			real;
+typedef	int			boolean;
 typedef enum {inv, noinv} 	invrot;
 typedef enum {tke_n, rke_n, pe_n, e_n, tt_n, rt_n, t_n, 
               h0_n, h1_n, h2_n, stress0_n, stress1_n,  stress2_n, press_n, 
@@ -378,13 +404,8 @@ typedef quat_mt	*quat_mp;
 typedef real    mat_mt[3][3];
 typedef vec_mt	*mat_mp;
 
-#if (defined(ANSI) || defined(__STDC__)) && !defined(VMS)
-typedef void	gptr;
-#else
-typedef char	gptr;
-#endif
-
-#define aalloc(n, type) (type *)talloc((int)(n),sizeof(type),__LINE__, __FILE__)
+#define aalloc(n, type) (type *)talloc((int)(n),(size_mt)sizeof(type),\
+				       __LINE__, __FILE__)
 #define ialloc(n) aalloc(n, int)
 #define dalloc(n) aalloc(n, real)
 #define ralloc(n) aalloc(n, vec_mt)
@@ -392,10 +413,13 @@ typedef char	gptr;
 #define qalloc(n) aalloc(n, quat_mt)
 
 #define	xfree( ptr )	tfree( (gptr *) (ptr) )
+#define lsizeof         (size_mt)sizeof
 
 #ifdef ANSI_LIBS
-#   define memcp(s1,s2,n) (void)memcpy( (gptr*)(s1), (gptr*)(s2), (size_t)(n))
+#   define memcp(s1,s2,n) (void)memcpy( (gptr*)(s1), (gptr*)(s2), (size_mt)(n))
+#   define memst(s,c,n)   (void)memset( (gptr*)(s), (c), (size_mt)(n))
 #else
 #   define memcp(s1,s2,n) (void)memcpy( (gptr*)(s1), (gptr*)(s2), (int)(n))
+#   define memst(s,c,n)   (void)memset( (gptr*)(s), (c), (int)(n))
 #endif
 #endif
