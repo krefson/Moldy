@@ -13,7 +13,7 @@ CFLAGS= -g -O -fstrength-reduce $(CFLAGS0)
 LDFLAGS= $(LDFLAGS0) -g
 #INLINE=
 #  **** Stellar ****
-#CFLAGS= -g -O2 -va -na  $(CFLAGS0)
+#CFLAGS= -g -O2 -va -na -nv $(CFLAGS0)
 #CFLAGS2= +CaliasFreePointers
 #LDFLAGS= $(LDFLAGS0) -g -z 
 #INLINE=
@@ -24,8 +24,8 @@ LDFLAGS= $(LDFLAGS0) -g
 #INLINE= -inline -Npaths=aux.in
 #  **** convex ****
 #CC=	vc
-#CFLAGS= -g -O2 -va -na  $(CFLAGS0)
-#LDFLAGS= $(LDFLAGS0) -lveclib 
+#CFLAGS= -g -O2 -va -na -nv -fi $(CFLAGS0)
+#LDFLAGS= $(LDFLAGS0) -fi -lveclib 
 #INLINE=
 #  **** Cray **** (CC 4.n) - Link in FORTRAN kernel
 #CFLAGS= -h vector,olevel_3,vmesg_1,ivdep  $(CFLAGS0)
@@ -60,7 +60,7 @@ OFILES = $(FILES:%=%.o)
 
 LFILES = $(FILES:%=%.ln)
 
-INFILES = control.water control.water.100 tips2.in\
+INFILES = control.water control.100 tips2.in\
 		control.tip4p tip4p.in\
 		methane.in mcy.in\
 		control.mgclh2o mgclh2o.in
@@ -78,11 +78,25 @@ EXTRAS = $(UTILS:%=%.c) mdshak.c ewald_parallel.c force_parallel.c
 
 HFILES=		structs.h defs.h string.h time.h stddef.h stdlib.h messages.h
 
-moldy:		$(OFILES) $(EXTRA_OBJ)
+DOC=		READ.ME BENCHMARK water-canon.out
+
+moldy:		$(OFILES) $(EXTRA_OBJ) $(HFILES)
 		$(CC)  $(OFILES) $(EXTRA_OBJ) $(LDFLAGS) -lm -o moldy
 
-$(UTILS):	$$@.c
-		$(CC) $(CFLAGS) $? -o $@
+moldyextract:	moldyextract.c $(HFILES)
+		$(CC) $(CFLAGS) $@.c -o $@
+
+moldyanalyze:	moldyanalyze.c $(HFILES)
+		$(CC) $(CFLAGS) $@.c -o $@
+
+dumpanalyze:	dumpanalyze.c $(HFILES)
+		$(CC) $(CFLAGS) $@.c -o $@
+
+dumpextract:	dumpextract.c $(HFILES)
+		$(CC) $(CFLAGS) $@.c -o $@
+
+dumpconvert:	dumpconvert.c $(HFILES)
+		$(CC) $(CFLAGS) $@.c -o $@
 
 mdshak:		mdshak.o $(SHAKOBJS)
 		$(CC) $(LDFLAGS) -o mdshak mdshak.o $(SHAKOBJS) -lm
@@ -103,10 +117,12 @@ install2:	moldy $(UTILS) mdshak
 
 Makefile:	xmakefile
 		@PATH=/usr/5bin:${PATH};\
-		echo		'{{{\n/^CFILES/  c\\\nCFILES =' $(CFILES)\
+		echo		'{{{{{\n/^CFILES/  c\\\nCFILES='  $(CFILES)\
 				'\n}\n/^OFILES/  c\\\nOFILES='  $(OFILES)\
 				'\n}\n/^LFILES/  c\\\nLFILES='  $(LFILES)\
 				'\n}\n/^EXTRAS/  c\\\nEXTRAS='  $(EXTRAS)\
+				'\n}\n/^SHAKC/   c\\\nSHAKC='    $(SHAKC)\
+				'\n}\n/^SHAKOBJS/  c\\\nSHAKOBJS='  $(SHAKOBJS)\
 				 > make.sed 
 		sed -f make.sed ./xmakefile > Makefile
 
@@ -126,8 +142,8 @@ print:		$(CFILES) $(HFILES)
 lint:		
 		$(LINT) $(LFLAGS) $(CFILES) -lm
 				
-tags:		$(CFILES) $(HFILES) kernel.f
-		etags $(CFILES) $(HFILES) kernel.f 
+tags:		$(CFILES) $(HFILES) 
+		etags $(CFILES) $(HFILES)  
 
 clean:		
 		/bin/rm -f $(OFILES) $(LFILES) moldy $(UTILS) mdshak\
@@ -141,7 +157,7 @@ spotless:
 annihilate:
 		$(MAKE) spotless
 		if ( [ -r RCS ] ) then\
-                    /bin/rm -f $(CFILES) $(HFILES) kernel.f moldy.tex Makefile\
+                    /bin/rm -f $(CFILES) $(HFILES)  moldy.tex Makefile\
 		    $(EXTRAS) ;\
                 else \
                    echo "RCS directory not present."\
@@ -150,36 +166,36 @@ annihilate:
 #
 #  Export options
 #
-moldy.tar:	READ.ME $(CFILES) $(HFILES) kernel.f Makefile moldy.tex\
+moldy.tar:	$(DOC) $(CFILES) $(HFILES)  Makefile moldy.tex\
 		$(EXTRAS) $(INFILES)
 		tar cvf moldy.tar\
-		READ.ME $(CFILES) kernel.f $(HFILES) Makefile moldy.tex\
+		$(DOC) $(CFILES)  $(HFILES) Makefile moldy.tex\
 		$(EXTRAS) $(INFILES)
 
 moldy.tar.Z:	moldy.tar
 		compress moldy.tar
 
-moldy.shar:	READ.ME $(CFILES) $(HFILES) kernel.f Makefile moldy.tex\
+moldy.shar:	$(DOC) $(CFILES) $(HFILES)  Makefile moldy.tex\
 		$(EXTRAS) $(INFILES)
-		shar READ.ME $(CFILES) kernel.f $(HFILES) Makefile moldy.tex\
+		shar $(DOC) $(CFILES)  $(HFILES) Makefile moldy.tex\
 		$(EXTRAS) $(INFILES) > moldy.shar
 
 moldy.shar.Z:	moldy.shar
 		compress moldy.shar
 
-cray:		$(CFILES) $(HFILES) kernel.f 
-		./cray_make $(CFILES) kernel.f $(HFILES) > cray.job
+cray:		$(CFILES) $(HFILES)  
+		./cray_make $(CFILES)  $(HFILES) > cray.job
 
-moldy.job:	$(CFILES) $(HFILES) kernel.f 
-		./make_cray $(CFILES) kernel.f $(HFILES) > moldy.job
+moldy.job:	$(CFILES) $(HFILES)  
+		./make_cray $(CFILES)  $(HFILES) > moldy.job
 
 compile.com:	Makefile
 		./make_vms_compile $(CFILES) > compile.com
 
-moldy.com:	$(CFILES) $(HFILES) kernel.f compile.com moldy.tex $(EXTRAS)\
-		$(INFILES) Aaaa_Read.Me
+moldy.com:	$(CFILES) $(HFILES)  compile.com moldy.tex $(EXTRAS)\
+		$(INFILES) Aaaa_Read.Me $(DOC)
 		./make_vms Aaaa_Read.Me compile.com $(CFILES) $(HFILES)\
-		 kernel.f $(INFILES) moldy.tex $(EXTRAS) > moldy.com
+		  $(INFILES) moldy.tex $(EXTRAS) $(DOC) > moldy.com
 
 moldy.com.Z:	moldy.com
 		compress moldy.com
@@ -195,11 +211,9 @@ $(OFILES):	structs.h defs.h
 aux.o:	aux.c 
 	$(CC) $(CFLAGS) $(CFLAGS2) -c $<
 
-convert.o:	convert.c
-	$(CC) -O $(CFLAGS0) -c $<
-
-kernelf.o:	kernel.f
-		$(FC) -a stack -b kernelf.o kernel.f
+#  Workaround for Stardent Titan compiler bug
+#convert.o:	convert.c
+#	$(CC) -O $(CFLAGS0) -c $<
 
 ewald.o:	ewald.c 
 	$(CC) $(CFLAGS) $(CFLAGS2) -c $(INLINE) $<
@@ -219,10 +233,7 @@ force.o:	force.c
 %.h:		RCS/%.h,v
 		co $@
 
-.SUFFIXES:	.c .ln .0
-
-.c.ln:
-	$(LINT) $(LFLAGS) -i $<
+.SUFFIXES:	.c .0
 
 .c.o:
 	$(CC) $(CFLAGS) -c $<
