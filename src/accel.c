@@ -25,6 +25,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.18  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.17  1996/11/05 16:47:19  keith
  *       Optimized site and site_force arrays to avoid cache conflicts.
  *
@@ -221,7 +226,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.17 1996/11/05 16:47:19 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/accel.c,v 2.18 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -1054,7 +1059,8 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
       for (spec = species; spec < &species[nspecies]; spec++)
 	 energy_dyad(ke_dyad, sys->h, spec->velp, spec->mass, spec->nmols);
       rahman(stress, sys->h, sys->hddot, ke_dyad,
-	     control.pressure, control.pmass, control.strain_mask);
+	     control.pressure, control.pmass, 
+	     control.const_pressure==2?512:control.strain_mask);
       beeman_2(sys->hdot[0], sys->hdotp[0], sys->hddot[0], sys->hddoto[0],
 	       sys->hddotvo[0], 9);
    }

@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.14  1999/10/08 10:52:04  keith
+ *       print_config() now converts potential parameters back to input units before
+ *       printing a system specification upon a texm-mode-save
+ *
  *       Revision 2.13  1999/07/22 13:10:49  keith
  *       Added fflush() call tp message() to ensure error messages not lost
  *       before abort.
@@ -185,7 +189,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/output.c,v 2.13 1999/07/22 13:10:49 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/output.c,v 2.14 1999/10/08 10:52:04 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -585,7 +589,10 @@ restrt_mt	*restart_header;
 
    if(control.const_pressure)
    {
-      (void)printf(" Constant stress ensemble will be used");
+      if(control.const_pressure == 1)
+	 (void)printf(" Constant stress ensemble will be used");
+      else if(control.const_pressure == 2)
+	 (void)printf(" Constant pressure ensemble will be used");
       new_line();
       format_dbl("Applied pressure", CONV_P*control.pressure,CONV_P_N);
       format_dbl("Mass parameter W",control.pmass,MUNIT_N);
