@@ -197,7 +197,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/input.c,v 2.8 1995/10/25 11:59:00 keith Exp keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/input.c,v 2.8 1995/10/25 11:59:00 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -243,13 +243,14 @@ int	len;
 FILE	*file;
 {
    char	*s, *t;
+   int  i;
    do
    {
       s = fgets(line, len, file);		/* Read one line of input     */
       if(s == NULL) break;			/* exit if end of file        */
-      t = s + strlen(s) - 1;
-      while(t >= s && (*t == ' ' || *t == '\t' || *t == '\n'))
-         *t-- = '\0';				/* Strip trailing white space */
+      i = strlen(s) - 1;
+      while(i >= 0 && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
+         s[i--] = '\0';				/* Strip trailing white space */
    }
    while(*s == '\0' || *s == '#');		/* Repeat if blank or comment */
    if(s == NULL)
