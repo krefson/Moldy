@@ -7,6 +7,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.8  89/09/04  18:48:31  keith
+ * Chhanged initialisation of 'control' commensurate with structs 1.6.1.2
+ * 
  * Revision 1.7  89/08/10  17:30:54  keith
  * Fixed if statement so that rdf's started on rather than after 'begin-rdf'
  * 
@@ -34,7 +37,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/main.c,v 1.7 89/08/10 17:30:54 keith Stab $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/main.c,v 1.8 89/09/04 18:48:31 keith Exp Locker: keith $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -53,6 +56,7 @@ void	print_config();
 void	message();
 double	cpu();
 void	write_restart();
+void	purge();
 /*========================== External data definition ========================*/
 /*
  * Control struct with default values for the parameters 
@@ -73,7 +77,11 @@ contr_t	control = {
 	"",			/* Name of file to read restart conf. from    */
 	"",			/* Name of file to write restart conf. to     */
 	"",			/* Name of file 'dump' writes to              */
+#ifdef vms
+	"MDBACKUP.DAT",
+#else
 	"MDBACKUP",		/* Name of file for periodic save of state    */
+#endif
 #ifdef CMS
 	"MDTEMP XXXXXXXX A1",	/* Temporary file name for restart to write   */
 #else
@@ -123,9 +131,9 @@ int	argc;
 char	*argv[];
 {
    system_t	system;
-   spec_p	species;
-   site_p	site_info;
-   pot_p	potpar;
+   spec_t	*species;
+   site_t	*site_info;
+   pot_t	*potpar;
    mat_t	stress_vir;
    double	pe[NPE];
    double	delta_cpu = 0.0, cpu_base = cpu();
@@ -168,11 +176,14 @@ char	*argv[];
 
       if(control.rdf_interval > 0 && control.istep >= control.begin_rdf && 
         (control.istep-control.begin_rdf+1) % control.rdf_out == 0)
-         print_rdf(&system, site_info);
+         print_rdf(&system, species, site_info);
 
       if(control.backup_interval > 0 &&
 	 control.istep % control.backup_interval == 0)
+      {
 	 write_restart(control.backup_file,&system, species, site_info, potpar);
+	 purge(control.backup_file);
+      }
 
       if(delta_cpu == 0.0) delta_cpu = cpu() - cpu_base;/* Time for a timestep*/
 
