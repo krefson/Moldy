@@ -1,0 +1,16 @@
+Incorporate new kernel's
+Unpack into own directory.
+Update restart with "xdr-xizeof" -- implement a replacement.
+Reword "Direct Pot. energy" message in force.c
+Eliminate extra args for kernel.
+Take DEBUG_THERMOSTAT out of accel.c
+Ensure that "will be scaled" message in banner page printed only if
+   istep <= scale-end.
+Print RDF info in banner page only if it will be done in this run.
+Print dump info only if this run will dump????
+Get rid of force-parallel and ewald-parallel.
+
+Get rid of system header -subst files?
+
+Dump legacy restart file reading.
+
