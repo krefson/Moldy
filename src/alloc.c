@@ -18,6 +18,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.11  90/08/29  18:21:09  keith
+ * Replaced calloc() call with malloc() and memset().
+ * On the CRAY XMP calloc() is very inefficient.
+ * 
+ * 
  * Revision 1.10  90/08/23  12:46:39  keith
  * Re-implemented arralloc() using more elegant recursive algorithm.
  * 
@@ -51,7 +56,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /mnt/keith/moldy/RCS/alloc.c,v 1.10 90/08/23 12:46:39 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.11 90/08/29 18:21:09 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
@@ -66,6 +71,7 @@ static char *RCSid = "$Header: /mnt/keith/moldy/RCS/alloc.c,v 1.10 90/08/23 12:4
 #include "messages.h"
 /*========================== External function declarations ==================*/
 void	message();				/* Error handling routine     */
+void	inhibit_vectorization();		/* Self-explanatory dummy     */
 #ifdef	DEBUG
 int	malloc_verify();
 int	malloc_debug();
@@ -125,9 +131,11 @@ va_list	ap;
 
    if(ndim > 0)		/* General case - set up pointers to pointers  */
    {
-NOVECTOR		/* Circumvent bug in cray compiler v4.1        */
       for( i = 0; i < prdim; i++)
+      {
+	 inhibit_vectorization();  /* Circumvent bug in cray compiler v4.1   */
 	 pp[i] = qq + i*dim - lb;
+      }
 
       subarray(size, ndim-1, prdim*dim, (int***)qq, qq+prdim*dim, base, ap);
    }

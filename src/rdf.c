@@ -8,6 +8,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.10  90/05/16  18:40:38  keith
+ * Renamed own freer from cfree to tfree.
+ * 
  * Revision 1.9  90/05/01  12:51:19  keith
  * Corrected line-breaking algorithm in print_rdf() to never exceed line length.
  * 
@@ -40,7 +43,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.9 90/05/01 12:51:19 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.10 90/05/16 18:40:38 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -59,6 +62,7 @@ void	invert();
 void	new_line();
 void	put_line();
 double	precision();
+void	inhibit_vectorization();		/* Self-explanatory dummy     */
 /*========================== External data references ========================*/
 extern contr_t	control;
 /*========================== External data definitions  ======================*/
@@ -146,10 +150,12 @@ VECTORIZE
           r = sqrt(rij[0]*rij[0] + rij[1]*rij[1] + rij[2]*rij[2]);
 	  bind[jsite] = rbin*r;
        }
-NOVECTOR
        for(jsite = isite+1; jsite < nsites; jsite++)
+       {
+	  inhibit_vectorization();
 	  if( bind[jsite] < control.nbins )
              rdf[id[isite]][id[jsite]][bind[jsite]]++;
+       }
     }
     tfree((char*)id);    tfree((char*)bind);
 }
