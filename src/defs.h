@@ -19,9 +19,21 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/md/moldy/RCS/defs.h,v 2.10 1995/12/22 14:00:52 keith Exp $
+ * $Header: /home/eeyore_data/keith/md/moldy/RCS/defs.h,v 2.11 1996/10/19 11:59:08 keith Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.10  1996/03/06 18:16:21  keith
+ * Minor mods assuming ANSI behaviour on MS_DOS
+ * Removed all COS functionality.
+ * Updated IBM AIX macro selection
+ * Added ANSI_LIBS functionality for Linux, OSF and SGI
+ *
+ * Added conditional defn of VOLATILE for the precision() bugfix
+ * Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
+ *
+ * Updated constants from CODATA 1986. Compile with -DOLDCONSTS for
+ * compatibility.
+ *
  * Revision 2.10  1995/12/22 14:00:52  keith
  * Minor mods assuming ANSI behaviour on MS_DOS
  * Removed all COS functionality.
@@ -200,8 +212,8 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 2.10 $"
-#define		 REVISION_DATE    "$Date: 1995/12/22 14:00:52 $"
+#define          REVISION         "$Revision: 2.11 $"
+#define		 REVISION_DATE    "$Date: 1996/10/19 11:59:08 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -221,7 +233,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * To allow XDR stuff to work on HP.  Surely there's a more general
  * way of doing this? I think that HPs header files are broken.
  */
-#ifdef __hpux
+#if defined(__hpux) && ! defined(__convex_spp)
 #define _HPUX_SOURCE
 #endif
 
@@ -283,6 +295,9 @@ what you give them.   Help stamp out software-hoarding!  */
 #ifdef __sgi__
 #   define ANSI_LIBS
 #endif
+#if defined(__sun) && defined(__SVR4) /* Solaris 2 libraries are ANSI */
+#   define ANSI_LIBS
+#endif
 /*
  * New convex compiler is ANSI, but doesn't define __STDC__ or  convexvc.
  * It has a silly macro __stdc__ which we will use instead.  convexvc
@@ -331,11 +346,29 @@ what you give them.   Help stamp out software-hoarding!  */
 #   define CONST /* */
 #   define VOLATILE /* */
 #endif
+/*
+ * Hardware configuration.  Specify cache-tuning params NCACHE and NLINE
+ * NCACHE is minimum size of "sites" arrays and should be a sub-multiple
+ *   of the cache length in WORDS (sizeof(real)).  It MUST be a power
+ *   of two since the alignment algorithm relies on this.
+ * NLINE is padding (in words) between arrays to avoid cache conflicts.
+ * Theoretically NCACHE should equal the size of the cache and NLINE
+ * the size of the cache line.  But too large an NCACHE wastes memory
+ * (arrays are padded to a multiple of this) and is actually slower
+ * for small systems presumably because it causes TLB misses. 512
+ * works well for HP/PA and IBM RISC/POWER.
+ * NLINE ought really to be a multiple of the cache line size but it
+ *   doesn't seem to matter as long as it's not zero.
+ * 512/4 works well on HP/PA/IBM RISC/POWER/SPARC/ALPHA/MIPS so use as
+ * default.  Hardware-specific values could be set here conditionally.
+ */
+#define NCACHE 256
+#define NLINE 4
 /* 
  * Vectorisation directive translation.  N.B. Most preprocessors munge 
- * directives so the #define must substiture the preprocessor OUTPUT.
+ * directives so the #define must substitute the preprocessor OUTPUT.
  */
-#ifdef CRAY
+#if defined(_CRAY1)	/* This seems to be defined for all CRI PVP systems */
 #   ifdef __STDC__
 #      define VECTORIZE
 #      define NOVECTOR
@@ -343,18 +376,22 @@ what you give them.   Help stamp out software-hoarding!  */
 #      define VECTORIZE ## ivdep
 #      define NOVECTOR  ## novector
 #   endif
+#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
 #else
-#ifdef __convexc__
+#if defined(__convexc__) && ! defined(__convex_spp)
 #   define VECTORIZE ;/* $dir no_recurrence */;
 #   define NOVECTOR  ;/* $dir scalar */;
+#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
 #else
 #ifdef stellar
 #   define VECTORIZE __dir NO_RECURRENCE :
 #   define NOVECTOR  __dir SCALAR :
+#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
 #else
 #ifdef ardent
 #   define VECTORIZE # pragma ivdep
 #   define NOVECTOR  # pragma novector
+#   define VECTOR    /* To choose vector vsn of site_neighbour_list */
 #else
 #   define VECTORIZE /* Canny  vectorise on this machine!*/
 #   define NOVECTOR  /* */
