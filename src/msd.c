@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.24 1999/11/15 11:50:39 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 2.0 1999/11/18 09:58:33 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,8 +35,18 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.2
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 2.0  1999/11/25  14:05:33  craig
+ *  Selection of positions outside of limits now possible with -X,-Y,-Z
+ *  Added new function "in_region" to utlsup.c
+ *  Removed variable range_flag and replaced with extra dimension in range array.
+ *  Corrected gnuplot output to only print blank lines when particle within region.
+ *  Rewrote msd output header as one printf statement.
+ *
+ *  Revision 1.25  1999/11/18 09:58:33  keith
+ *  Made headers into comments for gnuplot reading.
+ *
  *  Revision 1.24  1999/11/15 11:50:39  keith
- *  Extended msd with spatial selection abilities of mdavpos.
+ *  Extended msd with spatial selection abilities of mdtraj.
  *
  *  Revision 1.23  1999/11/15  17:16:13  craig
  *  Extended position limits to apply to msd as well as traj calcs.
@@ -177,6 +187,8 @@ int ithread=0, nthreads=1;
 #define TRAJ 1
 #define GNUP 0
 #define IDL  1
+#define INNER 1
+#define OUTER 2
 #define DUMP_SIZE(level)  (( (level & 1) + (level>>1 & 1) + (level>>2 & 1) ) * \
            (3*sys.nmols + 4*sys.nmols_r + 9)+ (level>>3 & 1) * \
            (3*sys.nmols + 3*sys.nmols_r + 9) + (level & 1))
@@ -188,7 +200,7 @@ void
 traj_gnu(species, traj_cofm, nslices, range, sp_range)
 spec_mt         species[];
 vec_mt          **traj_cofm;
-real            range[3][2];
+real            range[3][3];
 int             nslices, sp_range[3];
 {
    int          totmol=0, imol, i, itime;
@@ -198,10 +210,8 @@ int             nslices, sp_range[3];
    {
      (void)printf("# %s\n",spec->name);
      for( imol = 0; imol < spec->nmols; totmol++, imol++)
-     {
-       if( traj_cofm[0][totmol][0] >= range[0][0] && traj_cofm[0][totmol][0] <= range[0][1] &&
-          traj_cofm[0][totmol][1] >= range[1][0] && traj_cofm[0][totmol][1] <= range[1][1] &&
-             traj_cofm[0][totmol][2] >= range[2][0] && traj_cofm[0][totmol][2] <= range[2][1])
+       if( in_region( traj_cofm[0][totmol], range) )
+       {
           for( itime = 0; itime < nslices; itime++)
           {
              for( i = 0; i < 3; i++)
@@ -209,7 +219,7 @@ int             nslices, sp_range[3];
              (void)printf("\n");
           }
           (void)printf("\n\n");
-     }
+       }
    }
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
@@ -222,7 +232,7 @@ void
 traj_idl(species, traj_cofm, nslices, range, sp_range)
 spec_mt		species[];
 vec_mt		**traj_cofm;
-real		range[3][2];
+real		range[3][3];
 int		nslices, sp_range[3];
 {
    int		totmol, imol, i, itime;
@@ -234,13 +244,9 @@ int		nslices, sp_range[3];
      for( spec = species+sp_range[0]; spec <= species+sp_range[1]; spec+=sp_range[2])
      {
        for( imol = 0; imol < spec->nmols; totmol++, imol++)
-         if( traj_cofm[0][totmol][0] >= range[0][0] && traj_cofm[0][totmol][0] <= range[0][1] &&
-            traj_cofm[0][totmol][1] >= range[1][0] && traj_cofm[0][totmol][1] <= range[1][1] &&
-               traj_cofm[0][totmol][2] >= range[2][0] && traj_cofm[0][totmol][2] <= range[2][1])
-         {
+         if( in_region( traj_cofm[0][totmol], range) )
            for( i = 0; i < 3; i++)
                (void)printf("%f ",traj_cofm[itime][totmol][i]);
-         }
      }
      (void)printf("\n");
    }
@@ -256,7 +262,7 @@ spec_mt		species[];
 vec_mt		**traj_cofm;
 real            ***msd;
 int		sp_range[3];
-real            range[3][2];
+real            range[3][3];
 int             mstart, mfinish, minc, max_av, it_inc;
 {
    int it, irec, totmol, imsd, ispec, imol, nmols, cmols, i;
@@ -285,14 +291,12 @@ int             mstart, mfinish, minc, max_av, it_inc;
                cmols= 0;
 	       for( imol = 0; imol < nmols; totmol++, imol++)
 	       {
-                  if( tct0[totmol][0] >= range[0][0] && tct0[totmol][0] <= range[0][1] &&
-                     tct0[totmol][1] >= range[1][0] && tct0[totmol][1] <= range[1][1] &&
-                        tct0[totmol][2] >= range[2][0] && tct0[totmol][2] <= range[2][1])
-                        {
-		           stmp = tct1[totmol][i] - tct0[totmol][i] ;
-		           msdtmp += SQR(stmp);
-                           cmols++;
-                        }
+                  if( in_region( traj_cofm[0][totmol], range) )
+                  {
+		     stmp = tct1[totmol][i] - tct0[totmol][i] ;
+		     msdtmp += SQR(stmp);
+                     cmols++;
+                  }
 	       }
 	       msd[imsd][ispec][i] += (cmols == 0 ? 0 : msdtmp / cmols);
 	    }
@@ -315,8 +319,7 @@ int             nmsd, sp_range[3];
 
    for(spec = species+sp_range[0]; spec <= species+sp_range[1]; spec += sp_range[2])
    {
-       printf("# ");
-       puts(spec->name);
+       (void)printf("# %s\n",spec->name);
        for( imsd = 0; imsd < nmsd; imsd++)
        {
          totmsd = 0;
@@ -375,8 +378,7 @@ char	*argv[];
    spec_mt	*species;
    vec_mt 	**traj_cofm;
    mat_mt	*hmat;
-   real		range[3][2];
-   int		range_flag[3];
+   real		range[3][3];
    site_mt	*site_info;
    pot_mt	*potpar;
    quat_mt	*qpf;
@@ -385,7 +387,8 @@ char	*argv[];
    real         ***msd;
    int		it;
 
-   range_flag[0] = range_flag[1] = range_flag[2] = 0;
+   zero_real(range,9);
+
 #define MAXTRY 100
    control.page_length=1000000;
 
@@ -395,7 +398,7 @@ char	*argv[];
    else if( strstr(comm, "mdtraj") )
       outsw = TRAJ;
 
-   while( (c = getopt(argc, argv, "cr:s:d:t:m:i:g:o:w:uxyz") ) != EOF )
+   while( (c = getopt(argc, argv, "cr:s:d:t:m:i:g:o:w:uxXyYzZ") ) != EOF )
       switch(c)
       {
        case 'c':
@@ -407,7 +410,7 @@ char	*argv[];
 	 intyp = c;
 	 filename = optarg;
 	 break;
-        case 's':
+       case 's':
 	 if( intyp )
 	    errflg++;
 	 intyp = c;
@@ -436,13 +439,22 @@ char	*argv[];
 	 outsw = TRAJ;
          break;
        case 'x':
-         range_flag[0] = 1;
+         range[0][2] = INNER;
          break;
        case 'y':
-	 range_flag[1] = 1;
+         range[1][2] = INNER;
          break;
        case 'z':
-         range_flag[2] = 1;
+         range[2][2] = INNER;
+         break;
+       case 'X':
+         range[0][2] = OUTER;
+         break;
+       case 'Y':
+         range[1][2] = OUTER;
+         break;
+       case 'Z':
+         range[2][2] = OUTER;
          break;
        case 'w':
          trajsw = atoi(optarg);
@@ -456,9 +468,9 @@ char	*argv[];
    {
       fprintf(stderr,
          "Usage: %s [-s sys-spec-file |-r restart-file] [-c] ",comm);
-      fputs("[-d dump-files] [-t s[-f[:n]]] [-m s[-f[:n]]] ",stderr);
-      fputs("[-g s[-f[:n]]] [-i initial-time-increment] [-u]",stderr);
-      fputs("[-w trajectory-format] [-x] [-y] [-z] [-o output-file]\n",stderr);
+      fputs("[-d dump-files] [-t s[-f[:n]]] [-m s[-f[:n]]] [-g s[-f[:n]]] ",stderr);
+      fputs("[-i initial-time-increment] [-u] [-w trajectory-format] ",stderr);
+      fputs("[-x|-X] [-y|-Y] [-z|-Z] [-o output-file]\n",stderr);
       exit(2);
    }
 
@@ -685,7 +697,7 @@ char	*argv[];
 
         if( irec == 0)
 	{
-          range_in(&sys, range, range_flag);
+          range_in(&sys, range);
           traj_con2(species, (vec_mt*)0, traj_cofm[irec/inc], sp_range);
 	}
 	else
