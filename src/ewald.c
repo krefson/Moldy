@@ -3,12 +3,15 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.2  89/06/08  10:42:51  keith
+ * Modified to circumvent compiler bug in VMS/VAXC 2.4-026
+ * 
  * Revision 1.1  89/04/20  16:00:39  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: ewald.c,v 1.1 89/04/20 16:00:39 keith Exp $";
+static char *RCSid = "$Header: ewald.c,v 1.2 89/06/08 10:42:51 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef	convexvc
@@ -65,7 +68,12 @@ mat_t		stress;			/* Stress virial		(out) */
 		double	ksq;		/* Squared magnitude of K vector     */
 		double	pe_local = 0.0;	/* Local accumulator for pot. energy */
    		vec_t	kr, kv;		/* (hx(i),ky(i),lz(i)) & (Kx,Ky,Kz)  */
+#ifdef OLDEWALD
+   real		*chxky	= dalloc(nsites),
+		*shxky	= dalloc(nsites);
+#else
    		real	chxky, shxky;	/* Temporaries for sin(hx+ky) etc     */
+#endif
 /*
  * Maximum values of h, k, l  s.t. |k| < k_cutoff
  */
@@ -214,6 +222,37 @@ mat_t		stress;			/* Stress virial		(out) */
  * negative k and l by using sin(-x) = -sin(x), cos(-x) = cos(x). For
  * efficiency & vectorisation there is a loop for each case.
  */
+#ifdef OLDEWALD
+      if(k >= 0)
+VECTORIZE
+	 for(is = 0; is < nsites; is++)
+	 {
+	    chxky[is] = coshx[is]*cosky[is] - sinhx[is]*sinky[is];
+	    shxky[is] = sinhx[is]*cosky[is] + coshx[is]*sinky[is];
+	 }
+      else
+VECTORIZE
+	 for(is = 0; is < nsites; is++)
+	 {
+	    chxky[is] = coshx[is]*cosky[is] + sinhx[is]*sinky[is];
+	    shxky[is] = sinhx[is]*cosky[is] - coshx[is]*sinky[is];
+	 }
+
+      if(l >= 0)
+VECTORIZE
+	 for(is = 0; is < nsites; is++)
+	 {
+	    qcoskr[is] = chg[is]*(chxky[is]*coslz[is] - shxky[is]*sinlz[is]);
+	    qsinkr[is] = chg[is]*(shxky[is]*coslz[is] + chxky[is]*sinlz[is]);
+	 }
+      else
+VECTORIZE
+	 for(is = 0; is < nsites; is++)
+	 {
+	    qcoskr[is] = chg[is]*(chxky[is]*coslz[is] + shxky[is]*sinlz[is]);
+	    qsinkr[is] = chg[is]*(shxky[is]*coslz[is] - chxky[is]*sinlz[is]);
+	 }
+#else			/* Use of scalar temps is faster if compiler up to it*/
       if( k >= 0 )
          if( l >= 0 )
 VECTORIZE
@@ -252,7 +291,7 @@ VECTORIZE
 	       qcoskr[is] = chg[is]*(chxky*coslz[is] + shxky*sinlz[is]);
 	       qsinkr[is] = chg[is]*(shxky*coslz[is] - chxky*sinlz[is]);
 	    }
-
+#endif
       sqcoskr = sum(nsites, qcoskr, 1);	 sqsinkr = sum(nsites, qsinkr, 1);
       
 /*
@@ -306,6 +345,9 @@ VECTORIZE
    cfree((char*)chx[0]); cfree((char*)cky[0]); cfree((char*)clz[0]); 
    cfree((char*)shx[0]); cfree((char*)sky[0]); cfree((char*)slz[0]);
    cfree((char*)qcoskr); cfree((char*)qsinkr);
+#ifdef OLDEWALD
+   cfree((char*)chxky);	 cfree((char*)shxky); 
+#endif
 #ifdef VCALLS
    cfree((char*)temp);
 #endif
