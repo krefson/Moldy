@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.6  90/05/16  18:40:57  keith
+ * Renamed own freer from cfree to tfree.
+ * 
  * Revision 1.5  90/05/16  14:20:47  keith
  * *** empty log message ***
  * 
@@ -48,7 +51,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.5 90/05/16 14:20:47 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.6 90/05/16 18:40:57 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -102,8 +105,7 @@ mat_t		stress;			/* Stress virial		(out) */
 {
    mat_t	hinv;			/* Matrix of reciprocal lattice vects*/
    register	int	h, k, l;	/* Recip. lattice vector indices     */
-		int	i, j, is;	/* Counters.			     */
-		int	ispec, ssite;	/* Species counter		     */
+		int	i, j, is, ssite;/* Counters.			     */
    		spec_p	spec;		/* species[ispec]		     */
    register	int	nsites = system->nsites;
    		double	kx,ky,kz;
@@ -135,8 +137,10 @@ mat_t		stress;			/* Stress virial		(out) */
    real		***s_f_n;
    double	r_4_alpha = -1.0/(4.0 * control.alpha * control.alpha);
    double	vol = det(system->h);	/* Volume of MD cell		      */
-   static	double	self_energy;	/* Constant self energy term	      */
+   static	double	self_energy,	/* Constant self energy term	      */
+   			sheet_energy;	/* Correction for non-neutral system. */
    static	boolean init = true;	/* Flag for the first call of function*/
+   static	int	nsitesxf;	/* Number of non-framework sites.     */
 
    invert(system->h, hinv);		/* Inverse of h is matrix of r.l.v.'s */
    if (nthreads > 1)
@@ -144,26 +148,17 @@ mat_t		stress;			/* Stress virial		(out) */
 				 0, nthreads-2, 0, 2, 0, nsites-1);
 /*
  * First call only - evaluate self energy term and store for subsequent calls
+ * Self energy includes terms for non-framework sites only.
  */
    if(init)
    {
-      double	sqsq = 0, sq = 0, intra, r;
-      int	js;
-      self_energy = 0;
-      for(is = 0; is < nsites; is++)
-      {
-	 sq += chg[is];
-	 sqsq += SQR(chg[is]);
-      }
-      if( fabs(sq)*CONV_Q > 1.0e-5)
-      {
-	 self_energy += PI*SQR(sq) / (2.0*vol*SQR(control.alpha));
-	 message(NULLI, NULLP, WARNING, SYSCHG, sq*CONV_Q, self_energy*CONV_E);
-      }
+      double	sqsq = 0, sq = 0, sqxf, intra, r;
+      int	js, frame_flag;
 
-      self_energy += control.alpha / sqrt(PI) * sqsq;
+      self_energy = sheet_energy = 0;
       ssite = 0;
-      for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
+      spec = species; 
+      while( spec < species+system->nspecies && ! spec->framework)
       {
 	 intra = 0.0;
 	 for(is = 0; is < spec->nsites; is++)
@@ -175,7 +170,43 @@ mat_t		stress;			/* Stress virial		(out) */
 	    }
 	 self_energy += spec->nmols * intra;
 	 ssite += spec->nsites*spec->nmols;
+	 spec++;
       }
+      nsitesxf = ssite;
+      frame_flag = (spec != species+system->nspecies);
+
+      for(is = 0; is < nsitesxf; is++)
+      {
+	 sq += chg[is];
+	 sqsq += SQR(chg[is]);
+      }
+      self_energy += control.alpha / sqrt(PI) * sqsq;
+      /*
+       * Sqxf is total non-framework charge.  Calculate grand total in sq.
+       */
+      sqxf = sq;
+      for(; is < nsites; is++)
+	 sq += chg[is];
+      /*
+       *  Charged-system/uniform sheet correction terms (really in direct
+       *  space term but included here for convenience).
+       *  1) For charged framework only.
+       */
+      if( frame_flag )
+      {
+	 sheet_energy += PI*(sq-sqxf)*sqxf / (2.0*SQR(control.alpha));
+	 message(NULLI, NULLP, INFO, FRACHG, 
+		 sqxf*CONV_Q, sheet_energy/vol*CONV_E);
+      }
+      /* 
+       *  2) Case of entire system non-neutral.
+       */
+      if( fabs(sq)*CONV_Q > 1.0e-5)
+      {
+	 sheet_energy += intra = PI*SQR(sq) / (2.0*SQR(control.alpha));
+	 message(NULLI, NULLP, WARNING, SYSCHG, sq*CONV_Q, intra/vol*CONV_E);
+      }
+
       note("Ewald self-energy = %f Kj/mol",self_energy*CONV_E);
       init = false;
    }
@@ -202,7 +233,7 @@ mat_t		stress;			/* Stress virial		(out) */
 	    }
 	 }
 
-   *pe -= self_energy;			/* Subtract self energy term	      */
+   *pe -= self_energy+sheet_energy/vol;	/* Subtract self energy term	      */
       
 
 /*
@@ -268,7 +299,7 @@ VECTORIZE
  */
 /*$dir parallel*/
    for(ithread = 0; ithread < nthreads; ithread++)
-      ewald_inner(ithread, nthreads, nhkl, hkl, nsites,
+      ewald_inner(ithread, nthreads, nhkl, hkl, nsites, nsitesxf, 
 		  chx, cky, clz, shx, sky, slz, chg, vol, r_4_alpha,
 		  stress_n[ithread], pe_n+ithread,
 		  ithread ? s_f_n[ithread-1] : site_force);
@@ -362,11 +393,13 @@ VECTORIZE
  *  responsibility to provide a separte area and accumulate the grand totals *
  *****************************************************************************/
 void
-ewald_inner(ithread, nthreads, nhkl, hkl, nsites, chx, cky, clz, shx, sky, slz,
+ewald_inner(ithread, nthreads, nhkl, hkl, nsites, nsitesxf, 
+            chx, cky, clz, shx, sky, slz,
 	    chg, vol, r_4_alpha, stress, pe, site_force)
 int ithread, nthreads, nhkl;
 struct _hkl hkl[];
 int nsites;
+int nsitesxf;			/* N sites excluding framework sites.	      */
 real **chx, **cky, **clz, **shx, **sky, **slz;
 double vol, r_4_alpha;
 mat_t	stress;
@@ -376,7 +409,7 @@ real	**site_force;
 {
    vec_t	kv;
    double ksq, coeff, coeff2, pe_k;
-   double sqcoskr, sqsinkr;
+   double sqcoskr, sqsinkr, sqcoskrn, sqsinkrn, sqcoskrf, sqsinkrf;
    real *coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
    int is, i, j, h, k, l, ihkl;
 #ifdef OLDEWALD
@@ -450,12 +483,19 @@ VECTORIZE
       qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,chg,
 	      qcoskr,qsinkr,k,l,nsites);
 #endif
-      sqcoskr = sum(nsites, qcoskr, 1);	 sqsinkr = sum(nsites, qsinkr, 1);
+      sqcoskrn = sum(nsitesxf, qcoskr, 1);
+      sqsinkrn = sum(nsitesxf, qsinkr, 1);
+      sqcoskrf = sum(nsites-nsitesxf, qcoskr+nsitesxf, 1);
+      sqsinkrf = sum(nsites-nsitesxf, qsinkr+nsitesxf, 1);
+      sqcoskr = sqcoskrn + sqcoskrf;
+      sqsinkr = sqsinkrn + sqsinkrf;
       
 /*
  * Evaluate potential energy contribution for this K and add to total.
+ * Exclude frame-frame interaction terms.
  */
-      pe_k = 0.5 * coeff * (SQR(sqcoskr) + SQR(sqsinkr));
+      pe_k = 0.5 * coeff * (sqcoskrn*(sqcoskrn+sqcoskrf+sqcoskrf) +
+			    sqsinkrn*(sqsinkrn+sqsinkrf+sqsinkrf));
       *pe += pe_k;
 
       sqsinkr *= coeff; sqcoskr *= coeff;
