@@ -22,8 +22,8 @@ Moldy is available by anonymous file transfer from Oxford.  Connect to
 your email address as password.  The relevant files are all in the
 "/pub" directory and are
 
-* moldy-2.9.tar.Z     - The Unix distribution (also for MSDOS)
-* moldy-2.9.com       - The VMS distribution
+* moldy-2.yy.tar.Z     - The Unix distribution (also for MSDOS)
+* moldy-2.yy.com       - The VMS distribution
 * moldy-manual.ps.Z   - The Manual in PostScript form.  Note that
                         the distribution files already contain 
                         the LaTeX source.
@@ -35,7 +35,7 @@ improvements made to it by anybody remains available to anyone who
 wishes to use it.  If you change or improve Moldy, please tell me 
 and if practical and appropriate I will incorporate your modifications
 into a future release.  I hope that as time goes on Moldy will become
-yet more comprehensiva as a result of your input.
+yet more comprehensive as a result of your input.
 
 I am also keeping a list of email addresses of anyone who uses the
 program for notification of updates, bugs and so forth.  Please notify
@@ -48,7 +48,8 @@ Contents of the distribution:
 accel.c
 algorith.c
 alloc.c
-aux.c
+ansi.c
+auxil.c
 beeman.c		These files are the source code for Moldy.
 convert.c
 dump.c
@@ -152,6 +153,9 @@ unpack the "moldy.tar.Z" archive (suitably renamed) in the same way.
 COMPILING
 ---------
 
+Here are some brief notes.  There are more detailed instructions in the 
+manual.
+
 A. UNIX
 
 Stage 1.
@@ -232,7 +236,7 @@ _HPUX_SOURCE	(HPUX)
 
 SPMD		Compile for SPMD (Single Program Multiple Data) parallel
 		execution.  You must also specify one of the macros
-		BSP, MPI or TCGMSG to select a message-passing library
+		BSP, MPI or TCG to select a message-passing library
 		and have the appropriate include paths and libraries
 		defined in the Makefile.
 
@@ -281,30 +285,7 @@ moldy.dvi" ought to do the trick.
 PARALLEL VERSION
 ----------------
 
-A.  Shared memory.
-    -------------
-    The sources contain separate versions of ewald.c and force.c with
-    the appropriate code and compiler directives for compilation on
-    certain shared-memory parallel machines including Stardent Titan,
-    Convex and Cray architectures.  To use, you must REPLACE ewald.c
-    and force.c with the file ewald_parallel.c and force_parallel.c
-    respecively.  You must also define the preprocessor symbol
-    PARALLEL during the compilation (eg with the compiler option
-    -DPARALLEL).
-
-    The code reads the environment to decide how many processors
-    to execute on.  The name of the env variable is usually the
-    same one as the manufacturers use for the same purpose
-    NCPUS for the CRAY and THREADS on everything else.  Use
-    the SETENV command (for c-chell) or the bourne-shell equivalent
-    to before starting a run.
-
-    Note. The Stardent Titan version does not work as shipped because
-    the system supplied version of "malloc" can not be safely called
-    from a parallel program.  Contact the author for a "thread-safe"
-    version which can.
-
-B.  Distributed Memory
+A.  Distributed Memory
     ------------------
 
     To build this version you must have one of the three supported
@@ -337,6 +318,29 @@ B.  Distributed Memory
     There is an alternative version of Ewald.c which uses W. Smith's
     RIL paralellization strategy in ewald-RIL.c.  This uses far less
     memory but at the cost of doing parallel communication in the
-    inner loops.  This may work reasonably on parallel machines
-    with very short latencies, but on many it serializes the whole
-    code!
+    inner loops.  This works reasonably on parallel machines
+    with very short latencies such as the Cray T3D, but on lesser
+    beasts it serializes the whole code!
+
+B.  Shared memory.
+    -------------
+    The sources contain separate versions of ewald.c and force.c with
+    the appropriate code and compiler directives for compilation on
+    certain shared-memory parallel machines including Stardent Titan,
+    Convex and Cray architectures.  To use, you must REPLACE ewald.c
+    and force.c with the file ewald_parallel.c and force_parallel.c
+    respecively.  You must also define the preprocessor symbol
+    PARALLEL during the compilation (eg with the compiler option
+    -DPARALLEL).
+
+    The code reads the environment to decide how many processors
+    to execute on.  The name of the env variable is usually the
+    same one as the manufacturers use for the same purpose
+    NCPUS for the CRAY and THREADS on everything else.  Use
+    the SETENV command (for c-chell) or the bourne-shell equivalent
+    to before starting a run.
+
+    Note. The Stardent Titan version does not work as shipped because
+    the system supplied version of "malloc" can not be safely called
+    from a parallel program.  Contact the author for a "thread-safe"
+    version which can.
