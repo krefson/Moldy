@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.8  1996/10/04 17:27:24  keith
+ *       Rescheduled line order to overlap divide/computation on DEC Alpha/T3D.
+ *
  *       Revision 2.7  1994/06/08 13:22:31  keith
  *       Null update for version compatibility
  *
@@ -43,7 +46,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Got rid of all global (external) data items except for
  * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
+ * (pot_dim, potspec, prog_unit) are declared with const
  * qualifier macro which evaluates to "const" or nil
  * depending on ANSI/K&R environment.
  * Also moved as many "write" instantiations of "control"
@@ -52,7 +55,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Declared as "static"  all functions which should be.
  *
- * Added CONST qualifier to (re-)declarations of ANSI library
+ * Added const qualifier to (re-)declarations of ANSI library
  * emulation routines to give reliable compilation even
  * without ANSI_LIBS macro. (#define's away for K&R
  * compilers)
@@ -139,7 +142,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/kernel.c,v 2.7 1994/06/08 13:22:31 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/kernel.c,v 2.8 1996/10/04 17:27:24 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -157,13 +160,13 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/kernel.c,v 2
 #include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 void	message(int *,...);		/* Write a warning or error message   */
 #else
 void	message();			/* Write a warning or error message   */
 #endif
 /*========================== Potential type specification ====================*/
-CONST pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
+const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 		              {"buckingham",3},
                               {"mcy",4},
 		              {"generic",6},
@@ -171,7 +174,7 @@ CONST pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 /*
  *  Array of dimensions of pot'l parameters.  Powers of {m,l,t} per parameter.
  */
-CONST dim_mt   pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
+const dim_mt   pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
                                  {{1,8,-2},{1,2,-2},{0,-1,0}},
 		                 {{1,2,-2},{0,-1,0},{1,2,-2},{0,-1,0}},
 			         {{1,2,-2},{0,-1,0},{1,14,-2},

@@ -19,11 +19,15 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/dumpconv.c,v 2.7 1994/06/08 13:12:34 keith stab keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/dumpconv.c,v 2.8 1995/12/05 20:55:10 keith Exp $";
 #endif
 
 /*
  * $Log: dumpconv.c,v $
+ * Revision 2.8  1995/12/05 20:55:10  keith
+ * Separated ANSI replacement routines from Auxil.c into Ansi.c
+ * Removed all COS functionality.
+ *
  * Revision 2.7  1994/06/08 13:12:34  keith
  * Changed "%g" scan format to "%f" - should be identical but
  * some systems, particularly VAX/VMS didn't grok "%g".
@@ -95,7 +99,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/dumpconv.c,v
 #include "stddef.h"
 #include "structs.h"
 #include "string.h"
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #include <stdarg.h>
 #else
 #include <varargs.h>
@@ -111,7 +115,7 @@ bool_t xdr_dump();
 /******************************************************************************
  * strstr replacement for pre-ANSI machines which don't have it.              *
  ******************************************************************************/
-#ifndef ANSI_LIBS
+#ifndef STDC_HEADERS
 char *strstr(cs, ct)
 char *cs, *ct;
 {
@@ -123,7 +127,7 @@ char *cs, *ct;
 }
 #endif
 
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #undef  va_alist
 #define	va_alist char *format, ...
 #define va_dcl /* */
@@ -133,7 +137,7 @@ void error(va_alist)
 va_dcl
 {
    va_list p;
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
    va_start(p, format);
 #else
    char	*format;

@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.12  1996/08/15 14:35:39  keith
+ *      Fixed restart structure correctly - broken in prev version.
+ *      Thermostat parameters may not be properly read.
+ *
  *      Revision 2.11  1996/01/15 15:23:30  keith
  *      Changed input to new units
  *      Reset defaults for cutoff, alpha to zero for "auto" select.
@@ -65,7 +69,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Got rid of all global (external) data items except for
  * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
+ * (pot_dim, potspec, prog_unit) are declared with const
  * qualifier macro which evaluates to "const" or nil
  * depending on ANSI/K&R environment.
  * Also moved as many "write" instantiations of "control"
@@ -74,7 +78,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Declared as "static"  all functions which should be.
  *
- * Added CONST qualifier to (re-)declarations of ANSI library
+ * Added const qualifier to (re-)declarations of ANSI library
  * emulation routines to give reliable compilation even
  * without ANSI_LIBS macro. (#define's away for K&R
  * compilers)
@@ -232,7 +236,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/rahman/keith/moldy/src/RCS/startup.c,v 2.11 1996/01/15 15:23:30 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/startup.c,v 2.12 1996/08/15 14:35:39 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -273,7 +277,7 @@ double		mdrand();
 double		precision();
 void		smdrand();
 void		inhibit_vectorization();	/* Self-explanatory dummy     */
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
 #else
@@ -284,7 +288,7 @@ void		message();		/* Write a warning or error message   */
 extern	contr_mt	control;       /* Main simulation control parms. */
 extern int 		ithread, nthreads;
 /*========================== GLOBAL variables ================================*/
-CONST   unit_mt	prog_unit = {MUNIT, LUNIT, TUNIT, QUNIT};
+const   unit_mt	prog_unit = {MUNIT, LUNIT, TUNIT, QUNIT};
 static	unit_mt	input_unit;		/* Unit specification (see Convert.c) */
 static	char		backup_lockname[L_name];
 static	char		dump_lockname[L_name];
@@ -305,7 +309,7 @@ static	char	afmt[] = "    %8s = %8X %8s = %8X %8s = %8X %8s = %8X\
 /*
  * format SFORM is defined as %NAMLENs in structs.h, to avoid overflow.
  */
-CONST match_mt	match[] = {
+const match_mt	match[] = {
 {"title",            SFORM,  "Test Simulation",(gptr*) control.title},
 {"nsteps",           "%ld",  "0",            (gptr*)&control.nsteps},
 {"step",             "%lf",  "0.005",        (gptr*)&control.step},
@@ -380,7 +384,7 @@ void	rmlockfiles()
 static
 void	default_control()
 {
-   CONST match_mt	*match_p;
+   const match_mt	*match_p;
    char	tmp[64];
 
    for( match_p = match; match_p->key; match_p++)

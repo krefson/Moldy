@@ -23,6 +23,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.15  1998/01/27 15:46:45  keith
+ *       Got rid of __MSDOS__ and "unix" macros.
+ *       Replaced with ALLOC_SEPARATELY and ALLOC_ALIGN.
+ *
  *       Revision 2.14  1997/10/06 09:01:27  keith
  *       Changed text of self-energy message to read kJ/mol.
  *
@@ -68,7 +72,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Got rid of all global (external) data items except for
  * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
+ * (pot_dim, potspec, prog_unit) are declared with const
  * qualifier macro which evaluates to "const" or nil
  * depending on ANSI/K&R environment.
  * Also moved as many "write" instantiations of "control"
@@ -77,7 +81,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Declared as "static"  all functions which should be.
  *
- * Added CONST qualifier to (re-)declarations of ANSI library
+ * Added const qualifier to (re-)declarations of ANSI library
  * emulation routines to give reliable compilation even
  * without ANSI_LIBS macro. (#define's away for K&R
  * compilers)
@@ -209,7 +213,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.14 1997/10/06 09:01:27 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.15 1998/01/27 15:46:45 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -242,7 +246,7 @@ void	transpose();			/* Transposes a 3x3 matrix	      */
 void    zero_real();            	/* Initialiser                        */
 void    zero_double();          	/* Initialiser                        */
 double	sum();				/* Sum of elements of 'real' vector   */
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 void	note(char *,...);		/* Write a message to the output file */
 void	message(int *,...);		/* Write a warning or error message   */

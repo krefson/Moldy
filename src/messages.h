@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/rahman/keith/moldy/src/RCS/messages.h,v 2.14 1996/09/02 21:45:42 keith Exp $
+ * $Header: /home/eeyore_data/keith/md/moldy/RCS/messages.h,v 2.14 1996/09/02 21:45:42 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -109,7 +109,7 @@ rotational degrees of freedom (%d vs %d)"
 #define FRACCO  "Fractional co-ordinates must be in range [0,1) - (%f,%f,%f)"
 #define QNORM   "Quaternion (%f,%f,%f,%f) is not normalised"
 #define QNORM2  "Quaternion %d (%f,%f,%f,%f) - normalisation error in beeman"
-#define QCONST  "Quaternion %d - constraint error (%g)"
+#define Qconst  "Quaternion %d - constraint error (%g)"
 #define NIMOLS  "Wrong number of molecules of %s - given %d, expected %d"
 #define INITER  "Initialisation file contains %d errors"
 #define ROTLEN  "Length (%d) not a multiple of quaternion number (%d) in \

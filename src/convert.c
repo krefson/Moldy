@@ -23,6 +23,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: convert.c,v $
+ *       Revision 2.8  1995/12/07 17:47:59  keith
+ *       Reworked V. Murashov's thermostat code.
+ *       Convert mass params from kJ/mol ps^2 to prog units. Defaults=1.
+ *
  *       Revision 2.8  1995/12/06 17:49:03  keith
  *       Updated conversion table for thermostat parameters.
  *
@@ -35,7 +39,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Got rid of all global (external) data items except for
  * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
+ * (pot_dim, potspec, prog_unit) are declared with const
  * qualifier macro which evaluates to "const" or nil
  * depending on ANSI/K&R environment.
  * Also moved as many "write" instantiations of "control"
@@ -80,7 +84,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/convert.c,v 2.8 1995/12/06 17:49:03 keith Exp keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/convert.c,v 2.8 1995/12/07 17:47:59 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -91,9 +95,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/convert.c,v 
 #include	"messages.h"
 /*========================== External data references ========================*/
 extern	      contr_mt	control;            /* Main simulation control parms. */
-extern  CONST dim_mt	pot_dim[][NPOTP];    /* Pot'l dimension specification */
+extern  const dim_mt	pot_dim[][NPOTP];    /* Pot'l dimension specification */
 /*========================== External function declarations ==================*/
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 void	note(char *, ...);		/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
 #else
@@ -110,7 +114,7 @@ typedef struct
 }  conv_mt,  *conv_mp;
 /*========================== Global variables ================================*/
 #define TMUNIT (MUNIT/CONV_TM)
-static CONST conv_mt 
+static const conv_mt 
 	conv[] = {  {&control.step,	{0,0,1,0},	{1,1,TUNIT,1}},
                     {&control.pressure,	{1,-1,-2,0},	{1e6,1,1,1}},
 		    {&control.pmass,	{1,0,0,0},	{MUNIT,1,1,1}},
@@ -129,7 +133,7 @@ static CONST conv_mt
  ******************************************************************************/
 #define	MAX_SCALE	80			/* 1e35 - safe for any machine*/
 static double	unit_scale(dim, unit_from, unit_to)
-CONST dim_mp	dim;			/* Dimensions			      */
+const dim_mp	dim;			/* Dimensions			      */
 unit_mp	unit_from, unit_to;		/* Units to convert from/to	      */
 {
    double	lnscale = 	dim->m*(log(unit_from->m) - log(unit_to->m))
@@ -146,7 +150,7 @@ unit_mp	unit_from, unit_to;		/* Units to convert from/to	      */
  ******************************************************************************/
 void	conv_potentials(unit_from, unit_to, potpar, npotpar, ptype,
 			   site_info, max_id)
-CONST unit_mp	unit_from, unit_to;	/* Values of units for conversion     */
+const unit_mp	unit_from, unit_to;	/* Values of units for conversion     */
 pot_mt		potpar[];		/* Array of potpar records[max_id**2] */
 int		npotpar;		/* Number of 'active' parameters      */
 int		ptype;			/* Potential type		      */
@@ -179,7 +183,7 @@ int		max_id;			/* How many site id's		      */
  *   'conv' which contains a pointer to the data and a dimension struct.      *
  ******************************************************************************/
 void	conv_control(unit, direction)
-CONST unit_mp	unit;  			/* Units conversion is to/from	      */
+const unit_mp	unit;  			/* Units conversion is to/from	      */
 boolean		direction;		/* True=from input, false=to input    */
 {
    int		ic;			/* Counter			      */

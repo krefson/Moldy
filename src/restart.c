@@ -31,6 +31,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.10  1996/10/24 13:06:49  keith
+ *       Fixed restart structure correctly - broken in prev version.
+ *       Thermostat parameters may not be properly read.
+ *
  *       Revision 2.9  1996/01/12 15:45:52  keith
  *       Reworked V. Murashov's thermostat code.
  *       Convert mass params from kJ/mol ps^2 to prog units. Defaults=1.
@@ -52,7 +56,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Got rid of all global (external) data items except for
  * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
+ * (pot_dim, potspec, prog_unit) are declared with const
  * qualifier macro which evaluates to "const" or nil
  * depending on ANSI/K&R environment.
  * Also moved as many "write" instantiations of "control"
@@ -61,7 +65,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Declared as "static"  all functions which should be.
  *
- * Added CONST qualifier to (re-)declarations of ANSI library
+ * Added const qualifier to (re-)declarations of ANSI library
  * emulation routines to give reliable compilation even
  * without ANSI_LIBS macro. (#define's away for K&R
  * compilers)
@@ -153,7 +157,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/restart.c,v 2.10 1996/09/25 18:46:46 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/restart.c,v 2.10 1996/10/24 13:06:49 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -174,7 +178,7 @@ gptr		*av_ptr();
 char		*atime();
 char		*cctime();
 gptr		*rdf_ptr();
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
 #else

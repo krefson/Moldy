@@ -21,7 +21,7 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  *  Time.h   replacement for ANSI one
  */
-#ifdef ANSI_LIBS
+#ifdef STDC_HEADERS
 #include <time.h>
 #else
 

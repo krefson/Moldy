@@ -29,6 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.16  1998/01/27 15:47:15  keith
+ *       tidied up macro __STDC__ to include ANSI for consistency.
+ *
  *       Revision 2.15  1997/11/26 10:22:27  keith
  *       Reordered declarations so that local structs come before
  *       function declarations. Otherwise "protoize" broke!
@@ -124,7 +127,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.15 1997/11/26 10:22:27 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.16 1998/01/27 15:47:15 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -180,7 +183,7 @@ double          precision();            /* Floating pt precision.             */
 void            kernel();               /* Force kernel routine               */
 double          mol_radius();           /* Radius of largest molecule.        */
 void            rdf_accum();            /* Bin distances for rdf evaluation.  */
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 gptr            *arralloc(size_mt,int,...); /* Array allocator                */
 void            note(char *, ...);      /* Write a message to the output file */
 void            message(int *, ...);    /* Write a warning or error message   */
@@ -228,7 +231,7 @@ real    sx[], sy[];
 {
    int i;
 NOVECTOR
-#if defined(ANSI) || defined(__STDC__)
+#if defined(__stdc__) || defined(__STDC__)
 #pragma novector
 #endif
    for( i = 0; i < n; i++)

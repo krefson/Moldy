@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/md/moldy/RCS/string.h,v 2.7 1994/06/08 13:22:31 keith stab $
+ * $Header: /home/eeyore_data/keith/md/moldy/RCS/string.h,v 2.8 1996/03/06 16:02:13 keith Exp $
  *
  * $Log: string.h,v $
+ * Revision 2.8  1996/03/06 16:02:13  keith
+ * Moved tests/#defines of m/c include macros into non-ansi case only.
+ *
  * Revision 2.7  1994/06/08 13:22:31  keith
  * Null update for version compatibility
  *
@@ -73,7 +76,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  * 
  */
-#ifdef ANSI_LIBS
+#ifdef STDC_HEADERS
 #   include <string.h>
 #else
 

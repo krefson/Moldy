@@ -26,6 +26,14 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.10  1996/11/18 15:58:48  keith
+ *       Revised Cray macro tests to use _CRAY1 to select vector architecture.
+ *       Use "scalar" versions rather than SCILIB functions on Cray T3D
+ *       to avoid parallel divergence bug.  SCILIB can return different
+ *       results on different processors which is unacceptable.
+ *       Added optimised "sum()".
+ *       Removed "gatheri()" and "wheneq()" as they are no longer needed.
+ *
  *       Revision 2.9  1996/03/06 15:24:46  keith
  *       Modified CRAY defs to pick up SCILIB stuff on MPP archs.
  *
@@ -45,7 +53,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Got rid of all global (external) data items except for
  * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
+ * (pot_dim, potspec, prog_unit) are declared with const
  * qualifier macro which evaluates to "const" or nil
  * depending on ANSI/K&R environment.
  * Also moved as many "write" instantiations of "control"
@@ -60,7 +68,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Declared as "static"  all functions which should be.
  *
- * Added CONST qualifier to (re-)declarations of ANSI library
+ * Added const qualifier to (re-)declarations of ANSI library
  * emulation routines to give reliable compilation even
  * without ANSI_LIBS macro. (#define's away for K&R
  * compilers)
@@ -245,37 +253,33 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/auxil.c,v 2.10 1996/11/12 14:29:03 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/auxil.c,v 2.10 1996/11/18 15:58:48 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
-#ifndef _POSIX_SOURCE
-#   define _POSIX_SOURCE
-#endif
 /*========================== Library include files ===========================*/
-#if defined(ANSI) || defined(__STDC__)
-#include 	<stdarg.h>
-#else
-#include 	<varargs.h>
-#endif
-#include	<ctype.h>
 #include	<math.h>
 #include 	"string.h"
-#include	"stddef.h"
-#include	"stdlib.h"
-#include	"time.h"
 #include	<stdio.h>
 /*================= System Library include files - unix only ================*/
-#if defined(unix) || defined(__unix__)
-   /*
-    *  We must protect the inclusion of <sys/types.h>.  
-    */
-#ifndef SYS_TYPES_INCLUDED
-#define SYS_TYPES_INCLUDED
-#   include <sys/types.h>
+#if defined(HAVE_TIMES) && defined(HAVE_SYS_TIMES_H)
+#   include <sys/times.h>
+#else
+#   if defined HAVE_GETRUSAGE
+#      include <sys/resource.h>
+#   endif
 #endif
-#include <sys/time.h>
-#include <sys/times.h>
+
+#ifdef TIME_WITH_SYS_TIME
+#   include <sys/time.h>
+#   include "time.h"
+#else
+#   if HAVE_SYS_TIME_H
+#      include <sys/time.h>
+#   else
+#      include "time.h"
+#   endif
+#endif
 
 #ifndef CLK_TCK
 #   include <sys/param.h>
@@ -285,7 +289,10 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/auxil.c,v 2.
 #      define CLK_TCK 60	/* Really old unices defined 60. May be wrong.*/
 #   endif
 #endif
+#if !defined(CLOCKS_PER_SEC) && defined(CLK_TCK)
+#   define  CLOCKS_PER_SEC CLK_TCK
 #endif
+
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
@@ -625,8 +632,8 @@ double	precision()
 {
    static	int	first=1;
    static	double	eps = 0.5;
-   double VOLATILE	eps2, *eps1 = &eps2;	/* Use pointer to force store */
-   double VOLATILE      junk, *ptr = &junk;
+   double volatile	eps2, *eps1 = &eps2;	/* Use pointer to force store */
+   double volatile      junk, *ptr = &junk;
    
    if(first)
    {
@@ -643,9 +650,8 @@ double	precision()
 }
 /******************************************************************************
  *  cpu.  Return (double) the current cpu time in seconds.		      *
- *  rt_clock(). Return elapsed time in s.				      *
  ******************************************************************************/
-#if defined(unix) || defined(__unix__)
+#if defined(HAVE_TIMES) && defined(HAVE_SYS_TIMES_H)
 double        cpu()
 {
    struct tms buf;
@@ -654,17 +660,50 @@ double        cpu()
 
    return (buf.tms_utime + buf.tms_stime)/(double)CLK_TCK;
 }
+#else
+#   if defined HAVE_GETRUSAGE
+double  cpu()   /* The standard unix 'clock' wraps after 36 mins.            */
+{
+   struct rusage ru;
+   int getrusage();
+ 
+   (void)getrusage(RUSAGE_SELF, &ru);
 
-/*
- * The BSD version way to get the rt clock is via gettimeofday.  But
- * some systems <sys/time.h>, noticably Ultrix, DON'T include the
- * necessary struct definitions if _POSIX_SOURCE is defined!.  Aargh.
- * However in that case we can rely on POSIX behaviour of times -
- * (ie it's return value) - so the alternative rt_clock ought to
- * work.   The test is for the macro associated with the "timezone"
- * struct definition.
- */
-#if defined(BSD) && defined(DST_NONE)
+   return(ru.ru_utime.tv_sec  + ru.ru_stime.tv_sec
+          + 1.0e-6 * (ru.ru_utime.tv_usec + ru.ru_stime.tv_usec));
+}
+#   else
+double	cpu()
+{
+   return((double)clock() / CLOCKS_PER_SEC);
+}
+#   endif
+#endif
+/******************************************************************************
+ *  rt_clock(). Return elapsed time in s.				      *
+ ******************************************************************************/
+#if defined(HAVE_TIMES) && defined(HAVE_SYS_TIMES_H) && !defined(TIMES_RETURNS_STATUS)
+double rt_clock()
+{
+   struct tms buf;
+   static int use_time=0;
+   clock_t t;
+ 
+   if( ! use_time )
+   {
+      t=times(&buf);
+      if( t <= 0 )   /*Times failed.  Old BSD system? */
+	 use_time = 1;
+      else
+	 return t/(double)CLK_TCK;
+   }
+   if( use_time )
+   {
+      return time((time_t *)0);
+   }
+}
+#else
+#   if defined(HAVE_GETTIMEOFDAY)
 
 double rt_clock()
 {
@@ -674,29 +713,15 @@ double rt_clock()
    return(tp.tv_sec + tp.tv_usec*0.000001);
 }
 
-#else			/* System V or POSIX.			      */
+#   else 
 
-double rt_clock()
-{
-   struct tms buf;
- 
-   return times(&buf)/(double)CLK_TCK;
-}
-
-#endif			/* USG or BSG					      */
-#else			/* Not Unix					      */
-#if !defined(CLOCKS_PER_SEC) && defined(CLK_TCK)
-#   define  CLOCKS_PER_SEC CLK_TCK
-#endif
-double	cpu()
-{
-   return((double)clock() / CLOCKS_PER_SEC);
-}
 double rt_clock()
 {
    return time((time_t *)0);
 }
+#   endif
 #endif
+
 /******************************************************************************
  *  cctime()  Return ctime() but without the newline			      *
  ******************************************************************************/
@@ -783,7 +808,7 @@ char	*file;
 {
    char *name = aalloc(strlen(file)+4,char);
    strcpy(name, file);
-   if( strchr(name, ';') == NULL)
+   if( strchr(name, ';') == 0)
       (void)remove(strcat(name,";-1"));
    tfree(name);
 }

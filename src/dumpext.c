@@ -39,7 +39,7 @@ char *s;
 /******************************************************************************
  * strstr replacement for pre-ANSI machines which don't have it.              *
  ******************************************************************************/
-#ifndef ANSI_LIBS
+#ifndef STDC_HEADERS
 char *strstr(cs, ct)
 char *cs, *ct;
 {

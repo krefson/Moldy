@@ -29,6 +29,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: input.c,v $
+ *       Revision 2.9  1996/11/04 17:32:28  keith
+ *       Fixed non-ANSI compliance in get_line() which decremented pointer to
+ *       1 element below start of array and compared with beginning. I doubt
+ *       this could ever cause a failure in reality but standards are standards.
+ *
  *       Revision 2.8  1995/10/25 11:59:00  keith
  *       Fixed input parser bug which didn't notice missing "=" and silently
  *       used incorrect value.
@@ -49,7 +54,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Got rid of all global (external) data items except for
  * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
+ * (pot_dim, potspec, prog_unit) are declared with const
  * qualifier macro which evaluates to "const" or nil
  * depending on ANSI/K&R environment.
  * Also moved as many "write" instantiations of "control"
@@ -58,7 +63,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Declared as "static"  all functions which should be.
  *
- * Added CONST qualifier to (re-)declarations of ANSI library
+ * Added const qualifier to (re-)declarations of ANSI library
  * emulation routines to give reliable compilation even
  * without ANSI_LIBS macro. (#define's away for K&R
  * compilers)
@@ -197,7 +202,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/input.c,v 2.8 1995/10/25 11:59:00 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/input.c,v 2.9 1996/11/04 17:32:28 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -215,14 +220,14 @@ gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
 void		q_mul_1();
 void    	zero_real();            /* Initialiser                        */
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 void		message(int *, ...);	/* Write a warning or error message   */
 #else
 void		message();		/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
 extern	      contr_mt	control;	/* Main simulation control record     */
-extern	CONST pots_mt	potspec[];	/* Potential type specification       */
+extern	const pots_mt	potspec[];	/* Potential type specification       */
 /*========================== Macros ==========================================*/
 #define		LLEN		132
 		/* Flags to indicate status of potpar and site_info records   */
@@ -703,14 +708,14 @@ gptr	*ptr;
  ******************************************************************************/
 void	read_control(file,match)
 FILE	 *file;
-CONST match_mt *match;
+const match_mt *match;
 {
    char		line[LLEN],
    		name[LLEN],
    		value[LLEN];
    int		n_items;
    int		nerrs = 0;
-   CONST match_mt	*match_p;
+   const match_mt	*match_p;
 
    while( *get_line(line,LLEN,file) != '\0' )
    {

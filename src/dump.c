@@ -43,6 +43,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.9  1996/03/06 18:20:04  keith
+ *       Added cast in xdr_vector() call to supress spurious warning message.
+ *
  *       Revision 2.8  1994/10/17 10:57:11  keith
  *       Fixed bug in sequence code to check timesteps.
  *
@@ -56,7 +59,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Got rid of all global (external) data items except for
  * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
+ * (pot_dim, potspec, prog_unit) are declared with const
  * qualifier macro which evaluates to "const" or nil
  * depending on ANSI/K&R environment.
  * Also moved as many "write" instantiations of "control"
@@ -164,7 +167,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/dump.c,v 2.8 1994/10/17 10:57:11 keith stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/dump.c,v 2.9 1996/03/06 18:20:04 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -186,7 +189,7 @@ double		mdrand();
 void		mat_vec_mul();
 static void	dump_convert();
 static void	real_to_float();
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 void	note(char *, ...);		/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
 #else
@@ -370,7 +373,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 2.8 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 2.9 $"+11,
 		                     sizeof dump_header.vsn-1);
 #ifdef USE_XDR
       if( control.xdr_write )

@@ -25,6 +25,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.17  1996/11/05 16:47:19  keith
+ *       Optimized site and site_force arrays to avoid cache conflicts.
+ *
  *       Revision 2.16  1996/08/23 15:06:01  keith
  *       Fixed bug whereby rot elements of temp_value[] were uninitialized.
  *       This caused a crash on non-ieee machines.
@@ -71,7 +74,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Got rid of all global (external) data items except for
  * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
+ * (pot_dim, potspec, prog_unit) are declared with const
  * qualifier macro which evaluates to "const" or nil
  * depending on ANSI/K&R environment.
  * Also moved as many "write" instantiations of "control"
@@ -218,7 +221,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.17 1996/11/05 09:48:10 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.17 1996/11/05 16:47:19 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -280,7 +283,7 @@ void            kernel();              /* Potential function evaluation       */
 void		par_rsum();
 void		par_dsum();
 #endif
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 gptr		*arralloc(size_mt,int,...); /* Array allocator		      */
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */

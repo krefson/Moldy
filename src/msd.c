@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.12 1998/01/09 11:34:14 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.13 1998/01/28 09:55:05 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,9 +35,12 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.12
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
- *  Revision 1.13  1998/03/02  11:59:54  craig
- *  Removed unnecessary linking with lattice_start
- *  Corrected bug in get_real subroutine
+ *  Revision 1.13  1998/01/28 09:55:05  keith
+ *  Changes HAS_POPEN to more natural HAVE_POPEN.
+ *  Fixed minor portability problem with struct initialization.
+ *
+ *  Revision 1.13  1998/01/27 17:46:58  keith
+ *  Fixed minor portability problem with struct initialization.
  *
  *  Revision 1.12  1998/01/09 11:34:14  keith
  *  Added casts to arralloc() calls for portability.
@@ -52,7 +55,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.12
  *  Made -r and -s options mutually exclusive.
  *
  *  Revision 1.9  1997/10/15 13:13:09  keith
- *  Minor tidying up by CF.
+ *  Minor tirying up by CF.
  *
  *  Revision 1.8  1997/10/13  11:16:10  craig
  *  Removed unused variable declarations
@@ -82,7 +85,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.12
  *
  */
 #include "defs.h"
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #include <stdarg.h>
 #else
 #include <varargs.h>
@@ -95,7 +98,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.12
 #include <stdio.h>
 #include "structs.h"
 #include "messages.h"
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 #else
 gptr	*arralloc();	        	/* Array allocator		      */
@@ -110,6 +113,7 @@ void	initialise_sysdef();
 void	re_re_header();
 void	re_re_sysdef();
 void	allocate_dynamics();
+void	lattice_start();
 void	read_restart();
 void	init_averages();
 int	getopt();
@@ -151,7 +155,7 @@ void	conv_control()
  *  message.   Deliver error message to possibly exiting.  It can be called   *
  *             BEFORE output file is opened, in which case outt to stderr.    *
  ******************************************************************************/
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #   undef  va_alist
 #   define      va_alist int *nerrs, ...
 #   ifdef va_dcl
@@ -168,7 +172,7 @@ va_dcl
    int          sev;
    char         *format;
    static char  *sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
    va_start(ap, nerrs);
 #else
    int          *nerrs;
@@ -199,7 +203,7 @@ va_dcl
 /******************************************************************************
  *  message.   Deliver error message to possibly exiting. 		      *
  ******************************************************************************/
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #undef  va_alist
 #define	va_alist char *format, ...
 #ifdef  va_dcl
@@ -212,7 +216,7 @@ void	error(va_alist)
 va_dcl
 {
    va_list	ap;
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
    va_start(ap, format);
 #else
    char		*format;
@@ -260,15 +264,15 @@ int	lo, hi;
       return(EOF);
 }
 /******************************************************************************
- * get_real().  Read a real from stdin, issuing a prompt and checking         *
+ * get_real().  Read an int from stdin, issuing a prompt and checking         *
  * validity and range.  Loop until satisfied, returning EOF if appropriate.   *
  ******************************************************************************/
-real get_real(prompt, lo, hi)
+int get_real(prompt, lo, hi)
 char	*prompt;
 real 	lo, hi;
 {
    char		ans_str[80];
-   real		ans_r; 
+   int	ans_r; 
    int		ans_flag;
    ans_flag = 0;
    while( ! feof(stdin) && ! ans_flag )
@@ -276,7 +280,7 @@ real 	lo, hi;
       fputs(prompt, stderr);
       fflush(stderr);
       fgets(ans_str, sizeof ans_str, stdin);
-      if( sscanf(ans_str, "%lf", &ans_r) == 1 && ans_r >= lo && ans_r <= hi)
+      if( sscanf(ans_str, "%d", &ans_r) == 1 && ans_r >= lo && ans_r <= hi)
 	 ans_flag++;
    }
    if( ans_flag )
@@ -694,7 +698,7 @@ char	*argv[];
    vec_mt 	**traj_cofm;
    mat_mt	*hmat;
    real		range[3][2];
-   int		range_flag[3] = {0,0,0};
+   int		range_flag[3];
    site_mt	*site_info;
    pot_mt	*potpar;
    quat_mt	*qpf;
@@ -705,6 +709,7 @@ char	*argv[];
 
 #define MAXTRY 100
    control.page_length=1000000;
+   range_flag[0] = range_flag[1] = range_flag[2] = 0;
 
    comm = argv[0];
    if( strstr(comm, "msd") )
@@ -968,7 +973,7 @@ char	*argv[];
    if( (dump_buf = (float*)malloc(dump_size)) == 0)
       error("malloc failed to allocate dump record buffer (%d bytes)",
           dump_size);
-#if defined (HAS_POPEN) 
+#if defined (HAVE_POPEN) 
    sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s",
         sys.nmols, sys.nmols_r, start, finish, inc, dump_name);
    

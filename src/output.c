@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.11  1996/03/05 18:48:00  keith
+ *       Removed a couplt of const declarations because IBL xlc compiler
+ *       complained about them.
+ *
  *       Revision 2.10  1995/12/07 17:54:06  keith
  *       Reworked V. Murashov's thermostat code.
  *       Convert mass params from kJ/mol ps^2 to prog units. Defaults=100.
@@ -60,7 +64,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Got rid of all global (external) data items except for
  * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
+ * (pot_dim, potspec, prog_unit) are declared with const
  * qualifier macro which evaluates to "const" or nil
  * depending on ANSI/K&R environment.
  * Also moved as many "write" instantiations of "control"
@@ -69,7 +73,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Declared as "static"  all functions which should be.
  *
- * Added CONST qualifier to (re-)declarations of ANSI library
+ * Added const qualifier to (re-)declarations of ANSI library
  * emulation routines to give reliable compilation even
  * without ANSI_LIBS macro. (#define's away for K&R
  * compilers)
@@ -172,12 +176,12 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/output.c,v 2.10 1995/12/07 17:54:06 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/output.c,v 2.11 1996/03/05 18:48:00 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
 /*========================== Library include files ===========================*/
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #include 	<stdarg.h>
 #else
 #include 	<varargs.h>
@@ -197,8 +201,8 @@ char	*cctime();			/* Convert long time to ASCII.	      */
 void	rmlockfiles();
 /*========================== External data references ========================*/
 extern	      contr_mt 	control;	    /* Main simulation control parms. */
-extern	CONST match_mt	match[];	    /* Control file keyword table.    */
-extern  CONST pots_mt	potspec[];	    /* Potential type specification   */
+extern	const match_mt	match[];	    /* Control file keyword table.    */
+extern  const pots_mt	potspec[];	    /* Potential type specification   */
 extern int ithread, nthreads;
 /*========================== External data definitions  ======================*/
 static  int	out_page = 1;		    /* Which page of output we are on */
@@ -208,7 +212,7 @@ static  int	out_line = 999999;	    /* Which line of output           */
 /*========================== Special Control output cases ====================*/
 static        int	one=1;
 extern	      unit_mt	prog_unit;
-static	CONST match_mt	special[] = {
+static	const match_mt	special[] = {
         {"lattice-start",	"%d", "",	(gptr*)&one},
 	{"restart-file",	"%s", "",	(gptr*)""},
 	{"sys-spec-file",	"%s", "",	(gptr*)""},
@@ -217,7 +221,7 @@ static	CONST match_mt	special[] = {
 	{"time-unit",		"%lf", "",	(gptr*)&prog_unit.t},
 	{"charge-unit",		"%lf", "",	(gptr*)&prog_unit.q}
 		      };
-static	CONST int	nspecial = sizeof(special) / sizeof(match_mt);
+static	const int	nspecial = sizeof(special) / sizeof(match_mt);
 /******************************************************************************
  * lines_left().  How many lines are left on page?			      *
  ******************************************************************************/
@@ -269,7 +273,7 @@ int	c;
  *  message.   Deliver error message to possibly exiting.  It can be called   *
  *	       BEFORE output file is opened, in which case outt to stderr.    *
  ******************************************************************************/
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #   undef  va_alist
 #   define	va_alist int *nerrs, ...
 #   ifdef va_dcl
@@ -286,7 +290,7 @@ va_dcl
    int		sev;
    char		*format;
    static char	*sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
    va_start(ap, nerrs);
 #else
    int		*nerrs;
@@ -327,7 +331,7 @@ va_dcl
 /******************************************************************************
  *  note   write a message to the output file				      *
  ******************************************************************************/
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #undef  va_alist
 #define	va_alist char *text, ...
 #define va_dcl /* */
@@ -337,7 +341,7 @@ void	note(va_alist)
 va_dcl
 {
    va_list	ap;
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
    va_start(ap, text);
 #else
    char		*text;
@@ -683,7 +687,7 @@ site_mp		site_info;		/* To be pointed at site_info array   */
 pot_mp		potpar;			/* To be pointed at potpar array      */
 {
    FILE 	*out;
-   CONST match_mt	*match_p, *cur, *special_p;
+   const match_mt	*match_p, *cur, *special_p;
    spec_mp	spec;
    int		imol, code, i, j, k;
    double	cell_length[3], cell_angle[3];

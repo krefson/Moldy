@@ -34,6 +34,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: alloc.c,v $
+ *       Revision 2.10  1998/01/27 15:41:42  keith
+ *       Got rid of copying of arg ptr ap and replaced with a rescan of
+ *       the argument list in 'arralloc()'.  This is because va_list
+ *       isn't necessarily an lvalue in ANSI/ISO C (and really isn't in
+ *       WATCOM C.
+ *
  *       Revision 2.9  1997/11/27 16:24:49  keith
  *       Removed titan-specific THREAD_SYS stuff for cleanliness.
  *
@@ -148,13 +154,13 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/alloc.c,v 2.9 1997/11/27 16:24:49 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/alloc.c,v 2.10 1998/01/27 15:41:42 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
 #include "messages.h"
 /*========================== Library include files ===========================*/
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #   include <stdarg.h>
 #else
 #   include <varargs.h>
@@ -175,7 +181,7 @@ void	inhibit_vectorization();		/* Self-explanatory dummy     */
 int	malloc_verify();
 int	malloc_debug();
 #endif
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 void	note(char *, ...);			/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
 #else
@@ -209,7 +215,7 @@ int	line;
 char	*file;
 {
    gptr *p;
-#ifdef ANSI_LIBS
+#ifdef STDC_HEADERS
    /*
     * Test for malloc arg which would overflow.  Since size_mt is long
     * and size_t may be int this could happen on 16 bit machines.
@@ -317,7 +323,7 @@ va_list	ap;
    }      
 }
 
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #   undef va_alist
 #   define	va_alist size_mt size, int ndim, ...
 #   ifdef va_dcl
@@ -332,7 +338,7 @@ va_dcl
    va_list	ap;
    word_mt		*p;
    int		lb, ub;
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
    va_start(ap, ndim);
 #else
    size_mt	size;			/* size of array element	      */
@@ -395,7 +401,7 @@ va_list	ap;
 	 dpp[i] = dd + (i*dim - lb)*size/sizeof(word_mt);
 }
             
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #   undef va_alist
 #   define	va_alist size_mt size, int ndim, ...
 #   ifdef va_dcl
@@ -411,7 +417,7 @@ va_dcl
    word_mt		**p, **start;
    int		lb, ub, idim;
    long		n_ptr = 0, n_data = 1;
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
    va_start(ap, ndim);
 #else
    size_mt	size;			/* size of array element	      */
@@ -463,7 +469,7 @@ va_dcl
     * Rescan argument list to pass to subarray()
     */
    va_end(ap);
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
    va_start(ap, ndim);
 #else
    va_start(ap);

@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.11  1996/10/23 13:06:51  keith
+ *       Fixed restart structure correctly - broken in prev version.
+ *       Thermostat parameters may not be properly read.
+ *
  *       Revision 2.10  1996/03/06 18:20:45  keith
  *       Added cast in xdr_vector() call to supress spurious warning message.
  *
@@ -45,7 +49,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Got rid of all global (external) data items except for
  * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
+ * (pot_dim, potspec, prog_unit) are declared with const
  * qualifier macro which evaluates to "const" or nil
  * depending on ANSI/K&R environment.
  * Also moved as many "write" instantiations of "control"
@@ -54,7 +58,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Declared as "static"  all functions which should be.
  *
- * Added CONST qualifier to (re-)declarations of ANSI library
+ * Added const qualifier to (re-)declarations of ANSI library
  * emulation routines to give reliable compilation even
  * without ANSI_LIBS macro. (#define's away for K&R
  * compilers)
@@ -80,7 +84,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/users/keith/data/md/moldy/RCS/xdr.c,v 2.11 1996/10/19 11:53:43 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/xdr.c,v 2.11 1996/10/23 13:06:51 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"

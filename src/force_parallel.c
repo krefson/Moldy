@@ -28,7 +28,11 @@ what you give them.   Help stamp out software-hoarding!  */
  *              The actual calculation of the potential is in a different     *
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
- *       $Log: force.c,v $
+ *       $Log: force_parallel.c,v $
+ *       Revision 2.9  1997/07/09 14:45:19  keith
+ *       Brought up to daye with main-line developments in force.c.
+ *       (Actually, re-introduced compiler parallelism into force.c 2.14)
+ *
  *       Revision 2.14  1996/11/04 17:34:30  keith
  *       Moderate rewriting and code re-organization.
  *       1. Simplified PBC relocation calculation, got rid of large
@@ -120,7 +124,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.14 1996/11/04 17:34:30 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force_parallel.c,v 2.9 1997/07/09 14:45:19 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -155,7 +159,7 @@ double          precision();            /* Floating pt precision.             */
 void            kernel();               /* Force kernel routine               */
 double          mol_radius();           /* Radius of largest molecule.        */
 void            rdf_accum();            /* Bin distances for rdf evaluation.  */
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 gptr            *arralloc(size_mt,int,...); /* Array allocator                */
 void            note(char *, ...);      /* Write a message to the output file */
 void            message(int *, ...);    /* Write a warning or error message   */

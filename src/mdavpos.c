@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 2.4 1998/01/09 11:35:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 2.4 1998/01/28 09:55:37 keith Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *       
@@ -28,6 +28,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.4  1998/01/28 09:55:37  keith
+ *  Changed to "HAVE_POPEN" macro from system-specifics
+ *
  *  Revision 2.4  1998/01/09 11:35:11  keith
  *  Changed to "HAVE_POPEN" macro from system-specifics.
  *
@@ -71,7 +74,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 
  *
  */
 #include "defs.h"
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #include <stdarg.h>
 #else
 #include <varargs.h>
@@ -84,7 +87,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 
 #include <stdio.h>
 #include "structs.h"
 #include "messages.h"
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator */
 #else
 gptr	*arralloc();	        	/* Array allocator */
@@ -140,7 +143,7 @@ void	conv_control()
  *  message.   Deliver error message to possibly exiting.  It can be called   *
  *             BEFORE output file is opened, in which case outt to stderr.    *
  ******************************************************************************/
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #   undef  va_alist
 #   define      va_alist int *nerrs, ...
 #   ifdef va_dcl
@@ -157,7 +160,7 @@ va_dcl
    int          sev;
    char         *format;
    static char  *sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
    va_start(ap, nerrs);
 #else
    int          *nerrs;
@@ -188,7 +191,7 @@ va_dcl
 /******************************************************************************
  *  message.   Deliver error message to possibly exiting.                     *
  ******************************************************************************/
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 #undef  va_alist
 #define	va_alist char *format, ...
 #ifdef  va_dcl
@@ -201,7 +204,7 @@ void	error(va_alist)
 va_dcl
 {
    va_list	ap;
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
    va_start(ap, format);
 #else
    char		*format;

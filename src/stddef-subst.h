@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 
-#ifdef ANSI_LIBS
+#ifdef STDC_HEADERS
 #   include <stddef.h>
 #else
 #ifndef __stddef_h

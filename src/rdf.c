@@ -29,6 +29,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: rdf.c,v $
+ *       Revision 2.8  1996/01/15 15:19:12  keith
+ *       New function rdf_accum for parallel accululation or RDF data.
+ *       rdf_ptr() now takes one param, *size, which returns # items.
+ *
  *       Revision 2.7  1994/06/08 13:22:31  keith
  *       Null update for version compatibility
  *
@@ -38,7 +42,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Got rid of all global (external) data items except for
  * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
+ * (pot_dim, potspec, prog_unit) are declared with const
  * qualifier macro which evaluates to "const" or nil
  * depending on ANSI/K&R environment.
  * Also moved as many "write" instantiations of "control"
@@ -47,7 +51,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Declared as "static"  all functions which should be.
  *
- * Added CONST qualifier to (re-)declarations of ANSI library
+ * Added const qualifier to (re-)declarations of ANSI library
  * emulation routines to give reliable compilation even
  * without ANSI_LIBS macro. (#define's away for K&R
  * compilers)
@@ -144,7 +148,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/rdf.c,v 2.7 1994/06/08 13:22:31 keith stab keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/rdf.c,v 2.8 1996/01/15 15:19:12 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"

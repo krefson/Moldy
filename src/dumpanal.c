@@ -19,11 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpanal.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/dumpanal.c,v 2.7 1994/06/08 13:12:11 keith stab $";
 #endif
 
 /*
  * $Log: dumpanal.c,v $
+ * Revision 2.7  1994/06/08 13:12:11  keith
+ * Declared xdr_dump().
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -77,7 +80,7 @@ bool_t xdr_dump();
 /******************************************************************************
  * strstr replacement for pre-ANSI machines which don't have it.              *
  ******************************************************************************/
-#ifndef ANSI_LIBS
+#ifndef STDC_HEADERS
 char *strstr(cs, ct)
 char *cs, *ct;
 {
