@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/messages.h,v 2.1 93/07/19 13:28:03 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/messages.h,v 2.5 94/01/18 13:32:45 keith Stab $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -123,6 +123,8 @@ rotational degrees of freedom (%d vs %d)"
 (%d items of %lu bytes)"
 #define	DUMPST	"Started dumping data to file \"%s\" at timestep %d"
 #define CONTIG	"Dump file \"%s\" and restart file do not match"
+#define DUMPTS  "Dump file(\"%s\")'s timestep (%d) does not match current timestep (%d)."
+#define DRESET  "Problems prevent continuing existing dump.  Starting new sequence."
 #define	SHTDMP	"Records missing from dump file \"%s\" - found %d, expected %d"
 #define LNGDMP	"Extra records in dump file \"%s\" - found %d, expected %d"
 #define	CORUPT	"Dump file \"%s\" corrupt - expected %d bytes, found %d"
