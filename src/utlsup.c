@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/utlsup.c,v 1.10 2001/08/08 16:31:52 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/utlsup.c,v 1.11 2001/08/09 11:46:56 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -63,7 +63,7 @@ void	note(void)
 #   define va_dcl /* */
 #endif
 /*VARARGS*/
-void    message(int __builtin_va_alist)
+void    message(va_alist)
 {
    va_list      ap;
    char         *buff;
@@ -109,7 +109,7 @@ void    message(int __builtin_va_alist)
 #define va_dcl /* */
 #endif
 /*VARARGS*/
-void	error(int __builtin_va_alist)
+void	error(va_alist)
 {
    va_list	ap;
 #ifdef HAVE_STDARG_H

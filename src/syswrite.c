@@ -25,6 +25,11 @@ what you give them.   Help stamp out software-hoarding! */
  **************************************************************************************
  *  Revision Log
  *  $Log: syswrite.c,v $
+ *  Revision 2.2  2001/08/09 11:46:56  keith
+ *  Tidied up against some compiler warnings.
+ *  Added license file for SgInfo routines with permission of
+ *  Ralf W. Grosse-Kunstleve
+ *
  *  Revision 2.1  2001/08/09 09:36:36  keith
  *  Incorporated Craig's new "Syswrite" utility.
  *
@@ -33,7 +38,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/syswrite.c,v 2.1 2001/08/09 09:36:36 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/syswrite.c,v 2.2 2001/08/09 11:46:56 keith Exp $";
 #endif
 #include "defs.h"
 #ifdef HAVE_STDARG_H
@@ -730,15 +735,15 @@ int     add_suffix(char *string, int number)
 /******************************************************************************
  * copy_atom_data()  Make copy of atom/molecule names and positions           *
  ******************************************************************************/
-int copy_atom_data(site_mp site, double *charge, char (*label)[32], int natoms)
+int copy_atom_data(site_mp site, double *charge, char (*label)[NLEN], int natoms)
 {
    int iatom;
    for(iatom = 0; iatom < natoms; iatom++)
    {
-       strncpy((site+iatom)->name, label[iatom], NLEN);
-       (site+iatom)->charge = charge[iatom];
-       (site+iatom)->mass = 0.0;
-       (site+iatom)->pad = -1;
+       strncpy(site[iatom].name, label[iatom], L_site);
+       site[iatom].charge = charge[iatom];
+       site[iatom].mass = 0.0;
+       site[iatom].pad = -1;
    }
    return 0;
 }
@@ -755,9 +760,9 @@ main(int argc, char **argv)
    char         *filetype = NULL;
    char		*elename = "elements.dat";
    char		*potname = NULL;
-   char		elefile[PATHLN];
-   char		potfile[PATHLN];
-   char		title[TITLE_SIZE];
+   char		elefile[PATHLN] = "";
+   char		potfile[PATHLN] = "";
+   char		title[TITLE_SIZE] = "";
    double	cell[6];                      /* Cell parameters */
    mat_mt	h;                            /* Hessian */
    int		insw=-1;                      /* Switch for input format */
@@ -880,33 +885,35 @@ main(int argc, char **argv)
 
       nflag = 0;    /*  Flag for whether site (1) assigned or (0) not assigned to species */
       for( i = 0; i < spectot; i++)
-         if( !strcmp(st->name,(spec+i)->symbol)          /* Does site match any species identified so far? */
-                 && (st->charge == (spec+i)->charge) )
+         if( !strcmp(st->name,spec[i].symbol)          /* Does site match any species identified so far? */
+                 && (st->charge == spec[i].charge) )
          {
               st->pad = i;                 /* Assign this site to species i */
-              (spec+i)->nmols++;
+              spec[i].nmols++;
               nflag++;
          }
       if (!nflag)			   /* If no matches, create new species type */
       {
+	 if( spectot > NSPEC )
+	    error("Too many species found - current limit is %d (NSPEC in specdata.h)", NSPEC);
          for( j=0; j < n_elem; j++)        /* Search element/species data for match with site */
-           if( !strcmp(st->name,(element+j)->symbol) )
+           if( !strcmp(st->name,element[j].symbol) )
            {
-              strncpy((spec+spectot)->name,(element+j)->name,NLEN);
-              st->mass = (element+j)->mass;
-              if( insw == SHAK)
-                st->charge = (element+j)->charge;
+              strncpy(spec[spectot].name,element[j].name,NLEN);
+              st->mass = element[j].mass;
+              if( insw == SHAK || insw == PDB)
+                st->charge = element[j].charge;
               nflag++;
               break;
            }
 
          if( !nflag)
-             strcpy((spec+spectot)->name,st->name);
+             strcpy(spec[spectot].name,st->name);
 
-         strcpy((spec+spectot)->symbol,st->name);
-         (spec+spectot)->mass = st->mass;
-         (spec+spectot)->charge = st->charge;
-         (spec+spectot)->nmols=1;
+         strcpy(spec[spectot].symbol,st->name);
+         spec[spectot].mass = st->mass;
+         spec[spectot].charge = st->charge;
+         spec[spectot].nmols=1;
          st->pad = spectot;
          spectot++;
       }
@@ -917,10 +924,10 @@ main(int argc, char **argv)
    {
       k = 0;
       for(j = i+1; j < spectot; j++)
-         if( !strcmp((spec+i)->name,(spec+j)->name) )
+         if( !strcmp(spec[i].name,spec[j].name) )
          {
             k++;
-            add_suffix((spec+j)->name, k);
+            add_suffix(spec[j].name, k);
          }
    }
 
@@ -948,9 +955,9 @@ main(int argc, char **argv)
 
    for( i=0; i < spectot; i++)
    {
-       printf("%-14s %d\n",(spec+i)->name,(spec+i)->nmols);
+       printf("%-14s %d\n",spec[i].name,spec[i].nmols);
        printf("%-3d    0    0    0  %12.12g %12.12g  %s\n",i+1,
-                     (spec+i)->mass,(spec+i)->charge,(spec+i)->symbol);
+                     spec[i].mass,spec[i].charge,spec[i].symbol);
    }
 
    puts("end");
@@ -1000,7 +1007,7 @@ main(int argc, char **argv)
             x[i][j] -= floor(x[i][j]);
       }
 
-      printf("%-14s %10g %10g %10g\n",(spec+((site+i)->pad))->name,x[i][0],x[i][1],x[i][2]); 
+      printf("%-14s %10g %10g %10g\n",spec[site[i].pad].name,x[i][0],x[i][1],x[i][2]); 
    }
 
    puts("end");
