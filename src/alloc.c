@@ -18,6 +18,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.10  90/08/23  12:46:39  keith
+ * Re-implemented arralloc() using more elegant recursive algorithm.
+ * 
  * Revision 1.9  90/05/16  18:39:36  keith
  * Renamed own freer from cfree to tfree.
  * 
@@ -48,7 +51,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /mnt/keith/moldy/RCS/alloc.c,v 1.10 90/08/14 14:23:22 keith Exp $";
+static char *RCSid = "$Header: /mnt/keith/moldy/RCS/alloc.c,v 1.10 90/08/23 12:46:39 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
@@ -77,10 +80,11 @@ size_t	size;
 int	line;
 char	*file;
 {
-   char *p = calloc((unsigned) n, (unsigned) size);
+   char *p = malloc((unsigned) n*size);
    if(p == NULL && (n*size != 0))
       message(NULLI, NULLP, FATAL, NOMEM, line, file,
 	      (int)n, (unsigned long)size);
+   (void)memset(p, 0, n*size);
    return(p);
 }
 /******************************************************************************
@@ -121,6 +125,7 @@ va_list	ap;
 
    if(ndim > 0)		/* General case - set up pointers to pointers  */
    {
+NOVECTOR		/* Circumvent bug in cray compiler v4.1        */
       for( i = 0; i < prdim; i++)
 	 pp[i] = qq + i*dim - lb;
 
