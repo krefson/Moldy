@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1.1 1999/10/11 10:50:07 keith Exp keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1.2 1999/10/11 14:05:19 keith Exp keith $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -74,6 +74,8 @@ void	read_restart();
 void	init_averages();
 int	getopt();
 gptr	*talloc();
+void	zero_real();
+void	tfree();
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 static char  *comm;
@@ -187,7 +189,7 @@ real            **vaf;
 int             max_av;
 int             nvaf, sp_range[3];
 {
-   int          ispec, ivaf, i;
+   int          ispec, ivaf;
    spec_mp      spec;
 
    for( spec = species+sp_range[0], ispec = sp_range[0]; ispec <= sp_range[1];
@@ -241,15 +243,12 @@ char	*argv[];
    system_mt	sys;
    spec_mt	*species;
    vec_mt       **vel;
-   real		range[3][2];
-   int		range_flag[3];
    site_mt	*site_info;
    pot_mt	*potpar;
    quat_mt	*qpf;
    contr_mt	control_junk;
    int          nvaf, max_av, nspecies;
    real         **vaf;
-   int		it;
 
 #define MAXTRY 100
    control.page_length=1000000;
