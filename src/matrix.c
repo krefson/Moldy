@@ -11,6 +11,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	matrix.c,v $
+ * Revision 1.3  89/10/26  11:26:55  keith
+ * Mat_vec_mul() vectorised.
+ * 
  * Revision 1.2  89/10/24  17:16:21  keith
  * Modified transpose() so as not to vectorise under '-va' option on convex.
  * 
@@ -19,11 +22,13 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/matrix.c,v 1.2 89/10/24 17:16:21 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/matrix.c,v 1.4 89/12/18 17:48:43 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
 #include "messages.h"
+/*========================== Library include files ===========================*/
+char	*memcpy();
 /*========================== External function declarations ==================*/
 void	message();		/* Error message and exit handler	      */
 /*============================================================================*/
@@ -121,12 +126,14 @@ void transpose(a, b)
 mat_t	a,					/* Input matrix          (in) */
 	b;					/* Transposed matrix    (out) */
 {
-   register real tmp;
+   mat_t tmp;
 
-   b[0][0] = a[0][0];	b[1][1] = a[1][1];	b[2][2] = a[2][2];
-   tmp = a[0][1];	b[0][1] = a[1][0];	b[1][0] = tmp;
-   tmp = a[0][2];	b[0][2] = a[2][0];	b[2][0] = tmp;
-   tmp = a[1][2];	b[1][2] = a[2][1];	b[2][1] = tmp;
+   (void)memcpy((char*)tmp,(char*)a,sizeof tmp);
+
+   b[0][0] = tmp[0][0];	b[1][1] = tmp[1][1];	b[2][2] = tmp[2][2];
+   b[0][1] = tmp[1][0];	b[1][0] = tmp[0][1];
+   b[0][2] = tmp[2][0];	b[2][0] = tmp[0][2];
+   b[1][2] = tmp[2][1];	b[2][1] = tmp[1][2];
 }
 /******************************************************************************
  *  Det.  Determinant of a 3 x 3 matrix   				      *
