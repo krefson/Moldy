@@ -5,6 +5,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	accel.c,v $
+ * Revision 1.4  89/06/14  18:18:12  keith
+ * Removed call to SCILIB function VCOPY and equivalents - use memcpy instead.
+ * 
  * Revision 1.3  89/05/22  18:37:04  keith
  * Added option to scale velocities of each species separately
  * 
@@ -16,7 +19,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: accel.c,v 1.4 89/06/09 14:25:35 keith Exp $";
+static char *RCSid = "$Header: accel.c,v 1.5 89/06/22 15:42:17 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<math.h>
@@ -108,7 +111,7 @@ spec_t          species[];
 pot_t           potpar[];
 double          cutoff;
 {
-   int             ispec, isite, id, jd;	/* Counters		      */
+   int             isite, id, jd;	/* Counters		      */
    spec_p          spec;	       		/* pointer to current species */
    int            *site_count = ialloc(system->max_id);	/* Numbers of each site
 							 * type */
@@ -116,7 +119,7 @@ double          cutoff;
 /*
  * Count the sites
  */
-   for (ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
+   for (spec = species; spec < &species[system->nspecies]; spec++)
       for (isite = 0; isite < spec->nsites; isite++)
 	 site_count[spec->site_id[isite]] += spec->nmols;
 
@@ -247,7 +250,7 @@ mat_t           stress;		       /* Virial part of stress	(out) */
       site[ispec] = site_ptr;
       site_force[ispec] = s_f_ptr;
       force_ptr += spec->nmols;
-      if (species[ispec].quat)
+      if (spec->quat)
 	 torque_ptr += spec->nmols;
       site_ptr += spec->nmols * spec->nsites;
       s_f_ptr += spec->nmols * spec->nsites;
@@ -256,7 +259,7 @@ mat_t           stress;		       /* Virial part of stress	(out) */
  * Set up array of site charges
  */
    chg_ptr = chg;
-   for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+   for (spec = species; spec < &species[nspecies]; spec++)
       for (imol = 0; imol < spec->nmols; imol++)
 	 for (isite = 0; isite < spec->nsites; isite++)
 	    *chg_ptr++ = site_info[spec->site_id[isite]].charge;
@@ -275,9 +278,9 @@ mat_t           stress;		       /* Virial part of stress	(out) */
 /*
  * Calculate the site positions at this timestep - loop over species
  */
-   for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+   for (spec = species; spec < &species[nspecies]; spec++)
       make_sites(sys->h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 site[ispec], spec->nmols, spec->nsites);
+		 site[spec-species], spec->nmols, spec->nsites);
 
 /*
  * Real-space part of force evaluation - no loop over species for efficiency
@@ -304,8 +307,9 @@ mat_t           stress;		       /* Virial part of stress	(out) */
 /*
  * Calculate the centre of mass forces and torques from the site forces
  */
-   for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+   for (spec = species; spec < &species[nspecies]; spec++)
    {
+      ispec = spec-species;
       mol_force(site_force[ispec], force[ispec], spec->nsites, spec->nmols);
       if (spec->rdof > 0)
 	 mol_torque(site_force[ispec], spec->p_f_sites,
@@ -340,7 +344,7 @@ mat_t           stress;		       /* Virial part of stress	(out) */
    shuffle(sys->qddot, sys->qddoto, sys->qddotvo, q_tmp);
    if (control.const_pressure)
       shuffle(sys->hddot, sys->hddoto, sys->hddotvo, v_tmp);
-   for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+   for (spec = species; spec < &species[nspecies]; spec++)
    {
       shuffle(spec->acc, spec->acco, spec->accvo, v_tmp);
       if (spec->rdof > 0)
@@ -351,8 +355,8 @@ mat_t           stress;		       /* Virial part of stress	(out) */
  * Now apply the Newton/Euler equations to find the accelerations and
  * quaternion second derivatives.
  */
-   for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
-      newton(force[ispec], spec->acc, spec->mass, spec->nmols);
+   for (spec = species; spec < &species[nspecies]; spec++)
+      newton(force[spec-species], spec->acc, spec->mass, spec->nmols);
 
 /*
  * Correction to centre of mass accelerations for constant pressure algorithm
@@ -364,7 +368,7 @@ mat_t           stress;		       /* Virial part of stress	(out) */
    if (control.const_pressure)
    {
       zero_real(ke_dyad[0], 9);
-      for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+      for (spec = species; spec < &species[nspecies]; spec++)
 	 energy_dyad(ke_dyad, sys->h, spec->velp, spec->mass, spec->nmols);
       rahman(stress, sys->h, sys->hddot, ke_dyad,
 	     control.pressure, control.pmass);
@@ -384,9 +388,9 @@ mat_t           stress;		       /* Virial part of stress	(out) */
 #ifdef DEBUG
 	 iter++;
 #endif
-	 for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
+	 for (spec = species; spec < &species[nspecies]; spec++)
 	    if (spec->rdof > 0)
-	       euler(torque[ispec], spec->quat, spec->qdotp,
+	       euler(torque[spec-species], spec->quat, spec->qdotp,
 		     spec->qddot, spec->inertia, spec->nmols);
 	 vcopy(qd_tmp[0], sys->qdotp[0], 4 * sys->nmols_r);
 	 beeman_2(sys->qdot[0], sys->qdotp[0], sys->qddot[0], sys->qddoto[0],
