@@ -31,6 +31,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.11  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.10  1996/10/24 13:06:49  keith
  *       Fixed restart structure correctly - broken in prev version.
  *       Thermostat parameters may not be properly read.
@@ -157,7 +162,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/restart.c,v 2.10 1996/10/24 13:06:49 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/restart.c,v 2.11 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -595,7 +600,8 @@ int		av_convert;
 
    cread(xfp,  (gptr*)&rdf_flag, lsizeof rdf_flag, 1, xdr_bool); 
    				    /* Read flag signalling stored RDF data.  */
-   if(rdf_flag && control.rdf_interval>0)/* Only read if data there and needed*/
+   if(rdf_flag && control.rdf_interval>0 &&
+      control.begin_rdf <= control.istep)/* Only read if data there and needed*/
    {
       rdf_base = rdf_ptr(&rdf_size);
       cread(xfp, rdf_base, lsizeof(int), rdf_size, xdr_int);
@@ -629,7 +635,7 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
    FILE		*save;
    XDR		xdrsw;
    xfp_mt	xfp;
-   char		*vsn = "$Revision: 2.10 $"+11;
+   char		*vsn = "$Revision: 2.11 $"+11;
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)

@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.15  1999/10/11 09:51:07  keith
+ *      Fully implemented new constant-pressure algorithm.
+ *      Select by "const-pressure=2" in control.
+ *
  *
  *      Revision 2.14  1999/10/08 10:49:39  keith
  *      Added checks to behave sensibly if rdf-interval changed during accumulation
@@ -248,7 +252,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/startup.c,v 2.15 1999/10/08 15:49:58 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/startup.c,v 2.15 1999/10/11 09:51:07 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -1106,6 +1110,8 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
    long		old_rdf_out;		/* To check if altered on restart     */
    long		old_begin_rdf;		/* To check if altered on restart     */
    int		old_const_pressure;     /* To check if altered on restart     */
+   int		old_nbins;              /* To check if altered on restart     */
+   double       old_limit;              /* To check if altered on restart     */
    boolean	flag;			/* Used to test 'fseek'		      */
    long		pos;			/* Where control info starts on input */
    restrt_mt	backup_header;		/* To read backup file header into    */
@@ -1148,6 +1154,8 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
       old_begin_rdf	     = control.begin_rdf;
       old_rdf_out	     = control.rdf_out;
       old_const_pressure     = control.const_pressure;
+      old_nbins              = control.nbins;
+      old_limit              = control.limit;
       conv_control(&prog_unit, false);
       control.scale_end     -= control.istep;		/* These parameters   */
       control.begin_average -= control.istep;		/* are respecified    */
@@ -1352,7 +1360,10 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
 		    control.roll_interval, old_roll_interval, &av_convert);
       if(control.rdf_interval > 0)
          init_rdf(system);		/* Prepare to calculate rdf	      */
-      if( control.rdf_interval != old_rdf_interval && control.istep > control.begin_rdf) 
+      if( (control.rdf_interval != old_rdf_interval ||
+	   control.nbins != old_nbins ||
+	   control.limit != old_limit) &&
+	   control.istep > control.begin_rdf )
       {  
 	 message(NULLI, NULLP, WARNING, RDFALT);
 	 control.begin_rdf = control.istep + 1;
