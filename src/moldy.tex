@@ -1,0 +1,1445 @@
+\documentstyle{report}
+\oddsidemargin=0.5in
+\textwidth=6in
+\textheight=8.5in
+\title{{\Huge Moldy User's Manual}}
+\author{Keith Refson\\Department of Earth Sciences\\Parks Road
+\\Oxford OX1 3PR\\keith@uk.ac.ox.earth\\}
+
+\newcommand{\moldy}{{\em Moldy\ }}
+\newcommand{\etc}{{\em etc\ }}
+\newcommand{\eg}{{\em e.g.\ }}
+\newcommand{\ie}{{\em i.e.\ }}
+\begin{document}
+\maketitle
+\tableofcontents
+
+\chapter{Introduction}
+
+\moldy is a computer program for performing molecular dynamics
+simulations of condensed matter.  It can handle any assembly of rigid
+polyatomic molecules, atoms or ions and any mixture thereof. It uses
+the `link cell' method to calculate short-range forces and the Ewald
+sum technique to handle long-range electrostatic forces.  Simulations
+may be performed either in the usual $NVT$ ensemble or in an $N\sigma
+T$ ensemble using the constant-stress method of Parinello and Rahman.
+As the MD cell need not be cubic, the program is equally suitable for
+simulations of solids and liquids.
+
+Most existing MD programs are limited in their capabilities, for
+example to one kind of potential function, or molecular symmetry, or
+to some restricted number of molecules.  \moldy is (as far as
+possible) free from such arbitrary constraints.  The system is
+specified at the beginning of each run and its size is only limited by
+the amount of memory available to the program: if a system is too
+large to handle, the solution is to buy some more memory.  The system
+may contain a mixture of an arbitrary number of molecular species,
+each with an arbitrary number of atoms and a arbitrary number of
+molecules of each. Molecules or ions may be monatomic or polyatomic,
+linear or three dimensional in any combination.  The potential
+functions may be of the Lennard-Jones, Buckingham (including
+Born-Meyer) or MCY types, and other potential types may be easily
+added.  Such flexibility is possible because \moldy is written in the
+`C' language which permits dynamic memory allocation.
+
+\moldy is written to be highly portable and has been tested on a wide
+range of computers and operating systems, including CRAY COS, VAX/VMS
+and Unix(tm) (both BSD and system V varieties).  It should be trivial to
+move it to any other machine with a good `C' compiler.
+
+To be of real use a simulation program must run efficiently on modern
+high-speed computers, which are increasingly of vector or parallel
+architectures. \moldy is written so as to be highly vectorisable and
+has been tested on a range of vector machines from manufacturers
+including Cray Research Inc, Convex, Stellar, Ardent and Alliant.  On
+the cray XMP-48 its performance can exceed 100 MFlop/sec (on a
+suitably large system). A experimental version for parallel machines
+with shared memory is also available.
+
+\chapter{Algorithms and Equations}
+% Disclaimer to purpose and refs here
+% Description of nature of models Moldy can handle -
+% rigid molecule and site pair forces.
+\section{The Equations of Motion}
+% Newton-Euler
+% Quaternions
+\label{sec:quaternions}
+% Sonnenschein's 2nd order method
+\section{Integration Algorithms}
+% Beeman Ref to vel dep forces and recent paper
+% Velocity Dependent forces
+% Normalisation of quaternions and quaternion constraints
+\section{The Ewald Sum}
+\label{sec:ewald}
+%Equations
+% Self energies & uniform sheet correction
+% Surface dipole term
+\section{Periodic Boundaries - the Link Cell Method}
+\label{sec:link-cell}
+\section{Temperature Scaling}
+\label{sec:rescaling}
+\section{Constant Stress}
+\label{sec:const-stress}
+\section{Radial Distribution Functions}
+\section{The Initial Configuration}
+\label{sec:skewstart}
+\section{Potential Functions}
+
+\chapter{Running Moldy}
+The way \moldy is invoked depends to some extent on the operating
+system, but usually by issuing the command \verb'moldy'\footnote{On
+VMS, {\tt moldy} may be defined as a foreign command by {\tt \$ moldy
+:== \$mydisk:[mydir]moldy} For Unix(tm) the executable file {\tt
+moldy} should be placed in the shell search path (\eg in the current
+directory). For COS the executable binary should be in a local dataset
+called {\tt MOLDY}, which is often a permanent dataset, locally
+accessed by {\tt ACCESS,DN=MOLDY.}}.  There are two optional arguments
+- the name of the control file (see section~\ref{sec:control}) and the
+output file (see section~\ref{sec:output}).  If either is omitted,
+control input is read from the ``standard input'' which may be a
+terminal or a job command file depending on the operating system and
+circumstances, and the output is written to ``standard output'' which
+may be a terminal or batch job logfile\footnote{Some operating systems
+(Unix and COS) allow {\em file redirection} whereby the standard input
+is associated with some file.  This may also be used to supply the
+control file, provided that no command line parameter is given.}.
+Here are examples for VAX/VMS, Unix (tm) and COS (Cray Operating
+System), which assume that in each case the command has been set up to
+invoke \moldy. Under VMS the commands
+\begin{verbatim}
+        $ moldy control.dat output.lis
+        $ moldy control.dat
+\end{verbatim}
+will start \moldy which will read its input from \verb'control.dat'.
+The output will be directed to the file \verb'output.lis' in the first
+case and written to the terminal or batch log in the second.  Under
+UNIX any of
+\begin{verbatim}
+        % moldy < control > output.lis
+        % moldy control output.lis
+        % moldy control
+\end{verbatim}
+will cause moldy to read from the file called \verb'control' and in
+the first two examples to write its output to \verb'output.lis'.
+Under COS (Cray Operating System) any of the control statements
+\begin{verbatim}
+        MOLDY.
+        MOLDY,'CONTROL OUTPUT'.
+        MOLDY,' < CONTROL > OUTPUT'.
+\end{verbatim}
+will invoke \moldy, which in the first example will read the control
+file from the job file following the first \verb'/EOF' marker and send
+the output to \verb'$OUT'.  In the last two examples
+\moldy will read from the local dataset \verb'CONTROL' (which might, for
+example, be created using \verb'FETCH' or \verb'ACCESS') and create
+another local dataset called \verb'OUTPUT'.
+
+\section{The Control File}
+\label{sec:control}
+
+The information needed to initiate and control a run of \moldy is
+specified in a file known as the {\em control file}. This contains the
+parameters governing the run \eg the number of timesteps to be
+executed or the frequency of output, and the names of files to be used
+\eg for reading a restart configuration from or for writing the
+output to. Parameters in the control file are specified by entries of the form
+\verb'keyword = value'
+which appear one to a line, terminated by the special keyword
+\verb'end'.  Spaces and blank lines are ignored as are comments ({\em
+i.e.} the remainder of a line following a \verb'#'~symbol) and
+keywords may be entered in upper or lower case. For example
+\begin{verbatim}
+   title= Moldy example      # This is a comment
+
+   # The above blank line is ignored
+   nsteps = 1000
+   step=0.0005
+   restart-file = RESTART.DAT
+   end                       # The control file ends here
+\end{verbatim}
+sets the title of the simulation to ``Moldy example'', the number of
+steps to execute to 1000, the timestep to 0.0005ps and supplies the
+name of a restart file to read from.
+
+It is not necessary to specify all of the parameters on each run.
+Unless it is explicitly assigned a value in the control file, each
+parameter has a default value.  This is either the value listed in
+table~\ref{tab:parameters} or, in the case where the simulation is
+continuing from a restart file, the value it had on the previous run
+(see section~\ref{sec:restarting}). Parameters are read in sequence
+from the control file, and may appear more than once, in which case
+only the final instance is used.  
+
+The two most important parameters are \verb'step' which sets the size
+of the simulation timestep (in ps), and \verb'nsteps' which specifies
+the number of steps to perform.  Together these control the length of
+time to be simulated.  It is also possible to specify that a run
+should be terminated after a certain amount of computer time has been
+used - given by parameter \verb'cpu-limit'.  This will be particularly
+useful in batch mode systems, where the run is killed after some
+specified CPU time has elapsed.  Setting \verb'cpu-limit' to the
+maximum time allowed will cause \moldy to terminate the run {\em
+before} the limit is reached and write out a backup file (see
+section~\ref{sec:backup}).
+
+There are several kinds of parameters:
+\begin{description}
+
+\item[character strings] Apart from \verb'title' these are just file
+names \eg \verb'sys-spec-file'\footnote{Note for COS users: There is a
+special filename syntax for permanent dataset names ID's and usernames
+under COS (as described in the C library reference manual). The forms
+allowed are variants of OWN/ID/PDN where OWN is the dataset owner, ID
+is the ID string and PDN is the dataset name.  The OWN or ID strings
+may be omitted, defaulting to the job owner and null respectively.
+Unnecessary slashes may also be omitted so that, for example OWN//PDN
+and ID/PDN have the obvious meaning. If only a dataset name is
+present, and it is a valid local name, a local dataset is tried first.
+Failing that it is taken to be a permanent dataset name.}.  No checks
+are performed on the validity of the name (because \moldy has to work
+on many different computer systems), so if you make a mistake you are
+likely to get an error message to the effect that \moldy couldn't find
+the file you asked for.  To remove a default value, just specify a
+null string {\em e.g.} \verb'save-file = '.
+
+\item[booleans] These are just switches which turn a feature off or
+on. `0' means off or false and `1' means on or true. The parameters
+\verb'text-mode-save', \verb'new-sys-spec', \verb'scale-separately',
+\verb'surface-dipole' and \verb'lattice-start' are booleans.
+
+\item[real parameters] Several parameters are real numbers \eg
+\verb'step' which specifies the timestep.  They may be entered in the
+usual floating point or scientific notation \eg \mbox{\verb'step = 0.0005'}
+or \mbox{\verb'step = .5e-3'}, and are taken to be in the units given in
+table~\ref{tab:parameters}.
+
+\item[integer parameters] Parameters such as \verb'dump-level' take a
+numeric value, which should be an integer.
+
+\item[timestep-related parameters] Several parameters govern when some
+calculation begins and ends and how frequently it is performed in
+between. These are known as ``begin'', ``end'' and ``interval''
+parameters, but are really a special case of integer parameters.  For
+example \verb'begin-average', \verb'dump-interval' and
+\verb'scale-end'.  The calculation begins {\em on} the timestep
+specified on the \verb'begin' parameter, occurs every \verb'interval'
+timesteps thereafter and ends {\em after} the timestep specified by
+the \verb'end' parameter.  Setting the \verb'interval' parameter to
+zero is the usual method of turning that calculation off.
+
+The \verb'begin' and \verb'end' parameters behave in a special fashion
+when the simulation is continued from a restart file; they are
+interpreted {\em relative} to the current timestep.  Notice especially
+that \verb'nsteps', the number of timesteps is treated in this way.
+
+\end{description}
+
+A complete list of the parameters,
+their meanings and default values appears in
+table~\ref{tab:parameters}. 
+
+\begin{table}
+\begin{minipage}{\textwidth}
+\caption{Control Parameters}
+\label{tab:parameters}
+\begin{tabular}{|l|l|l|p{2.7in}|}
+\hline
+{\bf name} & {\bf type}\footnote{See section \ref{sec:control}} &
+{\bf default} & {\bf function} \\ \hline \hline
+\verb'title' &	    		character  & {\small Test Simulation} &
+A title to be printed on all output. \\
+\verb'nsteps' &	    		integer & 			0 &
+Number of MD steps to execute. \\
+\verb'cpu-limit' &		real &			1e20 &
+Terminate run if excessive CPU time used. \\
+\verb'step' &	    		real &			0.005 &
+Size of timestep \\ \hline
+\verb'sys-spec-file' &   	character  &	null &
+Name of system specification file.  Appended to control file if null. \\
+\verb'lattice-start' &		boolean & 		false  &
+Switch for crystalline initial configuration. \\
+\verb'save-file' &	   	character  &	null &
+File to save restart configuration in. \\
+\verb'restart-file' &    	character  &	null &
+File to read restart configuration from. \\
+\verb'new-sys-spec' &    	boolean & 		false  &
+Read restart configuration with changed system specification. \\
+\verb'text-mode-save' &  	boolean & 		false &
+Write a portable ``restart'' file consisting of control, system
+specification and lattice start files. \\ \hline
+\verb'density' &	    	real &			1.0 &
+Initial density.  Used by {\em skew start} only to determine initial
+MD cell dimensions. \\ \hline
+\verb'scale-interval' &    	integer & 		10 &
+Frequency of velocity scaling to required temperature. \\
+\verb'scale-end' &	   	integer & 			1000000 &
+When to stop scaling. \\
+\verb'scale-separately' &	boolean & 		false  &
+Perform scaling for each species individually. \\
+\verb'temperature' &    	real &			0 &
+Temperature to set up initial configuration at and to scale to. \\ \hline
+\verb'const-pressure' &  	boolean & 		false  &
+Whether to use Parinello and Rahman constant stress. \\
+\verb'w' &		    	real &			100.0 &
+Value of P \& R mass parameter. \\
+\verb'pressure' &	    	real &			0 &
+Applied pressure. \\ \hline
+\verb'alpha' &	    		real &			0.3 &
+$\alpha$ parameter for Ewald sum. \\
+\verb'k-cutoff' &		real &			2 &
+Reciprocal space cut off distance in \AA$^{-1}$. \\
+\verb'cutoff' &	    	real &			10 &
+Direct space cutoff distance in \AA. \\
+\verb'surface-dipole' &	boolean & 		false  &
+Include De Leeuw \& Perram term in Ewald sum. \\ \hline
+\verb'roll-interval' &   	integer & 		10 &
+Period over which to calculate rolling averages. \\
+\verb'print-interval' &  	integer & 		10 &
+How frequently to print normal output. \\ \hline
+\end{tabular}
+\end{minipage}
+\end{table}
+\begin{table}
+\begin{minipage}{\textwidth}
+\caption{Control Parameters (continued)}
+\begin{tabular}{|l|l|l|p{2.7in}|}
+\hline
+{\bf name} & {\bf type}\footnote{See section \ref{sec:control}} &
+{\bf default} & {\bf function} \\ \hline \hline
+\verb'begin-average' &   	integer & 		1001 &
+When to start accumulating thermodynamic averages. \\
+\verb'average-interval' &	integer & 		5000 &
+How frequently to calculate and print averages. \\
+\verb'reset-averages' &  	boolean & 		false  &
+Discard accumulated averages in restart file. \\ \hline
+\verb'begin-rdf' &		integer & 		1000000 &
+When to start accumulating radial distribution function information. \\
+\verb'rdf-interval' &		integer & 		20 &
+How frequently binning calculation is performed. \\
+\verb'rdf-out' &		integer & 		5000 &
+How frequently to calculate and print RDFs. \\
+\verb'rdf-limit' &		real &			10 &
+Calculate RDFs up to what distance? \\
+\verb'nbins' &			integer & 		100 &
+Number of binning intervals between 0 and rdf-limit. \\ \hline
+\verb'dump-file' &	    	character  &	null &
+Template of file names used for data dumps. \\
+\verb'begin-dump' &		integer & 		1 &
+Timestep to begin dumping at. \\
+\verb'dump-interval' &  	integer & 		20 &
+How frequently to perform dumps. \\
+\verb'dump-level' &		integer & 		0 &
+Amount of information to include in dump. \\
+\verb'ndumps' &		integer & 		250 &
+Number of dump records in each dump file. \\ \hline
+\verb'backup-interval' &	integer & 		500 &
+Frequency to write backup file. \\
+\verb'backup-file' &		character  &	MDBACKUP &
+Name of backup file. \\ \hline
+\verb'temp-file' &		character  &	MDTEMPX &
+Name of temporary file used for writing restart configurations. \\ \hline
+\verb'subcell' &		real &			0 &
+Size of sub cell to divide MD cell into for link-cell force
+calculation. \\ \hline
+\verb'seed' &			integer & 		1234567 &
+Seed for random number generator. \\ \hline
+\verb'page-width' &	    	integer & 		132 & 
+Number of columns on output paper. \\
+\verb'page-length' &   	integer & 		44 &
+Number of lines on a page of output. \\ \hline
+\verb'mass-unit' &	    	real &			1.6605655e-27 &
+Unit of mass for system specification file. \\
+\verb'length-unit' &    	real &			1e-10 &
+Unit of length for system specification file. \\
+\verb'time-unit' &		real &			1e-13 &
+Unit of time for system specification file. \\
+\verb'charge-unit' &		real &			1.6021892e-19 &
+Unit of charge for system specification file. \\ \hline
+\end{tabular}
+\end{minipage}
+\end{table}
+
+\section{Setting up the System}
+\subsection{System Specification}
+\label{sec:sys-spec}
+
+The information which describes to \moldy the system to be simulated
+and the interaction potentials is contained in a file known as the
+{\em system specification file}.  This may be presented to \moldy in
+either of two ways: If the control file parameter \verb'sys-spec-file'
+is null or absent, it is assumed to be appended to the end of the
+control file.  Otherwise the it is read from the file whose name is
+the value of \verb'sys-spec-file'.
+
+This file is divided into two sections.  First is the description of
+the molecules, atoms or ions, which is followed by the potential
+functions.  As for the control file, the input is case independent and
+free format, but line structured. Blank lines, spacing and comments
+are ignored.
+
+The physical description consists of a series of entries, one for each
+molecular species, terminated by the keyword \verb'end'. The entry
+for species $i$ should have the form
+\begin{displaymath}
+\begin{array}{lllllll}
+\multicolumn{7}{l}{\mbox{{\it species-name}}_{i} \; N_{i}}  \\
+id_{1} & x_{1} & y_{1} & z_{1}&  m_{1} & q_{1} & name_{1} \\
+id_{2} & x_{2} & y_{2} & z_{2}&  m_{2} & q_{2} & name_{2} \\
+\vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots \\
+id_{n_{i}} & x_{n_{i}} & y_{n_{i}} & z_{n_{i}}& 
+m_{n_{i}} & q_{n_{i}} & name_{n_{i}} \\
+\end{array}
+\end{displaymath}
+where {\it species-name}$_{i}$ is the name of the molecule and $N_{i}$
+is the number of molecules of that type in the system. Each molecule
+has $n_{i}$ atoms, one for each line in that group and each kind of
+atom is identified by a number $id_{i}$ (the site id) which will be
+used to specify the appropriate potential parameters. Its co-ordinates
+are $(x_{i},y_{i},z_{i})$, its mass is $m_{i}$, its charge is $q_{i}$
+and its name is $name_{i}$.  See Appendix \ref{sec:examples} for some
+sample system specification files.
+
+If there is more that one atom of any type (in the system - not just
+the same molecule) it is sufficient to identify it by its $id$ (and
+the site co-ordinates!).  If $m_{i}$, $q_{i}$ or $name_{i}$ {\em are}
+given they must agree exactly with the previous values or an error
+will be signalled.
+
+Site ids, masses and charges are all checked for `reasonableness'
+and impossible values cause an error. The set of site ids does not
+have to start at 1 or be contiguous, but since this may indicate a
+mistake, a warning is issued.
+
+Following the physical specification is the specification of the
+potential functions. This takes the form
+\begin{displaymath}
+\begin{array}{llllll}
+\multicolumn{4}{l}{\mbox{{\it potential-type}}} \\
+i & j & p^{1}_{ij} & p^{2}_{ij} & \ldots & p^{r}_{ij}  \\
+k & l & p^{1}_{kl} & p^{2}_{kl} & \ldots & p^{r}_{kl}  \\
+\vdots & \vdots & \vdots & \vdots & \vdots & \vdots \\
+m & n & p^{1}_{mn} & p^{2}_{mn} & \ldots & p^{r}_{mn}  \\
+\mbox{\verb'end'} \\
+\end{array}
+\end{displaymath}
+where {\it potential-type} is one of the keywords
+\verb'Lennard-Jones', \verb'Buckingham' or \verb'MCY' to identify the kind of
+potentials to be used,  $i, j, k, l, m, n$ are site ids and
+$p^{\alpha}_{ij}$ is the $\alpha^{th}$ potential parameter between
+sites $i$ and $j$.  There should be one line for each distinct pair of
+site ids.  If any pair is omitted a warning is issued and the
+parameter values are set to zero.
+
+The meaning of the parameters for the currently defined potentials is
+as follows:
+\begin{description}
+\item[Lennard-Jones] The potential is 
+\[\phi(r_{ij}) = \epsilon((\sigma/r_{ij})^{12}) -
+(\sigma/r_{ij})^{6}),\] and has two parameters, $\epsilon ( \equiv p^{1}_{ij})$
+and $\sigma ( \equiv p^{2}_{ij})$, which occur on each line in that
+order.  Note that the definition of epsilon differs by a factor of 4
+from another definition in common usage. 
+\item[Buckingham] This includes potentials of the Born-Meyer type and
+has formula \[\phi(r_{ij}) = -A_{ij}/r^{6}_{ij} + B_{ij}exp(-C_{ij}r_{ij}).\]
+The three parameters appear on each line in the order $A, B, C$.
+\item[MCY] This type supports potentials of the form of the water
+model of Matsuoka, Clementi and Yoshimine\cite{MCY75}, 
+\[\phi(r_{ij}) = A_{ij}exp(-B_{ij}r_{ij}) - C_{ij}exp(-D_{ij}r_{ij}),\]
+and the four parameters appear on the line in the order $A, B, C, D$.
+\end{description}
+Other types of potential types may be easily added: see
+appendix~\ref{sec:newpot}.
+
+It is possible to specify the units in which these quantities are given
+by means of the control file parameters \verb'mass-unit',
+\verb'length-unit', \verb'time-unit' and \verb'charge-unit' 
+(which are themselves specified in SI units). All quantities read from
+the system specification file (dimensions as well as potentials) are
+taken to be in those units. Their default values are amu, \AA, 0.1ps
+and $q_{e}$, which means that the unit of energy is kJ mol$^{-1}$.  So
+to read in \AA, amu and kcal mol$^{-1}$, specify
+\verb'time-unit=4.8888213e-14'.
+
+Once the system specification has been read in, all quantities are
+converted to `internal' units: a.m.u., \AA, ps, and $\sqrt{
+\mbox{ a.m.u. \AA}^{3} \mbox{ps}^{-2}/(4 \pi \epsilon_{0})}$.
+The prototype molecule for each species is then shifted so that its
+zero of coordinates lies on its centre of mass, and rotated into the
+principal frame (polyatomics only).
+
+\subsection{The Initial Configuration}
+
+\moldy provides two methods of setting up an initial configuration.
+By default the {\em skew start} method of section \ref{sec:skewstart}
+is used to place the molecular centres of mass in a regular
+arrangement which ensures molecular separation.  If there is more than
+one species present, molecules of each are chosen randomly for each
+site.  Molecular orientations are chosen randomly from a uniform
+distribution.  This method has been found to work well for reasonably
+small or fairly isotropic molecules and it is anticipated that it will
+be the usual method of starting a simulation of the liquid state.   On
+the other hand, if the constituent molecules are sufficiently large
+and irregular, or if it is intended to simulate the solid state then
+the {\em lattice start} method will be more appropriate.
+
+This method is activated by setting the control parameter
+\verb'lattice-start' to 1, and creates the initial configuration by
+periodic replication of some crystalline unit cell.  In that case
+\moldy expects to find, following the \verb'end' which terminates the
+system specification, an initial configuration specification of the
+following form:
+\begin{displaymath}
+\begin{array}{llllllll}
+\multicolumn{8}{l}{a\;b\;c\;\alpha\;\beta\;\gamma\;n_{x}\;n_{y}\;n_{z}} \\
+\mbox{{\it species-name}}_{1} &
+X_{1} & Y_{1} & Z_{1} &  q_{10} & q_{11} & q_{12} & q_{13} \\
+\vdots &  \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots \\
+\mbox{{\it species-name}}_{i} & X_{i} & Y_{i} & Z_{i} \\
+\vdots &  \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots \\
+\mbox{{\it species-name}}_{n} &
+X_{n} & Y_{n} & Z_{n} &  q_{n0} & q_{n1} & q_{n2} & q_{n3}  \\
+\mbox{\verb'end'}. \\
+\end{array}
+\end{displaymath}
+Here $a, b, c$ and $\alpha, \beta, \gamma$ are the crystal unit cell
+parameters, and $n_{x}, n_{y}, n_{z}$ are the number of unit cells in
+each direction which comprise the MD cell.  The next $n$ lines
+describe the $n$ molecules of the basis which will be replicated to
+form the full configuration.  Molecules may appear in any order, but
+of course the total number of each, multiplied by the number of unit
+cells $n_{x} n_{y} n_{z}$ must agree with that given in the system
+specification file.
+
+Each molecule is identified by its name, as given in the system
+specification file.  $X, Y$ and $Z$ are {\em fractional} co-ordinates,
+between 0 and 1 giving the location of the molecular centres of mass in
+the crystal unit cell. The orientation is given by the four
+quaternions $q_{0}, q_{1}, q_{2}, q_{3}$ which specify a rotation {\em
+relative to the orientation of the prototype molecule in the system
+specification file}.  (Notice the slight inconsistency with the
+positions, which are of the centres of mass, {\em not} the zeroes of
+co-ordinates in the system specification file. This may be fixed in
+future releases.)  Quaternions need only be included for
+polyatomic species, that is molecules $1$ and $n$ above, and omitted
+for the monatomic species $i$.
+
+After the molecular positions and orientations have been set up, their
+velocities (and angular velocities if appropriate) are initialised.
+Their values are sampled at random from the
+Maxwell-Boltzmann distribution for the temperature $T$, as given by
+the control parameter \verb'temperature'.  This is done for both
+starting methods.
+
+\section{Restarting from a Previous Run}
+\label{sec:restarting}
+
+At the end of a simulation run, it is often desirable to store the
+configuration of the system in a file.  This {\em restart file} may be
+used at a later date to continue the simulation from that point rather
+than from scratch.  To instruct \moldy to write a restart file, simply
+set the control parameter \verb'save-file' to a suitable filename; to
+start from a restart file, set \verb'restart-file' to be the name of
+that file.
+
+Each restart file is a binary file which contains enough information
+to reconstruct the exact state of the system and of the program.  It
+includes a copy of all the control parameters in force, the current
+timestep number, a complete system specification, all the simulation
+dynamic variables and the intermediate data used in the calculation of
+averages and radial distribution functions.  Thus a run continued from
+a restart file will proceed just as if there had been no interruption
+and will generate identical results (provided the control parameters
+are not changed).
+
+When continuing a simulation, it is only necessary to explicitly
+specify control parameters which are to be changed.  Their previous
+values are read from the restart file and are used as defaults when
+reading the control file. Consequently control files for restarting
+tend to be rather short. {\bf Caution}: always include a new (possibly
+null) value for \verb'save-file'. Otherwise when the new run
+terminates, the new restart file may overwrite the old one\footnote{
+Whether the old file is lost depends on the operating system. Under
+systems such as VMS and COS which have version numbers a new version
+is created and the old one remains. Under Unix, the old file is
+renamed by the addition of a ``\%'' character and thus is saved. On
+other systems it will be lost.}.
+
+Neither is it necessary to repeat the system specification since that
+too is stored in the restart file.  However there are occasions
+when it is desirable to do just that, for example if the value of one
+of the potential parameters is to be modified.  In that case, set the
+switch \verb'new-sys-spec' to 1 (true) and provide a system
+specification as per a new simulation.  This is checked for
+consistency with the existing one and if correct replaces it.  The
+following checks are applied, which only verify that it is sensible to
+assign the old dynamic variables to the new system. {\em 1.} The
+number of species must be the same. {\em 2.} Each species must have
+the same number of rotational degrees of freedom as its predecessor.
+That is, it is not possible to replace a polyatomic by a monatomic or
+linear molecule, for example.  {\em 3.} The number of molecules of
+each species must not change.  This means that the order in the
+specification file must be identical too.  It is however possible to
+change the number of sites on a molecule, subject to {\em 2}.
+
+\label{sec:backup}
+Closely related to restarting is the backup mechanism.  This is
+provided to guard against the complete loss of a simulation due to
+computer failure. Periodically during a run, \moldy writes its state
+to a {\em backup file} -- which is in fact just a restart file.  In
+the event of a crash, the simulation can be restarted from the point
+the last backup was written rather than from the beginning. The
+related control parameters are \verb'backup-file' which specifies the
+file name and \verb'backup-interval' which gives the frequency of
+backups.  It should not normally be necessary to change the name, but
+the optimum interval will depend on the size of the simulated system
+and the speed of the computer. By default it is 500.  At the
+successful end of a run the backup file is deleted so that only if
+there is an abnormal termination does one remain\footnote{A backup
+file is also written if the run is terminated for exceeding its cpu
+limit.}.
+
+The restart from a backup is entirely automatic. If a backup file
+exists when a run is started, it is read in and the run continues from
+it.  In contrast to a normal restart all of the control parameters are
+taken from the backup file and the control file (and a restart file if
+one is specified) is ignored\footnote{This is not quite true. \moldy
+does read the control file and any restart file but only to determine the
+name of the backup file. Thus even if the backup has a non-standard name
+it can still be found.}.
+
+In consequence, if a run is aborted or stops abnormally for some
+reason, the backup file must be removed ``by hand'' otherwise next
+time a run starts, the unwanted simulation will continue instead.
+
+A restart or backup file is created by first writing the data to a
+temporary file which is then renamed to the final name.  This ensures
+that there is no possibility of a file being left incomplete or
+corrupt if the computer crashes part-way through the write.  If the
+file already exists either it is replaced (on systems which only keep
+one version of a file) or a new version is created (on systems such as
+COS or VMS which retain multiple versions).  In the unlikely event of
+it being necessary to change where the temporary file is
+kept\footnote{This may be necessary if the restart file is located on
+a different device or disk partition from the current directory. To
+rename the temporary file successfully, it must reside in the same
+partition or device as the restart file}, it may be specified with the
+control parameter
+\verb'temp-file'.
+
+\section{Setting the Temperature}
+
+To control the temperature of the simulated system, \moldy implements
+the velocity rescaling technique described in section
+\ref{sec:rescaling}.  Every \verb'scale-interval' timesteps until
+\verb'scale-end', the velocities are adjusted so that the kinetic
+energy corresponds exactly to the desired temperature (the value of
+control parameter \verb'temperature'). If it is required that each
+individual species should have its temperature adjusted separately,
+the switch \verb'scale-separately' should be set to 1 (true).
+
+\section{Output}
+\label{sec:output}
+At the beginning of each run \moldy writes a {\em banner page}
+containing a summary of the system being simulated and details of the
+important control parameters. The bulk of the output file is the {\em
+periodic output} which contains the instantaneous values of various
+thermodynamic variables, their rolling averages and associated
+standard deviations. The {\em rolling average} is just the mean over
+the preceding $n$ timesteps where $n$ is set by the control parameter
+\verb'roll-interval'.   An annotated example is given in
+figure~\ref{fig:output}.  The frequency of periodic output may be
+altered by setting the control parameter \verb'print-interval' to the
+interval required.  (This may be necessary to constrain the size of
+the output file which can grow to be very large indeed with the
+default interval of only 10.)  
+\begin{figure}
+\caption[Sample \moldy output.]{Sample \moldy output from a simulation 
+of a two component mixture.  The first component is a polyatomic
+molecule and the second is atomic.  There are three {\em frames}, for
+the instantaneous values, the rolling averages and their associated
+standard deviations.  Within a frame, each row has the following
+meaning: for translational and rotational kinetic energies and
+temperatures it is the per-species value; for the potential energy it
+is the direct and reciprocal space components, and the MD cell matrix,
+{\tt h} and the stress are laid out as $3\times 3$ matrices.}
+\label{fig:output}
+\tiny
+%
+\begin{tabular}{rrrrrrrr
+@{\hspace{1em}}r@{\hspace{1em}}rr@{\hspace{1em}}r@{\hspace{1em}}r}
+\multicolumn{13}{l}{      Fri Nov 17 15:13:06 1989        Water\_test
+Page 4} \\
+Trans KE & Rot KE & Pot Energy & Tot Energy & TTemp & RTemp & Temp &
+h(1,*) & h(2,*) & h(3,*) & Stress & Stress & Stress \\
+\multicolumn{13}{l}{ ======== Timestep 10      Current values
+======================================================== } \\
+243.88 & 453.88  & -187.35  & 533.5  & 305.5  & 568.6  & 424.4  &
+12.53  & 0.00  & 0.00  & 589  & 46.4  & 120 \\
+22.053  & 0  & 1.0401 & & 221.0  & 0.0 & & 0.00  & 12.53  & 0.00  & 46.4
+& 373  & 90.1 \\
+ &  &  &  &  & & &  0.00  & 0.00  & 12.53 & 120  & 90.1  & -207 \\
+\multicolumn{13}{l}{ -------- Rolling averages over last 10 timesteps
+--------------------------------------------------------------------------
+------------------------------------------------
+} \\
+240.27 & 319.31 & -82.472 & 533.39 & 301.0 & 400.0 & 342.9 & 12.53 &
+0.00 & 0.00 & 1.2e+03 & 296 & 127 \\
+22.077 & 0 & 34.205  & & 221.3 & 0.0 & & 0.00 & 12.53 & 0.00 & 296 &
+589 & 133 \\
+& & & & & & & 0.00 & 0.00 & 12.53 & 127 & 133 & -132 \\
+\multicolumn{13}{l}{ -------- Standard deviations
+---------------------------------------------------------------------------------------------------------------------------------------------------
+} \\
+1.8214 & 71.893 & 56.441 & .19942 & 2.3 & 90.1 & 43.4 & 0.00 & 0.00 &
+0.00 & 1.32e+03 & 750 & 51 \\
+0.013 & 0 & 17.173 & & 0.1 & 0.0 & & 0.00 & 0.00 & 0.00 & 750 & 119 & 55.2 \\
+ & & &  &  &  &  & 0.00  & 0.00 & 0.00 & 51 & 55.2 & 49 \\
+\end{tabular}
+\end{figure}
+
+As well as the ``short term'' rolling averages, long term averages are
+calculated and printed out at regular but usually infrequent
+intervals.  Accumulation starts on the timestep given by the control
+parameter \verb'begin-average' and every \verb'average-interval'
+timesteps thereafter, the means and standard deviations are calculated
+and printed.  This output is interspersed with the periodic output and
+is formatted with one variable to a line in the form {\em mean +/-
+s.d.\ }. Where a variable has more than one component (such as
+multiple species for the translational temperature or cartesian
+components for the mean square forces) the components are printed
+across the page\footnote{Remember that the standard deviation is a
+measure of the {\em fluctuations} about the mean, {\bf not} the {\em
+uncertainty} in the mean. For that the standard error in the mean is
+required, which is more difficult to evaluate.  Theoretically it is
+the {\em s.d.\ } divided by $\sqrt N$ where $N$ is the number of
+independent observations.  But successive timesteps are highly
+correlated and do not count as independent.}.  In addition to those
+variables printed as part of the periodic output, the pressure, the
+virial, mean square forces, mean square torques and total dipole
+moments are calculated.
+
+\section{Radial Distribution Functions}
+
+Radial distribution functions are calculated by binning site pair
+distances periodically throughout the simulation.  As this process is
+expensive in computer time the binning subroutine is invoked only
+every few timesteps, as set by the control parameter
+\verb'rdf-interval' (20 by default).  Since the pair distances only
+change a little on each timestep, very little statistical information
+is lost.  Collection of binning data may also be
+turned off during an equilibration period: specify when binning is to
+start by means of the parameter \verb'begin-rdf'.  The parameters
+\verb'rdf-limit' and \verb'nbins' control the details of binning,
+giving respectively the largest distance counted and the number of
+bins that interval is divided into.
+
+Every \verb'rdf-out' timesteps (by default 5000) the rdfs are
+calculated from the binned distances and printed out, and the counters
+are reset to zero to begin accumulation again.  Distances are binned
+and rdfs calculated separately for each distinct type of site-site
+pair.  It is possible to calculate rdfs about an individual site,
+distinguishing it from otherwise identical sites by assigning it a
+unique site id in the system specification file.  An explanation of
+the output format is given in figure~\ref{fig:rdf-output}.  Note that
+each number should be considered as the value at the {\em centre} of
+its bin, so that entry $i$ in each list is the value of
+$g_{\alpha\beta}((i+1/2)b)$ where $b$ is the bin width.
+
+\begin{figure}
+\caption[Example output of radial distribution functions.]{Example
+output of radial distribution functions. After the header line
+consisting of underscores there is an indication of the bin width $b$
+(that is the distance between points at which the rdf is tabulated).
+Then for each site type pair $\alpha\beta$ there is a line listing
+which pair (\eg {\tt O-O RDF}) followed by {\tt nbins}.  values of
+$g_{\alpha\beta}((i+1/2)b)$.  }
+\label{fig:rdf-output}
+\begin{tiny}
+\begin{verbatim}
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        Radial Distribution Functions   Bin width=0.1
+        O-O RDF
+ 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000
+ 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000481 0.035710 0.183334 0.442186 0.613992 1.024402
+ 1.046396 0.964906 0.830174 0.660035 0.693341 0.615902 0.593192 0.510595 0.530697 0.532030 0.535959 0.524457 0.523221 0.466219
+ 0.496028 0.438487 0.456500 0.410547 0.443861 0.457956 0.446822 0.452202 0.419768 0.439333 0.465509 0.486887 0.461970 0.475745
+ 0.478883 0.480854 0.509090 0.533728 0.552747 0.552555 0.575402 0.547278 0.544836 0.493597 0.488168 0.520727 0.508073 0.479948
+ 0.501159 0.484000 0.485378 0.489160 0.464448 0.466791 0.476508 0.446576 0.470948 0.474468 0.449340 0.462169 0.501220 0.519107
+ 0.513338 0.510192 0.499766 0.525963 0.504663 0.517673 0.498359 0.512156 0.507061 0.466390 0.464342 0.445886 0.417555 0.407778
+ 0.387220 0.374041
+        O-H RDF
+ 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 0.000000 26.976688 0.000000 0.000000 0.000000 0.000000
+ 0.000000 0.016214 0.061257 0.304082 0.647342 0.847404 0.757188 0.601222 0.478273 0.462682 0.449614 0.450424 0.518998 0.572242
+ 0.689704 0.914269 1.184674 1.441772 1.570390 1.609068 1.600392 1.430457 1.322722 1.183606 1.103701 1.061788 0.980018 0.960570
+ 0.924390 0.908883 0.877591 0.857668 0.890761 0.852463 0.815447 0.824963 0.841255 0.890416 0.929030 0.960589 0.984145 1.020650
+ 1.028199 1.047496 1.064600 1.099812 1.095715 1.073793 1.078131 1.049212 1.052160 1.052001 1.020737 1.010782 0.979748 0.983158
+ 0.988946 0.967620 0.955655 0.944384 0.952145 0.948509 0.946692 0.960097 0.959299 0.964074 0.969219 0.972704 0.998504 1.027791
+ 1.041576 1.037637 1.039961 1.016804 1.004726 1.026805 1.030903 1.006268 0.972421 0.948140 0.908959 0.877089 0.849855 0.817964
+ 0.776986 0.721485
+
+\end{verbatim}
+\end{tiny}
+\end{figure}
+
+\section{Dumping}
+
+The dump facility is provided in order to allow the calculation of
+dynamic properties, such as time correlation functions and additional
+static averages not normally calculated by \moldy.  During a run, dump
+files are produced which contain a record of the simulation dynamic
+variables (positions, quaternions \etc) at varying degrees of
+detail.  Any property of interest, dynamic or static, may then be
+evaluated using the data in the dump.
+
+A dump consists of a sequence of files since the amount of data
+generated in a run can be very large indeed and it is usually more
+convenient to manipulate a series of smaller files rather than one
+large and unwieldy one. \moldy takes considerable pains to ensure that
+a contiguous sequence of dump files is maintained and also ensures
+that dumps from different runs are not accidentally intermixed.  There
+is no requirement that a dump file be produced by a single run of
+\moldy, which extends an existing file or starts a new one as appropriate.
+A simulation may stop and be restarted many times without
+disturbing the dump file sequence.  The  sequence
+should (in most cases) even survive a system crash and a restart from
+a backup file (see section~\ref{sec:backup}).
+
+Each dump file in a sequence is a binary file consisting of a {\em
+dump header}, which contains information about the contents of the
+file followed by a number of {\em dump records} which contain the
+actual data.
+
+Several control parameters govern dumping. It starts at the timestep
+specified by \verb'begin-dump', and a dump record is written every
+\verb'dump-interval' timesteps thereafter.  After \verb'ndumps' dump
+records have been written to a file, it is closed and another is
+begun. Filenames are generated from a prototype (given by the
+parameter \verb'dump-file') by appending a number, so that if the
+prototype is {\em MDDUMP} then successive files will be named
+{\em MDDUMP0}, {\em MDDUMP1}, {\em MDDUMP2} \etc
+If it is not convenient for the sequence number to appear at the end
+of the file, include the characters ``\%d'' at an appropriate
+point\footnote{This is actually the code ``sprintf()'', the C library
+function uses to signify converting an integer to a decimal character
+string. This function is used to create the actual file name from the
+prototype and the integer dump sequence number. (See any C library
+manual for details.)}.  For example under VMS, specifying
+\verb'dump-file=mddump%d.dat' will name the files {\em mddump0.dat},
+{\em mddump1.dat} \etc.
+
+Each dump record is a sequence of single-precision floating point
+binary numbers.  Its exact contents are determined by the control
+parameter \verb'dump-level' which is a bit flag {\em i.e.} a value
+of $2^{n}$ means that bit $n$ is set.  Four bits are used and any
+combination may be specified but the cumulative values 1, 3, 7
+and 15 are most useful.  A value of 0 disables dumping. The data
+dumped for each bit is as follows:
+\begin{description}
+\item[bit 0]	centre of mass co-ordinates, quaternions, unit cell matrix 
+and potential energy.	      
+\item[bit 1]	centre of mass velocities, quaternion and unit cell
+matrix derivatives.
+\item[bit 2]	centre of mass accelerations, quaternion and unit cell
+matrix second derivatives.
+\item[bit 3]    forces, torques and stress tensor.
+\end{description}
+Items selected are written in the order laid out above.  Within each
+set of variables, values are ordered primarily by species in the order
+they appeared in the system specification.  Within a species ordering
+is by molecule (or atom) and at the finest level by $x$, $y$ or $z$
+component ($q_{0}, \ldots q_{3}$ for quaternions). Therefore if $n$ is
+the total number of molecules and $n_{r}$ is the the number with
+rotational freedom the size of each record is
+\begin{displaymath}
+\begin{array}{cll}
+   & 3n + 4n_{r} + 9 + 1 & \mbox{ (if bit 0 is set)} \\
+ + & 3n + 4n_{r} + 9 & \mbox{ (if bit 1 is set)} \\
+ + & 3n + 4n_{r} + 9 & \mbox{ (if bit 2 is set)} \\
+ + & 3n + 3n_{r} + 9 & \mbox{ (if bit 3 is set)} \\
+\end{array}
+\end{displaymath}
+single precision floating point numbers.
+
+The header is a copy of a \verb'struct dump_t' (see
+appendix~\ref{sec:structs} for the format). It contains the simulation
+title and version number, the timestep at the beginning of the file,
+the control parameters \verb'dump-interval' and \verb'dump-level', the
+maximum and actual number of dump records in the file, a unique marker
+(actually a timestamp), common to all the files in a dump run, and the
+timestamp\footnote{A timestamp is simply the number of seconds elapsed
+since midnight on January 1, 1970.} of any restart file used to start
+the run.
+
+Unfortunately it is not possible to dump directly to magnetic tape.  
+\moldy must rewind to the beginning of a file to keep the
+header up to date with the number of dumps in the file, as well as
+extend existing files.  Neither operation is allowed on a tape drive.
+Large disk stores are now very cheap so this should not be a problem
+in practice.  If disk store {\em is} limited then the simulation may
+be divided into multiple \moldy runs interspersed with copying of dump
+files to tape.
+
+Notice that \moldy must sometimes read an existing but complete dump
+file to propagate the unique marker to all of the files in a sequence.
+Therefore when continuing a simulation and a dump run, at least
+the immediately preceding dump file must still be accessible.  This
+should be borne in mind when copying dumps to tape!
+
+\moldy is careful to ensure that existing files are not
+overwritten - especially necessary since dump records are added to
+the end of an existing dump file.  Whenever \moldy prepares to start a
+new dump file it checks to see if one of that name is already present.
+If so, a new name is chosen by ``mutating'' the old one, and a warning
+message to that effect is written to the output file. On the other
+hand, if the {\em first} file of a new dump run (including one
+initiated because of some error in continuing an old one) already
+exists, the {\em prototype} file name is mutated as above and the
+whole dump run is written to files based on the mutated name.
+
+When a run is restarted checks are made to ensure that the values of
+the dump control parameters have not been altered.  If they
+have, it is not possible to continue an existing dump sequence and a
+new one will be started.  (If existing dump files are present the new
+sequence will have mutated file names.)  This also happens if an
+existing file does not appear to be a \moldy dump.  Existing dump
+files are also tested to ensure that there is no corruption (due, for
+example to a system crash) and that they contain the correct number of
+records.  If the dump sequence can not be continued in these
+circumstances, \moldy terminates with a fatal error rather than waste
+computer time.
+
+%To ensure that the header always records the correct number of dump
+%records in a file, it is updated {\em after} the actual record has
+%been written.  It is possible that following s crash there may be one
+%more record than recorded.  \moldy ignores it and recalculates and
+%dumps the data.
+
+It is frequently convenient to perform analysis of dump data, and
+perhaps graphical output on a different computer to that which
+generated the data.  Unfortunately it is not usually possible to
+sensibly transfer binary data between computers of different
+architectures.  Therefore a program called {\em dumpconvert} is
+provided which converts dump files to a portable text file format
+(which may be easily moved between machines) and back again. It is
+described in appendix~\ref{sec:dumpconvert}.
+
+Two other utility programs included in the distribution are {\em
+dumpanalyze} which identifies dump files by printing out the headers
+and {\em dumpextract} which extracts atomic or molecular trajectories.
+The latter should be useful as a prototype for writing programs to
+analyse dump data.
+
+\section{Constant Stress Simulation}
+
+Setting the control parameter \verb'const-pressure' switches from a
+constant-volume simulation to a constant-stress simulation using the
+method of Parinello and Rahman\cite{PR81} (see section~\ref{sec:const-stress}).
+The value of the ``MD cell'' mass parameter, $W$ is given by the
+control parameter \verb'w' and the external pressure by
+\verb'pressure'. At present it is not possible to specify an anisotropic
+external stress, though this capability may be added in future
+versions of the program.
+
+\section{Cutoffs and Adjustable Parameters}
+
+There are four parameters related to the Ewald sum method of force
+evaluation (see section~\ref{sec:ewald}).  The $\alpha$ parameter is
+specified by \verb'alpha' and the direct and reciprocal space cutoff
+distances $r_{c}$ and $k_{c}$ by \verb'cutoff' and \verb'k-cutoff'.
+They are specified in units of \AA$^{-1}$, \AA\ and \AA$^{-1}$
+respectively.  Before a new simulation is started, trial runs should
+be performed to establish suitable values of these three parameters.
+For a simulation of 512 MCY water molecules the values $\alpha =
+0.3$\AA$^{-1}$, $r_{c} = 9$\AA\ and $k_{c} = 1.9$\AA$^{-1}$ give
+potential energies correct to approximately 1 part in $10^{5}$. For a
+simulation including ions - 1.1 Molal Magnesium Chloride solution -
+the same accuracy is attained with $\alpha = 0.45$\AA$^{-1}$, $r_{c} =
+9$\AA\ and $k_{c} = 3$\AA$^{-1}$.
+
+The other relevant parameter is the switch \verb'surface-dipole' which
+includes the dipole surface energy term of De Leeuw, Perram and
+Smith\cite{DLPS8?}.  See the note in section~\ref{sec:ewald} for an
+explanation of why this term should {\em never} be used for an ionic
+(as opposed to dipolar) system.
+
+The one adjustable parameter which controls the link-cell force
+calculation (see section~\ref{sec:link-cell}) is \verb'subcell'. It
+specifies the length (in \AA) of the side of a link cell and determines
+the number of cells the MD cell is divided into. In fact the MD cell
+is divided into a whole number of subcells whose side in each of the
+three directions is nearest to the value of \verb'subcell'.  (The
+default of zero though, is special and sets subcell to one fifth of
+the cutoff radius.) In general the smaller the link cell, the more
+accurately the cutoff radius is implemented, but too many of them
+reduces the efficiency of the program.
+
+It is worth noting that it is unnecessary to recompile the program or
+change anything else when the cutoffs are modified. Unlike most MD
+codes, \moldy employs dynamic array allocation and automatically sets
+up arrays of the correct size (and no more!) for any given $k_{c}$.
+In the case of $r_{c}$ any value up to the length of the smallest MD
+cell edge may be given. Any attempt to exceed this will result in the
+program terminating with an error\footnote{In the unlikely event this
+limit is too small, the modification is simple.  Simply set the {\tt
+\#define}d constant {\tt NSH} in {\tt force.c} to the maximum number of
+MD cell lengths required and recompile.  This will use slightly more
+memory, but not unreasonably more}.
+
+\section{Framework Simulations}
+
+There has recently been much interest in simulations of systems of
+molecules interacting with some rigid framework such as zeolites,
+clays and other surfaces.  \moldy has the capability to include such a
+framework in a simulation by defining it as a special kind of molecule.
+
+The system specification should contain an entry, similar to that for
+a normal molecule, which describes the atomic sites belonging to one
+MD cell's worth of the framework.  Its periodic images should fill
+space to construct the required infinite framework.  This is notified
+to the program by modifying the first line of the specification of
+that molecule to read
+\begin{displaymath}
+\begin{array}{lllllll}
+\multicolumn{7}{l}{\mbox{{\it species-name}}_{i} {\tt \; 1 \; Framework}}  \\
+\vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots \\
+\end{array}
+\end{displaymath}
+(compare with section~\ref{sec:sys-spec}).  The effect of the special
+keyword \verb'framework' is
+\begin{enumerate}
+\item to remove the rotational freedom of the molecule.  This
+preserves the infinite structure over MD cell repeats by disallowing
+relative motion of its parts. (Linear motion does not destroy the
+structure and {\em is} allowed.)
+\item to modify the effect of the periodic boundary conditions.
+Normally a molecule is assumed to be ``small'' and periodic relocations
+are applied to {\em all} of its atoms depending on its centre-of-mass
+co-ordinates relative to some interacting molecule.  In contrast, the
+atoms of a framework are independently relocated.  This ensures that
+each molecule ``sees'' all framework atoms from any unit cell which
+are within the cut-off distance.
+\end{enumerate}
+
+In the present version of the program, only one framework molecule is
+allowed, though more may be permitted in future versions. Consequently
+the configuration given as a lattice start must fill the entire MD
+box. (A skew start is not sensible under these circumstances since the
+orientation of the framework must be explicitly specified to construct
+a good space-filling structure.)
+
+\section{Messages and Errors}
+
+Apart from the periodic output, there are occasional ``once-off''
+messages which \moldy writes to the usual output file.  Such messages
+begin with the characters \verb'*I*', \verb'*W*', \verb'*E*' or
+\verb'*F*' denoting the classes {\em information}, {\em warning}, {\em
+error} or {\em fatal} respectively.  Their meanings are
+\begin{description}
+\item[{\tt*I*}] information. These are often produced by subroutines
+to give useful information on their particular calculations.  For
+example when temperature scaling is turned off a message to that
+effect is recorded in the output file.  Various routines which
+calculate internal quantities such as the Ewald sum self energies and
+distant potential corrections also record their values using an
+information message.
+\item[{\tt*W*}] warning.  When the system specification is suspicious
+but not clearly wrong, or some untoward condition is detected such as
+two atoms approaching too closely, a warning message is issued.
+\item[{\tt*E*}] error. Error messages are issued when an mistake is
+detected reading any of the input files. To make correction easier,
+processing continues until the end of that file, so that all of the
+errors are found.  The simulation is then stopped with a fatal error.
+\item[{\tt*F*}] fatal. The simulation is terminated immediately. Faulty 
+input files generate fatal errors after they have been completely
+processed.  There are many other conditions which also generate fatal
+errors, for example if the simulation algorithms violate some
+criterion such as quaternion normalisation or constraints (see
+section~\ref{sec:quaternions}), if the program runs out of memory or
+if a restart file can not be correctly opened or is of the wrong
+format.
+\end{description}
+The text of the messages is intended to be self-explanatory.
+
+\chapter{Compiling and Modifying Moldy}
+The \moldy distribution consists of numerous files of `C' source code
+for \moldy and the utility programs, command or job files to compile
+the source, \LaTeX input for the manual and example control and system
+specification files.  For ease of transport these are packed into one
+large ``archive'' file, whose format and method of unpacking depends
+on the operating system of the target machine.  At present it is
+available for:
+
+\begin{description}
+\item[unix]  The archive is a Bourne shell
+script called {\em moldy.shar}, and is unpacked by the command
+\verb'/bin/sh moldy.shar'.
+
+\item[VMS]  The archive is a DCL command file called {\em moldy.com},
+and is unpacked by the command \verb'@moldy'.
+
+\item[COS]  The archive is a JCL job file. It does not contain the
+manual, examples or utilities, which are only of much use on the
+front-end system.  N.B.  For unicos, use the unix distribution.
+\end{description}
+
+
+\section{Compilation}
+The source code of \moldy consists of 20 files of C programs (which have
+suffix ``.c'') and 4 header files (suffix ``.h'')\footnote{There is
+also a supplementary file ``kernel.f'' which contains a FORTRAN
+replacement for the function {\bf kernel()} in ``kernel.c''. This is
+because certain poor C compilers (notably CRAY CC 4.1) are unable
+to vectorize loops containing calls to the math library functions {\bf
+sqrt()} and {\bf exp()}.  If your compiler suffers from this problem,
+define the preprocessor symbol ``FKERNEL'' while compiling
+``force.c''; this selects the FORTRAN version. Compile ``kernel.f''
+and include it in the link {\em as well as ``kernel.c''}.  Both the
+JCL file for COS and the makefile for unicos do this.}.
+To build \moldy, all of the ``.c'' files must be compiled and linked
+together to form an executable.  The method of doing this depends on
+the operating system of the target computer.
+\begin{description}
+\item[unix]  The ``make'' program is used and the make file is
+supplied in the distribution.  You will have to edit this file, called
+``Makefile'' to select the  set of compiler flags appropriate for your
+machine (see the next section for what to do if it is not catered
+for). Then just type \verb'make' to compile and link \moldy and
+\verb'make utilities' for the utility programs.
+
+\item[VMS]  Simply type \verb'@compile' to execute the command file
+``compile.com''. This will build \moldy and the utilities.
+
+\item[COS]  In contrast to the other cases the cray COS distribution
+is a self-contained JCL  file which, when executed, will compile and
+link \moldy. 
+\end{description}
+
+\section{Portability}
+A major goal in writing \moldy was that it be as  portable as possible
+between different computers  and operating systems.   It is written in
+the Kernighan  and Ritchie\cite{KR78} compatible subset  of  ANSI C and
+assumes the  library  calls and  header  files   defined for a  hosted
+implementation of the standard.  It should therefore be possible
+to compile and run \moldy on any computer which has a good C compiler.
+
+There are two sources of difficulty in moving \moldy to a new machine.
+The library may not contain some necessary ANSI routine, or
+may not have the required header files.  Secondly, to make good use of
+vector or parallel architectures, compiler directives or calls to
+specialized library functions are usually required.
+Replacement ANSI library functions are supplied for the VAX/VMS,
+unix (both Berkeley and AT\&T system V varieties) and COS operating
+systems.  Different versions of a function are selected by the C
+preprocessor and conditionally compiled according to the pre-defined
+preprocessor symbols (see the documentation for your compiler).  For
+ease of portability {\em all system-dependent functions are in the
+module ``aux.c''} and {\em all preprocessor conditionals are in the
+header file ``defs.h''}.
+
+If the target operating system is the system V variant of UNIX, the
+preprocessor symbol \verb'USG' must be defined, either in ``defs.h'' or by
+setting the compiler option \verb'-DUSG' in the makefile. In addition, if
+the symbol \verb'HAVE_VPRINTF' is defined, it is assumed that the library
+contains the function  \verb'vprintf()', otherwise the replacement in
+``aux.c'' is used. If your system does not have \verb'vprintf()' but
+does have \verb'_doprnt()' then define the symbol \verb'HAVE_DOPRNT' to
+use it.
+
+\subsection{System Dependencies}
+In this section, details of system-dependant functions are described
+for the major operating systems.  
+\begin{itemize}
+\item The ANSI header file ``string.h''	is missing
+from Berkeley unix, and incomplete in other systems.  A file,
+``string.h'' is supplied with \moldy which conditionally includes
+``strings.h'', or ``string.h'' for other systems. On a proper ANSI
+implementation it should be possible to remove this file altogether.
+\item The  ANSI typedefs \verb'time_t' and \verb'size_t' are not
+defined in some UNIX implementations. They are explicitly defined in
+``defs.h'' and the \verb'time()' function is explicitly declared in
+``aux.c''.
+\item The supplied \verb'clock()' function on UNIX systems resets to
+zero after 36 minutes.  Replacements, called \verb'cpu()' for both
+system V and Berkeley UNIXes are supplied in ``aux.c''. (Otherwise
+\verb'cpu()' simply calls \verb'clock()'.)
+\item The ANSI function to delete a file, \verb'remove()' is missing
+from UNIX systems and COS.  Replacements are supplied in ``aux.c''.
+\item Replacements are provided for functions \verb'memset()' and
+\verb'memcpy()' which are missing from Berkeley UNIX.
+\item The function \verb'vprintf()' is often absent from older
+libraries. Replacements are provided which {\em a)} call the internal
+function \verb'_doprnt()' (or  \verb'XPRINTF()' in the case of COS) or
+{\em b)} implements a portable \verb'vprintf()'.  Use the preprocessor
+macros  \verb'HAVE_VPRINTF' or \verb'HAVE_DOPRNT' to select which.
+\item ``Aux.c'' contains the functions \verb'replace()' and \verb'purge()'.
+\verb'replace()' renames a file, making a backup of any existing file
+of that name. \verb'purge()' removes the previous or backup version of
+a file.  The pure ANSI versions just interface to \verb'rename()' and
+do nothing respectively.
+\end{itemize}
+
+\subsection{Optimisation and Vectorisation}
+\moldy has been designed to run fast on a wide range of computers, and
+in particular on those with vector architectures. This is a difficult
+problem, since necessarily machine-specific compiler directives and
+optimisations are required for ultimate performance, and inevitably
+portability must be sacrificed to gain speed.
+
+Nonetheless, it has been found that following a few basic rules gives
+extremely good performance on a range of vector computers.
+\begin{itemize}
+\item Write vector loops simply to make minimum demands on the
+compiler's ability to vectorize.
+\item Minimize the floating-point operation count.
+\item Minimize memory references in vector loops.
+\item Ensure that arrays are accessed with a stride of 1.  (This makes
+a large difference on some machines, notably the Stellar, and little
+on others). 
+\item Minimize integer arithmetic in critical code.  The CRAY in
+particular has no  integer multiplication hardware, which operations
+are slow as a result.
+\item Make use of manufacturer's linear algebra library functions.
+\end{itemize}
+The performance of \moldy has been carefully studied using profiling
+tools, and all critical regions of code are written as efficiently
+vectorizable loops.  
+
+The most critical sections of code (\ie those which use the majority
+of the computer time) are all to do with the site forces calculation.
+Thus it is the inner loops in ``force.c'', ``ewald.c'' and
+``kernel.c'' to which most attention should be paid.  The
+pair-distance loop of \verb'rdf_calc()' in ``rdf.c'' should vectorize
+for efficient radial distribution function evaluation. Others which
+are of minor importance are in ``beeman.c'', ``matrix.c'',
+``quaterns.c'' and ``algorith.c''.  ``Aux.c'' contains alternative
+versions of various sum, dot product, scatter and gather routines
+\etc which are interfaces to machine-specific libraries \eg
+Cray scilib, Convex veclib (which usually have FORTRAN calling
+conventions). There are also default versions coded in C which do
+vectorize, for machines lacking specialist libraries as well as for
+scalar computers.
+
+The program should, of course, be compiled with options specifying
+vectorisation. Many compilers also have an option which directs it to
+ignore recurrences throughout the whole program, \eg \verb'-va' on the
+Convex, \verb'-va' and \verb'+CaliasFreePointers' for the Stellar and
+\verb'-h ivdep' on the Cray compilers. It should  normally be safe to
+use these options\footnote{Except that if the  \verb'-va' option is
+used to compile ``force.c'' on the Convex, the program crashed for an
+unknown reason.}.  Since highly optimizing and vectorizing compilers
+frequently contain bugs, and since some options generate ``unsafe''
+optimizations,  it may be necessary to restrict the highest
+optimisation level to those modules which contain critical code.
+
+To allow the compiler to generate vector code, machine-specific
+compiler directives must be inserted into the source. The reason is
+that the run-time dimensioned arrays necessary to implement such a
+flexible program must use pointers as their base.  (See any C
+textbook, \eg Kernighan and Ritchie\cite{KR78} for an explanation of C
+pointers and arrays.)  Unfortunately this means that the compiler can
+not determine that each iteration of the loop is independant of the
+preceding iterations.  In the jargon of vectorizing compilers, there
+may be a {\em vector dependency} or {\em recurrence}.  Each
+manufacturer's compiler has its own peculiar method to inform it that
+despite appearances there is no dependency.  For example the CRAY
+compilers use a \verb'#pragma'~\verb'ivdep' statement whereas the
+convex and Stellar compilers use a ``significant comment''
+\verb'/*$dir'~\verb'no_recurrence*/'.
+
+
+A mechanism is provided to insert appropriate directives using the C
+preprocessor.  The text \verb'VECTORIZE' has been placed before each
+loop which ought to be vectorized, and the file ``defs.h'' contains
+machine-conditional \verb'#define's to replace it with the appropriate
+directive.  Currently directives for the CRAY, Stellar and Convex
+compilers are included, and null text is substituted for other
+machines.  Notice that in each case the substituted text is {\em not}
+the directive described in the manual, but rather that directive {\em
+after} it has been passed through the preprocessor. To determine what
+should be substituted on a new vector machine, create a small test
+containing the documented directive and use the C preprocessor on that
+file. The output will show the form that should be defined in
+``defs.h''.\footnote{Note that there is a bug in the Ardent (now
+Stardent) compiler whereby the \verb'\#pragma'~\verb'ivdep' directive acts
+syntactically like a C statement.  There are several loops in
+``force.c'' and ``ewald.c'' where the body of an \verb'if' clause is a
+single \verb'for' loop without braces.  The directive forces the
+\verb'for' loop {\em outside} the scope of the \verb'if' clause,
+erroneously altering the program flow.  The solution is to modify the
+code by putting braces around the directive and the \verb'for' loop.}
+
+This mechanism only works for vectorising compilers which have a
+directive which means ``ignore dependencies in the following loop''.
+Some, notably the Alliant FX/C compiler take the alternative approach
+of having direcives to the effect of ``ignore dependencies involving
+the following variables''.  In that case the directives must be
+inserted ``by hand'', though even then the \verb'VECTORIZE' directive
+al least identifies the appropriate loops.
+
+\section{Modifying Moldy}
+\subsection{Adding a New Potential}
+\label{sec:newpot}
+By default \moldy supports potential functions of the Lennard-Jones,
+six-exp and MCY forms.  However it should be very easy to add further
+types. The program is written in a highly modular fashion so that {\em
+the only code which need be altered is in file ``aux.c''} (and
+occasionally in ``defs.h''). 
+
+The calculation of the potential and forces is performed entirely in
+the function \verb'kernel()'.  This function is called repeatedly with
+a vector of (squared) distances between some reference site and its
+neighbour sites.  Vectors of potential parameters and charges are
+supplied which bear a one to one correspondance with the elements of
+the distance vector.  It calculates the coresponding values of
+${dU(r_{ij})} \over {dr_{ij}}$ which it stores in \verb'forceij[]'.
+There are several variants of the force-calculation loop, one for each
+kind of potential.  The potential type in use is passed as a parameter
+to \verb'kernel()' and is used in a \verb'switch' statement to select
+the appropriate code. 
+
+To add a new potential the array of structs called \verb'potspec[]'
+must be extended.  The new array element should contain the name of
+the new potential (against which, the names given in system
+specification files will be matched) and the number of potential
+parameters for each site pair\footnote{By default up to five
+parameters are allowed. If this is not sufficient, the limit is set by
+the value of the constant \verb'NPOTP' defined in ``defs.h''}.  Then
+define a new preprocessor symbol to the index of the new type in the
+array \verb'potspec[]' (after the line
+\verb'#define'~\verb'MCYPOT'~\verb'2'.  The value must correspond to
+the index of the new entry in \verb'potspec[]' (starting from 0 in
+accordance with the usual C convention).  This constant should be used
+to define a new case in the \verb'switch' statement of
+\verb'kernel()', and this is where the code to evaluate the potential goes.
+
+The existing cases may be used as a model, especially for the
+evaluation of the electrostatic term $\mbox{erfc}(\alpha r) / r$ which is
+evaluated by the polynomial expansion in section 7.1.26 of Abramowitz and
+Stegun\cite{AS70}. There are currently {\em two} versions of each
+loop, the second omitting this term for efficiency when all the
+electric charges are zero (which case is flagged by a negative value of
+$\alpha$). 
+
+Finally, the distant potential correction for the new potential should
+be added as a new case to function \verb'dist_pot()'. The code should evaluate
+\[
+\int^{\infty}_{r_c} r^2 U(r) dr
+\]
+for the potential $U(r)$.
+\subsection{Parallel Version}
+An experimental parallel version of \moldy is under development, and
+currently runs on a Stellar GS1000.   It consists of replacements for
+files ``force.c'' and ``ewald.c''. 
+
+The approach taken is to retain the vectorized inner loops and
+parallelize the the outer loops, over cells for ``force.c'' and {\bf
+k} vectors for ``ewald.c''.  The two parallel loops are structured by
+the method developed by the Kingston group\cite{C8?}. That is, a loop
+of the form
+\begin{verbatim}
+	for(i = 0; i < N; i++)
+	   <body of loop>
+\end{verbatim}
+is transformed into
+\begin{verbatim}
+	for(processor = 0; processor < NPROCESSORS; processor++)
+	   for(i = processor; i < N; i += NPROCESSORS)
+	      <body of loop>
+\end{verbatim}
+so that the outer loop is over the number of available processors,
+and the inner loop has an increment of that number.  Note that this
+transformation reorders the loop iterations.
+
+If the outer loop is to execute concurrently, each sub-process or
+thread must have local copies of any temporary variables, notably
+\verb'i'.  Therefore the contents of each loop are isolated into a
+separate function. Each thread executes a separate incarnation
+of the function.  A shared-memory model is assumed, in which each
+thread accesses a single copy of the parameters and global
+variables, but has a unique copy of all of its local variables.
+
+The ``master'' thread maintains separate copies of result variables
+and arrays, (\ie the forces, potential energy and stress virial) so
+that each incarnation of the function can write to its own copy
+without interference from other threads.  After all of the threads
+recombine, the separate copies are summed to give the final result of
+the calculation.  This method avoids the need for explicit
+synchronization between threads, but will add to the serial overhead
+on highly parallel machines.
+
+The method of actually parallelizing the outer loop will vary from
+machine to machine. The stellar compiler is able to generate parallel
+code, and the directive \verb'/*$dir'~\verb'no_recurrence*/' instructs
+it to parallelize the following loop.  On other machines this may not
+be so easy!
+\appendix
+\chapter{Example System Specifications}
+\label{sec:examples}
+\section{Argon}
+\begin{verbatim}
+# LJ Argon - about as simple as you can get
+Argon 128
+1          0           0          0    36 Ar
+end
+Lennard-Jones
+1 1 ? ?
+\end{verbatim}
+\section{TIPS2 Water}
+This is the four-site water model of Jorgenson {\em et. al.\
+}\cite{JG??}.  Only the oxygen site interacts via the Lennard-Jones
+potential, and the charge site, M, is displaced 0.15\AA from the Oxygen.
+\begin{verbatim}
+# Modified TIPS2 water
+Water 64
+1 	   0 		0 	   0 16    0 O
+2  0.7569503		0 -0.5858822 1 0.535 H
+2 -0.7569503		0 -0.5858822
+3          0            0      -0.15 0 -1.07 M
+end
+lennard-jones
+1 1 0.51799  3.2407
+end
+\end{verbatim}
+\section{Aqueous MgCl$_2$ Solution}
+This is a three-component system consisting of MCY water\cite{MCY76},
+Magnesium and Chloride ions.  The Mg$^{2+}$ potential was fitted to
+the SCF calculations of Dietz and Heinzinger\cite{DH8?} and the Cl$^-$
+to the calculations of Kistenmacher, Popkie and Clementi\cite{KPC7?}.
+Note that the potential parameters are expressed in kcal mol$^{-1}$,
+and the control file must set the parameter \verb'time-unit=4.8888213e-14'.
+\begin{verbatim}
+# MCY Water/ Mg2+ / Cl - solution
+Water 200
+1 	   0 		0 	   0 16    0 O
+2  0.7569503		0 -0.5858822 1     0.717484 H
+2 -0.7569503		0 -0.5858822
+3          0            0    -0.2677 0 -1.434968 M
+Magnesium 4
+4	   0		0	   0 24.31 2 Mg2+
+Chloride  8
+5	   0		0	   0 35.45 -1 Cl-
+end
+MCY
+1 1 1088213.2 	5.152712 	0 		0
+1 2 1455.427 	2.961895 	273.5954 	2.233264
+2 2 666.3373 	2.760844 	0 		0
+1 4 47750.0	3.836		546.3		1.253 # New values of Mg potl
+2 4 111.0	1.06		0		1.0   
+1 5 198855.0	3.910		0		0
+2 5 1857.0	2.408		77.94		1.369
+4 5 28325.5	2.65		0		0
+end
+\end{verbatim}
+\chapter{Organisation of Moldy}
+\section{Data Structures}
+\label{sec:structs}
+\section{Control Flow}
+
+\chapter{Utility Programs}
+\section{Moldyextract}
+\section{Dumpanalyze}
+\section{Dumpconvert}
+\label{sec:dumpconvert}
+\section{Dumpextract}
+\section{Mdshak}
+\end{document}
