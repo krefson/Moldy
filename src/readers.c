@@ -21,7 +21,6 @@ what you give them.   Help stamp out software-hoarding! */
 /************************************************************************************
  * Readers   Routines for reading SHAKAL, CSSR and PDB structure files              *
  *           Contents:                                                              *
- * tokenize()        Break down string into substrings and return no of substrings  *
  * multi_char()      Return value of run-time string as if multichar constant       *
  * trim()            Remove leading and trailing spaces from string                 *
  * str_cut()         Divide string into alphabetical and numerical parts            *
@@ -58,30 +57,13 @@ what you give them.   Help stamp out software-hoarding! */
 
 /*========================== External data references ========================*/
 extern  const pots_mt   potspec[];           /* Potential type specification  */
+extern  const T_TabSgName TabSgName[];       /* Space group names, etc */
 
 extern int transformation_matrix (char *buf, T_RTMx *trans_matrix);
 extern int symm_gen (T_RTMx matrix, mat_mp apos, char (*atype)[NLEN], double *charge, int max, int natoms, int abegin, int aend);
 extern void sgtransform (T_RTMx m, mat_mp x, mat_mp xp, int natoms);
 extern int sgexpand (int maxnatoms, int natoms, vec_mt (*a_lst), char (*label)[NLEN], double *charge, char *spgr);
 
-/******************************************************************************
- * tokenize().                                                                *
- ******************************************************************************/
-int   tokenize(char *buf, char **linev)
-{
-   char *p;
-   char *sep = " +*/=:;,'\"<>()[]!?@\\^_`{}~";
-   int linec = 0;
-
-   while( (p = strtok(buf,sep) ) != NULL)
-   {
-      *(linev++) = p;
-      linec++;
-      buf = NULL;
-   }
-
-   return linec;
-}
 /******************************************************************************
  * multi_char().  Return the value of a (run-time) string as if it had been   *
  *                declared as a multi-character constant. Up to 4-byte ints.  *
@@ -152,9 +134,9 @@ double   ca, cb, cg, sg;               /* Cos and sin of cell angles */
    h[1][0] = h[2][0] = h[2][1] = 0.0;
 }
 /******************************************************************************
- * str_cut().  Separates alphabetical and numeric parts of a string.         *
+ * str_cut().  Separates alphabetical and numeric parts of a string.          *
  ******************************************************************************/
-int     str_cut(char *in, char *out)
+int     str_cut(char *in, char *out) /* Input and output strings must be different */
 {
    int          i,j,k=strlen(in);
    int          value;
@@ -169,14 +151,14 @@ int     str_cut(char *in, char *out)
 
    if( i <= j )
    {
-      strncat(out,in+j,k-j);    /* Copy alphabetical part */
-      in[j] ='\0';              /* Truncate alphabetical part */
-      value=atoi(in);           /* Convert numeric part */
+      strncpy(out,in+j,k-j);   /* Copy alphabetical part */
+      in[j] ='\0';             /* Truncate alphabetical part */
+      value=atoi(in);          /* Convert numeric part */
    }
    else
    {
-      strncat(out,in,i);        /* Copy alphabetical part */
-      value=atoi(in+i);         /* Convert numeric part */
+      strncpy(out,in,i);       /* Copy alphabetical part */
+      value=atoi(in+i);        /* Convert numeric part */
    }
    if( strrchr(out,'-') != NULL && value > 0 )
         value *= -1;
@@ -188,10 +170,10 @@ int     str_cut(char *in, char *out)
  ******************************************************************************/
 char    *read_ftype(char *filename)
 {
-char      *s = filename;
+char    *s = filename+strlen(filename);
 
-   while( *s != '.' && *s != '\0' )
-      s++;
+   while( s != NULL && *s != '.' )
+      s--;
 
    if( *s == '.')
         s++;
@@ -202,15 +184,16 @@ char      *s = filename;
  ******************************************************************************/
 int      read_cssr(char *filename, mat_mp h, char (*label)[NLEN], vec_mp x, double *charge, char *title, char *spgr)
 {
-int      i, coord_sys=-1, nocell=0;
-int      natoms;
-double   cell[6];                                       /* Cell parameters */
-mat_mt   hinv;
-char     temp_name[6];
-double   chg;
-char     line[LLEN];
-FILE     *Fp;
-int	answer;
+int      i;		  /* Counter */
+int	 coord_sys=-1;	  /* -1 = unknown, 0 = frac coords, 1 = Cartesian coords */
+int	 nocell=0;        /* 0 = no cell, 1 = cell parms given */
+int      natoms;          /* Number of atoms in structure */
+double   cell[6];         /* Cell parameters */
+mat_mt   hinv;            /* Inverse h matrix */
+char     temp_name[6];    /* Temporary storage for atom label */
+char     line[LLEN];      /* Storage for line read from file */
+FILE     *Fp;             /* cssr file pointer */
+int	 sgno=0, sgopt=0; /* Space group number and associated option */
 
    if( (Fp = fopen(filename,"r")) == NULL)
       error("Failed to open configuration file \"%s\" for reading", filename);
@@ -219,8 +202,8 @@ int	answer;
    if( sscanf(get_line(line,LLEN,Fp,0),"%*38c%8lf%8lf%8lf",&cell[0],&cell[1],&cell[2]) < 3)
       nocell++;
 
-   if( sscanf(get_line(line,LLEN,Fp,0),"%*21c%8lf%8lf%8lf    SPGR =%*3d %11c",
-          &cell[3],&cell[4],&cell[5],spgr) < 4)
+   if( sscanf(get_line(line,LLEN,Fp,0),"%*21c%8lf%8lf%8lf    SPGR =%3d %11c OPT = %1d",
+          &cell[3],&cell[4],&cell[5],&sgno,spgr,&sgopt) < 5)
       nocell++;
 
    if( sscanf(get_line(line,LLEN,Fp,0),"%4d%4d %60c", &natoms, &coord_sys, title) < 2)
@@ -239,6 +222,64 @@ int	answer;
    }
 
    trim(spgr);
+   if( sgno > 1 && (strcmp(spgr,"") == 0 || strcmp(spgr,"P 1") == 0))
+      sprintf(spgr,"%d",sgno);
+
+   /* Match cssr options to axis choice */
+   if(sgopt)
+   {
+     if( sgno == 5 || sgno == 7 || sgno == 8 ||
+         sgno == 12 || sgno == 13 || sgno == 14 )
+     {
+        if( sgopt < 4)
+          strcat(spgr,":b");
+        else if( sgopt > 3 && sgopt < 7)
+          strcat(spgr,":c");
+        else if( sgopt > 6 && sgopt < 10)
+          strcat(spgr,":a");
+        sgopt = sgopt % 3;
+        if(!sgopt) sgopt = 3;
+        sprintf(spgr,"%s%d",spgr,sgopt);
+     }
+     /* Match cssr options to sginfo list order */
+     else if( sgno == 9 || sgno == 15 )
+     {
+        if( sgopt < 4)
+          strcat(spgr,":b");
+        else if( sgopt > 3 && sgopt < 7)
+          strcat(spgr,":-b");
+        else if( sgopt > 6 && sgopt < 10)
+          strcat(spgr,":c");
+        else if( sgopt > 9 && sgopt < 13)
+          strcat(spgr,":-c");
+        else if( sgopt > 12 && sgopt < 16)
+          strcat(spgr,":a");
+        else if( sgopt > 15 && sgopt < 19)
+          strcat(spgr,":-a");
+        sgopt = sgopt % 3;
+        if(!sgopt) sgopt = 3;
+        sprintf(spgr,"%s%d",spgr,sgopt);
+     }
+     else if( sgno == 50 || sgno == 59 || sgno == 68)
+     {
+        sgopt = sgopt % 2;
+        if(!sgopt)
+          strcat(spgr,":2");
+     }
+     else if( sgno == 146 || sgno == 148 || sgno == 155 ||
+              sgno == 160 || sgno == 161 || sgno == 166 ||
+              sgno == 167)
+     {
+         if( sgopt == 2)
+           strcat(spgr,":r");
+         else
+           strcat(spgr,":h");
+     }
+     /* Range of space groups with possible alternative origins */
+     else if( sgno == 70 || (sgno > 84 && sgno < 143) ||
+              sgno > 201)
+        sprintf(spgr,"%s:%d",spgr,sgopt);
+  }
 
    if( fgets(line,sizeof(line),Fp) == NULL )
       error("Unexpected end of input on line 4 of \"%s\"", filename);
@@ -278,7 +319,7 @@ int      read_pdb(char *filename, mat_mp h, char (*label)[NLEN], vec_mp x, doubl
 {
 int      natoms = 0;
 double   cell[6];                                  /* Cell parameters */
-char     temp_name[6], chg[2];
+char     dummy[6], chg[2];
 mat_mt   hinv;
 double   tr[3];
 char     line[LLEN], keyword[LLEN];
@@ -331,14 +372,14 @@ FILE     *Fp;
           if( natoms > MAX_ATOMS )
               fprintf(stderr,"Warning: \"%s\" contains too many atoms! (%d)\n", filename, natoms);
 
-          sscanf(line+12,"%4s%*1c%*3s%*2c%*4d%*4c%8lf%8lf%8lf", temp_name,
+          sscanf(line+12,"%4s%*1c%*3s%*2c%*4d%*4c%8lf%8lf%8lf", dummy,
                &x[natoms][0], &x[natoms][1], &x[natoms][2]);
-          str_cut(temp_name, label[natoms]);
+          str_cut(dummy, label[natoms]);
 
           trim(label[natoms]);
           strcpy(chg,"  ");
           sscanf(line+78,"%2s", chg);
-          charge[natoms] = str_cut(chg, chg);
+          charge[natoms] = str_cut(chg, dummy);
 
           natoms++;
        }
@@ -375,7 +416,7 @@ int      read_shak(char *filename, mat_mt h, char (*label)[NLEN], vec_mp x, doub
 int      i, natoms = 0;
 double   cell[6];                                    /* Cell parameters */
 double   box[6];
-char     line[LLEN], combuf[LLEN], *buf, *bufend, last;
+char     line[LLEN], *buf, *bufend, last;
 int      linec, linep; char *linev[32];
 int      blankflg = 0;                    /* Blanks in atom labels?            */
 int      multi_flag = 0;                  /* Flag for multiple units in file   */
@@ -404,7 +445,7 @@ FILE     *Fp;
       while(buf < bufend )
       {
          dupl_flag=0;
-         linec = tokenize(strcpy(combuf, buf), linev);
+         linec = get_tokens(buf, linev, " ");
          if( linec < 1 )
             break;
          linep = 0;
@@ -600,11 +641,11 @@ FILE     *Fp;
  ******************************************************************************/
 int      read_xtl(char *filename, mat_mp h, char (*label)[NLEN], vec_mp x, double *charge, char *title, char *spgr)
 {
-int      natoms = 0;
+int      i, num_tokens, natoms = 0;
 double   cell[6];                                  /* Cell parameters */
-char     line[LLEN], keyword[LLEN];
-char     temp_name[6];
-int      crystflag = 0, sgno = 0;
+char     line[LLEN], *buff[32];
+char	 dummy[4], temp_name[6];
+int      crystflag = 0, sgno = 0, sgopt = 0;
 FILE     *Fp;
 
    if( (Fp = fopen(filename,"r")) == NULL)
@@ -612,9 +653,8 @@ FILE     *Fp;
 
    while( !feof(Fp) )
    {
-      sscanf(get_line(line,LLEN,Fp,0),"%s",keyword);
-
-      if(strcmp(strlower(keyword),"title") == 0 )         /* Title */
+      get_line(line,LLEN,Fp,0);
+      if(strcmp(strlower(line),"title") == 0 )         /* Title */
       {
          if( strlen(line+5) == 0)
             strncat(title,filename,TITLE_SIZE);
@@ -623,7 +663,7 @@ FILE     *Fp;
          trim(title);
       }
 
-      if(strcmp(strlower(keyword),"cell") == 0)   /* CELL - Specify unit cell */
+      if(strcmp(strlower(line),"cell") == 0)   /* CELL - Specify unit cell */
       {
          if( sscanf(get_line(line,LLEN,Fp,0),"%10lf %10lf %10lf %10lf %10lf %10lf",
             &cell[0],&cell[1],&cell[2],&cell[3],&cell[4],&cell[5]) < 6 )
@@ -631,41 +671,68 @@ FILE     *Fp;
          crystflag = 1;
       }
 
-      if(strcmp(strlower(keyword),"symmetry") == 0 )         /* Space group */
+      if(strncmp(strlower(line),"symmetry ",9) == 0 )         /* Space group */
       {
-         if( sscanf(line,"SYMMETRY  NUMBER %d  LABEL %s",&sgno,spgr) < 1 )
-             error("Error in SYMMETRY line of \"%s\" -- should have 2 parameters", filename);
+        num_tokens = get_tokens(line, buff, " ");
+        for (i=1 ; i<num_tokens-1 ; i++)
+        {
+          /* seek space group number */
+          if (strcmp("number", *(buff+i)) == 0)
+            sscanf(*(buff+i+1),"%d", &sgno);
+          /* seek space group label */
+          if (strcmp("label", *(buff+i)) == 0)
+            strcpy(spgr, *(buff+i+1));
 
-         trim(spgr);
+          if( sgno > 1 && (strcmp(spgr,"") == 0 || strcmp(spgr,"P 1") == 0))
+            sprintf(spgr,"%d",sgno);
+
+          if (strcmp("qualifier", strlower(*(buff+i))) == 0)
+          {
+            strcat(spgr,":");
+
+            if(strcmp("b", strlower(*(buff+i+1))) == 0)
+              strcat(spgr,"b");
+
+            if(strcmp("c", strlower(*(buff+i+1))) == 0)
+              strcat(spgr,"c");
+
+            if(strcmp("a", strlower(*(buff+i+1))) == 0)
+              strcat(spgr,"a");
+
+            if(strcmp("origin", strlower(*(buff+i+1))) == 0)
+              strcat(spgr,*(buff+i+2));
+
+            if( strcmp(strlower(*(buff+i)),"hexagonal") == 0 )
+                 strcat(spgr,"h");
+
+            if( strcmp(strlower(*(buff+i)),"rhombohedral") == 0 )
+                 strcat(spgr,"r");
+          }
+        }
       }
 
-      if(strcmp(strlower(keyword),"atoms") == 0)
+      if(strcmp(strlower(line),"atoms") == 0)
       {
-         if( natoms > MAX_ATOMS )
-            fprintf(stderr,"Warning: \"%s\" contains too many atoms! (%d)\n", filename, natoms);
-
-         if( sscanf(get_line(line,LLEN,Fp,0),"%s",keyword) < 1)
-            error("File \"%s\" has incorrect format", filename);
-
-         if( strcmp(strlower(keyword),"name") == 0)
+         get_line(line,LLEN,Fp,0);
+         if( strncmp(strlower(line),"name ",5) == 0)
          {
-            
-            while( strcmp(strlower(keyword),"eof") !=0 )
-            {
-               if( sscanf(get_line(line,LLEN,Fp,0),"%s",keyword) < 1)
-                  error("File \"%s\" has incorrect format", filename);
+           do {
+              get_line(line,LLEN,Fp,0);
 
-               if( strcmp(strlower(keyword),"eof") !=0 )
-               {
-                  if( sscanf(line,"%8s %12lf %12lf %12lf %12lf", temp_name,
-                      &x[natoms][0], &x[natoms][1], &x[natoms][2], &charge[natoms]) < 5)
-                     error("File \"%s\" has incorrect format", filename);
+              if( strcmp(strlower(line),"eof") !=0 )
+              {
+		/* Read atom type from scattering element, as label not always element symbol */
+                 if( sscanf(line,"%s %lf %lf %lf %lf %*lf %*lf   %s",
+                     dummy, &x[natoms][0], &x[natoms][1], &x[natoms][2], &charge[natoms], temp_name) < 6)
+                    error("File \"%s\" has incorrect format", filename);
 
-                  str_cut(temp_name, label[natoms]); /* Convert atom name to atom symbol */
-                  trim(label[natoms]);
-                  natoms++;
-               }
-            }
+                 str_cut(temp_name, label[natoms]); /* Convert cssr atom name to atom symbol */
+                 trim(label[natoms]);
+                 natoms++;
+              }
+              else
+                break;
+           } while(!feof(Fp));
          }
       }
    }
@@ -684,6 +751,7 @@ FILE     *Fp;
 
       cell_to_prim(cell,h);
    }
+
    return natoms;
 }
 /******************************************************************************
@@ -694,7 +762,7 @@ int      read_xyz(char *filename, mat_mp h, char (*label)[NLEN], vec_mp x, char 
 int      natoms = 0;
 double   cell[6];                                  /* Cell parameters */
 char     line[LLEN];
-char	 temp_name[8];
+char     temp_name[8];
 double   cellmax[3], cellmin[3];
 mat_mt   hinv;
 int	 i,j;
@@ -725,30 +793,6 @@ FILE     *Fp;
    }
 
    fclose(Fp);
-
-   /*
-    * Convert to fractional co-ordinates
-    */
-   for( i = 0; i < natoms; i++)
-      for( j = 0; j < 3; j++)
-      {
-         cellmax[j] = MAX(cellmax[j],x[i][j]);
-         cellmin[j] = MIN(cellmin[j],x[i][j]);
-      }
-
-   for( i = 0; i < natoms; i++)   /* Shift all atoms to positive coords */
-      for( j = 0; j < 3; j++)
-          x[i][j] -= cellmin[j];
-
-   for( j = 0; j < 3; j++)
-      cell[j] = 2.0*fabs(cellmax[j] - cellmin[j]);
-
-   cell[3] = cell[4] = cell[5] = 90.0;
-
-   cell_to_prim(cell,h);
-   invert(h,hinv);
-
-   mat_vec_mul(hinv, x, x, natoms);   /* Convert to fractional coords */
 
    return natoms;
 }
