@@ -9,10 +9,13 @@
  *		module (kernel.c) for ease of modification.		      *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log:	force.c,v $
+ * Revision 1.1  89/04/20  16:00:40  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: force.c,v 1.1.1.1 89/05/17 12:45:50 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -97,7 +100,7 @@ double  cutoff;
 #endif
    for(ix = nx/2; ix < nx+1; ix++)
       for(iy = (ix==nx/2 ? ny/2 : 0); iy < ny+1; iy++)
-         for(iz = (ix==nx/2 && iy==ny/2 ? nz/2+1 : 0); iz < nz+1; iz++)
+         for(iz = (ix==nx/2 && iy==ny/2 ? nz/2 : 0); iz < nz+1; iz++)
          {
             s[0] = (ix + 0.5*(nx%2))/nx - 0.5;
             s[1] = (iy + 0.5*(ny%2))/ny - 0.5;
@@ -155,6 +158,45 @@ cell_t  mol[];                          /* What 'cell' points to         (out)*/
    }
 }
 /******************************************************************************
+ *  site_neightbour list.  Build the list of sites withing interaction radius *
+ *                         from the lists of sites in cells.		      *
+ ******************************************************************************/
+int	site_neighbour_list(nab, reloc_i,
+			    n_nabors, ix, iy, iz, nabor, cell, reloc )
+int	*nab;				/* Array of sites in list      (out) */
+int	*reloc_i;			/* Relocation indices for list (out) */
+int	n_nabors;			/* Number of neighbour cells    (in) */
+int	ix, iy, iz;			/* Labels of current cell	(in) */
+ivec_t	*nabor;				/* List of neighbour cells	(in) */
+cell_t	**cell;				/* Head of cell list		(in) */
+reloc_t	***reloc;			/* Relocation index array	(in) */
+{
+   int	jx, jy, jz;			/* Labels of cell in neighbour list  */
+   int	jcell, jnab, jsite, rl;		/* Counters for cells etc	     */
+   int	nnab = 0;			/* Counter for size of nab	     */
+   cell_t	*cmol;			/* Pointer to current cell element   */
+   for(jnab = 0; jnab < n_nabors; jnab++)    /* Loop over neighbour cells  */
+   {
+      jx = ix + nabor[jnab].i;
+      jy = iy + nabor[jnab].j;
+      jz = iz + nabor[jnab].k;
+      jcell = reloc[jx][jy][jz].ncell;
+      rl    = reloc[jx][jy][jz].rel;
+
+      /* Loop over molecules in this cell, filling 'nab' with its sites    */
+      for(cmol = cell[jcell]; cmol != NULL; cmol = cmol->next)
+      {
+	 for(jsite = 0; jsite < cmol->num; jsite++)
+	 {
+	    nab[nnab] = cmol->isite + jsite;
+	    reloc_i[nnab] = rl;
+	    nnab++;
+	 }
+      }
+   }
+   return nnab;
+}
+/******************************************************************************
  *  reloc_alloc.  Allocate and fill relocation array                          *
  ******************************************************************************/
 static void    reloc_alloc(h, reloc)
@@ -185,14 +227,14 @@ VECTORIZE
       forcej[jsite] += force_comp[jsite] = forceij[jsite]*r[jsite];
 }
 #endif
-static void calcdist(nnab, r_sqr, rx, ry, rz, nab_sx, nab_sy, nab_sz, sitei)
-int nnab;
+static void calcdist(j0, nnab, r_sqr, rx, ry, rz, nab_sx, nab_sy, nab_sz, sitei)
+int j0, nnab;
 real r_sqr[], rx[], ry[], rz[], nab_sx[], nab_sy[], nab_sz[];
 vec_t  sitei;
 {
    int jsite;
 VECTORIZE
-            for(jsite=0; jsite < nnab; jsite++)
+            for(jsite=j0; jsite < nnab; jsite++)
             {
                rx[jsite] = nab_sx[jsite] - sitei[0];
                ry[jsite] = nab_sy[jsite] - sitei[1];
@@ -217,21 +259,20 @@ mat_t           stress;                 /* Stress virial                (out) */
 {
    int          ispec,                  /* Counter for species                */
                 imol,                   /* Counter for molecules i            */
-                icell, jcell,		/* Index for cells of molecule pair   */
-                nnab, nnabl,		/* Number of sites in neighbour list  */
+                icell,			/* Index for cells of molecule pair   */
+                nnab,	j0,		/* Number of sites in neighbour list  */
                 isite, jsite,           /* Site counter i,j                   */
    		i_id, jnab, lim, ipot;	/* Miscellaneous		      */
 #ifdef FKERNEL
    int          nnab2;
 #endif
-   short        ix, iy, iz, jx, jy, jz;	/* 3-d cell indices for ref and neig. */
+   short        ix, iy, iz;		/* 3-d cell indices for ref and neig. */
    int          nsites = system->nsites,/* Local copy to keep optimiser happy */
                 n_potpar = system->n_potpar,
    		max_id = system->max_id;
    double       norm = 2.0*control.alpha/sqrt(PI);	/* Coulombic prefactor*/
    int          ncells = nx*ny*nz;	/* Total number of cells	      */
    int          tx, ty, tz;             /* Temporaries for # unit cell shifts */
-   int          rl;			/* Pbc relocation (index into reloc_i)*/
    int          *id_ptr;                /* Pointer to 'id' array              */
    		/*
 		 * The following arrays are for 'neighbour site list'
@@ -270,7 +311,7 @@ mat_t           stress;                 /* Stress virial                (out) */
 				   0, n_potpar-1, 0, nsites-1);
    cell_t       *mol = aalloc(system->nmols, cell_t );
    spec_p       spec;
-   cell_t       *cmol, *nmol;
+   cell_t       *cmol;
    cell_t       **cell;
    
    static boolean       init = true;
@@ -327,6 +368,7 @@ mat_t           stress;                 /* Stress virial                (out) */
    fill_cells(system->c_of_m, system->nmols, species, cell, mol);
    reloc_alloc(system->h, reloc_v);
 
+   s00 = s01 = s02 = s11 = s12 = s22 = 0.0;	/* Accumulators for stress    */
 /******************************************************************************
  *  Start of main loops.  Loop over species, ispec, molecules, imol, and      *
  *  sites, isite_mol on imol.  Isite is index into 'site' of site specified   *
@@ -340,68 +382,44 @@ mat_t           stress;                 /* Stress virial                (out) */
          for(iz = 0; iz < nz; iz++)
    {
       if(cell[++icell] == NULL) continue;       /* Empty cell - go on to next */
-      nnabl = 0;
+      nnab = 0;
 #ifdef DEBUG
       printf("Working on cell %4d (%d,%d,%d) (sites %4d to %4d)\n", icell,
              ix,iy,iz,cell[icell].isite,cell[icell].isite+cell[icell].num-1);
       printf("\n jcell\tjx jy jz\tNsites\n");
 #endif
-      /* Build site neighbour list 'nab' from cell list.      */ 
-      for(jnab = 0; jnab < n_nabors; jnab++)    /* Loop over neighbour cells  */
-      {
-         jx = ix + nabor[jnab].i;
-         jy = iy + nabor[jnab].j;
-         jz = iz + nabor[jnab].k;
-         jcell = reloc[jx][jy][jz].ncell;
-         rl    = reloc[jx][jy][jz].rel;
-#ifdef DEBUG2
-         printf("%d\n",jcell);
-#endif
-         /* Loop over molecules in this cell, filling 'nab' with its sites    */
-         for(cmol = cell[jcell]; cmol != NULL; cmol = cmol->next)
-         {
-            for(jsite = 0; jsite < cmol->num; jsite++)
-            {
-               nab[nnabl] = cmol->isite + jsite;
-               reloc_i[nnabl] = rl;
-               nnabl++;
-            }
-         }
-      }
-      /* Loop over all molecules in cell icell.                               */
-      for(cmol = cell[icell]; cmol != NULL; cmol = cmol->next)
-      {
-         nnab = nnabl;                          /* N sites in this cell too   */
-         /* Loop over all neighbour molecules in THIS cell, add to list.      */
-         for(nmol = cmol->next; nmol != NULL; nmol = nmol->next)
-            for(jsite = 0; jsite < cmol->num; jsite++)
-            {
-               nab[nnab] = nmol->isite + jsite;
-               reloc_i[nnab] = NREL(0,0,0);
-               nnab++;
-            }
-         if(nnab > nsites) message(NULLI,NULLP,FATAL,TONAB,nnab);
+      /*
+       * Build site neighbour list 'nab' from cell list.
+       */ 
+      nnab = site_neighbour_list(nab, reloc_i,
+				 n_nabors, ix, iy, iz, nabor, cell, reloc);
+      if(nnab > nsites) message(NULLI,NULLP,FATAL,TONAB,nnab);
 
 VECTORIZE
-         for(jnab = 0; jnab < nnab; jnab++)     /* Build stride 3 nabor list  */
-            nab3[jnab] = 3*nab[jnab];
+      for(jnab = 0; jnab < nnab; jnab++)     /* Build stride 3 nabor list  */
+         nab3[jnab] = 3*nab[jnab];
 
-         gather(nnab, nab_sx, site[0]  , nab3); /* Construct list of site     */
-         gather(nnab, nab_sy, site[0]+1, nab3); /* co-ordinated from nabor    */
-         gather(nnab, nab_sz, site[0]+2, nab3); /* list.                      */
+      gather(nnab, nab_sx, site[0]  , nab3); /* Construct list of site     */
+      gather(nnab, nab_sy, site[0]+1, nab3); /* co-ordinated from nabor    */
+      gather(nnab, nab_sz, site[0]+2, nab3); /* list.                      */
 
-         gather(nnab, R, reloc_v[0], reloc_i);
-         vadd(nnab, nab_sx, R);
-         gather(nnab, R, reloc_v[1], reloc_i);
-         vadd(nnab, nab_sy, R);
-         gather(nnab, R, reloc_v[2], reloc_i);
-         vadd(nnab, nab_sz, R);
+      gather(nnab, R, reloc_v[0], reloc_i);
+      vadd(nnab, nab_sx, R);
+      gather(nnab, R, reloc_v[1], reloc_i);
+      vadd(nnab, nab_sy, R);
+      gather(nnab, R, reloc_v[2], reloc_i);
+      vadd(nnab, nab_sz, R);
 
-         gather(nnab, nab_chg, chg, nab);       /* Gather site charges as well*/
-         zero_real(forcejx,nnab);
-         zero_real(forcejy,nnab);
-         zero_real(forcejz,nnab);
+      gather(nnab, nab_chg, chg, nab);       /* Gather site charges as well*/
+      zero_real(forcejx,nnab);
+      zero_real(forcejy,nnab);
+      zero_real(forcejz,nnab);
 
+      j0 = 0;
+            			/* Loop over all molecules in cell icell. */
+      for(cmol = cell[icell]; cmol != NULL; cmol = cmol->next)
+      {
+	 j0 += cmol->num;
          lim = cmol->isite + cmol->num;
          for(isite = cmol->isite; isite < lim; isite++)
          {                                   /* Loop over sites in cell icell */
@@ -409,43 +427,45 @@ VECTORIZE
                gather(nnab, nab_pot[ipot], potp[ipot][id[isite]], nab);
 #ifdef DEBUG
             if(isite == 100)
-            for(jnab = 0; jnab < nnab; jnab++)
+            for(jnab = j0; jnab < nnab; jnab++)
                printf("%4d %4d\n", jnab,nab[jnab]);
 #endif
 
-            calcdist(nnab, r_sqr, rx, ry, rz, nab_sx,nab_sy,nab_sz,site[isite]);
+            calcdist(j0, nnab, r_sqr, rx, ry, rz,
+		     nab_sx,nab_sy,nab_sz,site[isite]);
 
-            if( search_lt(nnab, r_sqr, 1, TOO_CLOSE) < nnab ) 
-                  message(NULLI, NULLP, FATAL, TOOCLS, sqrt(TOO_CLOSE), isite);
+            if( (jsite = j0+search_lt(nnab-j0, r_sqr+j0, 1, TOO_CLOSE)) < nnab )
+               message(NULLI, NULLP, WARNING, TOOCLS,
+		       isite, nab[jsite], sqrt(TOO_CLOSE));
 
             /*  Call the potential function kernel                            */
 #ifdef FKERNEL
-            nnab2 = nnab;
-            KERNEL(&nnab2, forceij, pe, r_sqr, nab_chg, chg+isite, &norm, 
-                   &control.alpha, &system->ptype, &nsites, nab_pot[0]);
+            nnab2 = nnab-j0;
+            KERNEL(&nnab2, forceij+j0, pe, r_sqr+j0, nab_chg+j0, chg+isite,
+		   &norm, &control.alpha, &system->ptype, &nsites, nab_pot[0]);
 #else
-            kernel(nnab, forceij, pe, r_sqr, nab_chg, chg[isite], norm,
-                   control.alpha, system->ptype, nab_pot);
+            kernel(nnab-j0, forceij+j0, pe, r_sqr+j0, nab_chg+j0, chg[isite],
+		   norm, control.alpha, system->ptype, nab_pot);
 #endif
 #ifdef VCALLS
-            vaadd(nnab, forcejx, force_comp, forceij, rx);
-            site_force[isite][0] -= sum(nnab, force_comp,1);
-            stress[0][0] += vdot(nnab, force_comp, 1, rx, 1);
-            stress[0][1] += vdot(nnab, force_comp, 1, ry, 1);
-            stress[0][2] += vdot(nnab, force_comp, 1, rz, 1);
+            vaadd(nnab-j0, forcejx+j0, force_comp+j0, forceij+j0, rx+j0);
+            site_force[isite][0] -= sum(nnab-j0, force_comp+j0,1);
+            s00                  += vdot(nnab-j0, force_comp+j0, 1, rx+j0, 1);
+            s01                  += vdot(nnab-j0, force_comp+j0, 1, ry+j0, 1);
+            s02                  += vdot(nnab-j0, force_comp+j0, 1, rz+j0, 1);
 
-            vaadd(nnab, forcejy, force_comp, forceij, ry);
-            site_force[isite][1] -= sum(nnab, force_comp,1);
-            stress[1][1] += vdot(nnab, force_comp, 1, ry, 1);
-            stress[1][2] += vdot(nnab, force_comp, 1, rz, 1);
+            vaadd(nnab-j0, forcejy+j0, force_comp+j0, forceij+j0, ry+j0);
+            site_force[isite][1] -= sum(nnab-j0, force_comp+j0,1);
+            s11                  += vdot(nnab-j0, force_comp+j0, 1, ry+j0, 1);
+            s12                  += vdot(nnab-j0, force_comp+j0, 1, rz+j0, 1);
 
-            vaadd(nnab, forcejz, force_comp, forceij, rz);
-            site_force[isite][2] -= sum(nnab, force_comp,1);
-            stress[2][2] += vdot(nnab, force_comp, 1, rz, 1);
+            vaadd(nnab-j0, forcejz+j0, force_comp+j0, forceij+j0, rz+j0);
+            site_force[isite][2] -= sum(nnab-j0, force_comp+j0,1);
+            s22                  += vdot(nnab-j0, force_comp+j0, 1, rz+j0, 1);
 #else
-            site0 = site1 = site2 = s00 = s01 = s02 = s11 = s12 = s22 = 0.0;
+            site0 = site1 = site2 = 0.0;
 VECTORIZE
-            for(jsite=0; jsite < nnab; jsite++)
+            for(jsite=j0; jsite < nnab; jsite++)
             {
                force_cpt  = forceij[jsite]*rx[jsite];
                site0           -= force_cpt;
@@ -455,7 +475,7 @@ VECTORIZE
                s01         += force_cpt * ry[jsite];
             }
 VECTORIZE
-            for(jsite=0; jsite < nnab; jsite++)
+            for(jsite=j0; jsite < nnab; jsite++)
             {
                force_cpt = forceij[jsite]*ry[jsite];
                site1           -= force_cpt;
@@ -464,7 +484,7 @@ VECTORIZE
                s12         += force_cpt * rz[jsite];
             }
 VECTORIZE
-            for(jsite=0; jsite < nnab; jsite++)
+            for(jsite=j0; jsite < nnab; jsite++)
             {
                force_cpt = forceij[jsite]*rz[jsite];
                site2           -= force_cpt;
@@ -474,26 +494,26 @@ VECTORIZE
             site_force[isite][0] += site0;
             site_force[isite][1] += site1;
             site_force[isite][2] += site2;
-
-            stress[0][0]  += s00;
-            stress[0][1]  += s01;
-            stress[0][2]  += s02;
-            stress[1][1]  += s11;
-            stress[1][2]  += s12;
-            stress[2][2]  += s22;
 #endif
          }
-         gather(nnab, forceij, site_force[0], nab3);
-         vadd(nnab, forceij, forcejx);
-         scatter(nnab, site_force[0], nab3, forceij);
-         gather(nnab, forceij, site_force[0]+1, nab3);
-         vadd(nnab, forceij, forcejy);
-         scatter(nnab, site_force[0]+1, nab3, forceij);
-         gather(nnab, forceij, site_force[0]+2, nab3);
-         vadd(nnab, forceij, forcejz);
-         scatter(nnab, site_force[0]+2, nab3, forceij);
       }
+      gather(nnab, forceij, site_force[0], nab3);
+      vadd(nnab, forceij, forcejx);
+      scatter(nnab, site_force[0], nab3, forceij);
+      gather(nnab, forceij, site_force[0]+1, nab3);
+      vadd(nnab, forceij, forcejy);
+      scatter(nnab, site_force[0]+1, nab3, forceij);
+      gather(nnab, forceij, site_force[0]+2, nab3);
+      vadd(nnab, forceij, forcejz);
+      scatter(nnab, site_force[0]+2, nab3, forceij);
    }
+   stress[0][0]  += s00;
+   stress[0][1]  += s01;
+   stress[0][2]  += s02;
+   stress[1][1]  += s11;
+   stress[1][2]  += s12;
+   stress[2][2]  += s22;
+
    cfree((char*)potp[0][1]);     cfree((char*)nab_pot[0]);
    cfree((char*)r_sqr);   cfree((char*)mol); 
    cfree((char*)R);       cfree((char*)reloc_i);  cfree((char*)nab_chg);
