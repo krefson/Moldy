@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "string.h"
 #include <varargs.h>
+#include "stddef.h"
 char	*malloc(), *realloc();
 char	*strtok();
 

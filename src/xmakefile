@@ -114,17 +114,17 @@ cflow:		$(CFILES)
 		cflow $(CFILES) > moldy.cflow
 		cflow -r $(CFILES) > moldy.cflow.r
 
+ci:		$(CFILES) $(HFILES) xmakefile moldy.tex $(EXTRAS)
+		ci -u $?
+
 print:		$(CFILES) $(HFILES)
 		for file in $(CFILES) $(HFILES) ;do\
 			a2ps $(A2FLAGS) ${SHFILE} | lpr -l -Plp2\
                         ;done
 		touch print
 
-lint:		$(LFILES)
-		$(LINT) $(LFLAGS) $(LFILES)
-
-lint5:		
-		$(LINT) $(LFLAGS) $(CFILES)
+lint:		
+		$(LINT) $(LFLAGS) $(CFILES) -lm
 				
 tags:		$(CFILES) $(HFILES) kernel.f
 		etags $(CFILES) $(HFILES) kernel.f 
@@ -188,26 +188,30 @@ $(LFILES):	$(HFILES)
 
 $(OFILES):	structs.h defs.h
 
+#   Inlining for titan
+#aux.o:	aux.c 
+#	$(CC) $(CFLAGS) $(CFLAGS2) -catalog=aux.in -c  $<
+
 aux.o:	aux.c 
-	$(CC) $(CFLAGS) $(CFLAGS2) -catalog=aux.in $(TARGET_ARCH) -c  $<
+	$(CC) $(CFLAGS) $(CFLAGS2) -c $<
 
 convert.o:	convert.c
-	$(CC) $(CFLAGS0) -O1 -c $<
+	$(CC) -O $(CFLAGS0) -c $<
 
 kernelf.o:	kernel.f
 		$(FC) -a stack -b kernelf.o kernel.f
 
 ewald.o:	ewald.c 
-	$(CC) $(CFLAGS) $(CFLAGS2) $(TARGET_ARCH) -c  $(INLINE) $<
+	$(CC) $(CFLAGS) $(CFLAGS2) -c $(INLINE) $<
 
 rdf.o:	rdf.c 
-	$(CC) $(CFLAGS) $(CFLAGS2) $(TARGET_ARCH) -c  $<
+	$(CC) $(CFLAGS) $(CFLAGS2) -c $<
 
 kernel.o:	kernel.c 
-	$(CC) $(CFLAGS) $(CFLAGS2) $(TARGET_ARCH) -c  $<
+	$(CC) $(CFLAGS) $(CFLAGS2) -c $<
 
 force.o:	force.c 
-	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSF) $(TARGET_ARCH) $(INLINE) -c $<
+	$(CC) $(CFLAGS) $(CFLAGS2) $(CFLAGSF) $(INLINE) -c $<
 
 %.c:		RCS/%.c,v
 		co $@
@@ -221,4 +225,4 @@ force.o:	force.c
 	$(LINT) $(LFLAGS) -i $<
 
 .c.o:
-	$(CC) $(CFLAGS0) $(CFLAGS) -c $<
+	$(CC) $(CFLAGS) -c $<

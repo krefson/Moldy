@@ -1,9 +1,12 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/dumpconvert.c,v 1.2 89/09/07 18:15:54 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 1.4 91/08/13 15:31:35 keith Exp $";
 #endif
 
 /*
  * $Log:	dumpconvert.c,v $
+ * Revision 1.3  90/09/28  10:51:27  keith
+ * Amended #idfefs for unicos
+ * 
  * Revision 1.2  89/09/07  18:15:54  keith
  * checked in with -k by keith at 89.09.08.15.48.37.
  * 
@@ -19,6 +22,7 @@ static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/dumpconvert.c,v 1
  */
 
 #include <stdio.h>
+#include "stddef.h"
 #include "structs.h"
 #include "string.h"
 #include <varargs.h>

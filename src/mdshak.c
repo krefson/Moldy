@@ -1,3 +1,4 @@
+#include "defs.h"
 #if ANSI || __STDC__
 #include <stdarg.h>
 #else
@@ -5,6 +6,7 @@
 #endif
 #include <math.h>
 #include <stdio.h>
+#include "stddef.h"
 #include "string.h"
 #define error(str, args) message(NULLI, NULLP, FATAL, str, args)
 #include "structs.h"

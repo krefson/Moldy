@@ -1,9 +1,12 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 1.2 90/04/25 14:47:28 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 1.4 91/08/13 15:31:40 keith Exp $";
 #endif
 
 /*
  * $Log:	moldyanalyze.c,v $
+ * Revision 1.3  91/03/07  18:10:59  keith
+ * Changed message
+ * 
  * Revision 1.2  90/04/25  14:47:28  keith
  * Declared malloc().
  * 
@@ -13,6 +16,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 
  */
 
 #include	<stdio.h>
+#include	"stddef.h"
 #include	"structs.h"
 
 char	*malloc();
