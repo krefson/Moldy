@@ -19,9 +19,15 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 2.1 93/08/18 20:54:03 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 2.3 93/10/28 10:28:29 keith Stab $
  *
  * $Log:	defs.h,v $
+ * Revision 2.3  93/10/28  10:28:29  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
+ * Revision 2.2  93/10/14  18:17:56  keith
+ * Fixed prortability problems to IBM RS6000
+ * 
  * Revision 2.1  93/08/18  20:54:03  keith
  * Tidied up clashes over ABS, MIN, MAX macros.
  * 
@@ -129,9 +135,9 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 2.1 $"
-#define		 REVISION_DATE    "$Date: 93/08/18 20:54:03 $"
-#define		 REVISION_STATE   "$State: Exp $"
+#define          REVISION         "$Revision: 2.3 $"
+#define		 REVISION_DATE    "$Date: 93/10/28 10:28:29 $"
+#define		 REVISION_STATE   "$State: Stab $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
  ******************************************************************************/
@@ -145,6 +151,9 @@ what you give them.   Help stamp out software-hoarding!  */
 #   define _ALL_SOURCE
 #   define ANSI_LIBS
 #endif
+#if (defined(__unix__) || defined(__unix)) && !defined(unix)
+#   define unix
+#endif
 /*
  *  Set symbol USG to identify system V variant of unix, BSD for Berkeley.
  */
@@ -155,7 +164,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * BSD is used to signal use of getrusage() rather than times() (unix only)
  * and absence of mem*() and strchr() functions from library.
  */
-#if (defined(unix) || defined(__unix__) ) && !defined(USG)
+#if defined(unix) && !defined(USG)
 #if EWOULDBLOCK==35 && EINPROGRESS==36 && EALREADY==37
 # define BSD
 #else
@@ -175,9 +184,6 @@ what you give them.   Help stamp out software-hoarding!  */
 #   define TEMP_FILE	"MDTEMP XXXXXXXX A1"
 #endif
 #ifdef unix
-#   define LOCKEX		".lck"
-#endif
-#ifdef __unix__
 #   define LOCKEX		".lck"
 #endif
 #ifndef LOCKEX
