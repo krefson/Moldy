@@ -22,8 +22,8 @@ Moldy is available by anonymous file transfer from Oxford.  Connect to
 your email address as password.  The relevant files are all in the
 "/pub" directory and are
 
-* moldy-2.6.tar.Z     - The Unix distribution (also for MSDOS)
-* moldy-2.6.com       - The VMS distribution
+* moldy-2.8.tar.Z     - The Unix distribution (also for MSDOS)
+* moldy-2.8.com       - The VMS distribution
 * moldy-manual.ps.Z   - The Manual in PostScript form.  Note that
                         the distribution files already contain 
                         the LaTeX source.
@@ -66,6 +66,7 @@ restart.c
 startup.c
 values.c
 xdr.c
+parallel.c
    
 defs.h
 messages.h		'Include' files for above files
@@ -78,11 +79,11 @@ stdlib.h
 string.h
 
 
-dumpanalyze.c
-dumpconvert.c
-dumpextract.c		Source code for 'utility' programs.
+dumpanal.c
+dumpconv.c
+dumpext.c		Source code for 'utility' programs.
 mdshak.c
-moldyextract.c
+mextract.c
 
 getopt.c		Support routine for utility progs.
 
@@ -212,6 +213,12 @@ _HPUX_SOURCE	(HPUX)
 		on IBM).  However other systems may require something
 		similar .
 
+SPMD		Compile for SPMD (Single Program Multiple Data) parallel
+		execution.  You must also specify one of the macros
+		BSP, MPI or TCGMSG to select a message-passing library
+		and have the appropriate include paths and libraries
+		defined in the Makefile.
+
 B. VMS (VAX/VMS and OpenVMS/AXP)
 
 Just execute the "compile.com" DCL command file which will build Moldy
@@ -254,3 +261,55 @@ dvips or dvi2ps, or whatever dvi output you normally use.
 There is a "moldy.dvi" target in the make file so just "make
 moldy.dvi" ought to do the trick.
 
+PARALLEL VERSION
+----------------
+
+A.  Shared memory.
+    -------------
+    The sources contain separate versions of ewald.c and force.c with
+    the appropriate code and compiler directives for compilation on
+    certain shared-memory parallel machines including Stardent Titan,
+    Convex and Cray architectures.  To use, you must REPLACE ewald.c
+    and force.c with the file ewald_parallel.c and force_parallel.c
+    respecively.  You must also define the preprocessor symbol
+    PARALLEL during the compilation (eg with the compiler option
+    -DPARALLEL).
+
+    The code reads the environment to decide how many processors
+    to execute on.  The name of the env variable is usually the
+    same one as the manufacturers use for the same purpose
+    NCPUS for the CRAY and THREADS on everything else.  Use
+    the SETENV command (for c-chell) or the bourne-shell equivalent
+    to before starting a run.
+
+    Note. The Stardent Titan version does not work as shipped because
+    the system supplied version of "malloc" can not be safely called
+    from a parallel program.  Contact the author for a "thread-safe"
+    version which can.
+
+B.  Distributed Memory
+    ------------------
+
+    To build this version you must have one of the three supported
+    message-passing libraries installed on the target system.  These
+    are the Oxford BSP library, MPI (the new standardised
+    message-passing library interface) and TCGMSG (the Theoretical
+    Chamistry message-passing system).  Then define the macro PARLIBC
+    in the Makefile to contain the "include" path for the library
+    header files, and the preprocessor symbols SPMD and one of MPI,
+    BSP and TCGMSG.  The macro PARLIBL should be defined to link with
+    the appropriate libraries.
+
+    To find out how to set up a parallel run, consult the documentation
+    for your parallel system, as this varies.  
+
+    The parallel performance increses with system size as the amount
+    of work in the force and ewald sum loops increases as a proportion
+    of the total work and with respect to the communication overhead.
+    A speedup of nearly 7 on an 8-processor IBM SP1 has been
+    demonstrated for the run "control.big", and in general the larger
+    the system the better the parallel performance.  
+
+    The parallel interface is contained within a single file
+    "parallel.c" and versions for other MP libraries should be
+    relatively easy to add with a few hours of programming effort.
