@@ -7,6 +7,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.10  89/11/20  18:04:15  keith
+ * Moved initialisation of control and units to 'input.c'
+ * Added 2nd command line arg to specify output file.
+ * 
  * Revision 1.9  89/11/20  12:02:09  keith
  * Changed interface to print_rdf.  cf rdf.c 1.6
  * Modified write of restart and backup files - added 'purge' call.
@@ -41,7 +45,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/main.c,v 1.9 89/11/20 12:02:09 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/main.c,v 1.10 89/11/20 18:04:15 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -61,6 +65,7 @@ void	message();
 double	cpu();
 void	write_restart();
 void	purge();
+double  rt_clock();
 /*========================== External data definition ========================*/
 contr_t		control;
 unit_t		input_unit;
@@ -76,6 +81,7 @@ char	*argv[];
    mat_t	stress_vir;
    double	pe[NPE];
    double	delta_cpu = 0.0, cpu_base = cpu();
+   double	rt = rt_clock();
    vec_t	(*meansq_f_t)[2];
    vec_t	dip_mom;
 
@@ -145,7 +151,8 @@ char	*argv[];
    else
       (void)remove(control.backup_file);		/* Get rid of backup */
       
-   note("Run used %.2fs of CPU time", cpu()-cpu_base);
+   note("Run used %.2fs of CPU time and %.2fs elapsed", cpu()-cpu_base,
+	rt_clock()-rt);
 
    return(0);
 }
