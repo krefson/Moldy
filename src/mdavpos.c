@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdavpos.c,v 2.6 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdavpos.c,v 2.8 1999/07/22 13:33:45 keith Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *
@@ -28,6 +28,12 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdavpos.c,v
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.9  1999/09/13 16:03:35  craig
+ *  PDB output format updated to version 2
+ *
+ *  Revision 2.8  1999/07/22 13:33:45  keith
+ *  Corrected memory freeing of dump limits
+ *
  *  Revision 3.1  1999/06/03 10:11:55  craig
  *  Corrected memory freeing of dump limits
  *
@@ -518,10 +524,14 @@ mat_mp		avh;
    double	**site = (double**)arralloc(sizeof(double),2,
                                             0,2,0,system->nsites-1);
    mat_mp	h = avh;
+   mat_mt	hinv;
    spec_mt	*spec;
    double	a,b,c, alpha, beta, gamma;
+   char         *atom_name;
    int		imol, isite, itot=1, ispec=1;
-   int		is;
+   int		i, is;
+
+   invert(h,hinv);
    
    a = sqrt(SQR(h[0][0]) + SQR(h[1][0]) + SQR(h[2][0]));
    b = sqrt(SQR(h[0][1]) + SQR(h[1][1]) + SQR(h[2][1]));
@@ -533,6 +543,11 @@ mat_mp		avh;
 /* Write the pdb header */
    (void)printf("CRYST1 %8.3f %8.3f %8.3f %6.2f %6.2f %6.2f P 1\n",
           a,b,c,alpha,beta,gamma);
+
+   for(i = 0; i < 3; i++)
+       (void)printf("SCALE%d %9.6f %9.6f %9.6f        0.00000\n",
+           i, hinv[i][0], hinv[i][1], hinv[i][2]);
+
    for(spec = avpos; spec < avpos+system->nspecies; ispec++, spec++)
    {
      make_sites(avh, spec->c_of_m, spec->quat, spec->p_f_sites,
@@ -543,16 +558,17 @@ mat_mp		avh;
      {
        for(is = 0; is < spec->nsites; is++)
        {
+         atom_name = site_info[spec->site_id[is]].name;
          if(fabs(site_info[spec->site_id[is]].mass) != 0)
-            (void)printf("HETATM%5d %2s%d  NONE    1     %7.3f %7.3f %7.3f  1.00  0.00\n",
-               itot, site_info[spec->site_id[is]].name, ispec,
-                  site[0][isite], site[1][isite], site[2][isite]);
+            (void)printf("HETATM%5d %2s%-2d NON A   1     %7.3f %7.3f %7.3f"
+               "  1.00  0.00          %4s\n",itot, atom_name, ispec,
+                  site[0][isite], site[1][isite], site[2][isite], atom_name);
          isite++;
          itot++;
        }
      }
    }
-   (void)printf("TER              %d     NONE    1\n",itot);
+   (void)printf("TER   %5d      NON A   1\n",itot);
    (void)printf("END\n");
    if( insert != NULL)
       (void)printf("%s\n", insert);
