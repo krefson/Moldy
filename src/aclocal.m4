@@ -37,9 +37,9 @@ done
 
 AC_DEFUN(AC_PROG_CC2,
 [AC_BEFORE([$0], [AC_PROG_CPP2])dnl
+AC_CHECK_PROG(CC, cc, cc, , , /usr/ucb/cc)
 AC_CHECK_PROG(CC, c89, c89, , , /usr/ucb/cc)
 AC_CHECK_PROG(CC, gcc, gcc)
-AC_CHECK_PROG(CC, cc, cc, , , /usr/ucb/cc)
 
 test -z "$CC" && AC_MSG_ERROR([no acceptable cc found in \$PATH])
 
