@@ -157,7 +157,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.29.4.8 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.29.4.9 $ $}
 \newcommand{\moldyversion}{2.16}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -5334,7 +5334,6 @@ The command line options are:
 \Lit{[-p]} 
 \Lit{[-x]}
 \Lit{[-j]}
-\Lit{[-c]}
 \Lit{[-o} \textit{output-file}\Lit{]}
 \end{center}
 
@@ -5357,8 +5356,6 @@ where the arguments have the following meanings:
 \item[-p] switch on 3D periodic boundary conditions.
 \item[-x] ignore right and straight angles.
 \item[-j] calculate bonds and angles between molecular sites rather than centres of mass.
-\item[-c] if reading system specification file, skip any preceding
-  control parameter info.
 \item[-o] name of optional output file. Defaults to standard output.
 \end{Argdescription}
 
@@ -5467,7 +5464,6 @@ Alternatively, the command line options are
 \Lit{-r} \textit{restart-file}\Lit{]}
 \Lit{[-d} \textit{dump-file-format}\Lit{]}
 \Lit{[-t} \textit{dump-range}\Lit{]} \\
-\Lit{[-c]}
 \Lit{[-f} \textit{output-type}\Lit{]}
 \Lit{[-y]}
 \Lit{[-i} \textit{extra-text}\Lit{]}
@@ -5483,8 +5479,6 @@ argument is a dump prototype name containing a \Lit{printf()} format
 string -- see section~\ref{sec:dumping}.
 \item[-t] range of records in dump file, specified in selector
 format.
-\item[-c] if reading a system specification file, skip any preceding
-control parameter info.
 \item[-f] Write the output file in the format specified (see table~\ref{tab:output}).
 \item[-y] Join up trajectory fragments to eliminate molecules ``leaping''
   from one side of the MD cell to the other.
@@ -5501,24 +5495,24 @@ to make it easy to add a new output routine (in file \Fname{molout.c}).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Mdvaf}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\emph{Mdvaf} is a utility for calculating the Velocity Autocorrelation 
-Function (VACF) from \moldy\ dump files of at least level 2 (see 
-Section\ref{sec:dumping}). It can also, optionally, calculate the Velocity 
+\emph{Mdvaf} is a utility for calculating the Velocity Autocorrelation
+Function (VACF) from \moldy\ dump files of at least level 2 (see
+Section\ref{sec:dumping}). It can also, optionally, calculate the Velocity
 Total Correlation Function (VTF) from the same data source.
 
-For a species of $N$ particles, the VACF, $Z(t)$ is defined as:
+For a species of $N$ particles, the VACF, $Z(t)$, is defined as:
 \begin{equation}
   Z(t) = \frac{1}{N N_t} \sum_{t_0=0}^{N_t} \sum_{n=1}^N v_n(t_0) \cdot v_n(t_0 + t)
 \end{equation}
 and the VTF as
 \begin{equation}
-  VTF(t)= \frac{1}{N_t} \sum_{t_0=0}^{N_t} \left ( \sum_{n=1}^N q_n v_n(t_0) 
+  VTF(t)= \frac{1}{N_t} \sum_{t_0=0}^{N_t} \left ( \sum_{n=1}^N q_n v_n(t_0)
   \cdot  \sum_{n=1}^N  q_n v_n(t_0 + t) \right )
 \end{equation}
-where $q$ is the total charge of the species, $v(t)$ the
+where $q$ is the total charge of the species, and $v(t)$ the
 velocity at time $t$.
 
-The self-diffusion coefficient of a species, $D$ can be
+The self-diffusion coefficient of a species, $D$, can be
 obtained from the integral of its VACF
 \begin{equation}
   D = \frac{1}{3} \int_0^\infty Z(t) dt .
@@ -5540,34 +5534,34 @@ The command line options are:
 \Lit{[-d} \textit{dump-file-format}\Lit{]}
 \Lit{[-t} \textit{dump-range}\Lit{]} \\
 \Lit{[-v} \textit{vaf-range}\Lit{]}
-\Lit{[-g} \textit{species-range}\Lit{]} 
-\Lit{[-c]}
-\Lit{[-q]} 
+\Lit{[-g} \textit{species-range}\Lit{]}
+\Lit{[-a]}
+\Lit{[-q]}
 \Lit{[-o} \textit{output-file}\Lit{]}
 \end{center}
 
 where the arguments have the following meanings:
 \begin{Argdescription}
-\item[-d] read the system info and centre of mass velocities from a dump file (of \Lit{dump-level} 
-$>= 2$) given as a prototype name containing a \Lit{printf()} format 
+\item[-d] read the system info and centre of mass velocities from a dump file (of \Lit{dump-level}
+$>= 2$) given as a prototype name containing a \Lit{printf()} format
 string -- see section~\ref{sec:dumping} .
 \item[-t] range of records in dump file, specified in selector format.
-\item[-v] time intervals to calculate the VACF or VTF values for, specified 
-in selector format. Default is 0 to half the number of dump 
+\item[-v] time intervals to calculate the VACF or VTF values for, specified
+in selector format. Default is 0 to half the number of dump
 records selected, with an increment of 1.
-\item[-g] range of species to be included, given in selector format 
+\item[-g] range of species to be included, given in selector format
 where \Lit{1} represents the \emph{first} species. Defaults to all species.
-\item[-c] if reading a system specification file, skip any preceding control 
-parameter info.
-\item[-q] calculate the VTF instead of the VACF.
+\item[-a] calculate the autocorrelation function for \emph{angular} velocities rather than C of M velocities.
+\item[-q] calculate the VTF instead of the VACF if VACF is default, and vice versa.
 \item[-o] name of optional output file. Defaults to standard output.
 \end{Argdescription}
 
-If the executable file is named \Fname{mdvaf} then the default calculation 
-is the VACF. If it is renamed to \Fname{mdvtf}, then the default is the 
-VTF. In both cases, the output is in the form of a single column 
-of data headed by the name of the species in question. The lines 
-down each column correspond to increasing time intervals.
+If the executable file is named \Fname{mdvaf} then the default calculation
+is the VACF. If it is renamed to \Fname{mdvtf}, then the default is the
+VTF. For the VACF, the output is in the form of five columns
+of data headed by the name of the species in question. From left to right the columns correspond to
+time, x component, y component, z component, and total VACF. For the VTF, the output consists of
+two columns (time and the VTF) headed by the name of the particular species.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Moldyext}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -5625,7 +5619,6 @@ specified in command line mode:
 \Lit{msd}
 \Lit{[-d} \textit{dump-file-format}\Lit{]}
 \Lit{[-t} \textit{dump-range}\Lit{]} \\
-\Lit{[-c]}
 \Lit{[-m} \textit{msd-time-range}\Lit{]}
 \Lit{[-i} \textit{initial-time-increment}\Lit{]}
 \Lit{[-g} \textit{species-range}\Lit{]}
@@ -5639,8 +5632,6 @@ where the meanings of the options are
 \item[-d] read the system info and centre of mass coordinates from a dump file given as a
 prototype name containing a \Lit{printf()} format string -- see
 section~\ref{sec:dumping}. 
-\item[-c] if reading a system specification file, skip any preceding control 
-parameter info.
 \item[-t] range of records in dump file, specified in selector format.
 \item[-m] time intervals to calculate the msd values for, specified in
   selector format. Default is zero to half the number of time slices specified with \Lit{-t}.
@@ -5773,6 +5764,7 @@ The command line options are:
 \Lit{[-w} \textit{mass}\Lit{]} 
 \Lit{[-q} \textit{charge}\Lit{]} \\
 \Lit{[-z} \textit{symbol}\Lit{]}
+\Lit{[-v} \textit{energy-unit-code}\Lit{]} 
 \Lit{[-a} \textit{dopant-structure-file}\Lit{]}
 \Lit{[-e} \textit{species-data-file}\Lit{]} 
 \Lit{[-y} \textit{potential-parameter-file}\Lit{]} 
@@ -5800,6 +5792,7 @@ where the arguments have the following meanings:
   first atom of the solvent species.
 \item[-z] name/symbol of the (monatomic) solute species. Defaults to same name as the
   first atom of the solvent species.
+\item[-v] energy units desired: 0 = kJ\,mol$^{-1}$, 1 = kcal\,mol$^{-1}$, 2 = eV, 3 = e$^2${\AA}. Only used when reading from restart file.
 \item[-a] file containing structural information for polyatomic solute species. Can be in CSSR, PDB, XYZ, XTL 
   or SCHAKAL format.
 \item[-e] read the species data (mass, charge, symbol) corresponding to the
@@ -5829,8 +5822,7 @@ same as in a system specification file (see section~\ref{sec:sys-spec}).
   Default is to match to site name only.
 \item[-h] position first site of solute molecule on first site of solvent molecule it is replacing.
   Default is to position molecules using centres of mass.
-\item[-c] if reading system specification file, skip any preceding
-  control parameter info.
+\item[-c] do not include control parameter info in output file.
 \item[-j] generate new quaternions (orientations) for all solute molecules (if polyatomic). Default is to use same quaternions (if available) as molecules being replaced or no rotation if solvent is monatomic.
 \item[-o] name of optional output file.
 \end{Argdescription}
@@ -5889,12 +5881,16 @@ masses of unrecognized sites will be assigned a value of zero. \textbf{N.B.}
 If none of the sites in a polyatomic molecule can be identified, the substitution will
 be aborted because the molecule's centre of mass cannot be determined.
 
-If the system data comes from a restart file, the user is prompted for
-the energy units to use when writing the potential parameters to the
-output. \textbf{N.B.} These may vary slightly from the original
+If the system data comes from a sys-spec file, the potential
+parameters will be written to the output file in the same units as the input file.
+If the system data comes from a restart file, by default energy units of kJ.mol$^{-1}$
+will be used when writing the potential parameters to the output. Alternative units can be
+selected with the \Lit{-v} option.
+\textbf{N.B.} The outputted potential parameters may vary slightly from the original
 input parameters depending on the exact value of the time-unit used
 in the control file to specify energy units other than kJ\,mol$^{-1}$. See
-section~\ref{sec:sys-spec}. The parameters for the species being introduced
+section~\ref{sec:sys-spec}. 
+The parameters for the species being introduced
 can be read in from a potential parameter file (using option \Lit{-y}),
 otherwise the parameters between the solute components and
 other atoms wll be assumed to be zero. It is up to the user to ensure that
@@ -5908,7 +5904,7 @@ files can be changed to suit the user's local environment by editing the
 parameters ELEPATH and POTPATH in \Fname{specdata.h} before compiling
 \emph{ransub}.
 
-Note that it is possible to introduce
+It is possible to introduce
 randomly distributed vacancies or empty sites by prefixing the solute name with ``\#''.
 
 The \moldy\ distribution comes with three widely-used Buckingham potential
