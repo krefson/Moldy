@@ -42,6 +42,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: algorith.c,v $
+ *       Revision 2.10  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.9  1995/12/04 11:45:49  keith
  *       Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
  *       Thanks to V. Murashov.
@@ -130,7 +135,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/algorith.c,v 2.9 1995/12/04 11:45:49 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/algorith.c,v 2.10 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -524,6 +529,11 @@ int	nmols;				/* Number of molecules		(in)  */
 
    xfree(vel);
 }
+double trace(mat)
+mat_mt  mat;
+{
+  return(mat[0][0] + mat[1][1] + mat[2][2]);
+}
 /******************************************************************************
  * Rahman   Calculate the unit cell matrix accelerations                      *
  ******************************************************************************/
@@ -537,9 +547,11 @@ double	press,				/* Externally applied pressure	      */
 int	mask;				/* Mask constrained el's of h matrix  */
 {
    double	vol = det(h);		/* Unit cell volume		      */
+   double       cpscale;                /* Scale factor for uniform scale case*/
    mat_mt	stress,			/* Stress tensor		      */
    		h_tr,			/* Transpose of h		      */
    		h_tr_inv,		/* Inverse of transpose of h	      */
+                htrh,                   /* Product  h'h                       */
    		sigma;			/* P & R sigma matrix 		      */
    int		i, j;			/* Counters			      */
 
@@ -551,21 +563,30 @@ int	mask;				/* Mask constrained el's of h matrix  */
       stress[i][i] -= press;	/* Subtract applied pressure from diagonal    */
 
    transpose(h, h_tr);          /* Calculate sigma = vol*h transpose inverse  */
-   invert(h_tr, h_tr_inv);
-   mat_sca_mul(vol, h_tr_inv, sigma);
-
-   mat_mul(stress, sigma, hddot);	/* Calculate unit cell accelerations  */
-   mat_sca_mul(1.0/W, hddot, hddot);
-
-   /* 
-    * Zero unwanted degrees of freedom. Refson PhD Thesis (1986)
-    */   
-   for(i = 0; i < 9; i++)
+   if ( mask >> 9 & 1 )                         /* Uniform dilation case */
    {
-      if( mask & 1 )
-	 hddot[0][i] = 0.0;		/* Access as [9] rather than [3][3]   */
-      mask >>= 1;
+     mat_mul(h_tr, h, htrh);
+     cpscale = 3.0*vol*trace(stress)/(W*trace(htrh));
+     mat_sca_mul(cpscale,h, hddot);
    }
+   else                                         /* Full parrinello-rahman */
+   {
+     invert(h_tr, h_tr_inv);
+     mat_sca_mul(vol, h_tr_inv, sigma);
+
+     mat_mul(stress, sigma, hddot);	/* Calculate unit cell accelerations  */
+     mat_sca_mul(1.0/W, hddot, hddot);
+     /* 
+      * Zero unwanted degrees of freedom. Refson PhD Thesis (1986)
+      */   
+     for(i = 0; i < 9; i++)
+     {
+        if( mask & 1 )
+	   hddot[0][i] = 0.0;		/* Access as [9] rather than [3][3]   */
+	mask  >>= 1;
+     }
+   }
+
 }
 /******************************************************************************
  * Hoover_tr() function corrects forces to realize thermostat                 *
