@@ -38,11 +38,16 @@ and if practical and appropriate I will incorporate your modifications
 into a future release.  I hope that as time goes on Moldy will become
 yet more comprehensive as a result of your input.
 
-I am also keeping a list of email addresses of anyone who uses the
-program for notification of updates, bugs and so forth.  Please notify
-me if you would like to be added to this list, preferably by email to
-Keith.Refson@earth.ox.ac.uk.
+If you want to be informed about updates, new versions, bugs etc,
+there is a mailing list called moldy-announce.  It is managed by
+majordomo and to join it send an email message to
+moldy-announce-request@maillist.ox.ac.uk containing the word
+"subscribe".
 
+There is a second list for discussion of simulations using Moldy,
+requesting help with problems and related issues called simply
+moldy. To join send an email message to
+moldy-request@maillist.ox.ac.uk containing the word "subscribe".
 
 Contents of the distribution:
 
@@ -74,11 +79,12 @@ defs.h
 messages.h		'Include' files for above files
 structs.h
 xdr.h
+config.h.in		Prototype configuration file.  Do not hand-edit.
 
-stddef.h
-time.h			replacement ANSI C include files for non-ANSI systems.
-stdlib.h
-string.h
+stddef-subst.h
+time-subst..h		replacement ANSI C include files for non-ANSI systems.
+stdlib-subst..h
+string-subst..h
 
 
 dumpanal.c
@@ -86,10 +92,22 @@ dumpconv.c
 dumpext.c		Source code for 'utility' programs.
 mdshak.c
 mextract.c
+msd.c
+mdavpos.c
+ReadDCD.c
+ReadDCD.h
 
 getopt.c		Support routine for utility progs.
 
-Makefile		Make file for Moldy.
+Makefile.in		Make file prototype for Moldy.  Do not hand-edit.
+Makefile.w32		Makefile for GNU make under Windows 32.
+Makefile.mak		Makefile for Borland Turbo C.
+
+configure		Shell script to prepare for compilation.
+
+aclocal.m4		Macros for preparing configure script.  Not used.
+config.guess 		
+config.sub		Called by configure script.
 
 compile.com		Master compile file for VMS.  Calls all the others.
 compile_moldy.com	Compile file for "moldy" itself.
@@ -100,9 +118,9 @@ defcomm.com		Defines comands - execute from your LOGIN.COM
 
 moldy.tex		LaTeX source for manual
 moldy.bbl
-fig_*.ps		Encapsulated Postscript versions of figures.
-fig_*.tex		LaTeX annotation for figures.
-fig_*-eepic.tex		Alternative version of figures in eepic form.
+figures/fig_*.ps	Encapsulated Postscript versions of figures.
+figures/fig_*.tex	LaTeX annotation for figures.
+figures/fig_*-eepic.tex	Alternative version of figures in eepic form.
 
 
 tips2.in
@@ -163,95 +181,40 @@ manual.
 
 A. UNIX
 
-Stage 1.
-You ought to be able to type "make moldy utilities" on just about any
-flavour of unix and build a working version.  However if you want to
-get the best performance you will have to work a bit harder with
-compiler options.  You may also find that the compile fails for
-obscure reasons.  Don't worry, some compile options will probably sort
-that out too.
+This version of Moldy uses the GNU autoconf system to configure for
+compilation.   In many cases it should be possible to do:
 
-Stage 2.  
-Edit "Makefile", choose a suitable set of compiler options for your
-machine and uncomment them. Moldy has been test compiled on most
-modern workstations as well as vector super and minisuper-computers,
-so you only have to select the preset options.
+% ./configure
+% make
 
-Stage 3.  
-This section describes how to "hand-tune" compiler options.
-If you get this far you have probably got a different machine or
-compiler system from any of the tested ones.  Moldy recognises a
-number of C preprocessor macros which adjust its expectations of the
-compiler and operating system.  These are best defined using the
-"-DMACRO-NAME" option of most unix C compilers.
+The "configure" script will determine the cababilities of the
+compiling system and create the files "config.h" and Makefile
+tailored to the system.  It should recognise most major workstation
+types and supply a good set of optimization options for the usual C
+compiler.
 
-MACRO		Purpose
------           -------
-	The following two macros are used to select the ANSI C
-	"stdarg" mechanism. Default is older "varargs" mechanism. 
+You can change the default compiler or options by calling configure
+with the environment variables CC, CPPFLAGS, CFLAGS, OPT, OPT2,
+LDFLAGS or LIBS defined.  Any values wou supply for these will override
+the built-in ones.  eg
 
-__STDC__	Automatically defined by ANSI compilers in strict mode.
-ANSI		Alternative for ANSI compiler in non-strict mode which
-		does not define __STDC__.
+% env CC=gcc OPT=-O1 ./configure     (c-shell)
+$ CC=gcc OPT=-O1 ./configure         (bourne-shell/korn-shell/bash)
 
-ANSI_LIBS	Set this if your libraries and header files conform
-		to those expected in the ANSI 89 Standard.  Otherwise
-		extra replacement routines and header files to
-		remedy the deficiencies of older systems are included.
+Configure should be able to determine the characteristics of an
+machine unknown to it and to create Makefile and config.h to build a
+working version.  In that case you may need to  "hand-tune" compiler
+or optimization options, which may be specified by setting the OPT
+and OPT2 environment variables.  OPT2 is used to compile only the most
+performance-critical modules and usually will select a very high level
+of optimization.  It should be safe to select an optimization which
+means "treat all function arguments as restricted pointers which are
+not aliased to any other object".  OPT is used for less
+preformance-critical modules and may be set to a lower level of
+optimization than OPT2.
 
-		Set this if at all possible.  Only in an ANSI
-		environment can you be sure that all needed headers and
-		library routines will be present.  The alternative is
-		a kludge which works most of the time on most machines.
-
-		This is automatically set in "defs.h" for some
-		machines/compilers vhich are known to have ANSI libraries.
-
-USE_XDR		Turn on support for the portable binary dump and
-		restart files using the XDR mechanism.  This is the
-		only area where Moldy departs substantially from the
-		ANSI C standard so it is optional.  Nevertheless it
-		is so massively useful that it is on by default.
-
-		As this is not part of the standard it may not compile
-		correctly on some systems if the compiler is in
-		"strict ANSI" mode.  Use the default  or the "relaxed"
-		or "extended" ansi mode often provided. 
-
-		You may well need to add a library to the link using
-		the LDFLAGS variable in the Makefile.  For
-		example, solaris 2 on Suns needs the "-lnsl"
-		option and SGI's need the "-lsun" option.
-
-		You may also need to define some other macro to get
-		the headers correctly included viz:
-
-_ALL_SOURCE 	(IBM RS6000)
-_HPUX_SOURCE	(HPUX)
-		These are needed to enable stuff needed for the XDR
-		routines and headers on IBM and HP machines.  
-		N.B. These are actually set automatically in the Moldy
-		header "defs.h" However other systems may require something
-		similar .
-
-SPMD		Compile for SPMD (Single Program Multiple Data) parallel
-		execution.  You must also specify one of the macros
-		BSP, MPI or TCGMSG to select a message-passing library
-		and have the appropriate include paths and libraries
-		defined in the Makefile.
-
-BSP/MPI/TCGMSG/SHMEM   (parallel.c only)
-		These select the parallel interface library.  Portable
-		implementations of the first three are available for
-		most parallel architectures, and MPI should be available
-		on most true parallel machines.  
-
-MPPMANY		(Ewald.c only) Selects parallelization of some of the
-		trig initialization code for the reciprocal-space sum.
-		This is a loser on all but the highest-bandwidth
-		parallel machines.  It increases run time on the IBM SP2.
-		However it DOES give a speedup on the T3D when used in
-		conjunction with the SHMEM or BSP library interface.
+There is just one other option to "configure", "--enable-parallel".
+See the section below on compiling for parallelism for a description.
 
 B. VMS (VAX/VMS and OpenVMS/AXP)
 
@@ -281,9 +244,9 @@ Moldy should compile using any good ANSI C compiler, but one of the
 ports of the free GNU gcc compiler to Win95 is recommended.  The
 simplest is the "Mingw32" port available from
 "http://agnes.dida.physik.uni-essen.de/~janjaap/mingw32/" which
-contains executables of the compiler, libraries and GNU Make.  Once
-this is installed the compilation procedure is the same as that for
-Unix.  There is a set of compiler options in the standard Makefile
+contains executables of the compiler, libraries and GNU Make.  
+Just rename the supplied "Makefile.w32" to makefile and invoke "make".
+There is a set of compiler options in  Makefile.w32
 which produce a reasonably fast and portable executable.  (N.B.  These
 compilers etc can only be run from the MS-DOS command line window)
 
@@ -333,25 +296,51 @@ A.  Distributed Memory
     message-passing libraries installed on the target system.  These
     are the Oxford BSP library, MPI (the new standardised
     message-passing library interface) and TCGMSG (the Theoretical
-    Chamistry message-passing system).  Then define the macro PARLIBC
-    in the Makefile to contain the "include" path for the library
-    header files, and the preprocessor symbols SPMD and one of MPI,
-    BSP and TCGMSG.  The macro PARLIBL should be defined to link with
-    the appropriate libraries.
+    Chamistry message-passing system).  For the Cray T3D, there is
+    also an interface to the SHMEM libraries which provides the very
+    fastest interprocessor communication.  This may be used in
+    conjunction with the MPPMANY option in Ewald.c.
 
-    For the Cray T3D, there is also an interface to the SHMEM libraries
-    which provides the very fastest interprocessor communication.  This
-    may be used in conjunction with the MPPMANY option in Ewald.c.
+    To configure for a parallel build, use the "--enable-parallel"
+    option to "configure".  The syntax is
 
-    To find out how to set up a parallel run, consult the documentation
-    for your parallel system, as this varies.  
+    ./configure --enable-parallel=<parsys> 
+
+    where <parsys> is one of "mpi" "bsp" "shmem" or "tcgmsg".  If 
+    <parsys> is omitted the default is "mpi".  
+
+    Sometimes this is all that is required for a parallel build -- if
+    the include files for the parallel system are in a directory
+    searched by the C compiled and the libraries can be found using
+    -l<parlib>.  The Cray T3D/T3E and SGI Power Challenge and Origin
+    2000 systems fall into this category.  Otherwise it may be
+    necessary to specify these by setting the environment variables
+    CPPFLAGS and LIBS, eg:
+
+    env CPPFLAGS=-I/usr/local/mpi/include 
+        LIBS="-L/usr/local/mpi/bin -lmpi" ./configure
+
+    Some parallel systems such as the MPICH implementation of MPI
+    from Argonne National Laboratories supply a compiler script
+    called, in this case "mpicc".  If you are using MPICH it is
+    sufficient to do:
+
+    env CC=mpicc ./configure --enable-parallel
+
+    Configure assumes that "mpicc" invokes the system C compiler
+    and adds the appropriate optimization flags.  Other cases where
+    an alternate compiler specification is used are for the IBM SP2
+    where the command is "mpcc" and for the Oxford bsp library
+    which provides "bspcc".
 
     The parallel performance increses with system size as the amount
     of work in the force and ewald sum loops increases as a proportion
     of the total work and with respect to the communication overhead.
     A speedup of nearly 7 on an 8-processor IBM SP1 has been
     demonstrated for the run "control.big", and in general the larger
-    the system the better the parallel performance.  
+    the system the better the parallel performance.   However it is
+    also possible to obtain a moderate speedup on a workstation
+    network using the MPICH implementation of MPI. 
 
     The parallel interface is contained within a single file
     "parallel.c" and versions for other MP libraries should be
