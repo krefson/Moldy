@@ -24,13 +24,13 @@ dnl Unfortunately the Bourne-shell "env=value command" construct breaks the
 dnl configure script.
 dnl However we can rely on the "env" command in the case of the crays.
 dnl   
-      T3D-cray-unicos*)   DEFCC="env TARGET=cray-t3d cc" ALTCC="mpicc bspcc";;
-      T3E-cray-unicos*)   DEFCC="env TARGET=cray-t3e cc" ALTCC="mpicc bspcc";;
+      T3D-cray-unicos*)   DEFCC="env TARGET=cray-t3d cc" ALTCC="mpicc bspcc cc";;
+      T3E-cray-unicos*)   DEFCC="env TARGET=cray-t3e cc" ALTCC="mpicc bspcc cc";;
 dnl
 dnl Alternative compilers for Linux
 dnl
       i?86-pc-linux*)     DEFCC=pgcc ALTCC="mpicc bspcc";;
-                     *)   ALTCC="mpicc bspcc";;
+                     *)   ALTCC="cc mpicc bspcc";;
    esac
 dnl
 dnl Here we test whether the specified (or default) C compiler is one of those
