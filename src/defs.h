@@ -19,9 +19,17 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.24 93/03/12 12:26:12 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 2.1 93/07/19 13:27:15 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 2.1  93/07/19  13:27:15  keith
+ * Added XDR capability for backup and dump files.
+ * 
+ * Revision 2.0  93/03/15  14:49:28  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.24  93/03/12  12:26:12  keith
  * Reorganized defines to recognise all ANSI (__type__) forms.
  * Fixed up Cray by defining old symbol.
@@ -118,8 +126,8 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.24 $"
-#define		 REVISION_DATE    "$Date: 93/03/12 12:26:12 $"
+#define          REVISION         "$Revision: 2.1 $"
+#define		 REVISION_DATE    "$Date: 93/07/19 13:27:15 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -249,9 +257,10 @@ what you give them.   Help stamp out software-hoarding!  */
 
 #define	L_name		128			/* Max Length of file names  */
 #define	NPE		2			/* real & Ewald PE's	     */
-#define ABS(x)		((x) > 0 ? (x) : -(x))
+#undef  MAX
 #define MAX(x,y)	((x) > (y) ? (x) : (y))
 #define MAX3(x,y,z)	MAX(x, MAX(y,z))
+#undef  MIN
 #define MIN(x,y)	((x) < (y) ? (x) : (y))
 #define	MIN3(x,y,z)	MIN(x, MIN(y,z))
 #define SUMSQ(x)	(x[0]*x[0] + x[1]*x[1] +x[2]*x[2])

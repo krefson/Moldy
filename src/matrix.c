@@ -31,6 +31,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	matrix.c,v $
+ * Revision 2.0  93/03/15  14:49:14  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.7  93/03/09  15:59:01  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
@@ -63,7 +68,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/matrix.c,v 1.7 93/03/09 15:59:01 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/matrix.c,v 2.0 93/03/15 14:49:14 keith Rel $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -73,6 +78,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/matrix.c,v 1.7 93
 /*========================== External function declarations ==================*/
 void	message();		/* Error message and exit handler	      */
 /*============================================================================*/
+#define ABS(x)		((x) > 0 ? (x) : -(x))
 /******************************************************************************
  * 3 x 3  Matrix - vector multiply  (of multiple vectors)                     *
  * The input and output vectors need not necessarily be distinct              *
