@@ -3,6 +3,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.7  90/08/01  19:11:40  keith
+ * Modified to exclude framework-framework interactions.
+ * N.B. Excluded from pe and stress but NOT forces (as they sum to 0).
+ * 
  * Revision 1.6  90/05/16  18:40:57  keith
  * Renamed own freer from cfree to tfree.
  * 
@@ -51,7 +55,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.6 90/05/16 18:40:57 keith Exp $";
+static char *RCSid = "$Header: /mnt/keith/moldy/RCS/ewald_parallel.c,v 1.8 90/08/20 17:49:24 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -69,8 +73,8 @@ double	err_fn();			/* Error function		      */
 double	det();				/* Determinant of 3x3 matrix	      */
 void	invert();			/* Inverts a 3x3 matrix		      */
 void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
+void	mat_sca_mul();			/* Multiplies a 3x3 matrix by scalar  */
 void	transpose();			/* Transposes a 3x3 matrix	      */
-void	mat_sca_mul();			/* Multiplies 3x3 matrix by scalar    */
 double	sum();				/* Sum of elements of 'real' vector   */
 #ifdef VCALLS
 void	saxpy();			/* A*x+y, x, y are long vectors	      */
@@ -83,9 +87,9 @@ int	nprocessors();			/* Return no. of procs to execute on. */
 /*========================== External data references ========================*/
 extern	contr_t	control;		/* Main simulation control record     */
 /*========================== Macros ==========================================*/
-#define astar hinv[0]
-#define bstar hinv[1]
-#define cstar hinv[2]
+#define astar hinvp[0]
+#define bstar hinvp[1]
+#define cstar hinvp[2]
 #define moda(hmat) (hmat[0][0])
 #define modb(hmat) sqrt(SQR(hmat[0][1]) + SQR(hmat[1][1]))
 #define modc(hmat) sqrt(SQR(hmat[0][2]) + SQR(hmat[1][2]) + SQR(hmat[2][2]))
@@ -103,7 +107,7 @@ real		chg[];			/* Array of site charges	 (in) */
 double		*pe;			/* Potential energy		(out) */
 mat_t		stress;			/* Stress virial		(out) */
 {
-   mat_t	hinv;			/* Matrix of reciprocal lattice vects*/
+   mat_t	hinvp;			/* Matrix of reciprocal lattice vects*/
    register	int	h, k, l;	/* Recip. lattice vector indices     */
 		int	i, j, is, ssite;/* Counters.			     */
    		spec_p	spec;		/* species[ispec]		     */
@@ -112,7 +116,6 @@ mat_t		stress;			/* Stress virial		(out) */
    		vec_t	kv;		/* (Kx,Ky,Kz)  			     */
    	 	struct _hkl *hkl;
    		int	nhkl = 0;
-   mat_t	htrinv;
 /*
  * Maximum values of h, k, l  s.t. |k| < k_cutoff
  */
@@ -142,7 +145,8 @@ mat_t		stress;			/* Stress virial		(out) */
    static	boolean init = true;	/* Flag for the first call of function*/
    static	int	nsitesxf;	/* Number of non-framework sites.     */
 
-   invert(system->h, hinv);		/* Inverse of h is matrix of r.l.v.'s */
+   invert(system->h, hinvp);		/* Inverse of h is matrix of r.l.v.'s */
+   mat_sca_mul(2*PI, hinvp, hinvp);
    if (nthreads > 1)
        s_f_n = (real***)arralloc(sizeof(real), 3,
 				 0, nthreads-2, 0, 2, 0, nsites-1);
@@ -214,15 +218,18 @@ mat_t		stress;			/* Stress virial		(out) */
    /*
     * Build array hkl[] of k vectors within cutoff
     */
-   transpose(hinv, htrinv);
-   mat_sca_mul(2*PI, htrinv, htrinv);
    hkl = aalloc(4*(hmax+1)*(kmax+1)*(lmax+1), struct _hkl);
    for(h = 0; h <= hmax; h++)
       for(k = (h==0 ? 0 : -kmax); k <= kmax; k++)
+      {
+	 kv[0] = h*astar[0] + k*bstar[0];
+	 kv[1] = h*astar[1] + k*bstar[1];
+	 kz = h*astar[2] + k*bstar[2];
 	 for(l = (h==0 && k==0 ? 1 : -lmax); l <= lmax; l++)
 	 {
-	    kv[0] = h; kv[1] = k; kv[2] = l;
-	    mat_vec_mul(htrinv, (vec_t*)kv,(vec_t*)kv,1);
+	  /*  kv[0] = kx + l*cstar[0]; 
+	    kv[1] = ky + l*cstar[1]; */
+	    kv[2] = kz + l*cstar[2];
 	    if( SUMSQ(kv) < SQR(control.k_cutoff) )
 	    {
 	       hkl[nhkl].h = h; hkl[nhkl].k = k; hkl[nhkl].l = l;
@@ -232,6 +239,7 @@ mat_t		stress;			/* Stress virial		(out) */
 	       nhkl++;
 	    }
 	 }
+      }
 
    *pe -= self_energy+sheet_energy/vol;	/* Subtract self energy term	      */
       
@@ -246,15 +254,15 @@ VECTORIZE
 VECTORIZE
    for(is = 0; is < nsites; is++)
    {
-      kx = hinv[0][0]*site[0][is]+hinv[0][1]*site[1][is]+hinv[0][2]*site[2][is];
-      ky = hinv[1][0]*site[0][is]+hinv[1][1]*site[1][is]+hinv[1][2]*site[2][is];
-      kz = hinv[2][0]*site[0][is]+hinv[2][1]*site[1][is]+hinv[2][2]*site[2][is];
-      chx[1][is] = cos(2.0 * PI * kx);
-      shx[1][is] = sin(2.0 * PI * kx);
-      cky[1][is] = cos(2.0 * PI * ky);
-      sky[1][is] = sin(2.0 * PI * ky);
-      clz[1][is] = cos(2.0 * PI * kz);
-      slz[1][is] = sin(2.0 * PI * kz);
+      kx = astar[0]*site[0][is]+astar[1]*site[1][is]+astar[2]*site[2][is];
+      ky = bstar[0]*site[0][is]+bstar[1]*site[1][is]+bstar[2]*site[2][is];
+      kz = cstar[0]*site[0][is]+cstar[1]*site[1][is]+cstar[2]*site[2][is];
+      chx[1][is] = cos(kx);
+      shx[1][is] = sin(kx);
+      cky[1][is] = cos(ky);
+      sky[1][is] = sin(ky);
+      clz[1][is] = cos(kz);
+      slz[1][is] = sin(kz);
    }
 /*
  * Use addition formulae to get sin(h*astar*x)=sin(Kx*x) etc for each site
