@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdvaf.c,v 1.9 2000/11/09 16:54:13 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdvaf.c,v 1.10 2000/11/13 16:01:24 keith Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,10 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdvaf.c,v 1.9 
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.10  2000/11/13 16:01:24  keith
+ *  Changed dump format to contain principle-frame angular velocities.
+ *  Adapted mdvaf.c to calculate angular acf's too - added "-a" flag.
+ *
  *  Revision 1.9  2000/11/09 16:54:13  keith
  *  Updated utility progs to be consistent with new dump format
  *
@@ -116,7 +120,7 @@ void	zero_float(float *r, int n)
  ***********************************************************************/    
 void
 vaf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc, 
-	 int max_av, int it_inc, float (**vel)[3], float **vaf)
+	 int max_av, int it_inc, float (**vel)[3], float **vaf, int aflg)
 {
    int it, irec, totmol, ivaf, ispec, imol;
    float		vaftmp;
@@ -136,10 +140,13 @@ vaf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc,
 	 for( ispec = 0, spec = species+sp_range[0]; spec <= species+sp_range[1];
 	    spec += sp_range[2], ispec++)
          {
-            vaftmp = 0.0;
-	    for( imol = 0; imol < spec->nmols; totmol++, imol++)
-	       vaftmp += DOTPROD(vel0[totmol],vel1[totmol]);
-            vaf[ivaf][ispec] += vaftmp / spec->nmols;
+	    if( aflg == 0 || spec->rdof > 0)
+	    {
+	       vaftmp = 0.0;
+	       for( imol = 0; imol < spec->nmols; totmol++, imol++)
+		  vaftmp += DOTPROD(vel0[totmol],vel1[totmol]);
+	       vaf[ivaf][ispec] += vaftmp / spec->nmols;
+	    }
          }
       }
 }
@@ -184,20 +191,23 @@ vtf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc,
  * vaf_out().  Output routine for displaying vaf results                      *
  ******************************************************************************/
 void
-vaf_out(spec_mt *species, float **vaf, int max_av, int nvaf, int *sp_range)
+vaf_out(spec_mt *species, float **vaf, int max_av, int nvaf, int *sp_range, int aflg)
 {
    int          ispec=0, ivaf;
    spec_mp      spec;
 
    for( spec = species+sp_range[0]; spec <= species+sp_range[1]; spec += sp_range[2])
    {
-       puts(spec->name);
+    if( aflg == 0 || spec->rdof > 0)
+    {
+      (void)printf("# %s\n",spec->name); 
        for( ivaf = 0; ivaf < nvaf; ivaf++)
        {
           vaf[ivaf][ispec] /= max_av;
           (void)printf("%10.7f\n",vaf[ivaf][ispec]);
        }
        ispec++;
+    }
    }
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
@@ -493,7 +503,7 @@ main(int argc, char **argv)
   /*
    * Allocate buffer for data
    */
-   dump_size = 3*sys.nmols*sizeof(float);
+   dump_size = 3*(aflg?sys.nmols_r:sys.nmols)*sizeof(float);
 
   /* Allocate memory for velocity data and zero */
    vel = (float (**)[3])arralloc(sizeof(float[3]),2,0,nslices-1,0,sys.nmols-1);
@@ -553,7 +563,7 @@ main(int argc, char **argv)
      if( outsw )
         vtf_calc(species, sp_range, vstart, vfinish, vinc, max_av, it_inc, vel, vaf);
      else
-        vaf_calc(species, sp_range, vstart, vfinish, vinc, max_av, it_inc, vel, vaf);
-     vaf_out(species, vaf, max_av, nvaf, sp_range);
+        vaf_calc(species, sp_range, vstart, vfinish, vinc, max_av, it_inc, vel, vaf, aflg);
+     vaf_out(species, vaf, max_av, nvaf, sp_range, aflg);
    return 0;    
 }
