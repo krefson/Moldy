@@ -14,6 +14,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 1.13  91/08/16  15:25:35  keith
+ * Checked error returns from fread, fwrite, fseek and fclose more
+ * rigourously.   Called strerror() to report errors.
+ * 
  * Revision 1.12  91/08/15  18:12:03  keith
  * Modifications for better ANSI/K&R compatibility and portability
  * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
@@ -64,7 +68,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.12 91/08/15 18:12:03 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.13 91/08/16 15:25:35 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -86,14 +90,17 @@ void message();
 /*========================== Potential type specification ====================*/
 pots_t	potspec[]  = {{"lennard-jones",2},
 		      {"buckingham",3},
-                      {"mcy",4}};
+                      {"mcy",4},
+		      {"generic",6}};
 int	npott=(sizeof potspec / sizeof(pots_t));
 /*
  *  Array of dimensions of pot'l parameters.  Powers of {m,l,t} per parameter.
  */
 dim_t    pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
                            {{1,8,-2},{1,2,-2},{0,-1,0}},
-		           {{1,2,-2},{0,-1,0},{1,2,-2},{0,-1,0}}};
+		           {{1,2,-2},{0,-1,0},{1,2,-2},{0,-1,0}},
+			   {{1,2,-2},{0,-1,0},{1,14,-2},
+			    {1,6,-2},{1,8,-2},{1,10,-2}}};
 
 /*========================== Macros ==========================================*/
 
@@ -110,6 +117,7 @@ dim_t    pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
 #define LJPOT 0
 #define E6POT 1
 #define MCYPOT 2
+#define GENPOT 3
 /*============================================================================*/
 /******************************************************************************
  *  dist_pot   return attractive part of potential integrated from cutoff to  *
@@ -129,11 +137,13 @@ int	ptype;				/* Potential type selector	      */
     case E6POT:
       return(potpar[0] / ( 3.0*CUBE(cutoff)));
     case MCYPOT:
-      if( potpar[2] != 0.0 )
+      if( potpar[3] != 0.0 )
          return( potpar[2] * (SQR(cutoff)/potpar[3] + 2*cutoff/SQR(potpar[3])
 	   		   + 2.0 / CUBE(potpar[3])) * exp(-potpar[3]*cutoff));
       else
          return( 0.0 );
+    case GENPOT:
+      return 0.0;
    }
 }
 /******************************************************************************
@@ -155,13 +165,15 @@ real	*pot[];			/* Vectors of potential parameters.	 (in) */
 {
    register real t;			/* Argument of erfc() polynomial.     */
    register real r;			/* Site-site distance.		      */
-   register real r_r, r_6_r, r_sqr_r, r_12_r;	/* Reciprocal powers of r.    */
+   register real r_r, r_6_r, r_sqr_r, r_12_r,	/* Reciprocal powers of r.    */
+                 r_4_r, r_8_r;
    register real erfc_term;		/* Intermediates in erfc calculation. */
    	    real ppe = 0.0;		/* Local accumulator of pot. energy.  */
    	    real exp_f1, exp_f2;	/* Temporary for b*exp(-cr) etc       */
    register int	jsite;			/* Loop counter for vectors.	      */
    real *p0 = pot[0], *p1 = pot[1],     /* Local bases for arrays of pot'l    */
-        *p2 = pot[2], *p3 = pot[3];     /* parameters.			      */
+        *p2 = pot[2], *p3 = pot[3],     /* parameters.			      */
+        *p4 = pot[4], *p5 = pot[5];
 
    if(alpha > 0.0)
       switch(ptype)
@@ -241,6 +253,37 @@ VECTORIZE
 	    + erfc_term * r_sqr_r;
 	 }
 	 break;      
+       case GENPOT:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+	 {
+	    /*
+	     * Calculate r and coulombic part
+	     */
+	    r       = sqrt(r_sqr[jsite]);
+	    r_r	 = 1.0 / r;
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(alpha*r));
+	    t = 1.0/(1.0+PP*(alpha*r));
+	    t = POLY5(t) * erfc_term * r_r;
+	    erfc_term = t + norm * erfc_term;
+	    r_sqr_r = SQR(r_r);
+            /*
+	     * Non-coulombic ie potential-specific part
+	     */
+	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
+	    r_4_r = SQR(r_sqr_r);
+	    r_6_r = r_sqr_r * r_4_r;
+	    r_8_r = p5[jsite] * SQR(r_4_r);
+	    r_12_r = p2[jsite] * SQR(r_6_r);
+	    r_4_r *= p3[jsite];
+	    r_6_r *= p4[jsite];
+
+	    ppe += t + exp_f1 + r_12_r -r_4_r - r_6_r - r_8_r;
+	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r - 4.0*r_4_r - 6.0*r_6_r 
+				      - 8.0*r_8_r + erfc_term)
+	                   + p1[jsite]*exp_f1 * r_r;
+	 }
+	 break;      
       }
    else
       switch(ptype)
@@ -285,6 +328,27 @@ VECTORIZE
 	    forceij[jsite] = (p1[jsite]*exp_f1 + p3[jsite]*exp_f2) *r_r;
 	 }
 	 break; 
+       case GENPOT:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+	 {
+	    r       = sqrt(r_sqr[jsite]);
+	    r_r	 = 1.0 / r;
+	    r_sqr_r = SQR(r_r);
+	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);
+	    r_4_r = SQR(r_sqr_r);
+	    r_6_r = r_sqr_r * r_4_r;
+	    r_8_r = p5[jsite] * SQR(r_4_r);
+	    r_12_r = p2[jsite] * SQR(r_6_r);
+	    r_4_r *= p3[jsite];
+	    r_6_r *= p4[jsite];
+
+	    ppe += exp_f1 + r_12_r -r_4_r - r_6_r - r_8_r;
+	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r - 4.0*r_4_r - 6.0*r_6_r 
+				      - 8.0*r_8_r)
+	                   + p1[jsite]*exp_f1 * r_r;
+	 }
+	 break;      
       }     
    *pe += ppe;
 }

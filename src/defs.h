@@ -1,7 +1,10 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.17 91/08/19 16:49:34 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.18 92/02/26 14:29:04 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.18  92/02/26  14:29:04  keith
+ * Updated vectorization directive substitution for Convex C vsn 4.3
+ * 
  * Revision 1.17  91/08/19  16:49:34  keith
  * Moved #if so that errno.h is included for system V.
  * 
@@ -75,8 +78,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.17 $"
-#define		 REVISION_DATE    "$Date: 91/08/19 16:49:34 $"
+#define          REVISION         "$Revision: 1.18 $"
+#define		 REVISION_DATE    "$Date: 92/02/26 14:29:04 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -184,7 +187,7 @@
 /******************************************************************************
  *  End of machine/OS configuration.					      *
  ******************************************************************************/
-#define NPOTP 5                 /* Must be number of doubles in pot_t        */
+#define NPOTP 7                 /* Must be number of doubles in pot_t        */
 
 #ifndef SEEK_END
 #define	SEEK_SET	0
