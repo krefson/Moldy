@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.28  2001/02/22 10:24:38  keith
+ *      Reinstated capability of "molecular" cutoff, but still using Bekker stress.
+ *
  *      Revision 2.27  2001/02/20 10:34:33  keith
  *      Revised criteria for testing if FP parameters changed on restart.
  *
@@ -306,7 +309,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.27 2001/02/20 10:34:33 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.28 2001/02/22 10:24:38 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -401,6 +404,7 @@ const match_mt	match[] = {
 {"text-mode-save",   "%d",   "0",            (gptr*)&control.print_sysdef},
 {"new-sys-spec",     "%d",   "0",            (gptr*)&control.new_sysdef},
 {"molecular-cutoff", "%d",   "0",            (gptr*)&control.molpbc},
+{"dont-use-symm-rot","%d",   "0",            (gptr*)&control.nosymmetric_rot},
 {"scale-options"   , "%d",   "0",            (gptr*)&control.scale_options},
 {"therm-options"   , "%d",   "0",            (gptr*)&control.scale_options},
 {"surface-dipole",   "%d",   "0",            (gptr*)&control.surface_dipole},

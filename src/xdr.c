@@ -26,6 +26,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.20  2001/02/19 19:36:45  keith
+ *       First working version of combined isothermic/isobaric ensemble.
+ *       (Previous version was faulty).
+ *       Also includes uniform-dilation, constant-pressure mode.
+ *
  *       Revision 2.19  2000/12/06 17:45:34  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -128,7 +133,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.19 2000/12/06 17:45:34 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.20 2001/02/19 19:36:45 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -164,8 +169,9 @@ bool_t xdr_contr(XDR *xdrs, contr_mt *cp)
       xdr_bool(xdrs, &cp->surface_dipole) &&
       xdr_bool(xdrs, &cp->lattice_start) &&
       xdr_opaque(xdrs, cp->sysdef, 6*L_name) &&
-      xdr_vector(xdrs, (gptr*)cp->spare, 23, sizeof(int), 
+      xdr_vector(xdrs, (gptr*)cp->spare, 22, sizeof(int), 
 		 (xdrproc_t)xdr_int) &&
+      xdr_bool(xdrs, &cp->nosymmetric_rot) &&
       xdr_double(xdrs, &cp->ttmass) &&
       xdr_double(xdrs, &cp->rtmass) &&
       xdr_int(xdrs, &cp->const_pressure) &&

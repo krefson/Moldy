@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.23  2001/02/21 17:04:25  keith
+ *       Reordered "applied temperature" message in banner_page()
+ *
  *       Revision 2.22  2001/02/20 12:29:52  keith
  *       Fixed banner page test for printing of "scaling" message.
  *
@@ -232,7 +235,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.22 2001/02/20 12:29:52 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.23 2001/02/21 17:04:25 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -465,6 +468,7 @@ void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
    spec_mp	spec;
    mat_mp	h = system->h;
    real		chg;
+   int rdof = 0;
    char		version[132], *vsn=version;
 
    new_page(); new_lins(2);
@@ -506,6 +510,7 @@ void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
       }
       else
       {
+	 rdof += spec->rdof;
 	 if(spec->rdof == 2)
 	 {
 	    (void)printf("\t%s molecule is linear",spec->name);
@@ -603,6 +608,15 @@ void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
 	    (void)printf("\tDe-Leeuw et al. surface dipole term included");
 	 new_line();
       }
+   }
+
+   if ( rdof > 0 )
+   {
+     if( control.nosymmetric_rot )
+       (void)printf(" Using General version of rotational leapfrog integrator");
+     else
+       (void)printf(" Using symmetry-adapted version of rotational leapfrog integrator");
+     new_line();
    }
 
    if( control.rdf_interval > 0 && control.begin_rdf <= control.nsteps)

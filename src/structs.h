@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.17 2001/02/19 19:36:45 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.18 2001/02/22 10:24:38 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.18  2001/02/22 10:24:38  keith
+ * Reinstated capability of "molecular" cutoff, but still using Bekker stress.
+ *
  * Revision 2.17  2001/02/19 19:36:45  keith
  * First working version of combined isothermic/isobaric ensemble.
  * (Previous version was faulty).
@@ -203,7 +206,8 @@ typedef struct                  /* Control parameters for simulation          */
                 dump_file[L_name],      /* Name of file 'dump' writes to      */
                 backup_file[L_name],    /* Name of backup save file           */
                 temp_file[L_name];      /* Temporary file for writing restart */
-   int          spare[23];      /* Extra space for expansion (should be ODD)  */
+   int          spare[22];      /* Extra space for expansion (should be EVEN) */
+   boolean      nosymmetric_rot;/* Don't use symm. variant of rot'l leapfrog  */
    double       ttmass,         /* Nose-Hoover trans temp mass parameter      */
                 rtmass;         /* Nose-Hoover rotat temp mass parameter      */
    int		const_pressure; /* Flag to turn on P&R CP method              */

@@ -35,6 +35,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: leapfrog.c,v $
+ *       Revision 2.9  2001/02/19 19:36:44  keith
+ *       First working version of combined isothermic/isobaric ensemble.
+ *       (Previous version was faulty).
+ *       Also includes uniform-dilation, constant-pressure mode.
+ *
  *       Revision 2.8  2001/02/15 17:25:21  keith
  *       Tidied up code and corrected one error in combined barostat
  *       and thermostat. (The combination is still not tested though).
@@ -74,7 +79,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.8 2001/02/15 17:25:21 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.9 2001/02/19 19:36:44 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -436,12 +441,10 @@ void leapf_quat_a(double step, quat_mt (*quat), quat_mt (*avel), real *inertia, 
  ******************************************************************************/
 void leapf_quat(double step, quat_mt (*quat), quat_mt (*avel), real *inertia, int nmols)
 {
-#define SYMM_BODY
-#ifdef SYMM_BODY
-      leapf_quat_b(step, quat, avel, inertia, nmols);
-#else
+  if( control.nosymmetric_rot )
       leapf_quat_a(step, quat, avel, inertia, nmols);
-#endif
+  else
+      leapf_quat_b(step, quat, avel, inertia, nmols);
 }
 /******************************************************************************
  * leapf_avel().  Perform the angular velocity update step of the leapfrog    *
