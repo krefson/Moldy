@@ -43,11 +43,14 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
- *       Revision 2.12  2000/04/27 17:57:06  keith
- *       Converted to use full ANSI function prototypes
+ *       Revision 2.10.2.2  2000/09/29 14:24:21  keith
+ *       Added tests and made secure against buffer overflow in "vsn" field of
+ *       dump and restart headers.  The 16-char buffer leads to overflows with
+ *       long CVS version strings
  *
- *       Revision 2.11  2000/04/26 16:01:01  keith
- *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
+ *       Revision 2.10.2.1  2000/08/29 16:49:20  keith
+ *       Fixed RNG to be synchronous on multiprocessor -- needed for
+ *       scale-options=8.
  *
  *       Revision 2.10  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
@@ -178,7 +181,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/dump.c,v 2.12 2000/04/27 17:57:06 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.10.2.2 2000/09/29 14:24:21 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -193,15 +196,17 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/dump.c,v 2.
 #include	"messages.h"
 #include	"xdr.h"
 /*========================== External function declarations ==================*/
-gptr            *talloc(int n, size_mt size, int line, char *file);	       /* Interface to memory allocator       */
+gptr            *talloc(int n, size_mt size, int line, char *file);
+	       /* Interface to memory allocator       */
 void            tfree(gptr *p);	       /* Free allocated memory	      	      */
 static char	*mutate(char *name);
-double		mdrand(void);
+double		mdrand1(void);
 void		mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
+void            vscale( int n,  double s,  real *x, int ix); /* Vector* const multiply */
 static void	dump_convert(float *buf, system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3], double pe);
 static void	real_to_float(real *b, float *a, int n);
-void	note(char *, ...);		/* Write a message to the output file */
-void	message(int *, ...);		/* Write a warning or error message   */
+void		note(char *, ...);	/* Write a message to the output file */
+void		message(int *, ...);	/* Write a warning or error message   */
 /*========================== External data references ========================*/
 extern contr_mt	control;                    /* Main simulation control parms. */
 #ifdef USE_XDR
@@ -218,6 +223,7 @@ static
 int read_dump_hdr(char *fname, FILE **dumpf, dump_mt *hdr_p, boolean *xdr_write)
 {
    int      errflg = true;	/* Provisionally !!   */
+   char     vbuf[sizeof hdr_p->vsn + 1];
 
    *xdr_write = false;
    if( (*dumpf = fopen(fname, "r+b")) == NULL)	/* Open dump file     */
@@ -231,8 +237,9 @@ int read_dump_hdr(char *fname, FILE **dumpf, dump_mt *hdr_p, boolean *xdr_write)
       xdrstdio_create(&xdrs, *dumpf, XDR_DECODE);
       if( xdr_dump(&xdrs, hdr_p) )
       {
-	 hdr_p->vsn[sizeof hdr_p->vsn - 1] = '\0';
-	 if( strstr(hdr_p->vsn,"(XDR)") )
+	 strncpy(vbuf,hdr_p->vsn,sizeof hdr_p->vsn);
+	 vbuf[sizeof hdr_p->vsn] = '\0';
+	 if( strstr(vbuf,"(XDR)") )
 	 {
 	    errflg = false;
 	    *xdr_write = true;
@@ -281,6 +288,9 @@ void	dump(system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3]
    int		junk;
    boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
+#define REV_OFFSET 11
+   char		*vsn = "$Revision: 2.10.2.2 $"+REV_OFFSET;
+#define LEN_REVISION strlen(vsn)
 
    if( ! strchr(control.dump_file, '%') )
       	(void)strcat(control.dump_file, "%d");
@@ -368,14 +378,18 @@ void	dump(system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3]
    }
    if( errflg || control.istep == control.begin_dump )
    {
+#define LEN_XDR 5
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 2.12 $"+11,
-		                     sizeof dump_header.vsn-1);
+      (void)strncpy(dump_header.vsn, vsn, sizeof dump_header.vsn);
+      dump_header.vsn[LEN_REVISION-2] = '\0';
 #ifdef USE_XDR
       if( control.xdr_write )
       {
-	 (void)strncat(dump_header.vsn, " (XDR)",
-		                     sizeof dump_header.vsn-1);
+	 if(LEN_REVISION-2+LEN_XDR >= sizeof dump_header.vsn)
+	    message(NULLI,NULLP,FATAL,
+		    "Internal error: dump_mt header field VSN too small");
+	 (void)strncat(dump_header.vsn, "(XDR)",sizeof dump_header.vsn-1);
+	 dump_header.vsn[sizeof dump_header.vsn-1] = '\0';
 	 xdr_write = true;
       }
 #endif
@@ -520,7 +534,7 @@ static char	*mutate(char *name)
       return NULL;
 
    while( begin < pc_pos )
-      *begin++ = alpha[(int)(mdrand() * 26.0)];
+      *begin++ = alpha[(int)(mdrand1() * 26.0)];
 
    return name;
 }
@@ -556,7 +570,7 @@ static void	dump_convert(float *buf, system_mp system, vec_mt (*force), vec_mt (
    if( control.dump_level & 2)
    {
       mat_vec_mul(system->h, system->vel, scale_buf, nmols);
-      vscale(3 * nmols,   1.0/system->ts, buf, 1);
+      vscale(3 * nmols,   1.0/system->ts, scale_buf[0], 1);
       real_to_float(scale_buf[0],    buf, 3*nmols);	buf += 3*nmols;
       if( system->nmols_r > 0 )
       {
