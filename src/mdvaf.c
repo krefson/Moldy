@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.17 2005/01/11 17:06:27 kr Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.18 2005/01/13 11:30:15 cf Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,9 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.17 2005/01/
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.18  2005/01/13 11:30:15  cf
+ *  Fixed formatting error in dumpext command line.
+ *
  *  Revision 1.17  2005/01/11 17:06:27  kr
  *  Fixed error which failed to pass correct file args to "dumpext".
  *  Fixed real stinker of a buffer overflow on dumpcommand by making it dynamic.
@@ -438,7 +441,7 @@ main(int argc, char **argv)
 
    verbose = 0;
 
-   while( (c = getopt(argc, argv, "3acd:t:l:i:g:o:qv") ) != EOF )
+   while( (c = getopt(argc, argv, "ad:t:l:i:g:o:qv") ) != EOF )
       switch(c)
       {
        case 'a':  /* Calculate angular velocity function */
