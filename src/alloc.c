@@ -171,6 +171,10 @@ static char *RCSid = "$Header: /tmp_mnt/home/eeyore/keith/md/moldy/RCS/alloc.c,v
 #ifndef THREADED
 # define THREAD_SYS(S) S;
 #endif
+#ifdef DBMALLOC
+typedef size_mt size_t;
+#include <dbmalloc.h>
+#endif
 /*========================== External function declarations ==================*/
 void	inhibit_vectorization();		/* Self-explanatory dummy     */
 #ifdef	DEBUG
@@ -196,8 +200,11 @@ void	message();			/* Write a warning or error message   */
  * object is the optimum.  If pointer representations of any actually required*
  * object (ie NOT char) do differ then these functions will have to be        *
  * rewritten.								      *
+ *									      *
+ * Wide_mt is the widest type for alignment purposes.  Try double.	      *
  ******************************************************************************/
 typedef int word_mt;
+typedef double wide_mt;
 /******************************************************************************
  * talloc()	Call Calloc to allocate memory, test result and stop if failed*
  ******************************************************************************/
@@ -220,13 +227,13 @@ char	*file;
 	       (int)n, (unsigned long)size);
 #endif
    THREAD_SYS(p = malloc(n*size))
+#ifdef DEBUGX
+   fprintf(stderr,"Alloc: %16s line %3d: %d x %lu bytes (%p to %p)\n", 
+	   file, line, n, size, p, p+n*size);
+#endif
    if(p == NULL && (n*size != 0))
      THREAD_SYS(message(NULLI, NULLP, FATAL, NOMEM, line, file,
 	       (int)n, (unsigned long)size))
-#ifdef DEBUGX
-   fprintf(stderr,"Alloc: %16s line %3d: %lu bytes (%x to %x)\n", 
-	   file, line, n*size, p, p+n*size);
-#endif
 #ifdef DEBUGZ
    (void)memset((gptr*)p,0x10,n*size);
 #endif
@@ -244,6 +251,31 @@ gptr	*p;
 #endif
    THREAD_SYS(free((gptr*)p))
 }
+
+#ifdef __MSDOS__
+union u {struct {int ndim, noffset, len;} b; word_mt * p; wide_mt w;};
+#define bsize (sizeof(union u)/sizeof(word_mt*))
+#define bwsize (sizeof(union u)/sizeof(word_mt))
+void afree(pp)
+gptr *pp;
+{
+   word_mt **p = (word_mt**)pp;
+   int i; union u *up = (union u *)(p-bsize);
+   if( up->b.ndim > 1 )
+   {
+      for( i=0; i < up->b.len; i++)
+	 afree((gptr*)(p[i] + up->b.noffset));
+   }
+   tfree((gptr*)(p-bsize));
+}
+      
+#else
+void 	afree(p)
+gptr	*p;
+{
+   tfree(p);
+}
+#endif
 /******************************************************************************
  *  arralloc.   Allocate a psuedo array of any dimensionality and type with   *
  *  specified lower and upper bounds for each dimension.  Each dimension is   *
@@ -254,6 +286,92 @@ gptr	*p;
  *  xfree(array);					     	      *
  *  (N.B. if lower bound of 1st dimension != 0 then free array+l.b.           *
  ******************************************************************************/
+#ifdef __MSDOS__
+
+word_mt **subarray(size, ndim, len, ap)
+size_mt	size;
+int	ndim, len;
+va_list	ap;
+{
+   word_mt **p;
+   word_mt  *d;
+   union u *up;
+   int blen, i, lb = va_arg(ap, int), ub = va_arg(ap,int);
+
+   if( ndim > 1 )
+   {
+#ifdef DEBUGY
+      fprintf(stderr,"[%d...%d]", lb, ub);
+#endif
+      blen = len+bsize;
+      p = (word_mt**)talloc(blen, (size_mt)sizeof(word_mt *), 
+			    __LINE__, __FILE__);
+      up = (union u *)p;      p += bsize;
+      up->b.ndim = ndim;	
+      up->b.len = len;	
+      up->b.noffset = lb*(ndim>2?sizeof(word_mt*):size)/sizeof(word_mt);
+      for( i=0; i<len; i++)
+	 p[i] = (word_mt*)subarray(size, ndim-1, ub-lb+1, ap) - up->b.noffset;
+      return p;
+   } else 
+   {
+      blen = len*(size/sizeof(word_mt))+bwsize;
+      d = (word_mt*)talloc(blen, (size_mt)sizeof(word_mt), __LINE__, __FILE__);
+      up = (union u *)d;      d += bwsize;
+      up->b.ndim = ndim;
+      return (word_mt **)d;
+   }      
+}
+
+#if defined(ANSI) || defined(__STDC__)
+#   undef va_alist
+#   define	va_alist size_mt size, int ndim, ...
+#   ifdef va_dcl
+#      undef va_dcl
+#   endif
+#   define va_dcl /* */
+#endif
+                /*VARARGS*/
+gptr		*arralloc(va_alist)
+va_dcl
+{
+   va_list	ap;
+   word_mt		*p;
+   int		lb, ub;
+#if defined(ANSI) || defined(__STDC__)
+   va_start(ap, ndim);
+#else
+   size_mt	size;			/* size of array element	      */
+   int		ndim;			/* Number of dimensions		      */
+
+   va_start(ap);
+   size = va_arg(ap, size_mt);
+   ndim = va_arg(ap, int);
+#endif
+
+#ifdef DEBUGY
+   fprintf(stderr,"%dD array of %lu byte elements:", ndim, size);
+#endif
+   if( size % sizeof(word_mt) != 0 )  /* Code only works for 'word' objects */
+      message(NULLI, NULLP, FATAL, WDPTR, size);
+
+   lb = va_arg(ap, int); ub = va_arg(ap, int);
+#ifdef DEBUGY
+   fprintf(stderr,"[%d...%d]", lb, ub);
+#endif
+   
+   p=(word_mt*)subarray(size, ndim, ub-lb+1, ap) 
+      - lb*(ndim>1?sizeof(word_mt*):size)/sizeof(word_mt);
+
+#ifdef DEBUGY
+   putc('\n',stderr);
+#endif
+
+   va_end(ap);   
+
+   return (gptr*)p;
+}
+#else
 #define CSA(a) ((char*)(a))
 #define ALIGN(a,base,b)	((word_mt*)(CSA(base)+((CSA(a)-CSA(base))+(b)-1)/(b)*(b) ))
 static
@@ -356,3 +474,4 @@ va_dcl
 
    return (gptr*)p;
 }
+#endif
