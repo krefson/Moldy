@@ -27,6 +27,9 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.17.10.7  2004/04/12 08:14:28  moldydv
+ *  Switched off eigensort.
+ *
  *  Revision 1.17.10.6  2004/04/09 05:43:02  moldydv
  *  Rationalized options, altered defaults and corrected bugs.
  *
@@ -160,7 +163,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/ransub.c,v 1.17.10.6 2004/04/09 05:43:02 moldydv Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/ransub.c,v 1.17.10.7 2004/04/12 08:14:28 moldydv Exp $";
 #endif  
 
 #include "defs.h"
@@ -638,6 +641,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    real		inertia[6];     /* Inertia tensor for rot to principal frame */
    double	mass[dopant->nsites];	/* Temporary storage for dopant site mass */
    int		num_site[max_id]; /* No of each site type */
+   vec_mt	mult;	/* Factor for multiplying positions after eigensort (+1 or -1) */
 
    zero_real(solvent_pos,3);
    zero_real(solute_pos,3);
@@ -692,8 +696,11 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
       }
       /* Rotate coordinates to principal frame */
       eigens(inertia, rot_mat[0], dopant->inertia, 3);
-      /* eigensort(rot_mat[0], dopant->inertia, 3); */
+      eigensort(rot_mat[0], dopant->inertia, 3, mult);
       mat_vec_mul(rot_mat, dopant->p_f_sites, p_f_sites, dopant->nsites);
+      for( isite = 0; isite < dopant->nsites; isite++)
+         for(i=0; i < 3; i++)
+            dopant->p_f_sites[isite][i] *= mult[i];
    }
 
    mat_vec_mul(hinv, (vec_mt*)solute_pos, (vec_mt*)solute_pos, 1);    /* Convert to fractional coords */
