@@ -62,8 +62,8 @@ CFLAGS=	-O  $(XDR) $(CFLAGS0)
 #CFLAGSAUX=-catalog=aux.in 
 #INLINE= -inline -Npaths=aux.in
 #  **** convex ****
-#CFLAGS= -O2 -va -na -nv -fi $(XDR) $(CFLAGS0)
-#CFLAGS2= -alias standard -alias ptr_args
+#CFLAGS= -O2 -na -nv -fi $(XDR) $(CFLAGS0)
+#CFLAGS2= -va -alias standard -alias ptr_args
 #CFLAGSP= -O3 -re
 #LDFLAGS= $(LDFLAGS0) -fi -lveclib 
 #INLINE=
