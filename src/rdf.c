@@ -28,6 +28,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 2.0  93/03/15  14:49:19  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.19  93/03/12  12:25:17  keith
  * Got rid of unneccesary convex special case.
  * 
@@ -103,7 +108,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.19 93/03/12 12:25:17 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 2.0 93/03/15 14:49:19 keith Rel $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -259,13 +264,14 @@ site_mt		site_info[];
          new_line();
 	 col = 0;
 
-	 norm = (system->nsites-1)*control.rdf_interval /
+	 norm = 3.0*system->nsites*control.rdf_interval /
 	    (4.0*PI*bincb*rho*nfrac[idi]*nfrac[idj]*control.rdf_out);
 	 if( idi == idj )
 	    norm += norm;
          for(ibin = 0; ibin < control.nbins; ibin++)
          {
-            sprintf(buf, " %7f",rdf[idi][idj][ibin]*norm/SQR(0.5+ibin));
+            sprintf(buf, " %7f",rdf[idi][idj][ibin]*norm/
+		    ( 3*(SQR(ibin) + ibin) + 1));
 	    col += strlen(buf);
             if(col > control.page_width)
             {
