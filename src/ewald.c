@@ -23,6 +23,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 2.1  93/09/02  12:31:55  keith
+ * Optimized qsincos() -- should give up to 25% speed improvement on
+ * compilers without assert no aliasing options.
+ * 
  * Revision 2.1  93/05/17  10:42:22  keith
  * Optimized qsincos() -- should give up to 25% speed improvement on
  * compilers without assert no aliasing options.
@@ -135,7 +139,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 2.1 93/05/17 10:42:22 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 2.1 93/09/02 12:31:55 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -162,9 +166,15 @@ void	invert();			/* Inverts a 3x3 matrix		      */
 void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
 void	mat_sca_mul();			/* Multiplies a 3x3 matrix by scalar  */
 double	sum();				/* Sum of elements of 'real' vector   */
-gptr	*arralloc();			/* Allocates a dope vector array      */
+#if defined(ANSI) || defined(__STDC__)
+gptr	*arralloc(size_t,int,...); 	/* Array allocator		      */
+void	note(char *,...);		/* Write a message to the output file */
+void	message(int *,...);		/* Write a warning or error message   */
+#else
+gptr	*arralloc();	        	/* Array allocator		      */
 void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
+#endif
 /*========================== External data references ========================*/
 extern	contr_mt	control;		/* Main simulation control record     */
 /*========================== Macros ==========================================*/

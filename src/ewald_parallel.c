@@ -23,6 +23,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 2.1  93/09/02  12:34:44  keith
+ * Optimized qsincos() -- should give up to 25% speed improvement on
+ * compilers without assert no aliasing options.
+ * 
  * Revision 2.0  93/03/15  14:49:49  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
@@ -140,7 +144,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 2.0 93/03/15 14:49:49 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 2.1 93/09/02 12:34:44 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -169,11 +173,17 @@ void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
 void	mat_sca_mul();			/* Multiplies a 3x3 matrix by scalar  */
 void	transpose();			/* Transposes a 3x3 matrix	      */
 double	sum();				/* Sum of elements of 'real' vector   */
-gptr	*arralloc();			/* Allocates a dope vector array      */
-void	note();				/* Write a message to the output file */
-void	message();			/* Write a warning or error message   */
 void	ewald_inner();			/* Inner loop forward reference       */
 int	nprocessors();			/* Return no. of procs to execute on. */
+#if defined(ANSI) || defined(__STDC__)
+gptr	*arralloc(size_t,int,...); 	/* Array allocator		      */
+void	note(char *, ...);		/* Write a message to the output file */
+void	message(int *, ...);		/* Write a warning or error message   */
+#else
+gptr	*arralloc();	        	/* Array allocator		      */
+void	note();				/* Write a message to the output file */
+void	message();			/* Write a warning or error message   */
+#endif
 /*========================== External data references ========================*/
 extern	contr_mt	control;		/* Main simulation control record     */
 /*========================== Macros ==========================================*/

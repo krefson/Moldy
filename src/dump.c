@@ -43,6 +43,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 2.1  93/08/18  20:52:08  keith
+ * Added support for dumps in XDR format.
+ * 
  * Revision 2.0  93/03/15  14:49:01  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
@@ -123,7 +126,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 2.0 93/03/15 14:49:01 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 2.1 93/08/18 20:52:08 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -145,8 +148,13 @@ double		mdrand();
 void		mat_vec_mul();
 static void	dump_convert();
 static void	real_to_float();
-void		message();
-void		note();
+#if defined(ANSI) || defined(__STDC__)
+void	note(char *, ...);		/* Write a message to the output file */
+void	message(int *, ...);		/* Write a warning or error message   */
+#else
+void	note();				/* Write a message to the output file */
+void	message();			/* Write a warning or error message   */
+#endif
 /*========================== External data references ========================*/
 extern contr_mt	control;
 extern restrt_mt restart_header;
@@ -287,7 +295,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 2.0 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 2.1 $"+11,
 		                     sizeof dump_header.vsn-1);
 #ifdef USE_XDR
       if( control.xdr_write )

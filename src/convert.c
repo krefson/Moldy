@@ -23,6 +23,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	convert.c,v $
+ * Revision 2.0  93/03/15  14:49:00  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.5  93/03/09  15:58:24  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
@@ -48,7 +53,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/convert.c,v 1.5 93/03/09 15:58:24 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/convert.c,v 2.0 93/03/15 14:49:00 keith Rel $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -60,7 +65,13 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/convert.c,v 1.5 9
 /*========================== External data references ========================*/
 extern	contr_mt	control;
 /*========================== External function declarations ==================*/
-void		message();
+#if defined(ANSI) || defined(__STDC__)
+void	note(char *, ...);		/* Write a message to the output file */
+void	message(int *, ...);		/* Write a warning or error message   */
+#else
+void	note();				/* Write a message to the output file */
+void	message();			/* Write a warning or error message   */
+#endif
 /*========================== Structs local to module =========================*/
 /* This struct array contains all details for conversions in 'control' struct */
 typedef struct

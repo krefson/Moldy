@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/messages.h,v 2.0 93/03/15 14:49:34 keith Rel $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/messages.h,v 2.1 93/07/19 13:28:03 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */

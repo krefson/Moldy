@@ -25,6 +25,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	accel.c,v $
+ * Revision 2.0  93/03/15  14:47:36  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.8.1.26  93/03/15  14:39:59  keith
  * Added GPL copyleft notice to permit release and distribution.
  * N.B.  Previous versions were copyright (C) by author and 
@@ -150,7 +155,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 1.8.1.26 93/03/15 14:39:59 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.0 93/03/15 14:47:36 keith Rel $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -167,7 +172,6 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 1.8.1.2
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
-void		message();	       /* Print error message: possibly exit  */
 void            step_1();	       /* Step co-ordinates by Beeman algrthm */
 void            step_2();	       /* Step velocities at above            */
 void            beeman_2();	       /* As above for individual components  */
@@ -196,10 +200,17 @@ double 		roll_av();	       /* Return thermodynamic average	      */
 double          vdot();		       /* Fast vector dot product	      */
 void            vscale();	       /* Vector by constant multiply	      */
 double          vec_dist();	       /* normalised vector distance	      */
-void            note();		       /* Write message to output file	      */
-gptr		*arralloc();	       /* Array allocator		      */
 void		thermalise();	       /* Randomize velocities to given temp  */
 void	inhibit_vectorization();       /* Self-explanatory dummy              */
+#if defined(ANSI) || defined(__STDC__)
+gptr		*arralloc(size_t,int,...); /* Array allocator		      */
+void		note(char *, ...);	/* Write a message to the output file */
+void		message(int *, ...);	/* Write a warning or error message   */
+#else
+gptr		*arralloc();	        /* Array allocator		      */
+void		note();			/* Write a message to the output file */
+void		message();		/* Write a warning or error message   */
+#endif
 /*========================== External data references ========================*/
 extern contr_mt control;
 /*========================== Macros ==========================================*/

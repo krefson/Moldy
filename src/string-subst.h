@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 2.0 93/03/15 14:49:29 keith Rel $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 2.1 93/07/19 13:28:19 keith Exp $
  *
  * $Log:	string.h,v $
+ * Revision 2.1  93/07/19  13:28:19  keith
+ * Added XDR capability for backup and dump files.
+ * 
  * Revision 2.0  93/03/15  14:49:29  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 

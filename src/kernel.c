@@ -34,6 +34,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 2.0  93/03/15  14:49:11  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.17  93/03/12  12:24:46  keith
  * Got rid of unneccesary convex special case.
  * 
@@ -101,7 +106,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.17 93/03/12 12:24:46 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 2.0 93/03/15 14:49:11 keith Rel $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -119,7 +124,11 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.17 9
 #include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
-void message();
+#if defined(ANSI) || defined(__STDC__)
+void	message(int *,...);		/* Write a warning or error message   */
+#else
+void	message();			/* Write a warning or error message   */
+#endif
 /*========================== Potential type specification ====================*/
 pots_mt	potspec[]  = {{"lennard-jones",2},
 		      {"buckingham",3},

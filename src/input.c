@@ -29,6 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	input.c,v $
+ * Revision 2.1  93/07/19  13:27:53  keith
+ * Added XDR capability for backup and dump files.
+ * 
  * Revision 2.0  93/03/15  14:49:08  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
@@ -147,7 +150,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/input.c,v 2.0 93/03/15 14:49:08 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/input.c,v 2.1 93/07/19 13:27:53 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -164,8 +167,12 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/input.c,v 2.0 93/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
 void		q_mul_1();
-void		message();
 void    	zero_real();            /* Initialiser                        */
+#if defined(ANSI) || defined(__STDC__)
+void		message(int *, ...);	/* Write a warning or error message   */
+#else
+void		message();		/* Write a warning or error message   */
+#endif
 /*========================== External data references ========================*/
 extern	contr_mt	control;		/* Main simulation control record     */
 extern	unit_mt	input_unit;		/* Unit specification (see Convert.c) */

@@ -37,6 +37,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	startup.c,v $
+ * Revision 2.0  93/03/15  14:49:22  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.6.1.27  93/03/13  01:45:58  keith
  * Replaced NR "jacobi.c" with "eigens.c" for public release.
  * 
@@ -166,7 +171,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 1.6.1.27 93/03/13 01:45:58 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 2.0 93/03/15 14:49:22 keith Rel $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -182,7 +187,6 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 1.6.1
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
-void		message();
 void		read_control();
 void		read_sysdef();
 void		lattice_start();
@@ -196,7 +200,7 @@ void		re_re_sysdef();
 void		read_restart();
 void		banner_page();
 void		zero_real();
-void		jacobi();
+void		eigens();
 void		transpose();
 void		mat_vec_mul();
 void		q_mul();
@@ -206,6 +210,13 @@ char		*atime();
 double		mdrand();
 void		smdrand();
 void		inhibit_vectorization();	/* Self-explanatory dummy     */
+#if defined(ANSI) || defined(__STDC__)
+void		note(char *, ...);	/* Write a message to the output file */
+void		message(int *, ...);	/* Write a warning or error message   */
+#else
+void		note();			/* Write a message to the output file */
+void		message();		/* Write a warning or error message   */
+#endif
 /*========================== External data references ========================*/
 extern	unit_mt		input_unit;
 extern	contr_mt		control;
@@ -525,7 +536,7 @@ quat_mt		qpf[];			/* Quaternion rotation to princ.frame*/
          print_mat(inertia, " *D* Inertia Tensor");
 #endif
 /*         jacobi(inertia, 3, spec->inertia, v, &nrot);*/
-	 eigens(inertia,v,spec->inertia,3);
+	 eigens(inertia,v[0],spec->inertia,3);
 /*         transpose(v,v);			/* Rotation matrix to pr. fr.*/
 	 rot_to_q(v, qpf[spec-species]);	/* make equivalent quaternion*/
 #ifdef	DEBUG

@@ -28,6 +28,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 2.1  93/07/29  17:37:11  keith
+ * Changed evaluation of rdf to be in exact accordance with
+ * manual.  That is, replaced (nsites-1) with nsites and
+ * 3(b+1/2)^2 with [(b+1)^3 - b^3].  Should make negligible
+ * difference to results. 
+ * 
  * Revision 2.0  93/03/15  14:49:19  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
@@ -108,7 +114,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 2.0 93/03/15 14:49:19 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 2.1 93/07/29 17:37:11 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"

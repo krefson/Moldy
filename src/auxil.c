@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	aux.c,v $
+ * Revision 2.2  93/09/06  14:43:28  keith
+ * Fixed portability problems/bugs in XDR code.
+ * 
  * Revision 2.0  93/03/15  14:48:56  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
@@ -184,7 +187,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/aux.c,v 2.0 93/03/15 14:48:56 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/aux.c,v 2.2 93/09/06 14:43:28 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"

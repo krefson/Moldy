@@ -19,11 +19,16 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 1.5 93/03/09 15:59:54 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 2.0 93/03/15 14:49:46 keith Rel $";
 #endif
 
 /*
  * $Log:	moldyanalyze.c,v $
+ * Revision 2.0  93/03/15  14:49:46  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.5  93/03/09  15:59:54  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.

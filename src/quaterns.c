@@ -23,6 +23,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	quaterns.c,v $
+ * Revision 2.0  93/03/15  14:49:18  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.2  93/03/09  15:59:06  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
@@ -32,7 +37,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/quaterns.c,v 1.2 93/03/09 15:59:06 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/quaterns.c,v 2.0 93/03/15 14:49:18 keith Rel $";
 #endif
 /*========================== Library include files ===========================*/
 #include <math.h>

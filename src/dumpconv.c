@@ -19,11 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 2.1 93/08/18 20:52:05 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 2.2 93/09/06 14:42:43 keith Exp $";
 #endif
 
 /*
  * $Log:	dumpconvert.c,v $
+ * Revision 2.2  93/09/06  14:42:43  keith
+ * Fixed portability problems/bugs in XDR code.
+ * 
  * Revision 2.1  93/08/18  20:52:05  keith
  * Added support for dumps in XDR format.
  * 

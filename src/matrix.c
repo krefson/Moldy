@@ -31,6 +31,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	matrix.c,v $
+ * Revision 2.1  93/08/18  20:54:18  keith
+ * Tidied up clashes over ABS, MIN, MAX macros.
+ * 
  * Revision 2.0  93/03/15  14:49:14  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
@@ -68,7 +71,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/matrix.c,v 2.0 93/03/15 14:49:14 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/matrix.c,v 2.1 93/08/18 20:54:18 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -76,7 +79,11 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/matrix.c,v 2.0 93
 /*========================== Library include files ===========================*/
 #include	"string.h"
 /*========================== External function declarations ==================*/
-void	message();		/* Error message and exit handler	      */
+#if defined(ANSI) || defined(__STDC__)
+void		message(int *, ...);	/* Write a warning or error message   */
+#else
+void		message();		/* Write a warning or error message   */
+#endif
 /*============================================================================*/
 #define ABS(x)		((x) > 0 ? (x) : -(x))
 /******************************************************************************

@@ -27,6 +27,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 2.0  93/03/15  14:49:13  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.20  93/03/09  15:58:58  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
@@ -104,7 +109,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.20 93/03/09 15:58:58 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 2.0 93/03/15 14:49:13 keith Rel $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -124,17 +129,22 @@ void	values();
 void	averages();
 void	output();
 void	rescale();
-void	note();
 void	dump();
 void	print_rdf();
 void	print_config();
-void	message();
 double	cpu();
 void	write_restart();
 void	purge();
 double  rt_clock();
-gptr            *talloc();	       /* Interface to memory allocator       */
-void            tfree();	       /* Free allocated memory	      	      */
+gptr    *talloc();		       /* Interface to memory allocator       */
+void    tfree();		       /* Free allocated memory	      	      */
+#if defined(ANSI) || defined(__STDC__)
+void	note(char *, ...);		/* Write a message to the output file */
+void	message(int *, ...);		/* Write a warning or error message   */
+#else
+void	note();				/* Write a message to the output file */
+void	message();			/* Write a warning or error message   */
+#endif
 /*========================== External data definition ========================*/
 contr_mt		control;
 unit_mt		input_unit;

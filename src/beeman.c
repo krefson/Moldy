@@ -38,6 +38,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	beeman.c,v $
+ * Revision 2.0  93/03/15  14:48:58  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.5  93/03/15  14:41:37  keith
  * Added GPL copyleft notice to permit release and distribution.
  * N.B.  Previous versions were copyright (C) by author and 
@@ -66,7 +71,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/beeman.c,v 1.5 93/03/15 14:41:37 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/beeman.c,v 2.0 93/03/15 14:48:58 keith Rel $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -76,7 +81,13 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/beeman.c,v 1.5 93
 #include "structs.h"
 #include "messages.h"
 /*========================== External function declarations ==================*/
-void	message();			/* Error  and exit handler	      */
+#if defined(ANSI) || defined(__STDC__)
+void	note(char *, ...);		/* Write a message to the output file */
+void	message(int *, ...);		/* Write a warning or error message   */
+#else
+void	note();				/* Write a message to the output file */
+void	message();			/* Write a warning or error message   */
+#endif
 /*========================== External data references ========================*/
 extern	contr_mt	control;
 /*========================== Macros ==========================================*/

@@ -38,6 +38,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 2.0  93/03/15  14:48:54  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.22  93/03/15  14:41:32  keith
  * Added GPL copyleft notice to permit release and distribution.
  * N.B.  Previous versions were copyright (C) by author and 
@@ -128,7 +133,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.22 93/03/15 14:41:32 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 2.0 93/03/15 14:48:54 keith Rel $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
@@ -155,11 +160,17 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.22 93
 # define THREAD_SYS(S) S;
 #endif
 /*========================== External function declarations ==================*/
-void	message();				/* Error handling routine     */
 void	inhibit_vectorization();		/* Self-explanatory dummy     */
 #ifdef	DEBUG
 int	malloc_verify();
 int	malloc_debug();
+#endif
+#if defined(ANSI) || defined(__STDC__)
+void	note(char *, ...);			/* Write a message to the output file */
+void	message(int *, ...);		/* Write a warning or error message   */
+#else
+void	note();				/* Write a message to the output file */
+void	message();			/* Write a warning or error message   */
 #endif
 /*============================================================================*/
 /******************************************************************************

@@ -37,6 +37,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	algorith.c,v $
+ * Revision 2.0  93/03/15  14:48:51  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.1.1.12  93/03/15  14:41:28  keith
  * Added GPL copyleft notice to permit release and distribution.
  * N.B.  Previous versions were copyright (C) by author and 
@@ -91,7 +96,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 1.1.1.12 93/03/15 14:41:28 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 2.0 93/03/15 14:48:51 keith Rel $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -116,7 +121,13 @@ void	q_conj_mul();
 double	vdot();				/* Vector dot product		      */
 double	sum();				/* Vector sum			      */
 void	vscale();
-void	message();			/* Error message and exit handler     */
+#if defined(ANSI) || defined(__STDC__)
+void	note(char *, ...);		/* Write a message to the output file */
+void	message(int *, ...);		/* Write a warning or error message   */
+#else
+void	note();				/* Write a message to the output file */
+void	message();			/* Write a warning or error message   */
+#endif
 /*========================== Macros ==========================================*/
 #define MATMUL(i, m, r, o) (m[i][0]*r[0][o] + m[i][1]*r[1][o] + m[i][2]*r[2][o])
 /*============================================================================*/

@@ -37,6 +37,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	output.c,v $
+ * Revision 2.0  93/03/15  14:49:16  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.8.1.15  93/03/12  12:14:23  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
@@ -124,7 +129,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/output.c,v 1.8.1.15 93/03/12 12:14:23 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/output.c,v 2.0 93/03/15 14:49:16 keith Rel $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
