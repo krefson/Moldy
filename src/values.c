@@ -34,6 +34,16 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ *       Revision 2.12  2000/11/06 16:02:07  keith
+ *       First working version with a Nose-Poincare thermostat for rigid molecules.
+ *
+ *       System header updated to include H_0.
+ *       Dump performs correct scaling  of angular velocities, but dumpext still
+ *          needs to be updated to read this.
+ *       XDR functions corrected to work with new structs.
+ *       Parallel broadcast of config also updated.
+ *       Some unneccessary functions and code deleted.
+ *
  *       Revision 2.11  2000/05/23 15:23:09  keith
  *       First attempt at a thermostatted version of the Leapfrog code
  *       using either a Nose or a Nose-Poincare thermostat
@@ -150,7 +160,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.11 2000/05/23 15:23:09 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.12 2000/11/06 16:02:07 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -248,7 +258,8 @@ static  gptr    *av_tmp;
  *  following rule - a positive entry is the true multiplicity and a negative *
  *  one is multiplied by the number of species for the true multiplicity.     *
  ******************************************************************************/
-void	init_averages(int nspecies, char *vsn, long int roll_interval, long int old_roll_interval, int *av_convert)
+void	init_averages(int nspecies, char *vsn, long int roll_interval, 
+		      long int old_roll_interval, int *av_convert)
 {
    av_mt		*av_mp;
    int		i, imult;
@@ -261,6 +272,20 @@ void	init_averages(int nspecies, char *vsn, long int roll_interval, long int old
       navs += av_info[i].mult;		/* Count total			      */
       if(i < max_col && av_info[i].mult > max_row)
          max_row = av_info[i].mult;
+   }
+   if( control.const_pressure > 0 )
+   {
+      if( control.const_temp > 0 )
+	 strcpy(av_info[3].name,"Gibbs Enrgy");
+      else
+	 strcpy(av_info[3].name,"Enthalpy");
+   }
+   else
+   {
+      if( control.const_temp > 0 )
+	 strcpy(av_info[3].name,"Free Energy");
+      else
+	 strcpy(av_info[3].name,"Intl Energy");
    }
 
    /* Determine size of database, Allocate space and set pointers             */
@@ -316,7 +341,8 @@ void	init_averages(int nspecies, char *vsn, long int roll_interval, long int old
  * if restart file written using old "static" scheme.			      *
  * Also a convenient place to implement reset_averages.			      *
  ******************************************************************************/
-void	convert_averages(long int roll_interval, long int old_roll_interval, int av_convert)
+void	convert_averages(long roll_interval, long old_roll_interval, 
+			 int av_convert)
 {
    int iav, old_nroll, old_iroll, rbl;
    size_mt prev_av_mt_size;
@@ -442,13 +468,12 @@ static void	add_average(double datum, av_n type, int offset)
  * values   Calculate the values of the thermodynamic quantities, maintain and*
  * if necessary print them, their averages and rolling averages.              *
  ******************************************************************************/
-void	values(system_mp system, spec_mt *species, vec_mt (*meansq_f_t)[2], double *pe, real *dipole, real (*stress_vir)[3])
-         	       		/* record of system info		      */
-       	          	/* Records of info for each species	      */
-      		                /* mean square forces and torques             */
-      		     		/* potential energy real/reciprocal space     */
-      		       		/* dipole moment of whole system              */
-      		           	/* 'Potential' part of stress, or virial      */
+void	values(system_mt *system,        /* record of system info             */
+	       spec_mt   *species, 	 /* Records of info for each species  */
+	       vec_mt   (*meansq_f_t)[2],/* mean square forces and torques    */ 
+	       double    *pe, 		 /* potential energy real,reciprocal  */
+	       real      *dipole, 	 /* dipole moment of whole system     */
+	       real     (*stress_vir)[3])/* 'Potential' part of stress virial */
 {
    spec_mp	spec;
    int		ispec, ipe;
@@ -633,7 +658,7 @@ double	roll_sd(av_n type, int comp)
  *  the field width and format to use for each data type.                     *
  ******************************************************************************/
 static
-void print_frame(int header_sym, char *header_text, double (*f) (/* ??? */))
+void print_frame(int header_sym, char *header_text, double (*f)(av_n, int))
 {
    int	row, col, icol;
    static int	out_width = 1;
