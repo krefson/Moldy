@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.8.1.2  1995/12/06 15:07:50  keith
+ *       Fixed bug which caused core dump for small k-cutoff (hmax=0)
+ *
  *       Revision 2.8.1.2  1994/12/30 11:53:51  keith
  *       Finxed bug which caused core dump for small k-cutoff (hmax=0)
  *
@@ -178,7 +181,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.8.1.2 1994/12/30 11:53:51 keith Exp keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.8.1.2 1995/12/06 15:07:50 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -338,18 +341,25 @@ mat_mt		stress;			/* Stress virial		(out) */
 			kmax = floor(control.k_cutoff/(2*PI)*modb(system->h)),
 			lmax = floor(control.k_cutoff/(2*PI)*modc(system->h));
 /*
- * lower and upper limits for parallel loops
+ * lower and upper limits for parallel loops.  This doles out the sites
+ * in parcels of "nsnode0" sites on "nns" threads and "nsnode0+1" sites
+ * on the rest. "ns0" marks the beginning of the sites for this thread
+ * and "nsnode" the number of sites allocated to the node.  
+ * N. B. The parcelling algorithm in W. Smith's paper FAILS if
+ *       nthreads**2 > nsites.
  */
-   int	ns0 = (nsites+nthreads-1)/nthreads * ithread,
-        ns1 = MIN(nsites, (nsites+nthreads-1)/nthreads * (ithread+1)),
-        ns0f, ns1f;
+   int   nsnode0 = nsites/nthreads;
+   int   nns = nthreads*(nsnode0 + 1 ) - nsites;
+   int	 nsnode = nsnode0 + ((ithread < nns)?0:1);
+   int	 ns0 = MIN(ithread, nns)*nsnode0 + MAX(ithread-nns,0)*(nsnode0+1);
+   int	 ns1 = ns0 + nsnode, ns0f, ns1f;
 /*
  * Kludge to optimize performance on RS6000s with 4-way assoc. cache.
  */
 #ifdef RS6000
-   int		nsarray = (ns1-ns0+64)/512*512 + MAX((ns1-ns0+64)%512-64,64);
+   int		nsarray = (nsnode+64)/512*512 + MAX((nsnode+64)%512-64,64);
 #else
-   int		nsarray = ns1-ns0;
+   int		nsarray = nsnode;
 #endif
 /*
  * Arrays for cos & sin (h x(i)), (k y(i)) and (l z(i)) eg chx[h][isite]
