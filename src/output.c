@@ -36,7 +36,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * print_sysdef()	Print system specification readable by read_sysdef()  *
  ******************************************************************************
  *      Revision Log
- *       $Log:	output.c,v $
+ *       $Log: output.c,v $
+ * Revision 2.3  93/10/28  10:28:01  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.0  93/03/15  14:49:16  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
@@ -129,7 +132,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/output.c,v 2.0 93/03/15 14:49:16 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/output.c,v 2.5 1994/01/18 13:32:51 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -607,7 +610,7 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
       else
 	 cur = match_p;
 
-      code = cur->format[MAX(0, strlen(cur->format)-1)];
+      code = cur->format[MAX(0, (long)strlen(cur->format)-1)];
       switch(code)
       {
        case 's':
