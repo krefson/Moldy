@@ -19,24 +19,37 @@ Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
+#ifndef lint
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.8 1997/10/09 13:22:10 keith Exp $";
+#endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
- *              of molecules from MolDy dump files.				      *
+ *              of molecules from MolDy dump files.			              *
  *		Output in columnar form "x y z total" for successive time intervals.  *
  *		Selection of species using -g: 0 = species 1, 1 = species 2, etc.     *
- *		Default msd time intervals:					      *
+ *		Default msd time intervals:			     	              *
  *                             1 to (total no. of dump slices-1)/2, step size 1       *
- *		Option -u outputs trajectory coordinates in columnar format	      *
- *		"x y z" against time for each atom of selected species. 	      *
- *		nb. msd time intervals taken relative to extracted dump slices.	      *
+ *		Option -u outputs trajectory coordinates in columnar format           *
+ *		"x y z" against time for each particle of selected species.           *
+ *		nb. msd time intervals taken relative to extracted dump slices.       *
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 1.8  1997/10/09  11:21:40  craig
+ *  Option for renaming program "mdtraj" added for default trajectory calculation
+ *  Option 'c' added to parameter list to skip control information
+ *  Changed hmat allocation from arralloc to aalloc
+ *  Removed freeing of dumplims which was causing crash
+ *  Msd limits modified to cope with dump limits interval = 1 (special case)
+ *
+ *  Revision 1.7  1997/10/08 13:30:55  keith
+ *  Fixed dump_buf mem free bug.
+ *
  *  Revision 1.6  1997/08/12 14:03:05  keith
  *  Combined version to produce output for GNUPLOT or IDL
  *
  *  Revision 1.2  1997/07/16 14:20:47  craig
- *  Option for various output formats trajectory coords
+ *  Option for various output formats for trajectory coords
  *
  *  Revision 1.1  1997/07/14 15:36:24  keith
  *  Modified by KR.  MSD calc put into separate function and optimised
@@ -83,12 +96,13 @@ gptr	*talloc();
 FILE	*popen();
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
+static char  *comm;
 #define MSD  0
 #define TRAJ 1
 #define GNUP 0
 #define IDL  1
 /******************************************************************************
- * Dummies of 'moldy' routines so that msd may be linked with moldy library*
+ * Dummies of 'moldy' routines so that msd may be linked with moldy library   *
  ******************************************************************************/
 void 	init_rdf()
 {}
@@ -676,9 +690,18 @@ char	*argv[];
 #define MAXTRY 100
    control.page_length=1000000;
 
-   while( (c = getopt(argc, argv, "r:s:d:t:m:i:g:o:w:uxyz") ) != EOF )
+   comm = argv[0];
+   if( strstr(comm, "msd") )
+      outsw = MSD;
+   else if( strstr(comm, "mdtraj") )
+      outsw = TRAJ;
+
+   while( (c = getopt(argc, argv, "cr:s:d:t:m:i:g:o:w:uxyz") ) != EOF )
       switch(c)
       {
+       case 'c':
+         cflg++;
+         break;
        case 'r':
        case 's':
 	 if( intyp )
@@ -727,9 +750,10 @@ char	*argv[];
 
    if( errflg )
    {
-      fputs("Usage: mdtraj [-s sys-spec-file] [-r restart-file] ",stderr);
+      fprintf(stderr,
+         "Usage: %s [-s sys-spec-file] [-r restart-file] ",comm);
       fputs("[-d dump-files] [-t s[-f[:n]]] [-m s[-f[:n]]] ",stderr);
-      fputs("[-g s[-f[:n]]] [-i init_inc]",stderr);
+      fputs("[-g s[-f[:n]]] [-i init_inc] ",stderr);
       fputs("[-u] [-w] [-x] [-y] [-z] [-o output-file]\n",stderr);
       exit(2);
    }
@@ -813,7 +837,6 @@ char	*argv[];
       }
       if( dflag)
       {
-          (void)free(dumplims);
           dumplims = NULL;
       } 
    } while(dflag);
@@ -863,7 +886,10 @@ char	*argv[];
    {
      /* Use default values for msd interval limits */
       mstart = 1;
-      mfinish = (finish-start)/(2*inc); /* Midpoint of longest time span */
+      if( finish > start + 1)
+          mfinish = (finish-start)/(2*inc); /* Midpoint of longest time span */
+      else
+          mfinish = 1;
       minc = 1;
    }
 
@@ -916,7 +942,7 @@ char	*argv[];
    zero_real(traj_cofm[0], nslices*sys.nmols*3);
 
   /* Allocate array to store unit cell matrices */
-   hmat = arralloc(sizeof(mat_mt),1,0,nslices-1);
+   hmat = aalloc(nslices, mat_mt);
 
    if( (dump_buf = (float*)malloc(dump_size)) == 0)
       error("malloc failed to allocate dump record buffer (%d bytes)",
@@ -960,8 +986,8 @@ char	*argv[];
 	   irec, dump_name);
 #endif
    }
-
    xfree(dump_buf);
+
 #if defined (unix) || defined (__unix__)
    pclose(Dp);
 #else
@@ -991,7 +1017,7 @@ char	*argv[];
      msd_out(species, msd, max_av, nmsd, sp_range);
    }
    else /* Otherwise output trajectories in selected format */
-     switch( trajsw)
+     switch(trajsw)
      {
        case IDL:
           traj_idl(&sys, species, traj_cofm, nslices, range, sp_range);
