@@ -8,6 +8,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.5  89/10/24  17:18:33  keith
+ * Modified pbc algorithm to use floor() library function.
+ * Now works with non-orthorhombic cell.
+ * 
  * Revision 1.4  89/07/07  10:37:02  keith
  * Added check for uniformly zero RDF which otherwise gave divide by zero.
  * 
@@ -22,7 +26,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/rdf.c,v 1.4 89/07/07 10:37:02 keith Stab $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/rdf.c,v 1.5 89/10/24 17:18:33 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<math.h>
@@ -128,16 +132,23 @@ spec_t	species[];			/* Species info struct array  */
  * bins B(ib) for this id and b = bin width then:-			      *
  * 	g(r) = B(ib)/(4 pi r**2 rho b) * (n-1)/sum,  where r(ib) =b*(ib+1/2)  *
  ******************************************************************************/
-void	print_rdf(system, site_info)
-system_p	system;
+void	print_rdf(system, species, site_info)
+system_t	*system;
+spec_t		species[];
 site_t		site_info[];
 {
-   int		idi, idj, col, sum, ibin;
+   int		idi, idj, col, ibin, is;
+   int		*nfrac = ialloc(system->max_id);  /* Per site count of system*/
+   spec_t	*spec;
    double	bin = control.limit/control.nbins,
    		bincb = bin*bin*bin,
    		rho = system->nsites/det(system->h);
    double	norm;
    
+   for(spec = species; spec < species+system->nspecies; spec++)
+      for(is = 0; is < spec->nsites; is++)
+	 nfrac[spec->site_id[is]] += spec->nmols;
+
    put_line('_');
    (void)printf("\tRadial Distribution Functions\tBin width=%g", bin);
    new_line();
@@ -147,13 +158,12 @@ site_t		site_info[];
       {
          (void)printf("\t%s-%s RDF", site_info[idi].name, site_info[idj].name);
          new_line();
-         sum = 0; col = 0;
-         for(ibin = 0; ibin < control.nbins; ibin++)
-            sum += rdf[idi][idj][ibin];
-	 if( sum > 0 )
-	    norm = (system->nsites - 1) / (4.0 * PI * rho * bincb * sum);
-	 else				/* Safeguard against zero RDF	      */
-	    norm = 1.0;
+	 col = 0;
+
+	 norm = (system->nsites-1)*control.rdf_interval /
+	    (4.0*PI*bincb*rho*nfrac[idi]*nfrac[idj]*control.rdf_out);
+	 if( idi == idj )
+	    norm += norm;
          for(ibin = 0; ibin < control.nbins; ibin++)
          {
             col += printf(" %7f",rdf[idi][idj][ibin]*norm/SQR(0.5+ibin));
@@ -165,5 +175,6 @@ site_t		site_info[];
             rdf[idi][idj][ibin] = 0;				/* Reset      */
          }
       }
-      put_line('_');
+   put_line('_');
+   cfree((char*)nfrac);
 }
