@@ -172,7 +172,7 @@
 #   define VECTOR    /* To choose vector vsn of site_neighbour_list */
 #endif
 
-#ifdef __unix__
+#if defined(unix) || defined(__unix) || defined(__unix__)
 #   define LOCKEX		".lck"
 #   define ALLOC_ALIGN
 #endif
