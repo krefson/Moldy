@@ -202,7 +202,7 @@ int	 sgno=0, sgopt=0; /* Space group number and associated option */
    if( sscanf(get_line(line,LLEN,Fp,0),"%*38c%8lf%8lf%8lf",&cell[0],&cell[1],&cell[2]) < 3)
       nocell++;
 
-   if( sscanf(get_line(line,LLEN,Fp,0),"%*21c%8lf%8lf%8lf    SPGR =%3d %11c OPT = %1d",
+   if( sscanf(get_line(line,LLEN,Fp,0),"%*21c%8lf%8lf%8lf    SPGR =%3d %11c OPT =%2d",
           &cell[3],&cell[4],&cell[5],&sgno,spgr,&sgopt) < 5)
       nocell++;
 
