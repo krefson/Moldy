@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdshak.c,v 2.12 1997/11/13 12:51:40 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdshak.c,v 2.13 1997/11/26 10:09:47 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -435,9 +435,6 @@ char		*insert;
    double	**site = (double**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
    spec_mt	*spec;
-   double	a, b, c, alpha, beta, gamma;
-   mat_mp	h = system->h;
-   mat_mt	hinv;
    int		imol, isite, is;
 
 /* We count the number of atoms */
@@ -526,9 +523,9 @@ char		*insert;
    }
 /* On first call  write the DCD header.  Always write to stdout. */
    if( n == 0 )
-      write_dcdheader(1, control.title, isitem, irec, 0, inc, control.step);
+      write_dcdheader(stdout, control.title, isitem, irec, 0, inc, control.step);
    
-   write_dcdstep(1, isitem, sitef[0], sitef[1], sitef[2]);
+   write_dcdstep(stdout, isitem, sitef[0], sitef[1], sitef[2]);
 
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
@@ -699,7 +696,6 @@ char	*argv[];
    char		*filename = NULL, *dump_name = NULL;
    char		*dumplims = NULL, *atom_sel = NULL;
    char		*insert = NULL;
-   char		*tempname;
    char		dumpcommand[256];
    int		dump_size;
    float	*dump_buf;

@@ -10,7 +10,7 @@
  * RCS INFORMATION:
  *
  *      $RCSfile: ReadDCD.h,v $
- *      $Author: billh $        $Locker:  $                $State: Exp $
+ *      $Author: billh $        $Locker: keith $                $State: Exp $
  *      $Revision: 1.3 $      $Date: 1995/05/11 23:42:25 $
  *
  ***************************************************************************
@@ -25,13 +25,8 @@
 #define READ_DCD_H
 
 #include <stdio.h>
-#include <malloc.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
+#include <stdlib.h>
 #include <errno.h>
-#include <pwd.h>
 #include <time.h>
 
 /*  DEFINE ERROR CODES THAT MAY BE RETURNED BY DCD ROUTINES		*/
@@ -45,19 +40,17 @@
 
 
 /*			FUNCTION ALLUSIONS				*/
-int open_dcd_read(const char *);      /*  Open a DCD file for reading 	*/
-int read_dcdheader(int, int*, int*, int*, int*, double*, int*, int**);	
+int read_dcdheader();	
 				/*  Read the DCD header			*/
-int read_dcdstep(int, int, float*, float*, float*, int, int, int*);	
+int read_dcdstep();	
 				/*  Read a timestep's values		*/
-int open_dcd_write(char *);     /*  Open a DCD file for writing		*/
-int write_dcdstep(int, int, float *, float *, float *);
+int write_dcdstep();
 				/*  Write out a timesteps values	*/
-int write_dcdheader(int, char*, int, int, int, int, double);	
+int write_dcdheader();	
 				/*  Write a dcd header			*/
-void close_dcd_read(int, int, int *);
+void close_dcd_read();
 				/*  Close a dcd file open for reading   */
-void close_dcd_write(int);	/*  Close a dcd file open for writing   */
+void close_dcd_write();	/*  Close a dcd file open for writing   */
 
 #endif /* ! DCDLIB_H */
 
