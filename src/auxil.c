@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.14  1998/11/26 17:09:18  keith
+ *       Added #pragma for cache suppression in gather on T3E
+ *
  *       Revision 2.13  1998/05/22 17:04:58  keith
  *       Standardized unix, __unix __unix__ macros and
  *       protected unix-specific parts.
@@ -265,7 +268,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2.13 1998/05/22 17:04:58 keith Exp $";
+static char *RCSid = "$Header$";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -594,12 +597,21 @@ real	x[];
 int	ix;
 double	s;
 {
-   int i, im=n*ix;
+   int i,j, im=n*ix;
+   if ( ix == 1 ) 
+   {
+      for( i = n-1; i >= 0; i -- )
+	 if( x[i] < s )
+	    im = i;
+   }
+   else
+   {
 VECTORIZE
-   for( i = (n-1)*ix; i >= 0; i -= ix )
-      if( x[i] < s )
-	 im = i;
-   return(im/ix);
+      for( i = (n-1)*ix, j=n-1; i >= 0; i -= ix, j-- )
+         if( x[i] < s )
+	    im = j;
+   }
+   return im;
 }
 #endif
                             /*ARGSUSED*/
