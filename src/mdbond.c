@@ -28,6 +28,9 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdbond.c,v $
+ *  Revision 1.6  1999/11/12 12:24:04  keith
+ *  Bug fixes by Craig Fisher
+ *
  *  Revision 1.6  1999/11/12 11:05:41  craig
  *  Tidied up usage of NULL pointers which was causing crashes on some machines.
  *  Added error checks when inserting nodes in lists.
@@ -72,7 +75,7 @@ what you give them.   Help stamp out software-hoarding! */
  */
 
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 1.5 1999/11/01 17:23:23 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 1.6 1999/11/12 12:24:04 keith Exp keith $";
 #endif
 #include "defs.h"
 #ifdef HAVE_STDARG_H
@@ -635,7 +638,7 @@ char	*argv[];
 
    /* Use default values for species selection limits */
    sp_range[0] = 0;
-   sp_range[1] = sys.nspecies;
+   sp_range[1] = sys.nspecies-1;
    sp_range[2] = 1;
 
    if( speclims == NULL)
@@ -657,7 +660,7 @@ char	*argv[];
          fputs(" finish >= start, start >= 0 and increment > 0\n", stderr);
          sflag = 0;
       }
-      if( sp_range[1] > sys.nspecies)
+      if( sp_range[1] > sys.nspecies-1)
       {
          fputs("Molecule selection exceeds no. of species\n",stderr);
          sflag = 0;
