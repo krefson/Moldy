@@ -184,7 +184,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/algorith.c,v 2.21 2002/09/19 09:26:27 kr Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/algorith.c,v 2.21 2002/09/19 09:26:27 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -220,16 +220,16 @@ void	message(int *, ...);		/* Write a warning or error message   */
 /*============================================================================*/
 /******************************************************************************
  *  rotate        Perform the rotation described by the quaternions in the    *
- *  second parameter on each of the co-ordinates in the first, putting the    *
- *  result in the third.  (Pawley,  Mol. Phys. 43, 1321-1330 (1981))          *
+ *  third parameter on each of the co-ordinates in the first, putting the     *
+ *  result in the second.  (Pawley,  Mol. Phys. 43, 1321-1330 (1981))         *
  *  NB this is different to Evans' formulation.                               *
  *  Apply each rotation to nvec/nquat vectors.                                *
  ******************************************************************************/
 static
 void rotate(vec_mp r_in,        /* Co-ordinates to be rotated [n][3] (in)     */ 
-	    vec_mp r_out        /* Resulting co-ordinates [n][3]    (out)     */, 
+	    vec_mp r_out,       /* Resulting co-ordinates [n][3]    (out)     */ 
 	    int nvec, 	        /* Number of co-ordinates.           (in)     */
-	    quat_mp quat,	/* Quaternions for the rotation.     (in)     */
+	    quat_mp quat,       /* Quaternions for the rotation.     (in)     */
 	    int nquat, 	        /* Number of quaternions             (in)     */
 	    invrot inv_mat)     /* Flag to do inverse rotations      (in)     */
 {
@@ -241,6 +241,7 @@ void rotate(vec_mp r_in,        /* Co-ordinates to be rotated [n][3] (in)     */
 
    for(iquat = 0; iquat < nquat; iquat++)
    {
+
       q_to_rot(quat[iquat], rot);
       if(inv_mat == inv)    transpose(rot, rot);
       mat_vec_mul(rot, r_in, r_out, nvec / nquat);
@@ -321,7 +322,7 @@ VECTORIZE
 void make_sites(mat_mt h,        /* Unit cell matrix h                   (in) */
 		vec_mp c_of_m_s, /* Centre of mass co-ords [nmols][3]    (in) */
 		quat_mp quat, 	 /* Quaternions [nmols][4]               (in) */
-		vec_mp p_f_sites,/* Principal-frame sites [nsites][3]    (in) */ 
+		vec_mp p_f_sites,/* Principal-frame sites [nsites][3]    (in) */
 		real **site, 	 /* Sites [nmols*nsites][3]             (out) */
 		int nmols, 	 /* Number of molecules                  (in) */
 		int nsites, 	 /* Number of sites on each molecule     (in) */
