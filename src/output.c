@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.15  1999/10/08 15:49:58  keith
+ *       Fully implemented new constant-pressure algorithm.
+ *       Select by "const-pressure=2" in control.
+ *
  *       Revision 2.14  1999/10/08 10:52:04  keith
  *       print_config() now converts potential parameters back to input units before
  *       printing a system specification upon a texm-mode-save
@@ -189,7 +193,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/output.c,v 2.14 1999/10/08 10:52:04 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/leapfrog/RCS/output.c,v 2.15 1999/10/08 15:49:58 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -464,6 +468,7 @@ restrt_mt	*restart_header;
 {
    spec_mp	spec;
    mat_mp	h = system->h;
+   real		chg;
    char		version[132], *vsn=version;
 
    new_page(); new_lins(2);
@@ -486,6 +491,7 @@ restrt_mt	*restart_header;
       (void)printf( " System specification read in from file %s",
 		    control.sysdef);
    new_line();
+
 
    for(spec = species; spec < &species[system->nspecies]; spec++)
    {
@@ -596,21 +602,39 @@ restrt_mt	*restart_header;
       new_line();
       format_dbl("Applied pressure", CONV_P*control.pressure,CONV_P_N);
       format_dbl("Mass parameter W",control.pmass,MUNIT_N);
+      if(control.const_pressure == 1)
+	 format_int("h-matrix constraint mask",control.strain_mask);
 
       if(control.const_temp == 2)
          message(NULLI, NULLP, WARNING, GANDP);
    }
-   format_dbl("Interaction cut-off",control.cutoff,LUNIT_N);
+   if( control.strict_cutoff )
+      format_dbl("Interaction cut-off (strict)",control.cutoff,LUNIT_N);
+   else
+      format_dbl("Interaction cut-off (lazy)",control.cutoff,LUNIT_N);
    if(control.alpha != 0.0)
    {
       format_dbl("Alpha parameter for Ewald sum",control.alpha,RLUNIT_N);
       format_dbl("Reciprocal space cut-off",control.k_cutoff,RLUNIT_N);
+      if( control.surface_dipole )
+      {
+	 chg = 0.0;
+	 for(spec = species; spec < &species[system->nspecies]; spec++)
+	    chg += fabs(spec->charge);
+	 
+	 if( chg > 1.0e-6 )
+	    message(NULLI, NULLP, WARNING,DPSCHG);
+	 else
+	    (void)printf("\tDe-Leeuw et al. surface dipole term included");
+	 new_line();
+      }
    }
 
    if( control.rdf_interval > 0 )
    {
       (void)printf(" Radial distribution functions will be calculated");
       new_line();
+      format_dbl("Pair cutoff for RDF calculation",control.limit,LUNIT_N);
       format_long("Starting at timestep", control.begin_rdf);
       format_long("No. steps between binnings", control.rdf_interval);
       format_long("Calculate and print after", control.rdf_out);
@@ -779,6 +803,9 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
    
    if( ferror(out) || fclose(out) )
       message(NULLI,NULLP,FATAL,REWRT,strerror(errno));
+
+   note("Configuration written to sys-spec plus lattice-start file \"%s\" ",
+	save_name);
 
    conv_control(&prog_unit, true);
    conv_potentials(&input_unit, &prog_unit, potpar, system->n_potpar,

@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/moldy/src/RCS/messages.h,v 2.18 1999/10/08 15:49:15 keith Exp $
+ * $Header: /home/eeyore_data/keith/moldy/src/RCS/messages.h,v 2.19 1999/12/20 15:18:36 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -170,3 +170,4 @@ Gaussian thermostat would interfere with each other."
 #define DESYNC  "Trajectories on parallel threads are diverging.\n     Thread %d: %20.17g != %20.17g"
 #define RDFALT  "One of the RDF sampling parameters changed on restart\n     stored RDF data has been discarded"
 #define RDFDIS  "RDF output frequency parameters changed on restart\n     Excess stored RDF data may be discarded"
+#define DPSCHG  "Surface dipole term switched ON but some species are charged\n     Expect non-conservation of energy and large, impulsive forces!"
