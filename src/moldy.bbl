@@ -1,0 +1,259 @@
+\providecommand{\bysame}{\leavevmode\hbox to3em{\hrulefill}\thinspace}
+\providecommand{\MR}{\relax\ifhmode\unskip\space\fi MR }
+% \MRhref is called by the amsart/book/proc definition of \MR.
+\providecommand{\MRhref}[2]{%
+  \href{http://www.ams.org/mathscinet-getitem?mr=#1}{#2}
+}
+\providecommand{\href}[2]{#2}
+\begin{thebibliography}{10}
+
+\bibitem{abramowitz:70}
+M.~Abramowitz and I.~A. Stegun, \emph{Handbook of mathematical functions},
+  Dover, New York, 1970.
+
+\bibitem{allen:87}
+M.~P. Allen and D.~J. Tildesley, \emph{Computer simulation of liquids},
+  Clarendon Press, Oxford, 1987.
+
+\bibitem{andersen:80}
+Hans~C. Andersen, \emph{Molecular dynamics simulation at constant pressure
+  and/or temperature}, J. Chem. Phys. \textbf{72} (1980), no.~4, 2384--2393.
+
+\bibitem{beeman:76}
+D.~Beeman, \emph{Some multistep methods for use in molecular dynamics
+  calculations}, J. Comp. Phys. \textbf{20} (1976), 130--139.
+
+\bibitem{bekker:95}
+H.~Bekker, E.~J. Dijkstra, M.~K.~R. Renardus, and H.~J.~C. Berendsen, \emph{An
+  efficient box shape independent non-bonded force and virial algorithm for
+  molecular dynamics}, Mol. Simul. \textbf{14} (1995), 137--151.
+
+\bibitem{berthaut:52}
+F.~Berthaut, \emph{L'\'{e}nergie \'{e}lectrostatique de r\`{e}seaux ioniques},
+  J. de Physique Rad. \textbf{13} (1952), 499--505.
+
+\bibitem{bowler:87}
+K.~C. Bowler, R.~D. Kennaway, G.~S. Pawley, and D.~Roweth, \emph{An
+  introduction to {OCCAM-2} programming}, Chartwell-Bratt, 1987.
+
+\bibitem{cho:92}
+K.~Cho and J.~D. Joannopoulos, \emph{Ergodicity and dynamical properties of
+  constant-temperature molecular dynamics}, Phys. Rev.A \textbf{45} (1992),
+  no.~10, 7089--7097.
+
+\bibitem{cho:93}
+K.~Cho, J.~D. Joannopoulos, and L.~Kleinman, \emph{Constant-temperature
+  molecular dynamics with momentum conservation}, Phys. Rev.E \textbf{47}
+  (1993), no.~5, 3145--3151.
+
+\bibitem{clementi:85}
+E.~Clementi, G.~Corongiu, and J.~H. Detrich, \emph{Parallelism in computations
+  in quantum and statistical mechanics}, Comp. Phys. Commun. \textbf{37}
+  (1985), 287--294.
+
+\bibitem{cleveland:88}
+Charles~L. Cleveland, \emph{New equations of motion for molecular dynamics
+  systems that change shape}, J. Chem. Phys. \textbf{89} (1988), no.~8,
+  4987--4993.
+
+\bibitem{dietz:82}
+W.~Deitz, W.~O. Riede, and K.~Heinzinger, \emph{Molecular dynamics simulation
+  of an aqueous {M}g{C}l$_2$ solution}, Z. Naturforsch. \textbf{37a} (1982),
+  1038--1048.
+
+\bibitem{evans:77}
+D.~J. Evans, \emph{On the representation of orientation space}, Mol. Phys.
+  \textbf{34} (1977), no.~2, 317--325.
+
+\bibitem{evans:77b}
+D.~J. Evans and S.~Murad, \emph{Singularity free algorithm for molecular
+  dynamics simulation of rigid polyatomics}, Mol. Phys. \textbf{34} (1977),
+  no.~2, 327--331.
+
+\bibitem{fincham:92}
+D.~Fincham, \emph{Leapfrog rotational algorithms}, Mol. Simul. \textbf{8}
+  (1992), 165--178.
+
+\bibitem{fincham:94}
+\bysame, \emph{Optimization of the {E}wald sum for large systems}, Mol. Simul.
+  \textbf{13} (1994), no.~1, 1--9.
+
+\bibitem{mpi:94}
+Message Passing~Interface Forum, \emph{{MPI}: A message-passing interface
+  standard}, Int. J. Supercomput. App. \textbf{8} (1994), no.~3-4, 165.
+
+\bibitem{pvm:94}
+Al~Geist, Adam Beguelin, Jack Dongarra, Weicheng Jiang, Robert Manchek, and
+  Vaidy Sunderam, \emph{{PVM}: Parallel virtual machines, a user's guide and
+  tutorial for networked parallel computing}, MIT Press, Cambridge, {MA}, 1994.
+
+\bibitem{goldstein:80}
+H.~Goldstein, \emph{Classical mechanics}, 2nd ed., Addison--Wesley, Reading,
+  MA, 1980.
+
+\bibitem{hansen:86}
+J.~P. Hansen and I.~R. McDonald, \emph{Theory of simple liquids}, 2nd ed.,
+  Academic Press, London, 1986.
+
+\bibitem{tcgmsg:94}
+Robert~J. Harrison, \emph{Tcgmsg send/receive subroutines}, Battelle Pacific
+  Northwest Laboratory, 1994, Available by internet ftp from url
+  ftp://ftp.tcg.anl.gov/pub/tcgmst/tcgmsg-4.04.tar.Z.
+
+\bibitem{heyes:87}
+D.~M. Heyes, \emph{Large numbers of particles on the {C}ray-1}, Information
+  Quarterly - {CCP5} \textbf{25} (1987), 57--61.
+
+\bibitem{hoover:85}
+W.~G. Hoover, \emph{Canonical dynamics: equilibrium phase-space distributions},
+  Phys. Rev.A \textbf{31} (1985), 1695--1697.
+
+\bibitem{sunxdr}
+Sun~Microsystems Inc, \emph{External data representation: Protocol
+  specification}, 1987, RFC1014.
+
+\bibitem{jorgensen:82}
+W.~L. Jorgensen, \emph{Revised {TIPS} model for simulations of liquid water and
+  aqueous solutions}, J. Chem. Phys. \textbf{77} (1982), 4156--63.
+
+\bibitem{schakal:88}
+E.~Keller, \emph{Neues von {SCHAKAL}}, Chemie in unserer Zeit \textbf{20}
+  (1986), no.~6, 178--181.
+
+\bibitem{kernighan:78}
+B.~W. Kernighan and D.~Ritchie, \emph{The {C} programming language}, 1st ed.,
+  Prentice Hall, Cambridge, 1978.
+
+\bibitem{kernighan:88}
+\bysame, \emph{The {C} programming language}, second ed., Prentice Hall,
+  Cambridge, 1988.
+
+\bibitem{kistenmacher:73b}
+H.~Kistenmacher, H.~Popkie, and E.~Clementi, \emph{Study of the structure of
+  molecular complexes {III}. {E}nergy surface of a water molecule in the field
+  of a fluorine or chlorine anion.}, J. Chem. Phys. \textbf{58} (1973), no.~4,
+  5842.
+
+\bibitem{knuth:73a}
+Donald~E. Knuth, \emph{Fundamental algorithms}, second ed., The Art of Computer
+  Programming, vol.~1, section 1.2, Addison-Wesley, 1973.
+
+\bibitem{laakonsen:85}
+A.~Laakonsen, \emph{Computer simulation package for liquids and solids with
+  polar interactions. {I}. {McMOLDYN/H2O}: aqueous systems}, Internal Report
+  KGN-41, IBM Corporation, Kingston, N. Y.12401, USA, 1985.
+
+\bibitem{deleeuw:80}
+S.~W.~De Leeuw, J.~W. Perram, and E.~R. Smith, \emph{Simulation of
+  electrostatic systems in periodic boundary conditions. {I} {L}attice sums and
+  dielectric constant}, Proc. Roy. Soc. \textbf{A373} (1980), 27--56.
+
+\bibitem{matsuoka:75}
+O.~Matsuoka, E.~Clementi, and M.~Yoshimine, \emph{{CI} study of the water dimer
+  potential surface}, J. Chem. Phys. \textbf{64} (1976), no.~4, 1351--1361.
+
+\bibitem{bsp:93}
+Richard Miller, \emph{A library for bulk-synchronous parallel computing},
+  Parallel Processing Specialist Group workshop on General Purpose Parallel
+  Computing, British Computer Society, 1993.
+
+\bibitem{nose:84}
+S.~Nos{\'e}, \emph{A molecular dynamics method for simulations in the canonical
+  ensemble}, Mol. Phys. \textbf{52} (1984), 255--268.
+
+\bibitem{nose:91}
+\bysame, \emph{Molecular dynamics simulations at constant temperature and
+  pressure}, Computer Simulation in Materials Science (M.~Meyer and
+  V.~Pontikis, eds.), vol. E205, Kluwer, Dordrecht, 1991, NATO ASI, pp.~21--42.
+
+\bibitem{nose:83}
+S.~Nos\'{e} and M.~L. Klein, \emph{Constant pressure molecular dynamics for
+  molecular systems}, Mol. Phys. \textbf{50(5)} (1983), 1055--1076.
+
+\bibitem{pappalardo:93}
+Rafael~Rodriguez Pappalardo and Enrique Sanchez~Marcos, \emph{Recovering the
+  concept of the hydrated ion for modelling ionic solutions: A monte carlo
+  study of {Zn$^{2+}$} in water}, J. Phys. Chem. \textbf{97} (1993),
+  4500--4504.
+
+\bibitem{parrinello:81}
+M.~Parrinello and A.~Rahman, \emph{Polymorphic transitions in single crystals:
+  {A} new molecular dynamics method}, J. App. Phys. \textbf{52} (1981), no.~12,
+  7182--7190.
+
+\bibitem{pawley:81}
+G.~S. Pawley, \emph{Molecular dynamics simulation of the plastic phase; a model
+  for {SF}$_6$}, Mol. Phys. \textbf{43} (1981), no.~6, 1321--1330.
+
+\bibitem{pawley:82}
+\bysame, \emph{Computer simulation of the plastic-to-crystalline phase
+  transition in {SF}$_6$}, Phys. Rev. Lett. \textbf{48} (1982), 410--413.
+
+\bibitem{pawley:85b}
+G.~S. Pawley and M.~T. Dove, \emph{Quaternion-based reorientation conditions
+  for molecular dynamics analyses}, Mol. Phys. \textbf{55} (1985), no.~5,
+  1147--1157.
+
+\bibitem{powles:79}
+J.~G. Powles, W.~A.~B. Evans, E.~McGrath, K.~E. Gubbins, and S.~Murad, \emph{A
+  computer simulation for a simple model of liquid hydrogen chloride}, Mol.
+  Phys. \textbf{38} (1979), 893--908.
+
+\bibitem{press:92C}
+William~H. Press, Saul~A. Teukolsky, William~T. Vetterling, and Brian~P.
+  Flannery, \emph{Numerical recipes in {C} the art of scientific computing},
+  2nd ed., Cambridge University Press, 1992.
+
+\bibitem{quentrec:75}
+B.~Quentrec and C.~Brot, \emph{New methods for searching for neighbours in
+  molecular dynamics computations}, J. Comp. Phys. \textbf{13} (1975),
+  430--432.
+
+\bibitem{rapaport:88}
+D.~C. Rapaport, \emph{Large-scale molecular-dynamics simulation using vector
+  and parallel computers}, Comp. Phys. Rep. \textbf{9} (1988), no.~1, 1--53.
+
+\bibitem{refson:85}
+K.~Refson, \emph{Molecular dynamics simulation of solid {\em n}-butane},
+  Physica \textbf{131B} (1985), 256--266.
+
+\bibitem{refson:87a}
+K.~Refson and G.~S. Pawley, \emph{Molecular dynamics studies of the condensed
+  phases of {\em n}-butane and their transitions, {I} {T}echniques and model
+  results}, Mol. Phys. \textbf{61} (1987), no.~3, 669--692.
+
+\bibitem{rodger:89}
+P.~M. Rodger, \emph{On the accuracy of some common molecular dynamics
+  algorithms}, Mol. Simul. \textbf{3} (1989), 263--269.
+
+\bibitem{smith:91}
+W.~Smith, \emph{Molecular dynamics on hypercube parallel computers}, Comp.
+  Phys. Commun. \textbf{62} (1991), 229--248.
+
+\bibitem{smith:92}
+\bysame, \emph{A replicated-data molecular dynamics strategy for the parallel
+  {E}wald sum}, Comp. Phys. Commun. \textbf{67} (1992), 392--406.
+
+\bibitem{smith:82}
+W.~Smith and D.~Fincham, \emph{The program {MDMPOL}}, SERC, Daresbury
+  Laboratory, 1982, CCP5 Program Library.
+
+\bibitem{sonnenschein:85}
+R.~Sonnenschein, \emph{An improved algorithm for molecular dynamics simulation
+  of rigid molecules}, J. Comp. Phys. \textbf{59} (1985), no.~2, 347--350.
+
+\bibitem{duval:64}
+P.~Du Val, \emph{Homographies, quaternions and rotations}, Oxford Mathematical
+  Monograph, 1964.
+
+\bibitem{verlet:67}
+L.~Verlet, \emph{Computer `experiments' on classical fluids. {I}.
+  thermodynamical properties of lennard-jones molecules}, Phys. Rev.
+  \textbf{165} (1967), 201--214.
+
+\bibitem{wentzcovitch:91}
+Renata~M. Wentzcovitch, \emph{Invariant molecular-dynamics approach to
+  structural phase transitions}, Phys. Rev. B \textbf{44} (1991), no.~5,
+  2358--2361.
+
+\end{thebibliography}
