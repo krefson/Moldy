@@ -8,6 +8,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.14  92/06/26  17:03:25  keith
+ * Got rid of assumption that memory returned by talloc() or
+ * arralloc() is zeroed.  This enhances ANSI compatibility.
+ * Removed memory zeroing from alloc.c() in consequence.
+ * 
  * Revision 1.13  91/08/15  18:12:12  keith
  * Modifications for better ANSI/K&R compatibility and portability
  * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
@@ -62,7 +67,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.13 91/08/15 18:12:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.14 92/06/26 17:03:25 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -106,7 +111,7 @@ system_p	system;				/* System info struct	      */
 
    rdf = aalloc(max_id, int ** );
    rdf_base = ialloc(control.nbins * max_id * (max_id - 1) / 2);
-   (void)memset(rdf_base, 0, control.nbins * max_id * (max_id - 1) / 2*sizeof(int));
+   (void)memset((char*)rdf_base, 0, control.nbins * max_id * (max_id - 1) / 2*sizeof(int));
    for(idi = 1; idi < max_id; idi++)
       rdf[idi] = aalloc(max_id, int * );
    for(idi = 1; idi < max_id; idi++)

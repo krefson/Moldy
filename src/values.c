@@ -14,6 +14,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	values.c,v $
+ * Revision 1.13  92/06/26  17:03:38  keith
+ * Got rid of assumption that memory returned by talloc() or
+ * arralloc() is zeroed.  This enhances ANSI compatibility.
+ * Removed memory zeroing from alloc.c() in consequence.
+ * 
  * Revision 1.12  92/03/24  12:41:31  keith
  * Fixed bug introduced in last revision which calculated
  * averages wrongly.
@@ -66,7 +71,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.12 92/03/24 12:41:31 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.13 92/06/26 17:03:38 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -84,6 +89,7 @@ double	det();				/* Determinant of 3x3 matrix	      */
 double	vdot();				/* Vector dot product		      */
 double	sum();				/* Vector sum			      */
 void	zero_real();
+void	zero_double();
 void	energy_dyad();
 double	trans_ke();
 double	rot_ke();
@@ -215,7 +221,7 @@ int	roll_interval, old_roll_interval;
    av_head  = (av_head_t*)aalloc( av_size, char);
    av_head->nav = av_head->nroll = av_head->iroll = 0;
    av       = (av_t*)(av_head+1);
-   zero_double(av, navs*av_t_size/sizeof(double));
+   zero_double((double*)av, (int)(navs*av_t_size/sizeof(double)));
 
    av_p = av;
    for(i = 0; i < (int)end; i++)	/* Set up pointers to area of array   */
