@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdshak.c,v 2.8 1994/10/17 10:55:22 keith stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdshak.c,v 2.10 1996/09/25 18:49:43 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -59,6 +59,12 @@ gptr	*talloc();
 FILE	*popen();
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
+static   char		*comm;
+contr_mt		control;
+
+#define OUTBIN 2
+#define SHAK   0
+#define XYZ 1
 /******************************************************************************
  * Dummies of 'moldy' routines so that mdshak may be linked with moldy library*
  ******************************************************************************/
@@ -117,7 +123,7 @@ va_dcl
    sev   = va_arg(ap, int);
    format= va_arg(ap, char *);
 
-   (void)fprintf(stderr, "mdshak: ");
+   (void)fprintf(stderr, "%s: ",comm);
    (void)vfprintf(stderr, format, ap);
    va_end(ap);
    fputc('\n',stderr);
@@ -158,7 +164,7 @@ va_dcl
    format= va_arg(ap, char *);
 #endif
 
-   (void)fprintf(stderr, "mdshak: ");
+   (void)fprintf(stderr, "%s: ",comm);
    (void)vfprintf(stderr, format, ap);
    fputc('\n',stderr);
    va_end(ap);
@@ -412,6 +418,69 @@ char		*insert;
       error("Error writing output - \n%s\n", strerror(errno));
 }
 /******************************************************************************
+ * xyz_out().  Write a system configuration to stdout in the form of an    *
+ * input data file for the graphics program XYZ (rasmol -xyz file)	      *
+ ******************************************************************************/
+void
+xyz_out(n, system, species, site_info, insert)
+int	n;
+system_mt	*system;
+spec_mt		species[];
+site_mt		site_info[];
+char		*insert;
+{
+   double	**site = (double**)arralloc(sizeof(double),2,
+					    0,2,0,system->nsites-1);
+   spec_mt	*spec;
+   double	a, b, c, alpha, beta, gamma;
+   mat_mp	h = system->h;
+   mat_mt	hinv;
+   int		imol, isite, is;
+
+/* We count the number of atoms */
+   isite=0;
+   for(spec = species; spec < species+system->nspecies; spec++)
+   {
+      for(imol = 0; imol < spec->nmols; imol++)
+      {
+	 for(is = 0; is < spec->nsites; is++)
+         {
+	    if(fabs(site_info[spec->site_id[is]].mass) != 0)
+              isite++;
+         }
+      }
+   }
+/* Now we write the Xyz header */
+   (void)printf("%d\n",isite);
+/* It would be nice to have here the real title */
+   (void)printf("%s\n",control.title);
+   
+   for(spec = species; spec < species+system->nspecies; spec++)
+   {
+      make_sites(system->h, spec->c_of_m, spec->quat, spec->p_f_sites,
+		 spec->framework, site, spec->nmols, spec->nsites);
+
+      isite = 0;
+      for(imol = 0; imol < spec->nmols; imol++)
+      {
+	 for(is = 0; is < spec->nsites; is++)
+	 {
+	    if(fabs(site_info[spec->site_id[is]].mass) != 0)
+	       (void)printf("%-8s %7.4f %7.4f %7.4f\n",
+			    site_info[spec->site_id[is]].name,
+			    site[0][isite], site[1][isite], site[2][isite]);
+	    isite++;
+	 }
+      }
+   }
+
+   if( insert != NULL)
+      (void)printf("%s\n", insert);
+
+   if( ferror(stdout) )
+      error("Error writing output - \n%s\n", strerror(errno));
+}
+/******************************************************************************
  * atoms_out().  Write a system configuration to stdout in the form of an     *
  * binary atomic co-ordinates.						      *
  ******************************************************************************/
@@ -535,10 +604,13 @@ char		*insert;
    }
    switch (outsw)
    {
-    case 0:
+    case SHAK:
       schakal_out(n, system, species, site_info, insert);
       break;
-    case 1:
+    case XYZ:
+      xyz_out(n, system, species, site_info, insert);
+      break;
+    case OUTBIN:
       atoms_out(n, system, species, site_info, atom_sel);
       break;
    }
@@ -550,8 +622,6 @@ char		*insert;
  * restart files.  Call: mdshak [-s sys-spec-file] [-r restart-file].   If    *
  * neither specified on command line, user is interrogated.		      *
  ******************************************************************************/
-contr_mt		control;
-
 int
 main(argc, argv)
 int	argc;
@@ -581,20 +651,27 @@ char	*argv[];
    site_mt	*site_info;
    pot_mt	*potpar;
    quat_mt	*qpf;
-   contr_mt	control_junk;
    int		av_convert;
    
 #define MAXTRY 100
    control.page_length=1000000;
 
-   while( (c = getopt(argc, argv, "a:bo:cr:s:d:t:i:") ) != EOF )
+   comm = argv[0];
+   if( strstr(comm, "mdshak") )
+     outsw = SHAK;
+   else if (strstr(comm, "mdxyz") )
+     outsw = XYZ;
+   else
+     outsw = OUTBIN;
+
+   while( (c = getopt(argc, argv, "a:bo:cr:s:d:t:i:xh") ) != EOF )
       switch(c)
       {
        case 'a': 
 	 atom_sel = optarg;
 	 break;
        case 'b':
-	 outsw++;
+	 outsw=OUTBIN;
 	 break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
@@ -619,6 +696,12 @@ char	*argv[];
        case 'i':
 	 insert = optarg;
 	 break;
+       case 'x':
+	 outsw = XYZ;
+	 break;
+       case 'h':
+	 outsw = SHAK;
+	 break;
        default:
        case '?':
 	 errflg++;
@@ -626,7 +709,9 @@ char	*argv[];
 
    if( errflg )
    {
-      fputs("Usage: mdshak [-c] [-s sys-spec-file] [-r restart-file] ",stderr);
+      fprintf(stderr,
+	      "Usage: %s [-x] [-h] [-c] [-s sys-spec-file] [-r restart-file] ",
+	      comm);
       fputs("[-d dump-files] [-t s[-f[:n]]] [-o output-file]\n", stderr);
       exit(2);
    }
@@ -675,8 +760,8 @@ char	*argv[];
       if( (Fp = fopen(filename,"rb")) == NULL)
 	 error("Couldn't open restart file \"%s\" for reading -\n%s\n", 
 	       filename, strerror(errno));
-      re_re_header(Fp, &restart_header, &control_junk);
-      re_re_sysdef(Fp, &sys, &species, &site_info, &potpar);
+      re_re_header(Fp, &restart_header, &control);
+      re_re_sysdef(Fp, restart_header.vsn, &sys, &species, &site_info, &potpar);
       break;
     default:
       error("Internal error - invalid input type", "");
@@ -710,7 +795,7 @@ char	*argv[];
       break;
     case 'r':				/* Restart file			      */
 	init_averages(sys.nspecies, restart_header.vsn,
-		      control_junk.roll_interval, control_junk.roll_interval,
+		      control.roll_interval, control.roll_interval,
 		      &av_convert);
 	read_restart(Fp, restart_header.vsn, &sys, av_convert);
 	moldy_out(1, &sys, species, site_info, atom_sel, outsw, insert);
