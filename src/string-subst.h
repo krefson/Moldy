@@ -1,7 +1,10 @@
 /*
- * $Header: string.h,v 1.1 89/04/25 17:38:05 keith Exp $
+ * $Header: /home/tigger/keith/md/RCS/string.h,v 1.2 89/06/09 12:18:51 keith Stab $
  *
  * $Log:	string.h,v $
+ * Revision 1.2  89/06/09  12:18:51  keith
+ * Recognised sysV and SysV macros
+ * 
  * Revision 1.1  89/04/25  17:38:05  keith
  * Initial revision
  * 
@@ -18,6 +21,7 @@
 #define strchr(c,p) index(c,p)
 #include	<strings.h>
 char		*memcpy();
+char		*strdup();
 #endif
 
 #else	/* Not unix */
