@@ -20,19 +20,23 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/mdvaf.c,v 1.12 2001/05/18 11:02:00 keith Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/mdvaf.c,v 1.13 2002/09/19 09:26:29 kr Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
  *              velocity total correlation functions (vtf) from MolDy dump files.     *
  *		Output in columnar form "x y z total" for successive time intervals.  *
- *		Selection of species using -g: 0 = species 1, 1 = species 2, etc.     *
+ *		Selection of species using -g: 1 = species 1, 2 = species 2, etc.     *
  *		Default mdvaf time intervals:			     	              *
  *                             1 to (total no. of dump slices-1)/2, step size 1       *
  *		nb. mdvaf time intervals taken relative to extracted dump slices.     *
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.13  2002/09/19 09:26:29  kr
+ *  Tidied up header declarations.
+ *  Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *  Revision 1.12  2001/05/18 11:02:00  keith
  *  Added "-3" option to calculate and print XYZ components separately
  *
@@ -91,8 +95,6 @@ static char *RCSid = "$Header: /home/kr/CVS/moldy/src/mdvaf.c,v 1.12 2001/05/18 
 #include "utlsup.h"
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 
-#define DOTPROD(x,y)   ((x[0]*y[0])+(x[1]*y[1])+(x[2]*y[2]))
-
 char	*strlower(char *s);
 void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, 
                     site_mp *site_info, pot_mp *pot_ptr);
@@ -143,11 +145,11 @@ double vdotf(int n, float *x, int ix, float *y, int iy)
  * vaf_calc. Calculate vaf from velocity array		               *
  ***********************************************************************/    
 void
-vaf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc, 
-	 int max_av, int it_inc, float (**vel)[3], float **vaf, int aflg, 
+vaf_calc(spec_mt *species, char *spec_mask, int nspecies, int vstart, int vfinish,
+	 int vinc, int max_av, int it_inc, float (**vel)[3], float **vaf, int aflg, 
 	 int cptflg)
 {
-   int it, irec, totmol, ivaf, ispec, icpt;
+   int it, irec, totmol, ivaf, ispec, icpt, nspec;
    spec_mp      spec;
    float	(*vel0)[3], (*vel1)[3];
 
@@ -160,39 +162,36 @@ vaf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc,
 	 ivaf = (irec-vstart)/vinc;
 	 vel0 = vel[it];
 	 vel1 = vel[it+irec];
-         totmol=0;
-	 for( ispec = 0, spec = species+sp_range[0]; spec <= species+sp_range[1];
-	    spec += sp_range[2], ispec++)
-         {
-         if( cptflg ) 
-	 {
-	    for(icpt=0; icpt < 3; icpt++)
-	    {
-	       if( aflg == 0 || spec->rdof > 0)
+         totmol=0; ispec=0;
+	 for( spec = species; spec < species+nspecies; spec++, ispec++)
+            if( spec_mask[ispec] )
+            {
+               if( cptflg ) 
 	       {
-		  vaf[ivaf][3*ispec+icpt] += vdotf(spec->nmols, vel0[0]+icpt, 
+	          for(icpt=0; icpt < 3; icpt++)
+	          {
+	             if( aflg == 0 || spec->rdof > 0)
+	             {
+		        vaf[ivaf][3*ispec+icpt] += vdotf(spec->nmols, vel0[0]+icpt, 
 					   3, vel1[0]+icpt, 3)/ spec->nmols;
-	       }
-	    }
-	 } else {
-	     if( aflg == 0 || spec->rdof > 0)
-	       {
-		 vaf[ivaf][ispec] += vdotf(3*spec->nmols, vel0[0], 1, 
+   	             }
+	          }
+	       } else {
+	           if( aflg == 0 || spec->rdof > 0)
+		       vaf[ivaf][ispec] += vdotf(3*spec->nmols, vel0[0], 1, 
 					  vel1[0], 1) / spec->nmols;
 	       }
-	 }
-
+            }
       }
-   }
 }
 /***********************************************************************
  * vtf_calc. Calculate vtf from velocity array		               *
  ***********************************************************************/    
 void
-vtf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc, 
+vtf_calc(spec_mt *species, char *spec_mask, int nspecies, int vstart, int vfinish, int vinc, 
 	 int max_av, int it_inc, float (**vel)[3], float **vtf)
 {
-   int it, irec, totmol, ivtf, ispec, imol, i;
+   int it, irec, totmol, ivtf, ispec, imol, i, nspec;
    spec_mp      spec;
    float	(*vel0)[3], (*vel1)[3];
    float	vtftmp0[3], vtftmp1[3];
@@ -206,53 +205,53 @@ vtf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc,
 	 ivtf = (irec-vstart)/vinc;
 	 vel0 = vel[it];
 	 vel1 = vel[it+irec];
-         totmol=0;
-	 for( ispec = 0, spec = species+sp_range[0]; spec <= species+sp_range[1];
-	    spec += sp_range[2], ispec++ )
-         {
-            for( i = 0; i < 3; i++)
-               vtftmp0[i] = vtftmp1[i] = 0;
-	    for( imol = 0; imol < spec->nmols; totmol++, imol++)
+         totmol=0; ispec=0;
+	 for( spec = species; spec < species+nspecies; spec++, ispec++ )
+            if( spec_mask[ispec] )
+            {
                for( i = 0; i < 3; i++)
-               {
-                  vtftmp0[i] += spec->charge*vel0[totmol][i];
-                  vtftmp1[i] += spec->charge*vel1[totmol][i];
-               }
-	    vtf[ivtf][ispec] += DOTPROD(vtftmp0,vtftmp1);
-         }
-      }
+                  vtftmp0[i] = vtftmp1[i] = 0;
+	       for( imol = 0; imol < spec->nmols; totmol++, imol++)
+                  for( i = 0; i < 3; i++)
+                  {
+                     vtftmp0[i] += spec->charge*vel0[totmol][i];
+                     vtftmp1[i] += spec->charge*vel1[totmol][i];
+                  }
+	       vtf[ivtf][ispec] += DOTPROD(vtftmp0,vtftmp1);
+            }
+     }
 }
 /******************************************************************************
  * vaf_out().  Output routine for displaying vaf results                      *
  ******************************************************************************/
 void
-vaf_out(spec_mt *species, float **vaf, int max_av, int nvaf, int *sp_range, int aflg, int cptflg)
+vaf_out(spec_mt *species, float **vaf, int max_av, int nvaf, char *spec_mask, int nspecies, int aflg, int cptflg)
 {
    int          ispec=0, ivaf;
    spec_mp      spec;
 
-   for( spec = species+sp_range[0]; spec <= species+sp_range[1]; spec += sp_range[2])
-   {
-    if( aflg == 0 || spec->rdof > 0)
-    {
-      (void)printf("# %s\n",spec->name); 
-       for( ivaf = 0; ivaf < nvaf; ivaf++)
-       {
-	 if( cptflg ) 
-	 {
-	   vaf[ivaf][3*ispec] /= max_av;
-	   vaf[ivaf][3*ispec+1] /= max_av;
-	   vaf[ivaf][3*ispec+2] /= max_av;
-	   (void)printf("%6d %10.7f %10.7f %10.7f\n",ivaf, vaf[ivaf][3*ispec],
+   for( spec=species; spec < species+nspecies; spec++, ispec++)
+      if( spec_mask[ispec] )
+      {
+         if( aflg == 0 || spec->rdof > 0)
+         {
+            (void)printf("# %s\n",spec->name); 
+            for( ivaf = 0; ivaf < nvaf; ivaf++)
+            {
+	       if( cptflg ) 
+	       {
+	         vaf[ivaf][3*ispec] /= max_av;
+	         vaf[ivaf][3*ispec+1] /= max_av;
+	         vaf[ivaf][3*ispec+2] /= max_av;
+	         (void)printf("%6d %10.7f %10.7f %10.7f\n",ivaf, vaf[ivaf][3*ispec],
 			vaf[ivaf][3*ispec+1],vaf[ivaf][3*ispec+2]);
-	 } else {
-	   vaf[ivaf][ispec] /= max_av;
-	   (void)printf("%10.7f\n",vaf[ivaf][ispec]);
-	 }
-       }
-       ispec++;
-    }
-   }
+      	       } else {
+	         vaf[ivaf][ispec] /= max_av;
+	         (void)printf("%10.7f\n",vaf[ivaf][ispec]);
+	       }
+            }
+         }
+      }
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
 }
@@ -274,12 +273,11 @@ main(int argc, char **argv)
    int		start, finish, inc;
    int		vstart, vfinish, vinc;
    int		nslices;
-   int		sp_range[3];
    int		dflag, iflag, sflag, vflag;
    int		outsw;
    int		irec, it_inc = 1;
    char		*filename = NULL, *dump_name = NULL;
-   char		*dumplims = NULL, *speclims = NULL;
+   char		*dumplims = NULL;
    char		*vaflims = NULL;
    char		*tempname;
    char		dumpcommand[256];
@@ -295,7 +293,9 @@ main(int argc, char **argv)
    quat_mt	*qpf;
    contr_mt	control, control_junk;
    int          nvaf, max_av, nspecies;
-   float         **vaf;
+   float        **vaf;
+   char         *spec_list = "1-50";
+   char         spec_mask[MAX_SPECIES];
 
 #define MAXTRY 100
    control.page_length=1000000;
@@ -341,7 +341,7 @@ main(int argc, char **argv)
 	 vaflims = mystrdup(optarg);
          break;
        case 'g':
-	 speclims = mystrdup(optarg);
+         spec_list = optarg;
 	 break;
        case 'i':
 	 it_inc = atoi(optarg);
@@ -366,6 +366,9 @@ main(int argc, char **argv)
       fputs("[-g s[-f[:n]]] [-i init-inc] [-q] [-o output-file]\n",stderr);
       exit(2);
    }
+
+   if( tokenise(mystrdup(spec_list), spec_mask, MAX_SPECIES) == 0 )
+       error("Invalid species specification \"%s\": usage eg 1,3,5-9,4",spec_list);
 
    if(intyp == 0)
    {
@@ -506,46 +509,7 @@ main(int argc, char **argv)
       vinc = 1;
    }
 
-  /*
-   * Ensure that the species selection limits sp_range are set up,
-   * either on command line or by user interaction.
-   */
-   if( speclims != NULL)
-   {
-      do
-      {
-         sflag = 0;
-         if( forstr(speclims, &(sp_range[0]), &(sp_range[1]), &(sp_range[2])))
-         {  
-	   sflag++;
-           fputs("Invalid range for molecule selection \"", stderr);
-	   fputs(speclims, stderr);
-	   fputs("\"\n", stderr);
-         }
-         if( sp_range[1] > sys.nspecies-1)
-         {
-            sflag++;
-            fputs("Molecule selection exceeds no. of species\n",stderr);
-         }
-         if( sflag )
-         {
-            (void)free(speclims);
-            speclims = NULL;
-            fputs("Please specify molecule selection in form", stderr);
-            fputs(" start-finish:increment\n", stderr);
-            speclims = get_str("s-f:n? ");
-         }
-       } while(sflag);         
-   }
-   else
-   {
-      /* Use default values for molecule selection limits */
-       sp_range[0] = 0;
-       sp_range[1] = sys.nspecies-1;
-       sp_range[2] = 1;
-   } 
-
-   nspecies = floor((sp_range[1]-sp_range[0])/sp_range[2]+1.0); /* No of species to include */
+   nspecies = sys.nspecies;
 
   /*
    * Allocate buffer for data
@@ -609,9 +573,9 @@ main(int argc, char **argv)
 
   /* Calculate and print vaf/vtf values */
      if( outsw )
-        vtf_calc(species, sp_range, vstart, vfinish, vinc, max_av, it_inc, vel, vaf);
+        vtf_calc(species, spec_mask, nspecies, vstart, vfinish, vinc, max_av, it_inc, vel, vaf);
      else
-        vaf_calc(species, sp_range, vstart, vfinish, vinc, max_av, it_inc, vel, vaf, aflg, cptflg);
-     vaf_out(species, vaf, max_av, nvaf, sp_range, aflg, cptflg);
+        vaf_calc(species, spec_mask, nspecies, vstart, vfinish, vinc, max_av, it_inc, vel, vaf, aflg, cptflg);
+     vaf_out(species, vaf, max_av, nvaf, spec_mask, nspecies, aflg, cptflg);
    return 0;    
 }
