@@ -2,10 +2,13 @@
  * Ewald	The reciprocal-space part of the standard Ewald sum technique *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log:	ewald.c,v $
+ * Revision 1.1  89/04/20  16:00:39  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: ewald.c,v 1.1 89/04/20 16:00:39 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef	convexvc
@@ -142,23 +145,35 @@ mat_t		stress;			/* Stress virial		(out) */
  * Use addition formulae to get sin(h*astar*x)=sin(Kx*x) etc for each site
  */
    for(h = 2; h <= hmax; h++)
+   {
+      coshx = chx[h];
+      sinhx = shx[h];
       for(is = 0; is < nsites; is++)
       {
-	 chx[h][is] = chx[h-1][is]*chx[1][is] - shx[h-1][is]*shx[1][is];
-	 shx[h][is] = shx[h-1][is]*chx[1][is] + chx[h-1][is]*shx[1][is];
+	 coshx[is] = chx[h-1][is]*chx[1][is] - shx[h-1][is]*shx[1][is];
+	 sinhx[is] = shx[h-1][is]*chx[1][is] + chx[h-1][is]*shx[1][is];
       }
+   }
    for(k = 2; k <= kmax; k++)
+   {
+      cosky = cky[k];
+      sinky = sky[k];
       for(is = 0; is < nsites; is++)
       {
-	 cky[k][is] = cky[k-1][is]*cky[1][is] - sky[k-1][is]*sky[1][is];
-	 sky[k][is] = sky[k-1][is]*cky[1][is] + cky[k-1][is]*sky[1][is];
+	 cosky[is] = cky[k-1][is]*cky[1][is] - sky[k-1][is]*sky[1][is];
+	 sinky[is] = sky[k-1][is]*cky[1][is] + cky[k-1][is]*sky[1][is];
       }
+   }
    for(l = 2; l <= lmax; l++)
+   {
+      coslz = clz[l];
+      sinlz = slz[l];
       for(is = 0; is < nsites; is++)
       {
-	 clz[l][is] = clz[l-1][is]*clz[1][is] - slz[l-1][is]*slz[1][is];
-	 slz[l][is] = slz[l-1][is]*clz[1][is] + clz[l-1][is]*slz[1][is];
+	 coslz[is] = clz[l-1][is]*clz[1][is] - slz[l-1][is]*slz[1][is];
+	 sinlz[is] = slz[l-1][is]*clz[1][is] + clz[l-1][is]*slz[1][is];
       }
+   }
 /*
  * Start of main loops over K vector indices h, k, l between -*max, *max etc.
  * To avoid calculating K and -K, only half of the K-space box is covered. 
