@@ -11,6 +11,16 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 1.11  91/08/15  18:12:14  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
  * Revision 1.10  91/03/12  15:43:16  keith
  * Tidied up typedefs size_t and include file <sys/types.h>
  * Added explicit function declarations.
@@ -43,7 +53,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.12 91/08/14 14:23:49 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.12 91/08/16 15:26:07 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -86,7 +96,7 @@ int	nitems;
 
    (void)fread((gptr*)&stored_size, sizeof stored_size, 1, file); 
    if(ferror(file))
-      message(NULLI,NULLP,FATAL,REREAD,ferror(file),ftell(file));
+      message(NULLI,NULLP,FATAL,REREAD,ftell(file),strerror(errno));
    else if(feof(file))
       message(NULLI,NULLP,FATAL,REEOF);
    if(stored_size != size * nitems)
@@ -94,7 +104,7 @@ int	nitems;
               stored_size, size * nitems);
    (void)fread(ptr, size, nitems, file);
    if(ferror(file))
-      message(NULLI,NULLP,FATAL,REREAD,ferror(file),ftell(file));
+      message(NULLI,NULLP,FATAL,REREAD,ftell(file),strerror(errno));
    else if(feof(file))
       message(NULLI,NULLP,FATAL,REEOF);
 }
@@ -108,12 +118,12 @@ FILE	*file;
 
    (void)fread((gptr*)&stored_size, sizeof stored_size, 1, file); 
    if(ferror(file))
-      message(NULLI,NULLP,FATAL,REREAD,ferror(file),ftell(file));
+      message(NULLI,NULLP,FATAL,REREAD,ftell(file),strerror(errno));
    else if(feof(file))
       message(NULLI,NULLP,FATAL,REEOF);
    (void)fseek(file, (long)stored_size, 1);
    if(ferror(file))
-      message(NULLI,NULLP,FATAL,REREAD,ferror(file),ftell(file));
+      message(NULLI,NULLP,FATAL,REREAD,ftell(file),strerror(errno));
    else if(feof(file))
       message(NULLI,NULLP,FATAL,REEOF);
 }
@@ -127,10 +137,10 @@ size_t	size;
 int	nitems;
 {
    size_t       length = size*nitems;
-   (void)fwrite((gptr*)&length, sizeof length, 1, file);
-   (void)fwrite(ptr, size, nitems, file);
-   if(ferror(file))
-      message(NULLI,NULLP,FATAL,REWRT,ferror(file));
+   if( fwrite((gptr*)&length, sizeof length, 1, file) == 0 )
+      message(NULLI,NULLP,FATAL,REWRT,strerror(errno));
+   if( fwrite(ptr, size, nitems, file) < nitems )
+      message(NULLI,NULLP,FATAL,REWRT,strerror(errno));
 }
 /******************************************************************************
  *  re_re_header   Read from the (already opened) restart file, the	      *
@@ -304,7 +314,8 @@ pot_p		potpar;			/* To be pointed at potpar array      */
    else
       cwrite(save,  (gptr*)&zero, sizeof(int), 1);/* Otherwise flag no rdf data*/
       
-   (void)fclose(save);				/* Finished writing temp. file*/
+   if( fclose(save) )				/* Delayed write error?       */
+      message(NULLI, NULLP, FATAL, REWRT, strerror(errno));
 
    if(replace(control.temp_file, save_name) == 0)/* Rename temp file to output*/
    {						/* Don't signal backup write  */
@@ -313,5 +324,6 @@ pot_p		potpar;			/* To be pointed at potpar array      */
 	      save_name, cctime(&save_header.timestamp), save_header.seq);
    }
    else
-      message(NULLI, NULLP, ERROR, RNFAIL, save_name, control.temp_file);
+      message(NULLI, NULLP, ERROR, RNFAIL, save_name, control.temp_file,
+	      strerror(errno));
 }
