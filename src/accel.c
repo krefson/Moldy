@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.36  2001/07/13 14:54:17  keith
+ *       Fixed bug in DEBUG_THERMOSTAT code which calculayed KE and PE
+ *       at different half-steps.
+ *
  *       Revision 2.35  2001/06/28 15:48:22  keith
  *       Fixed bug in implementation of Nose-poincare thermostat to do with
  *       update of smom in rotational update stage.
@@ -317,7 +321,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.35 2001/06/28 15:48:22 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.36 2001/07/13 14:54:17 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -949,6 +953,8 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    int             ispec, imol, imol_r;
    int		   nspecies = sys->nspecies;
    boolean	   uni = control.const_pressure> 0 && (control.const_pressure%2==0);
+   static	   boolean first_call = true;
+   static	   double saved_pe;
    /*
     * Initialize force and torque arays.
     */
@@ -960,6 +966,26 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
       imol += spec->nmols;
       if (spec->quat)
 	 imol_r += spec->nmols;
+   }
+
+   /*
+    * Evaluate initial Hamiltonian H_0 at start of run or after a velocity
+    * scaling step.  
+    */ 
+   if( first_call )
+   {
+      first_call = false;
+      eval_forces(sys, species, site_info, potpar,
+		  pe, dip_mom, stress_vir, force, torque);
+      saved_pe = pe[0] + pe[1];
+   }
+   if(control.istep == 1 || init_H_0 )
+   {
+      ke = tot_ke(sys, species,1);
+      sys->H_0 = ke + saved_pe + SQR(sys->tsmom)/(2.0*control.ttmass) 
+                            + sys->d_of_f*kB*control.temp * log(sys->ts)
+	                    + ke_cell(sys->hmom, control.pmass)
+                            + control.pressure*det(sys->h);
    }
    /*
     * Half step for H1. 
@@ -993,21 +1019,7 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
     */
    eval_forces(sys, species, site_info, potpar,
 	       pe, dip_mom, stress_vir, force, torque);
-   /*
-    * Evaluate initial Hamiltonian H_0 at start of run or after a velocity
-    * scaling step.  It's more accurate to compute H_0 here at the first 
-    * midpoint than initially as it avoids the large discontinuity in H
-    * due to initial inconsistency between co-ords and momentum variables.
-    * N.B.  "ke" still contains old, on-step value at this point.
-    */ 
-   if(control.istep == 1 || init_H_0 )
-   {
-      ke = tot_ke(sys, species,1);
-      sys->H_0 = ke + pe[0] + pe[1] + SQR(sys->tsmom)/(2.0*control.ttmass) 
-                            + sys->d_of_f*kB*control.temp * log(sys->ts)
-	                    + ke_cell(sys->hmom, control.pmass)
-                            + control.pressure*det(sys->h);
-   }
+   saved_pe = pe[0] + pe[1];
 
 #ifdef DEBUG_THERMOSTAT
    leapf_all_momenta(0.5*control.step, sys, species, force, torque);
