@@ -26,6 +26,16 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.25  2000/11/06 16:02:04  keith
+ *       First working version with a Nose-Poincare thermostat for rigid molecules.
+ *
+ *       System header updated to include H_0.
+ *       Dump performs correct scaling  of angular velocities, but dumpext still
+ *          needs to be updated to read this.
+ *       XDR functions corrected to work with new structs.
+ *       Parallel broadcast of config also updated.
+ *       Some unneccessary functions and code deleted.
+ *
  *       Revision 2.22.2.3  2000/10/20 15:17:38  keith
  *       Incorporated fix og 2.15c into this branch
  *
@@ -255,7 +265,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.22.2.3 2000/10/20 15:17:38 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.25 2000/11/06 16:02:04 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -870,6 +880,10 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    spec_mp         spec;
    int             ispec, imol, imol_r;
    int		   nspecies = sys->nspecies;
+   boolean	   just_rescaled      /* Is this first step after rescale? */
+                            = control.scale_interval > 0 &&
+                             (control.istep-1) <= control.scale_end &&
+                             (control.istep-1) % control.scale_interval == 0;
    /*
     * Initialize force and torque arays.
     */
@@ -883,7 +897,7 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
 	 imol_r += spec->nmols;
    }
    /*
-    * Evaluate initial KE on first step or when scaling switched off
+    * Evaluate initial KE on first step of this run or restart. 
     */
    if (init)
    {
@@ -919,6 +933,18 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
     */
    eval_forces(sys, species, site_info, potpar,
 	       pe, dip_mom, stress, force, torque);
+   /*
+    * Evaluate initial Hamiltonian H_0 at start of run or after a velocity
+    * scaling step.  It's more accurate to compute H_0 here at the first 
+    * midpoint than initially as it avoids the large discontinuity in H
+    * due to initial inconsistency between co-ords and momentum variables.
+    * N.B.  "ke" still contains old, on-step value at this point.
+    */ 
+   if(control.istep == 1 || just_rescaled )
+   {
+      sys->H_0 = ke + pe[0] + pe[1] + SQR(sys->tsmom)/(2.0*control.ttmass) 
+                            + sys->d_of_f*kB*control.temp * log(sys->ts); 
+   }
 
    invert(sys->h, hinv);
    for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
@@ -930,14 +956,6 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
 		                          spec->inertia, spec->nmols);
    }
    ke = tot_ke(sys, species);
-
-   if(control.istep == 1 
-      || control.scale_interval > 0 && control.istep == 1+control.scale_end)
-   {
-      sys->H_0 = ke + pe[0] + pe[1] 
-	            + SQR(sys->tsmom)/(2.0*control.ttmass) 
-                    + sys->d_of_f*kB*control.temp * log(sys->ts); 
-   }
 
    if( control.const_temp )
       sys->tsmom -= control.step*(pe[0]+pe[1] - sys->H_0);
@@ -975,8 +993,8 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
       HS = sys->d_of_f*kB*control.temp * log(sys->ts);
       H = ke + pe[0] + pe[1] + HP + HS;
       fprintf(stderr,
-	      "do_step(exit):  Q= %f\ts= %f\tps= %f\tH= %f\tHK= %f\tHV= %f\tHP= %f\tHS= %f\t(H-H_0)s= %f\n",
-	      control.ttmass,sys->ts,sys->tsmom, H,ke, pe[0] + pe[1], HP, HS,(H-sys->H_0)*sys->ts);
+             "do_step:  s= %7.4g  ps= %9.5g  H= %12.7g  HK= %12.7g  HV= %12.7g  HP= %12.7g  HS= %12.7g   (H-H_0)s= %12.7g\n",
+             sys->ts,sys->tsmom, H,ke, pe[0] + pe[1], HP, HS,(H-sys->H_0)*sys->ts); 
    }
 #endif
 
