@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.29  2001/02/13 17:45:06  keith
+ *       Added symplectic Parrinello-Rahman constant pressure mode.
+ *
  *       Revision 2.28  2000/12/06 17:45:27  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -288,7 +291,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.28 2000/12/06 17:45:27 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.29 2001/02/13 17:45:06 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -305,13 +308,13 @@ gptr   *talloc(int n, size_mt size, int line, char *file);
                               /* Interface to memory allocator       */
 void   tfree(gptr *p);	       /* Free allocated memory	      	      */
 void   afree(gptr *p);	       /* Free allocated array	      	      */
-void   leapf_com(real step, vec_mt (*c_of_m), vec_mt (*mom), 
+void   leapf_com(double step, vec_mt (*c_of_m), vec_mt (*mom), 
 		 mat_mt h, real s, real mass, int nmols);
-void   leapf_mom(real step, mat_mt, vec_mt (*mom), 
+void   leapf_mom(double step, mat_mt, vec_mt (*mom), 
 		 vec_mt (*force),  int nmols);
-void   leapf_quat(real step, quat_mt (*quat), quat_mt (*avel), 
+void   leapf_quat(double step, quat_mt (*quat), quat_mt (*avel), 
 		  real *inertia, int nmols);
-void   leapf_avel(real step, quat_mt (*avel), vec_mt (*torque), 
+void   leapf_avel(double step, quat_mt (*avel), vec_mt (*torque), 
 		  real *inertia, int nmols);
 double leapf_s(double step, real s, real smom, double Q);
 double leapf_smom_a(double step, real s, real smomo,  double Q, double gkt);
@@ -319,6 +322,12 @@ double leapf_smom_b(double step, real s, real smomo, double Q, double gkt);
 void   leapf_hmom(double step, mat_mt hmom, mat_mt sigma, real s,
 		  real pressure, int mask);
 void   leapf_h(double step, mat_mt h, mat_mt hmom, real s, real W);
+void   gleap_therm(double step, real mass, real gkt, real *s, real *smom);
+void   gleap_cell(double step, real pmass, real s, real pressure, int strain_mask, 
+		  mat_mt h, mat_mt hmom, real *smom);
+void   update_hmom(double step, real s, mat_mt h,
+		   mat_mt stress_part, mat_mt hmom);
+
 void   make_sites(mat_mt, vec_mp c_of_m_s, quat_mp quat, 
 		  vec_mp p_f_sites, real **site, int nmols, int nsites, 
 		  int molflag);		/* Construct site coordinate arrays  */
@@ -351,7 +360,6 @@ void   mat_mul(mat_mt a, mat_mt b, mat_mt c); /* 3 x 3 matrix multiplier     */
 void   mat_add(mat_mt a, mat_mt b, mat_mt c); /* Add 2 3x3 matrices          */
 void   mat_sca_mul(real s, mat_mt a, mat_mt b); 
 void   mk_sigma(mat_mt h, mat_mt sigma);
-                                      /* 3 x 3 Matrix by Vector multiplier   */
 void   mean_square(vec_mt (*x), real *meansq, int nmols);
                      	                /* Calculates mean square of args    */
 void   rdf_calc(real **site, system_mp system, spec_mt *species);
@@ -609,6 +617,39 @@ void stress_kin (mat_mt ke_dyad, system_mt *sys, spec_mt *species)
       
    for (spec = species; spec < &species[sys->nspecies]; spec++)
       energy_dyad(ke_dyad, sys->h, sys->ts, spec->mom, spec->mass, spec->nmols); 
+}
+/******************************************************************************
+ * leapf_all_coords(). Update centre-of-mass and quaternion co-ordinates      *
+ ******************************************************************************/
+void leapf_all_coords(double step, system_mt *sys, spec_mt *species)
+{
+   spec_mt *spec;
+
+   for (spec = species; spec < &species[sys->nspecies]; spec++)
+   {
+      leapf_com(step, spec->c_of_m, spec->mom, sys->h, sys->ts, 
+		spec->mass, spec->nmols);
+      if( spec->rdof > 0 )
+	 leapf_quat(step/sys->ts, spec->quat, spec->avel, 
+		    spec->inertia, spec->nmols);
+   }
+}
+/******************************************************************************
+ * leapf_all_momenta(). Update linear and angular momenta.		      *
+ ******************************************************************************/
+void leapf_all_momenta(double step, system_mt *sys, spec_mt *species,
+		       vec_mp *force, vec_mp *torque)
+{
+   spec_mt *spec;
+   int     ispec;
+
+   for (ispec = 0, spec = species; ispec < sys->nspecies; ispec++, spec++)
+   {
+      leapf_mom(step*sys->ts, sys->h, spec->mom,  force[ispec], spec->nmols);
+      if( spec->rdof > 0 )
+	 leapf_avel(step*sys->ts, spec->avel, torque[ispec], spec->inertia, 
+		                                             spec->nmols);
+   }
 }
 /******************************************************************************
  * eval_forces().  This is the master potential and force evaluation routine. *
@@ -874,7 +915,7 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    static double   ke;		       /* (translational) kinetic energy) */
    double          vol = det(sys->h);
    static boolean  init = true;
-   mat_mt          ke_dyad, sigma, tmp_mat;
+   mat_mt          ke_dyad;
    double	   tsold;
    spec_mp         spec;
    int             ispec, imol, imol_r;
@@ -909,35 +950,16 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    if( control.const_temp )
    {
       tsold = sys->ts;
-      sys->tsmom = leapf_smom_a(0.5*control.step, sys->ts, sys->tsmom, 
-				control.ttmass, sys->d_of_f*kB*control.temp);
-      sys->ts    = leapf_s     (0.5*control.step, sys->ts, sys->tsmom, 
-				control.ttmass);
-      sys->tsmom = leapf_smom_b(0.5*control.step, sys->ts, sys->tsmom, 
-				control.ttmass, sys->d_of_f*kB*control.temp);
+      gleap_therm(0.5*control.step, control.ttmass, sys->d_of_f*kB*control.temp, 
+		  &sys->ts, &sys->tsmom);
       ke *=SQR(tsold/sys->ts);
    }
    /*
     * H2 half step
     */
    if( control.const_pressure )
-   {
-      vol = det(sys->h);
-      mk_sigma(sys->h, sigma);
-      leapf_hmom(0.5*control.step, sys->hmom, sigma, sys->ts, control.pressure, 
-		 control.strain_mask);
-
-      if( control.const_temp )
-	 sys->tsmom -= control.step*(ke_cell(sys->hmom, control.pmass)
-				     + control.pressure*vol);
-
-      leapf_h(0.5*control.step, sys->h, sys->hmom, sys->ts, control.pmass);
-
-      vol = det(sys->h);
-      mk_sigma(sys->h, sigma);
-      leapf_hmom(0.5*control.step, sys->hmom, sigma, sys->ts, control.pressure, 
-		 control.strain_mask);
-   }
+      gleap_cell(0.5*control.step, control.pmass, sys->ts, control.pressure, 
+		 control.strain_mask, sys->h, sys->hmom, &sys->tsmom);
    /*
     * H3 half step
     */
@@ -946,18 +968,9 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    if( control.const_pressure )
    {
       stress_kin(ke_dyad, sys, species);
-      mat_mul(ke_dyad, sigma, ke_dyad);
-      mat_sca_mul(0.5*control.step*sys->ts/vol, ke_dyad, ke_dyad);
-      mat_add(sys->hmom, ke_dyad, sys->hmom);
+      update_hmom(0.5*control.step, sys->ts, sys->h, ke_dyad, sys->hmom);
    }
-   for (spec = species; spec < &species[nspecies]; spec++)
-   {
-      leapf_com(0.5*control.step, spec->c_of_m, spec->mom, sys->h, sys->ts, 
-		spec->mass, spec->nmols);
-      if( spec->rdof > 0 )
-	 leapf_quat(0.5*control.step/sys->ts, spec->quat, spec->avel, 
-		    spec->inertia, spec->nmols);
-   }
+   leapf_all_coords(0.5*control.step, sys, species);
    /*
     * H4 full step
     */
@@ -971,33 +984,20 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
     * N.B.  "ke" still contains old, on-step value at this point.
     */ 
    if(control.istep == 1 || just_rescaled )
-   {
       sys->H_0 = ke + pe[0] + pe[1] + SQR(sys->tsmom)/(2.0*control.ttmass) 
                             + sys->d_of_f*kB*control.temp * log(sys->ts)
 	                    + ke_cell(sys->hmom, control.pmass)
                             + control.pressure*vol;
-   }
 
-   for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
-   {
-      leapf_mom(control.step*sys->ts, sys->h, spec->mom,  force[ispec], 
-		                            spec->nmols);
-      if( spec->rdof > 0 )
-	 leapf_avel(control.step*sys->ts, spec->avel, torque[ispec], 
-		                          spec->inertia, spec->nmols);
-   }
+   leapf_all_momenta(control.step, sys, species, force, torque);
+
    ke = tot_ke(sys, species);
 
    if( control.const_temp )
       sys->tsmom -= control.step*(pe[0]+pe[1] - sys->H_0);
 
    if( control.const_pressure )
-   {
-      /* Assume sigma, vol set from H2 init step */
-      mat_mul(stress_vir, sigma, tmp_mat);
-      mat_sca_mul(control.step*sys->ts/vol, tmp_mat, tmp_mat); 
-      mat_add(sys->hmom, tmp_mat, sys->hmom);
-   }
+      update_hmom(control.step, sys->ts, sys->h, stress_vir, sys->hmom);
    /*
     * Second H3 half step.
     */
@@ -1006,52 +1006,24 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    if( control.const_pressure )
    {
       stress_kin(ke_dyad, sys, species);
-      /* Assume sigma, vol set from H2 init step */
-      mat_mul(ke_dyad, sigma, ke_dyad);
-      mat_sca_mul(0.5*control.step*sys->ts/vol, ke_dyad, ke_dyad);
-      mat_add(sys->hmom, ke_dyad, sys->hmom);
+      update_hmom(0.5*control.step, sys->ts, sys->h, ke_dyad, sys->hmom);
    }
 
-   for (spec = species; spec < &species[nspecies]; spec++)
-   {
-      leapf_com(0.5*control.step, spec->c_of_m, spec->mom, sys->h, sys->ts, 
-		spec->mass, spec->nmols);
-      if( spec->rdof > 0 )
-	 leapf_quat(0.5*control.step/sys->ts, spec->quat, spec->avel, 
-		    spec->inertia, spec->nmols);
-   }
+   leapf_all_coords(0.5*control.step, sys, species);
    /*
     * Second H2 half step.
     */
    if( control.const_pressure )
-   {
-      /* Assume vol and sigma set from previous H2 half step */
-      leapf_hmom(0.5*control.step, sys->hmom, sigma, sys->ts, control.pressure, 
-		 control.strain_mask);
-
-      if( control.const_temp )
-	 sys->tsmom -= control.step*(ke_cell(sys->hmom, control.pmass)
-				     + control.pressure*vol);
-
-      leapf_h(0.5*control.step, sys->h, sys->hmom, sys->ts, control.pmass);
-
-      vol = det(sys->h);
-      mk_sigma(sys->h, sigma);
-      leapf_hmom(0.5*control.step, sys->hmom, sigma, sys->ts, control.pressure, 
-		 control.strain_mask);
-   }
+      gleap_cell(0.5*control.step, control.pmass, sys->ts, control.pressure, 
+		 control.strain_mask, sys->h, sys->hmom, &sys->tsmom);
    /*
     * Final half step for H1.  Also update the KE according to new value of s.
     */
    if( control.const_temp )
    {
       tsold = sys->ts;
-      sys->tsmom = leapf_smom_a(0.5*control.step, sys->ts, sys->tsmom, 
-				control.ttmass, sys->d_of_f*kB*control.temp);
-      sys->ts    = leapf_s     (0.5*control.step, sys->ts, sys->tsmom, 
-				control.ttmass);
-      sys->tsmom = leapf_smom_b(0.5*control.step, sys->ts, sys->tsmom, 
-				control.ttmass, sys->d_of_f*kB*control.temp);
+      gleap_therm(0.5*control.step, control.ttmass, sys->d_of_f*kB*control.temp, 
+		  &sys->ts, &sys->tsmom);
       ke *=SQR(tsold/sys->ts);
    }
 
