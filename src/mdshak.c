@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdshak.c,v 2.29 2004/12/07 13:00:02 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdshak.c,v 2.30 2005/01/13 12:39:19 cf Exp $";
 #endif
 
 #include "defs.h"
@@ -30,6 +30,7 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdshak.c,v 2.29 2004/12
 #include <stdio.h>
 #include "structs.h"
 #include "utlsup.h"
+#include "messages.h"
 
 /*======================== Global variables ==================================*/
 int ithread=0, nthreads=1;
@@ -48,19 +49,20 @@ main(int argc, char **argv)
    extern char	*optarg;
    int		errflg = 0;
    int		intyp = 0;
-   int		start, finish, inc;
-   int		rflag;
+   int		start = 0, finish = 0, inc = 1;
+   int		tflag = 0;
    int		irec;
    int		iout = 0;
    int		outsw=0;
-   char		*filename = NULL, *dump_name = NULL;
+   char		*filename = NULL, *dump_base = NULL;
+   char		*dump_names = NULL;
    char		*dumplims = NULL;
    char		*insert = NULL;
-   char		*tempname;
+   char		*tempname = NULL;
    char		*dumpcommand;
    int		dump_size;
    float	*dump_buf;
-   FILE		*Fp = NULL, *Dp;
+   FILE		*Fp = NULL, *Hp, *Dp;
    restrt_mt	restart_header;
    system_mt	sys;
    spec_mt	*species;
@@ -70,7 +72,9 @@ main(int argc, char **argv)
    int		av_convert;
    int		trajsw = 0;
    vec_mt       *prev_cofm = NULL;
+   int          arglen, ind, genflg=0;
    int		verbose = 0;
+   int		dump_level = 0;
    
 #define MAXTRY 100
    control.page_length=1000000;
@@ -98,7 +102,7 @@ main(int argc, char **argv)
       {
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
-	    error("failed to open file \"%s\" for output", optarg);
+            error(NOOUTF, optarg);
 	 break;
        case 'r':
 	 if( intyp )
@@ -113,10 +117,13 @@ main(int argc, char **argv)
 	 filename = optarg;
 	 break;
        case 'd':
-	 dump_name = optarg;
+	 dump_base = optarg;
 	 break;
        case 't':
-	 dumplims = mystrdup(optarg);
+         if( tflag++ == 0)
+           dumplims = mystrdup(optarg);
+         else
+           errflg++;
 	 break;
        case 'i':
 	 insert = optarg;
@@ -144,6 +151,7 @@ main(int argc, char **argv)
 	 break;
        case 'v':
          verbose++;
+         break;
        default:
        case '?':
 	 errflg++;
@@ -152,13 +160,13 @@ main(int argc, char **argv)
    if( errflg )
    {
       fprintf(stderr,
-	      "Usage: %s [-f out-type] [-y] [-s sys-spec-file|-r restart-file] ",
+	      "Usage: %s -s sys-spec-file|-r restart-file [-f out-type] [-y] ",
 	      comm);
       fputs("[-d dump-files] [-t s[-f[:n]]] [-v] [-o output-file]\n", stderr);
       exit(2);
    }
 
-   if( dump_name )
+   if( dump_base )
       data_source = 'd';
 
    if(intyp == 0)
@@ -178,7 +186,7 @@ main(int argc, char **argv)
    {
     case 's':
       if( (Fp = fopen(filename,"r")) == NULL)
-	 error("Couldn't open sys-spec file \"%s\" for reading", filename);
+	 error(NOSYSSPEC, filename);
       cflg = check_control(Fp);
       if( cflg )
       {
@@ -195,8 +203,7 @@ main(int argc, char **argv)
       break;
     case 'r':
       if( (Fp = fopen(filename,"rb")) == NULL)
-	 error("Couldn't open restart file \"%s\" for reading -\n%s\n", 
-	       filename, strerror(errno));
+	 error(NORESTART, filename, strerror(errno)); 
       re_re_header(Fp, &restart_header, &control);
       control.rdf_interval = 0;       /* Don't attempt to read RDF data */
       re_re_sysdef(Fp, restart_header.vsn, &sys, &species, &site_info, &potpar);
@@ -239,83 +246,112 @@ main(int argc, char **argv)
 	moldy_out(0, 0, 1, &sys, sys.h, species, site_info, outsw, intyp, insert);
       break;
     case 'd':				/* Dump dataset			      */
-	if( dump_name == 0 )
+	if( dump_base == 0 )
 	{
 	   fputs("Enter canonical name of dump files (as in control)\n",stderr);
-	   if( (dump_name = get_str("Dumps? ")) == NULL)
-	      exit(2);
+	   if( (dump_base = get_str("Dump file name? ")) == NULL)
+             exit(2);
 	}
 
-	/*
-	 *  Ensure that the dump limits start, finish, inc are set up,
-	 *  either on command line or by user interaction.
-	 */
-	do
-	{
-	   rflag = 0;
-	   if( dumplims == NULL )
-	   {
-	      fputs("Please specify range of dump records in form", stderr);
-	      fputs(" in form start-finish:increment\n", stderr);
-	      dumplims = get_str("s-f:n? ");
-	   }
-	   if( forstr(dumplims, &start, &finish, &inc) )
-	   {
-	      rflag++;
-	      fputs("Invalid range for dump records \"", stderr);
-	      fputs(dumplims, stderr);
-	      fputs("\"\n", stderr);
-	   }
-	   if( start > finish || start < 0 || inc <= 0 )
-	   {
-	      rflag++;
-	      fputs("Dump record limits must satisfy", stderr);
-	      fputs(" finish >= start, start >= 0 and increment > 0\n", stderr);
-	   }
-	   if( rflag)
-	   {
-	      (void)free(dumplims);
-	      dumplims = NULL;
-	   }
-	} while(rflag);
+        if( strstr(dump_base,"%d") )
+           genflg++;
+
+        /* Prepare dump file name for reading */
+
+        if( genflg == 0 && optind < argc ) {
+           arglen = strlen(dump_base);
+           for(ind=optind; ind < argc; ind++) {
+	      arglen += strlen(argv[ind]) + 1;
+           }
+           dump_names=malloc(arglen);
+           dump_names[0] = 0;
+           strcat(dump_names, dump_base);
+           if(optind < argc) strcat(dump_names," ");
+           for(ind=optind; ind < argc; ind++) {
+              strcat(dump_names,argv[ind]);
+              if(ind < argc-1) strcat(dump_names," ");
+           }
+        }
+        else
+           dump_names = dump_base;
+
+	if( (dumpcommand = malloc(256+strlen(dump_names))) == 0)
+	   error(COMMEM, 256+strlen(dump_names));
+
+#if defined (HAVE_POPEN)
+	sprintf(dumpcommand,"dumpext -c -1 %s%s", verbose?"-v ":"", dump_names);
+	if( verbose ) message(NULLI, NULLP, INFO, EXEC, dumpcommand);
+	if( (Hp = popen(dumpcommand,"r")) == 0)
+	   error(DUMPCOMM, dumpcommand);
+#else
+	tempname = tmpnam((char*)0);
+	sprintf(dumpcommand,"dumpext -c -1 -o %s %s%s", tempname, verbose?"-v ":"", dump_names);
+	if( verbose ) message(NULLI, NULLP, INFO, EXEC, dumpcommand);
+	system(dumpcommand);
+	if( (Hp = fopen(tempname,"rb")) == 0)
+	   error(FILEOPEN,tempname);
+#endif
+	finish = dump_info(Hp, &dump_level);
+
+	(void)free(dumpcommand);
+
+        if( verbose ) message(NULLI, NULLP, INFO, HEADER);
+
+#if defined (HAS_POPEN)
+	pclose(Hp);
+#else
+	fclose(Hp);
+	remove(tempname);
+#endif
+
+   /* Check dump file contains necessary data */
+        if( !(dump_level & 1) )
+	  error(NOCOMP, "C of M positions", dump_level);
+
+   /*
+    *  Ensure that the dump limits start, finish, inc are set up.
+    */
+	if( tflag )
+	  if( forstr(dumplims, &start, &finish, &inc) )
+	    error(INVSLICES, dumplims);
 
 	/*
 	 * Allocate buffer for data
          */
 	dump_size = DUMP_SIZE(~0,sys.nmols,sys.nmols_r)*sizeof(float);
 	if( (dump_buf = (float*)malloc(dump_size)) == 0)
-	   error("malloc failed to allocate dump record buffer (%d bytes)",
-		 dump_size);
+	   error(BUFFMEM, dump_size);
+	if( (dumpcommand = malloc(256+strlen(dump_names))) == 0)
+	   error(COMMEM, 256+strlen(dump_names));
+
 	/*
 	 * Loop over dump records, ascertaining which file they are in
 	 * and opening it if necessary.  Call output routine.
 	 */
 #if defined (HAVE_POPEN) 
-	sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %s %s %s",
-		sys.nmols,sys.nmols_r, dumplims, dump_name, verbose?"-v ":" ");
+	sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d %s %s",
+		sys.nmols,sys.nmols_r, start, finish, inc, dump_names, verbose?"-v ":"");
+	if( verbose ) message(NULLI, NULLP, INFO, EXEC, dumpcommand);
 	if( (Dp = popen(dumpcommand,"r")) == 0)
-	   error("Failed to execute \"dumpext\" command - \n%s",
-		 strerror(errno));
+	   error(DUMPCOMM, dumpcommand);
 #else
 	tempname = tmpnam((char*)0);
-	sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %s -o %s %s %s",
-		sys.nmols,sys.nmols_r, dumplims, tempname, dump_name, verbose?"-v ":" ");
+	sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c 0 -t %d-%d:%d -o %s %s %s",
+		sys.nmols,sys.nmols_r, start, finish, inc, tempname, dump_names, verbose?"-v ":"");
+	if( verbose ) message(NULLI, NULLP, INFO, EXEC, dumpcommand);
 	system(dumpcommand);
-        if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
-        if( (Dp = popen(dumpcommand,"r")) == 0)
-        {
-           if( !strcmp(strerror(errno),"Success") )
-              error("Failed to execute \"dumpext\" command\n");
-           else
-              error("Failed to execute \"dumpext\" command - \n%s",
-                 strerror(errno));
-        }
+	if( (Dp = fopen(tempname,"rb")) == 0)
+	   error(FILEOPEN, tempname);
 #endif
 	for(irec = start; irec <= finish; irec+=inc)
 	{
-	   if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
-              error("Error reading record %d in dump file - \n%s\n",
-		    irec, strerror(errno));
+           if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
+           {
+              if( !strcmp(strerror(errno),"Success") )
+                 error(DUMPREC, irec, dump_base, strerror(errno));
+              else
+                 error(DUMPREC0, irec, dump_base, strerror(errno));
+           }
 
 	   dump_to_moldy(dump_buf, &sys);
 
@@ -331,7 +367,7 @@ main(int argc, char **argv)
 
 	   moldy_out(iout++, irec, inc, &sys, sys.h, species, site_info, outsw, intyp, insert);
 #ifdef DEBUG
-	   fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
+	   fprintf(stderr,"Successfully read dump record %d from file \"%s\"\n",
 		   irec%header.maxdumps, dump_name);
 #endif
 	}
@@ -345,5 +381,6 @@ main(int argc, char **argv)
       default:
 	break;
      }
+   if( verbose ) message(NULLI, NULLP, INFO, COMPLETE);
    return 0;    
 }
