@@ -230,7 +230,7 @@ lint-utils2:
 
 lint-utils:	lint-utils2
 		for file in moldyext.c dumpconv.c dumpext.c manalyze.c bdist.c;do\
-			$(LINT) $(XDR) $(LFLAGS) $$file\
+			echo $(LINT) $$file && $(LINT) $(XDR) $(LFLAGS) $$file\
                         ;done
 
 tags:		$(CFILES) $(HFILES) 

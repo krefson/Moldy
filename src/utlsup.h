@@ -1,10 +1,13 @@
-extern void init_rdf (void); 
-extern gptr *rdf_ptr (void); 
-extern void new_lins (void); 
+/*
+ * utlsup functions
+ */
+extern void init_rdf (system_mt *sys); 
+extern gptr *rdf_ptr (int *size); 
+extern void new_lins (int ); 
 extern int lines_left (void); 
 extern void new_page (void); 
 extern void new_line (void); 
-extern void banner_page (void); 
+extern void banner_page (system_mt *sys, spec_mt *spec, restrt_mt *rh); 
 extern void note (char *format, ...); 
 extern void message (int *nerrs, ...); 
 extern void error (char *format, ...); 
@@ -21,3 +24,35 @@ extern void traj_con (system_mt *system, vec_mt (*prev_cofm), int n);
 extern void traj_con2 (spec_mt *species, vec_mt (*prev_cofm), vec_mt (*traj_cofm), int *sp_range); 
 extern int range_in (system_mt *system, real (*range)[3]); 
 extern char *comm;
+/*
+ * Moldy functions
+ */
+gptr	*arralloc(size_mt,int,...); 	/* Array allocator */
+gptr	*talloc(int n, size_mt size, int line, char *file);
+void    tfree(gptr *p);
+char    *atime(void);
+
+void    moldy_out(int n, int irec, int inc, system_mt *system, 
+		  mat_mp h, spec_mt *species, site_mt *site_info, 
+		  int outsw, int intyp, char *insert);
+char	*strlower(char *s);
+void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, 
+		    site_mp *site_info, pot_mp *pot_ptr);
+void	initialise_sysdef(system_mp system, spec_mt *species, 
+			  site_mt *site_info, quat_mt (*qpf));
+void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr);
+void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, 
+		     spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr);
+void	allocate_dynamics(system_mp system, spec_mt *species);
+void	lattice_start(FILE *file, system_mp system, spec_mp species, 
+		      quat_mt (*qpf));
+void	read_restart(FILE *restart, char *vsn, system_mp system, 
+		     int av_convert);
+void	init_averages(int nspecies, char *vsn, long int roll_interval, 
+		      long int old_roll_interval, int *av_convert);
+int	getopt(int, char *const *, const char *);
+gptr	*talloc(int n, size_mt size, int line, char *file);
+void	zero_real(real *r, int n);
+void    conv_potentials(const unit_mt *unit_from, const 
+			unit_mt *unit_to, pot_mt *potpar, int npotpar,
+			int ptype, site_mt *site_info, int max_id);

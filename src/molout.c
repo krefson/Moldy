@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/molout.c,v 1.4 1999/11/29 10:48:56 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/molout.c,v 1.5 2000/04/27 17:57:10 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -16,7 +16,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/molout.c,v 
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 
 void	invert(real (*a)[3], real (*b)[3]);
-void	make_sites(real (*h)[3], vec_mp c_of_m_s, quat_mp quat, vec_mp p_f_sites, int framework, real **site, int nmols, int nsites);
+void	make_sites(real (*h)[3], vec_mp c_of_m_s, 
+		   quat_mp quat, vec_mp p_f_sites, 
+		   real **site, int nmols, int nsites, int pbc);
 void    error(char *format, ...);
 void    afree(gptr *p);
 char    *atime(void);
@@ -119,8 +121,9 @@ schakal_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, c
    printf("CELL %f %f %f %f %f %f\n", a, b, c, alpha, beta, gamma);
    for(spec = species; spec < species+system->nspecies; spec++)
    {
+
       make_sites(system->h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 spec->framework, site, spec->nmols, spec->nsites);
+		 site, spec->nmols, spec->nsites, MOLPBC);
 
       mat_vec_mul3(hinv, site, spec->nsites*spec->nmols);
 
@@ -192,7 +195,7 @@ pdb_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char 
    for(spec = species; spec < species+system->nspecies; ispec++, spec++)
    {
      make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-           spec->framework, site, spec->nmols, spec->nsites);
+           site, spec->nmols, spec->nsites, MOLPBC);
 
      isite = 0;
      for(imol = 0; imol < spec->nmols; imol++)
@@ -252,7 +255,7 @@ xyz_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char 
    for(spec = species; spec < species+system->nspecies; spec++)
    {
       make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 spec->framework, site, spec->nmols, spec->nsites);
+		 site, spec->nmols, spec->nsites, MOLPBC);
 
       isite = 0;
       for(imol = 0; imol < spec->nmols; imol++)
@@ -293,7 +296,7 @@ dcd_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, int n
    for(spec = species; spec < species+system->nspecies; spec++)
    {
       make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 spec->framework, site, spec->nmols, spec->nsites);
+		 site, spec->nmols, spec->nsites, MOLPBC);
 
       isite = 0;
       for(imol = 0; imol < spec->nmols; imol++)
@@ -340,7 +343,7 @@ atoms_out(system_mt *system, mat_mp h, spec_mt *species)
    for(spec = species; spec < species+system->nspecies; spec++)
    {
       make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 spec->framework, site, spec->nmols, spec->nsites);
+		 site, spec->nmols, spec->nsites, MOLPBC);
 
       mat_vec_mul3(hinv, site, spec->nsites*spec->nmols);
 
@@ -412,7 +415,7 @@ cssr_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char
    for(spec = species; spec < species+system->nspecies; ispec++, spec++)
    {
      make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-           spec->framework, site, spec->nmols, spec->nsites);
+		site, spec->nmols, spec->nsites, MOLPBC);
 
      mat_vec_mul3(hinv, site, spec->nsites*spec->nmols);
 

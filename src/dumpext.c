@@ -22,6 +22,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #include	"stdlib.h"
 #include	"stddef.h"
 #include 	"string.h"
+#include        "time.h"
 #include 	<stdio.h>
 #include	"structs.h"
 #ifdef USE_XDR
@@ -329,8 +330,8 @@ void	print_header(dump_mt *header, dump_sysinfo_mt *sysinfo)
    int ispec;
    printf("Title\t\t\t\t= \"%s\"\n",header->title);
    printf("RCS Revision\t\t\t= %.*s\n", (int)strlen(header->vsn), header->vsn);
-   printf("Istep\t\t\t\t= %d\n",header->istep);
-   printf("Dump_interval\t\t\t= %d\n", header->dump_interval);
+   printf("Istep\t\t\t\t= %ld\n",header->istep);
+   printf("Dump_interval\t\t\t= %ld\n", header->dump_interval);
    printf("Dump_level\t\t\t= %d\n", header->dump_level);
    printf("Max dumps\t\t\t= %d\n", header->maxdumps);
    printf("Dump Size\t\t\t= %d\n", header->dump_size);

@@ -19,11 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/manalyze.c,v 2.8 1996/11/05 09:53:50 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/manalyze.c,v 2.9 2000/04/27 17:57:09 keith Exp $";
 #endif
 
 /*
  * $Log: manalyze.c,v $
+ * Revision 2.9  2000/04/27 17:57:09  keith
+ * Converted to use full ANSI function prototypes
+ *
  * Revision 2.8  1996/11/05 09:53:50  keith
  * Fixed bug which reported last record twice.
  * Now prints offsets too for ease of debugging.
@@ -107,7 +110,7 @@ main(int argc, char **argv)
    }
    fread(&restart_header, size, 1,f);
    offset = sizeof size;
-   printf("Restart file was written at %s", ctime(&restart_header.timestamp));
+   printf("Restart file was written at %s", ctime((time_t*)&restart_header.timestamp));
    printf("This is restart No %d of run \"%s\" started %s\n",
             restart_header.seq, restart_header.title, restart_header.init_date);
    printf("It was written by version %s of write_restart\n",restart_header.vsn);

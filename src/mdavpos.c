@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.13 2000/04/27 17:57:09 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.14 2000/11/09 16:54:12 keith Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *
@@ -28,6 +28,9 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.14  2000/11/09 16:54:12  keith
+ *  Updated utility progs to be consistent with new dump format
+ *
  *  Revision 2.13  2000/04/27 17:57:09  keith
  *  Converted to use full ANSI function prototypes
  *
@@ -131,22 +134,6 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.
 #include "structs.h"
 #include "messages.h"
 #include "utlsup.h"
-gptr	*arralloc(size_mt,int,...); 	/* Array allocator */
-
-void    moldy_out(int n, int irec, int inc, system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, int outsw, int intyp, char *insert);
-void	make_sites(real (*h)[3], vec_mp c_of_m_s, quat_mp quat, vec_mp p_f_sites, int framework, real **site, int nmols, int nsites);
-char	*strlower(char *s);
-void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_info, pot_mp *pot_ptr);
-void	initialise_sysdef(system_mp system, spec_mt *species, site_mt *site_info, quat_mt (*qpf));
-void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr);
-void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr);
-void	allocate_dynamics(system_mp system, spec_mt *species);
-void	lattice_start(FILE *file, system_mp system, spec_mp species, quat_mt (*qpf));
-void	read_restart(FILE *restart, char *vsn, system_mp system, int av_convert);
-void	init_averages(int nspecies, char *vsn, long int roll_interval, long int old_roll_interval, int *av_convert);
-int	getopt(int, char *const *, const char *);
-gptr	*talloc(int n, size_mt size, int line, char *file);
-void	zero_real(real *r, int n);
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 contr_mt                control;

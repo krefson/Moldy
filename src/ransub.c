@@ -27,6 +27,9 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.8  2000/11/09 16:54:13  keith
+ *  Updated utility progs to be consistent with new dump format
+ *
  *  Revision 1.7  2000/04/27 17:57:11  keith
  *  Converted to use full ANSI function prototypes
  *
@@ -97,21 +100,9 @@ what you give them.   Help stamp out software-hoarding! */
 #include "utlsup.h"
 
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ransub.c,v 1.7 2000/04/27 17:57:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ransub.c,v 1.8 2000/11/09 16:54:13 keith Exp $";
 #endif  
-char	*strlower(char *s);
-void	read_sysdef(FILE *file, system_mp system, spec_mp *spec_pp, site_mp *site_info, pot_mp *pot_ptr);
-void	initialise_sysdef(system_mp system, spec_mt *species, site_mt *site_info, quat_mt (*qpf));
-void	re_re_header(FILE *restart, restrt_mt *header, contr_mt *contr);
-void	re_re_sysdef(FILE *restart, char *vsn, system_mp system, spec_mp *spec_ptr, site_mp *site_info, pot_mp *pot_ptr);
-void	allocate_dynamics(system_mp system, spec_mt *species);
-void	lattice_start(FILE *file, system_mp system, spec_mp species, quat_mt (*qpf));
-void	read_restart(FILE *restart, char *vsn, system_mp system, int av_convert);
-void	init_averages(int nspecies, char *vsn, long int roll_interval, long int old_roll_interval, int *av_convert);
-void    conv_potentials(const unit_mt *unit_from, const unit_mt *unit_to, pot_mt *potpar, int npotpar, int ptype, site_mt *site_info, int max_id);
 int	getopt(int, char *const *, const char *);
-gptr	*talloc(int n, size_mt size, int line, char *file);
-char    *atime(void);
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 static  unit_mt prog_unit = {MUNIT, LUNIT, TUNIT, QUNIT};

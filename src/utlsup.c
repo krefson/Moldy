@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/utlsup.c,v 1.6 2000/04/27 17:57:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/utlsup.c,v 1.7 2000/11/09 16:54:14 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -20,23 +20,32 @@ char	*comm;
 /******************************************************************************
  * Dummies of moldy routines so that utils may be linked with moldy library   *
  ******************************************************************************/
-void 	init_rdf(void)
+/*ARGSUSED*/
+void 	init_rdf(system_mt *sys)
 {}
-gptr *rdf_ptr(void)
+/*ARGSUSED*/
+gptr *rdf_ptr(int *size)
 {return 0;}
-void new_lins(void)
+/*ARGSUSED*/
+void new_lins(int n)
 {}
+/*ARGSUSED*/
 int lines_left(void)
 {return 0;}
+/*ARGSUSED*/
 void new_page(void)
 {}
+/*ARGSUSED*/
 void	new_line(void)
 {
    (void)putchar('\n');
 }
-void	banner_page(void)
+/*ARGSUSED*/
+void	banner_page(system_mt *sys, spec_mt *spec, restrt_mt *rh)
 {}
-void	note(void)
+/*ARGSUSED*/
+/*VARARGS1*/
+void	note(char *s)
 {}
 
 /******************************************************************************
@@ -51,7 +60,6 @@ void    message(int *nerrs, ...)
    char         *buff;
    int          sev;
    char         *format;
-   static char  *sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
    va_start(ap, nerrs);
    buff  = va_arg(ap, char *);
    sev   = va_arg(ap, int);
@@ -143,7 +151,7 @@ real get_real(char *prompt, real lo, real hi)
    if( ans_flag )
       return(ans_r);
    else
-      return(EOF);
+      return((real)EOF);
 }
 /******************************************************************************
  * get_sym().  Read a character from stdin and match to supplied set          *
