@@ -1,7 +1,10 @@
 /*
- * $Header: structs.h,v 1.1 89/04/25 12:33:11 keith Exp $
+ * $Header: structs.h,v 1.1 89/04/27 14:44:58 keith Exp $
  *
  * $Log:	structs.h,v $
+ * Revision 1.1  89/04/27  14:44:58  keith
+ * Initial revision
+ * 
  * 
  */
 #ifndef	STRUCT_ALREADY
@@ -161,7 +164,7 @@ typedef struct                  /* Record of dimensions of physical quantity  */
                 q;
 } dim_t, *dim_p;
 
-#define DLEN	26		/* Length of date/time string		      */
+#define DLEN	28		/* Length of date/time string		      */
 typedef	struct			/* Restart file header format 		      */
 {
    time_t	timestamp,	/* Date and time restart file was written     */
