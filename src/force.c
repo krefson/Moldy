@@ -29,6 +29,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.15  1997/11/26 10:22:27  keith
+ *       Reordered declarations so that local structs come before
+ *       function declarations. Otherwise "protoize" broke!
+ *
  *       Revision 2.14  1996/11/04 17:34:30  keith
  *       Moderate rewriting and code re-organization.
  *       1. Simplified PBC relocation calculation, got rid of large
@@ -120,7 +124,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.14 1996/11/04 17:34:30 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.15 1997/11/26 10:22:27 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -224,7 +228,7 @@ real    sx[], sy[];
 {
    int i;
 NOVECTOR
-#ifdef __STDC__
+#if defined(ANSI) || defined(__STDC__)
 #pragma novector
 #endif
    for( i = 0; i < n; i++)
