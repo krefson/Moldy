@@ -34,6 +34,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: alloc.c,v $
+ *       Revision 2.14  2000/12/06 17:45:28  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.13  2000/10/20 15:15:46  keith
  *       Incorporated all mods and bugfixes from Beeman branch up to Rel. 2.16
  *
@@ -168,7 +175,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/alloc.c,v 2.13 2000/10/20 15:15:46 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/alloc.c,v 2.14 2000/12/06 17:45:28 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
@@ -210,7 +217,11 @@ void	message(int *, ...);		/* Write a warning or error message   */
  *									      *
  * Wide_mt is the widest type for alignment purposes.  Try double.	      *
  ******************************************************************************/
+#if SIZEOF_FLOAT < SIZEOF_INT
+typedef float word_mt;
+#else
 typedef int word_mt;
+#endif
 #ifdef ALLOC_SEPARATELY
 typedef double wide_mt;
 #endif

@@ -22,6 +22,12 @@
 /* Define as the return type of signal handlers (int or void).  */
 #undef RETSIGTYPE
 
+/* DEFINE to sizeof(float) */
+#define SIZEOF_FLOAT 4
+
+/* DEFINE to sizeof(int) */
+#define SIZEOF_INT 4
+
 /* Define to `unsigned' if <sys/types.h> doesn't define.  */
 #undef size_t
 
