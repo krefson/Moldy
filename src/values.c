@@ -34,6 +34,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	values.c,v $
+ * Revision 2.0  93/03/15  14:49:24  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.15  93/03/09  15:59:19  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
@@ -98,7 +103,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.15 93/03/09 15:59:19 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 2.0 93/03/15 14:49:24 keith Rel $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -133,26 +138,6 @@ void            tfree();	       /* Free allocated memory	      	      */
 extern	contr_mt	control;
 extern	int	out_line, out_page;	/* Current line and page in output    */
 /*========================== Structs local to module =========================*/
-#define	MAX_ROLL_INTERVAL	100
-typedef struct
-{   double	value,
-   		sum,
-   		sum_sq,
-		mean,
-		sd,
-   		roll[MAX_ROLL_INTERVAL],
-   		roll_mean,
-   		roll_sd;
-} old_av_mt;
-
-typedef	union
-{
-   old_av_mt		av;
-   struct
-   {	
-      int	av, roll;
-   }		cnt;
-} old_av_u_t;
 
 typedef struct
 {   double	value,
@@ -162,15 +147,6 @@ typedef struct
 		sd,
    		roll[1];
 } av_mt;
-
-typedef	struct
-{	
-   int		nav, 
-   		nroll, 
-		iroll, 
-		pad;
-   double align;
-} av_head_t;
 
 typedef struct
 {
@@ -202,12 +178,12 @@ av_info_t av_info[] = { {tke_n, "Trans KE",   CONV_E_N,	11, "%11.5g",-1, NULL},
 			{dip_n, "Dip Mom",    CONV_D_N,	 8, "%8.2g", 3,  NULL}};
 static  int	av_size;		/* Size of averages database          */
 static  int	av_mt_size;		/* Size of entry inaverages database  */
-static  av_head_t  *av_head;
+static  av_head_mt  *av_head;
 static	av_mt	*av;			/* Dynamic array of averages structs  */
 static	int	navs = 0;		/* Size of array av                   */
 static	int	max_row = 0;		/* Largest number of components       */
 static  int	max_col = (int)press_n;	/* Number to print across page        */
-static  int	av_convert = 0;
+	int	av_convert = 0;
 static  int     av_tmp_size;
 static  gptr    *av_tmp;
 /*========================== Macros ==========================================*/
@@ -244,8 +220,8 @@ int	roll_interval, old_roll_interval;
 
    /* Determine size of database, Allocate space and set pointers             */
    av_mt_size = sizeof(av_mt)+(roll_interval-1)*sizeof(double);
-   av_size = sizeof(av_head_t) + navs*av_mt_size;
-   av_head  = (av_head_t*)aalloc( av_size, char);
+   av_size = sizeof(av_head_mt) + navs*av_mt_size;
+   av_head  = (av_head_mt*)aalloc( av_size, char);
    av_head->nav = av_head->nroll = av_head->iroll = 0;
    av       = (av_mt*)(av_head+1);
    zero_double((double*)av, (int)(navs*av_mt_size/sizeof(double)));
@@ -273,7 +249,7 @@ int	roll_interval, old_roll_interval;
 	 message(NULLI, NULLP, FATAL, INRVSN, vsn);
       if( major < cmajor || (major==cmajor && minor <= cminor ) )
       {
-	 av_tmp_size = (navs+1)*sizeof(old_av_u_t);
+	 av_tmp_size = (navs+1)*sizeof(old_av_u_mt);
 	 av_tmp = aalloc(av_tmp_size, char);
 	 av_convert = 1;
       }
@@ -282,7 +258,7 @@ int	roll_interval, old_roll_interval;
        */
       else if (roll_interval != old_roll_interval )
       {
-	 av_tmp_size =  sizeof(av_head_t) 
+	 av_tmp_size =  sizeof(av_head_mt) 
 	             + navs*(sizeof(av_mt)+(old_roll_interval-1)*sizeof(double));
 	 av_tmp = aalloc(av_tmp_size, char);
 	 av_convert = 2;	 
@@ -298,8 +274,8 @@ void	convert_averages(roll_interval, old_roll_interval)
 int	roll_interval, old_roll_interval;
 {
    int iav, old_nroll, old_iroll, rbl, prev_av_mt_size;
-   old_av_u_t *old_av_mp=(old_av_u_t *)av_tmp;
-   av_head_t	*prev_av_head = (av_head_t *)av_tmp;
+   old_av_u_mt *old_av_mp=(old_av_u_mt *)av_tmp;
+   av_head_mt	*prev_av_head = (av_head_mt *)av_tmp;
    av_mt	        *av_mp, *prev_av_mp;
 
    switch(av_convert)

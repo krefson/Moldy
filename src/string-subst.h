@@ -19,9 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 1.10 93/03/09 15:59:26 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 2.0 93/03/15 14:49:29 keith Rel $
  *
  * $Log:	string.h,v $
+ * Revision 2.0  93/03/15  14:49:29  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.10  93/03/09  15:59:26  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
@@ -65,6 +70,7 @@ extern char
 	*strchr(),
 	*strtok(),
 	*strdup(),
+	*strstr(),
         *strerror();
 
 extern int

@@ -31,6 +31,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 2.0  93/03/15  14:49:20  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.19  93/03/09  15:59:12  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
@@ -101,7 +106,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.19 93/03/09 15:59:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 2.0 93/03/15 14:49:20 keith Rel $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -113,6 +118,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.19 
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
+#include	"xdr.h"
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
@@ -128,132 +134,249 @@ extern	int	***rdf;				/* Accumulated RDF bins       */
 /*========================== External data definitions =======================*/
 restrt_mt		restart_header = {0L, 0L, "", "", "0.0$", 0};
 /*============================================================================*/
-static size_t stored_size = 0;
+typedef struct {FILE *fp; XDR *xp;} xfp_mt;
+static unsigned long stored_size = 0;
+static boolean xdr_read;
 static int    size_flg = 0;
+/******************************************************************************
+ * creset() reset and rewind input stream.				      *
+ ******************************************************************************/
+void creset(fp)
+FILE 	*fp;
+{
+   size_flg = 0;
+   if( fseek(fp,0L,0) )
+      message(NULLI,NULLP,FATAL,SEFAIL,"<RESTART FILE>",strerror(errno));      
+}
 /******************************************************************************
  *   cnext.  Read the size of the next 'record' stored in the file.           *
  *   Leave file pointer unchanged.  ie do lookahead.			      *
  ******************************************************************************/
-size_t cnext(file)
-FILE	*file;
+unsigned long cnext(xfp)
+xfp_mt	xfp;
 {
-   (void)fread((gptr*)&stored_size, sizeof stored_size, 1, file); 
-   if(ferror(file))
-      message(NULLI,NULLP,FATAL,REREAD,ftell(file),strerror(errno));
-   else if(feof(file))
+   bool_t status;
+   (void)fread((gptr*)&stored_size, sizeof stored_size, 1, xfp.fp);
+   if(ferror(xfp.fp))
+      message(NULLI,NULLP,FATAL,REREAD,ftell(xfp.fp),strerror(errno));
+   else if(feof(xfp.fp))
       message(NULLI,NULLP,FATAL,REEOF);
    size_flg++;
    return stored_size;
 }
+#ifdef USE_XDR
+unsigned long xdr_cnext(xfp)
+xfp_mt	xfp;
+{
+   if( xdr_read ) {
+      if(!xdr_u_long(xfp.xp,&stored_size))
+	 message(NULLI,NULLP,FATAL,REREAD,xdr_getpos(xfp.xp),strerror(errno));
+      size_flg++;
+      return stored_size;
+   } else
+      return cnext(xfp);
+}
+#endif
 /******************************************************************************
  *   cread.   read a word from the binary restart file.  This should be the   *
  *   size of the next 'record' stored in the file.  Check it against the      *
  *   expected value.  Finally call fread to read in this data and check for   *
  *   error and end of file						      *
  ******************************************************************************/
-void	cread(file, ptr, size, nitems)
-FILE	*file;
+void	cread(xfp, ptr, size, nitems, proc)
+xfp_mt	xfp;
 gptr	*ptr;
 size_t	size;
 int	nitems;
+xdrproc_t proc;
 {
+   int status;
    if( size_flg )
       size_flg = 0;
    else
    {
-      (void)fread((gptr*)&stored_size, sizeof stored_size, 1, file); 
-      if(ferror(file))
-	 message(NULLI,NULLP,FATAL,REREAD,ftell(file),strerror(errno));
-      else if(feof(file))
+      status = fread((gptr*)&stored_size, sizeof stored_size, 1, xfp.fp);
+      if(ferror(xfp.fp))
+	 message(NULLI,NULLP,FATAL,REREAD,ftell(xfp.fp),strerror(errno));
+      else if(feof(xfp.fp))
 	 message(NULLI,NULLP,FATAL,REEOF);
+      else 
+      if( status == 0 )
+         message(NULLI,NULLP,FATAL,"Unknown read error: %s",strerror(errno));
    }
-   if(stored_size != size * nitems)
-      message(NULLI,NULLP,FATAL,REFORM, ftell(file),
+   if(stored_size != (unsigned long)size * nitems)
+      message(NULLI,NULLP,FATAL,REFORM, ftell(xfp.fp),
               stored_size, size * nitems);
-   (void)fread(ptr, size, nitems, file);
-   if(ferror(file))
-      message(NULLI,NULLP,FATAL,REREAD,ftell(file),strerror(errno));
-   else if(feof(file))
+   status = fread(ptr, size, nitems, xfp.fp);
+   if(ferror(xfp.fp))
+      message(NULLI,NULLP,FATAL,REREAD,ftell(xfp.fp),strerror(errno));
+   else if(feof(xfp.fp))
       message(NULLI,NULLP,FATAL,REEOF);
+   else if ( status < nitems )
+      message(NULLI,NULLP,FATAL,"Unknown write error");
 }
-/******************************************************************************
- *   cskip.  Skip over  the next record in the file.			      *
- ******************************************************************************/
-void	cskip(file)
-FILE	*file;
+#ifdef USE_XDR
+void	xdr_cread(xfp, ptr, size, nitems, proc)
+xfp_mt	xfp;
+gptr	*ptr;
+size_t	size;
+int	nitems;
+xdrproc_t proc;
 {
-   if( size_flg )
-      size_flg = 0;
-   else
-   {
-      (void)fread((gptr*)&stored_size, sizeof stored_size, 1, file); 
-      if(ferror(file))
-	 message(NULLI,NULLP,FATAL,REREAD,ftell(file),strerror(errno));
-      else if(feof(file))
-	 message(NULLI,NULLP,FATAL,REEOF);
-   }
-   (void)fseek(file, (long)stored_size, SEEK_CUR);
-   if(ferror(file))
-      message(NULLI,NULLP,FATAL,REREAD,ftell(file),strerror(errno));
-   else if(feof(file))
-      message(NULLI,NULLP,FATAL,REEOF);
+   unsigned int	       begin_data, end_data;
+
+   if( xdr_read ) {
+      if( size_flg )
+	 size_flg = 0;
+      else
+      {
+	 if( xdr_u_long(xfp.xp,&stored_size) == 0 )
+	    message(NULLI,NULLP,FATAL,REREAD,xdr_getpos(xfp.xp),strerror(errno));
+      }
+#if 0
+      if(stored_size != (unsigned long)size * nitems)
+	 message(NULLI,NULLP,FATAL,REFORM, ftell(xfp.fp),
+		 stored_size, size * nitems);
+#endif
+      begin_data = xdr_getpos(xfp.xp);
+      while(nitems > 0)
+      {
+	 if (! (*proc)(xfp.xp,ptr) )
+	    break;
+	 ptr = (gptr*) ((char*)ptr+size);
+	 nitems--;
+      }
+      end_data = xdr_getpos(xfp.xp);
+      if ( nitems > 0 )
+	 if(feof(xfp.fp))
+	    message(NULLI,NULLP,FATAL,REEOF);
+	 else
+	    message(NULLI,NULLP,FATAL,"Unknown read error");
+      if(stored_size != end_data-begin_data)
+	 message(NULLI,NULLP,FATAL,REFORM, xdr_getpos(xfp.xp),
+		 stored_size, end_data-begin_data);
+   } else
+      cread(xfp, ptr, size, nitems, proc);
 }
+#endif
 /******************************************************************************
  *  cwrite.  opposite of cread.  write the length followed by the data	      *
  ******************************************************************************/
-void	cwrite(file, ptr, size, nitems)
-FILE	*file;
+void	cwrite(xfp, ptr, size, nitems, proc)
+xfp_mt	xfp;
 gptr	*ptr;
 size_t	size;
 int	nitems;
+xdrproc_t proc;
 {
-   size_t       length = size*nitems;
-   if( fwrite((gptr*)&length, sizeof length, 1, file) == 0 )
+   unsigned long       length = (unsigned long)size*nitems;
+   if( fwrite((gptr*)&length, sizeof length, 1, xfp.fp) == 0 )
       message(NULLI,NULLP,FATAL,REWRT,strerror(errno));
-   if( fwrite(ptr, size, nitems, file) < nitems )
+   if( fwrite(ptr, size, nitems, xfp.fp) < nitems )
       message(NULLI,NULLP,FATAL,REWRT,strerror(errno));
 }
+#ifdef USE_XDR
+void	xdr_cwrite(xfp, ptr, size, nitems, proc)
+xfp_mt	xfp;
+gptr	*ptr;
+size_t	size;
+int	nitems;
+xdrproc_t proc;
+{
+   unsigned long       length;
+   unsigned int	       begin_length, begin_data, end_data;
+   if( control.xdr_write ) {   
+      /* 
+       * We can't calculate length in advance.  Instead we post-calculate
+       * it from "getpos" and backspace in order to write it.
+       */
+      begin_length = xdr_getpos(xfp.xp);
+      if( xdr_u_long(xfp.xp,&length) == 0)
+	 message(NULLI,NULLP,FATAL,REWRT,strerror(errno));
+      begin_data = xdr_getpos(xfp.xp);
+      while(nitems > 0)
+      {
+	 if( !(*proc)(xfp.xp,ptr) )
+	    break;
+	 ptr = (gptr*) ((char*)ptr+size);
+	 nitems--;
+      }
+      if( nitems > 0 )
+	 message(NULLI,NULLP,FATAL,REWRT,strerror(errno));
+      end_data = xdr_getpos(xfp.xp);
+      length = end_data-begin_data;
+      if( ! xdr_setpos(xfp.xp, begin_length) || ! xdr_u_long(xfp.xp,&length)
+	 || ! xdr_setpos(xfp.xp, end_data) )
+	 message(NULLI,NULLP,FATAL,REWRT,strerror(errno));
+   } else
+      cwrite(xfp, ptr, size, nitems, proc);
+}
+#endif
+
+#ifdef USE_XDR
+#define cread	xdr_cread
+#define cwrite	xdr_cwrite
+#define cnext	xdr_cnext
+#endif
 /******************************************************************************
  *  re_re_header   Read from the (already opened) restart file, the	      *
  *  restart_header and control structs.                                       *
  ******************************************************************************/
+static   XDR		xdrs;
 void	re_re_header(restart, header, contr)
-FILE	*restart;
+FILE	  *restart;
 restrt_mt *header;
-contr_mt	*contr;
+contr_mt  *contr;
 {
-   cread(restart,  (gptr*)header, sizeof(restrt_mt), 1);
-   cread(restart,  (gptr*)contr, sizeof(contr_mt), 1); 
+   xfp_mt	xfp;
+   xfp.xp =     &xdrs;
+
+#ifdef USE_XDR
+   xdr_read = TRUE;
+   xdrstdio_create(xfp.xp, restart, XDR_DECODE);
+   if( cnext(xfp) == XDR_RESTRT_SIZE )
+   {
+      cread(xfp,  (gptr*)header, sizeof(restrt_mt), 1, xdr_restrt);
+      header->vsn[15] = '\0';   /* Add terminator in case vsn is garbage*/
+      if( ! strstr(header->vsn,"(XDR)") )
+	 xdr_read = FALSE;
+   }
+   else
+      xdr_read=FALSE;
+
+   if( ! xdr_read )		     /* Didn't find XDR flag		*/
+      creset(restart);
+#endif
+   xfp.fp=restart;
+   if( ! xdr_read )
+      cread(xfp,  (gptr*)header, sizeof(restrt_mt), 1, xdr_restrt);
+   cread(xfp,  (gptr*)contr, sizeof(contr_mt), 1, xdr_contr); 
 }
 /******************************************************************************
  *  conv_potsize    Convert potential parameters array if NPOTP has changed   *
  ******************************************************************************/
-void conv_potsize(pot, restart_size, system)
+void conv_potsize(pot, old_pot_size, old_npotp, npotpar, npotrecs)
 pot_mt	*pot;
-size_t	restart_size;
-system_mp system;
+size_t  old_pot_size;
+int     old_npotp, npotpar, npotrecs;
 {
-   size_t	old_pot_size;
-   int		old_npotp, i;
+   int		i;
    char		*tmp_pot;
 
-   old_npotp = ((long)restart_size / SQR(system->max_id) 
-		- (long)sizeof(pot_mt)) / (long)sizeof(real) + NPOTP;
-   old_pot_size = sizeof(pot_mt) + (old_npotp - NPOTP) * sizeof(real);
    if( old_npotp == NPOTP )
       return;
-   else if ( system->n_potpar <= NPOTP )
+   else if ( npotpar <= NPOTP )
    {
       note("Old potential parameter array size = %d, new = %d",old_npotp,NPOTP);
-      tmp_pot = aalloc( restart_size, char);
-      memcpy(tmp_pot, (gptr*)pot, restart_size);
-      for( i=0; i < SQR(system->max_id); i++)
+      tmp_pot = aalloc( old_pot_size*npotrecs, char);
+      memcpy(tmp_pot, (gptr*)pot, old_pot_size*npotrecs);
+      for( i=0; i < npotrecs; i++)
 	 memcpy((gptr*)(pot+i), tmp_pot+old_pot_size*i, 
 		MIN(old_pot_size,sizeof(pot_mt)));
       xfree(tmp_pot);
    }
    else
-      message(NULLI, NULLP, FATAL, CPOTFL, NPOTP, system->n_potpar);
+      message(NULLI, NULLP, FATAL, CPOTFL, NPOTP, npotpar);
 }
 /******************************************************************************
  *  re_re_sysdef    Read the system specification from the restart file       *
@@ -261,37 +384,54 @@ system_mp system;
  *  structures system and species and arrays site_info and potpar (allocating *
  *  space) and read in the supplied values.  				      *
  ******************************************************************************/
-void	re_re_sysdef(file, system, spec_ptr, site_info, pot_ptr)
+void	re_re_sysdef(restart, system, spec_ptr, site_info, pot_ptr)
+FILE		*restart;		/* File pointer to read info from     */
 system_mp	system;			/* Pointer to system array (in main)  */
 spec_mp		*spec_ptr;		/* Pointer to be set to species array */
 site_mp		*site_info;		/* To be pointed at site_info array   */
 pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
-FILE		*file;			/* File pointer to read info from     */
 {
    spec_mp	spec;
-   size_t	potsize;
+   size_t	old_pot_size;
+   int		old_npotp, n_pot_recs;
+   xfp_mt	xfp;
 
-   cread(file,  (gptr*)system, sizeof(system_mt), 1);/* Read in system structure*/
+   xfp.xp = &xdrs;
+   xfp.fp = restart;
+
+   cread(xfp,  (gptr*)system, sizeof(system_mt), 1, xdr_system);/* Read in system structure*/
 
    /* Allocate space for species, site_info and potpar arrays and set pointers*/
    *spec_ptr  = aalloc(system->nspecies,                spec_mt );
    *site_info = aalloc(system->max_id,                  site_mt );
    *pot_ptr   = aalloc(system->max_id * system->max_id, pot_mt );
    /*  read species array into allocated space				      */
-   cread(file,  (gptr*)*spec_ptr, sizeof(spec_mt), system->nspecies);
+   cread(xfp,  (gptr*)*spec_ptr, sizeof(spec_mt), system->nspecies, xdr_species);
    
    for (spec = *spec_ptr; spec < &(*spec_ptr)[system->nspecies]; spec++)
    {
       spec->p_f_sites = ralloc(spec->nsites);	/* Allocate the species -     */
       spec->site_id   = ialloc(spec->nsites);	/* specific arrays	      */
-      cread(file,  (gptr*)spec->p_f_sites, sizeof(vec_mt), spec->nsites);
-      cread(file,  (gptr*)spec->site_id, sizeof(int), spec->nsites);
+      cread(xfp,  (gptr*)spec->p_f_sites, sizeof(real), 3*spec->nsites, xdr_real);
+      cread(xfp,  (gptr*)spec->site_id, sizeof(int), spec->nsites, xdr_int);
    }
-   cread(file,  (gptr*)*site_info, sizeof(site_mt), system->max_id);
-   potsize = cnext(file);
-   *pot_ptr = aalloc(MAX(potsize/sizeof(pot_mt)+1,SQR(system->max_id) ), pot_mt);
-   cread(file,  (gptr*)*pot_ptr, potsize, 1);
-   conv_potsize(*pot_ptr, potsize, system);
+   cread(xfp,  (gptr*)*site_info, sizeof(site_mt), system->max_id, xdr_site);
+   /*
+    * Potential Parameters -- complicated by need to convert if NPOTP changed.
+    */
+   n_pot_recs = SQR(system->max_id);
+#ifdef USE_XDR
+   if( xdr_read )
+      old_npotp = (cnext(xfp)/ n_pot_recs - 2*XDR_INT_SIZE)/XDR_REAL_SIZE;
+   else
+#endif
+      old_npotp = ((long)cnext(xfp)/ n_pot_recs - (long)sizeof(pot_mt))/
+                       (long)sizeof(real) + NPOTP;
+   old_pot_size = sizeof(pot_mt) + (old_npotp - NPOTP) * sizeof(real);
+   *pot_ptr = (pot_mt*)aalloc(n_pot_recs*MAX(sizeof(pot_mt),old_pot_size), char);
+   xdr_set_npotpar(old_npotp);		/* Pass npotpar to xdr_pot. Ugh! */
+   cread(xfp,  (gptr*)*pot_ptr, old_pot_size, n_pot_recs, xdr_pot);
+   conv_potsize(*pot_ptr, old_pot_size, old_npotp, system->n_potpar, n_pot_recs);
 }
 /******************************************************************************
  *  read_restart.   read the dynamic simulation variables from restart file.  *
@@ -304,38 +444,46 @@ system_mp	system;
    size_t	asize;			/* Size of averages database	      */
    boolean	rdf_flag;		/* Indicates whether file contains rdf*/
    int		rdf_size = control.nbins*system->max_id*(system->max_id-1)/2;
+   xfp_mt	xfp;
 
-   cread(restart,  (gptr*)system->c_of_m, sizeof(vec_mt), system->nmols);
-   cread(restart,  (gptr*)system->vel,    sizeof(vec_mt), system->nmols);
-   cread(restart,  (gptr*)system->velp,   sizeof(vec_mt), system->nmols);
-   cread(restart,  (gptr*)system->acc,    sizeof(vec_mt), system->nmols);
-   cread(restart,  (gptr*)system->acco,   sizeof(vec_mt), system->nmols);
-   cread(restart,  (gptr*)system->accvo,  sizeof(vec_mt), system->nmols);
+   xfp.xp= &xdrs;
+   xfp.fp=restart;
+
+   cread(xfp,  (gptr*)system->c_of_m, sizeof(real), 3*system->nmols, xdr_real);
+   cread(xfp,  (gptr*)system->vel,    sizeof(real), 3*system->nmols, xdr_real);
+   cread(xfp,  (gptr*)system->velp,   sizeof(real), 3*system->nmols, xdr_real);
+   cread(xfp,  (gptr*)system->acc,    sizeof(real), 3*system->nmols, xdr_real);
+   cread(xfp,  (gptr*)system->acco,   sizeof(real), 3*system->nmols, xdr_real);
+   cread(xfp,  (gptr*)system->accvo,  sizeof(real), 3*system->nmols, xdr_real);
    if(system->nmols_r > 0)
    {
-      cread(restart,  (gptr*)system->quat,    sizeof(quat_mt), system->nmols_r);
-      cread(restart,  (gptr*)system->qdot,    sizeof(quat_mt), system->nmols_r);
-      cread(restart,  (gptr*)system->qdotp,   sizeof(quat_mt), system->nmols_r);
-      cread(restart,  (gptr*)system->qddot,   sizeof(quat_mt), system->nmols_r);
-      cread(restart,  (gptr*)system->qddoto,  sizeof(quat_mt), system->nmols_r);
-      cread(restart,  (gptr*)system->qddotvo, sizeof(quat_mt), system->nmols_r);
+      cread(xfp,  (gptr*)system->quat,    sizeof(real), 4*system->nmols_r, xdr_real);
+      cread(xfp,  (gptr*)system->qdot,    sizeof(real), 4*system->nmols_r, xdr_real);
+      cread(xfp,  (gptr*)system->qdotp,   sizeof(real), 4*system->nmols_r, xdr_real);
+      cread(xfp,  (gptr*)system->qddot,   sizeof(real), 4*system->nmols_r, xdr_real);
+      cread(xfp,  (gptr*)system->qddoto,  sizeof(real), 4*system->nmols_r, xdr_real);
+      cread(xfp,  (gptr*)system->qddotvo, sizeof(real), 4*system->nmols_r, xdr_real);
    }
-   cread(restart,  (gptr*)system->h,       sizeof(vec_mt), 3);
-   cread(restart,  (gptr*)system->hdot,    sizeof(vec_mt), 3);
-   cread(restart,  (gptr*)system->hdotp,   sizeof(vec_mt), 3);
-   cread(restart,  (gptr*)system->hddot,   sizeof(vec_mt), 3);
-   cread(restart,  (gptr*)system->hddoto,  sizeof(vec_mt), 3);
-   cread(restart,  (gptr*)system->hddotvo, sizeof(vec_mt), 3);
+   cread(xfp,  (gptr*)system->h,       sizeof(real), 9, xdr_real);
+   cread(xfp,  (gptr*)system->hdot,    sizeof(real), 9, xdr_real);
+   cread(xfp,  (gptr*)system->hdotp,   sizeof(real), 9, xdr_real);
+   cread(xfp,  (gptr*)system->hddot,   sizeof(real), 9, xdr_real);
+   cread(xfp,  (gptr*)system->hddoto,  sizeof(real), 9, xdr_real);
+
+   cread(xfp,  (gptr*)system->hddotvo, sizeof(real), 9, xdr_real);
 
    ap = av_ptr(&asize);			/* get addr and size of database      */
-   if( asize == 0 )			/* Don't read in any data	      */
-      cskip(restart);
-   else
-      cread(restart, ap, asize, 1);
+   xdr_set_av_size(asize);		/* Pass asize to xdr_averages.  Ugh! */
+   cread(xfp, ap, asize, 1, xdr_averages);
 
-   cread(restart,  (gptr*)&rdf_flag, sizeof rdf_flag, 1); /* Stored RDF data?  */
+   cread(xfp,  (gptr*)&rdf_flag, sizeof rdf_flag, 1, xdr_bool); /* Stored RDF data?  */
    if(rdf_flag && control.rdf_interval>0)/* Only read if data there and needed*/
-      cread(restart,  (gptr*)rdf[1][1], sizeof(int), rdf_size);
+      cread(xfp,  (gptr*)rdf[1][1], sizeof(int), rdf_size, xdr_int);
+#ifdef USE_XDR
+   if( xdr_read )
+      xdr_destroy(xfp.xp);
+#endif
+
 }
 /******************************************************************************
  *  write_restart.  Write the restart file.  Included (in order) are          *
@@ -356,7 +504,9 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
    int		zero = 0, one = 1;
    restrt_mt	save_header;
    FILE		*save;
-   char		*vsn = "$Revision: 1.19 $"+11;
+   XDR		xdrs;
+   xfp_mt	xfp;
+   char		*vsn = "$Revision: 2.0 $"+11;
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)
@@ -364,62 +514,77 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
       message(NULLI, NULLP, ERROR, OSFAIL, control.temp_file);
       return;
    }
+   xfp.xp = &xdrs;
+   xfp.fp = save;
+#ifdef USE_XDR
+   if( control.xdr_write )
+      xdrstdio_create(xfp.xp, save, XDR_ENCODE);
+#endif
 
    control.reset_averages = 0;		/* This flag never propagated.	      */
    save_header = restart_header;
    (void)strncpy(save_header.vsn, vsn, sizeof save_header.vsn-1);
    save_header.vsn[strlen(save_header.vsn)-2] = '\0'; /* Strip trailing $     */
+   if( control.xdr_write )
+      (void)strncat(save_header.vsn," (XDR)",16);
    save_header.prev_timestamp = restart_header.timestamp;
    save_header.timestamp = time((time_t*)0);		/* Update header      */
    save_header.seq++;
    
-   cwrite(save,  (gptr*)&save_header, sizeof save_header, 1);
-   cwrite(save,  (gptr*)&control, sizeof control, 1); 
+   cwrite(xfp,  (gptr*)&save_header, sizeof save_header, 1, xdr_restrt);
+   cwrite(xfp,  (gptr*)&control, sizeof control, 1, xdr_contr); 
 
-   cwrite(save,  (gptr*)system, sizeof(system_mt), 1);
-   cwrite(save,  (gptr*)species, sizeof(spec_mt), system->nspecies);
+   cwrite(xfp,  (gptr*)system, sizeof(system_mt), 1, xdr_system);
+   cwrite(xfp,  (gptr*)species, sizeof(spec_mt), system->nspecies, xdr_species);
    
    for (spec = species; spec < &species[system->nspecies]; spec++)
    {
-      cwrite(save,  (gptr*)spec->p_f_sites, sizeof(vec_mt), spec->nsites);
-      cwrite(save,  (gptr*)spec->site_id, sizeof(int), spec->nsites);
+      cwrite(xfp,  (gptr*)spec->p_f_sites, sizeof(real), 3*spec->nsites, xdr_real);
+      cwrite(xfp,  (gptr*)spec->site_id, sizeof(int), spec->nsites, xdr_int);
    }
-   cwrite(save,  (gptr*)site_info, sizeof(site_mt), system->max_id);
-   cwrite(save,  (gptr*)potpar, sizeof(pot_mt), SQR(system->max_id));
+   cwrite(xfp,  (gptr*)site_info, sizeof(site_mt), system->max_id, xdr_site);
+   xdr_set_npotpar(NPOTP);	/* Pass npotpar to xdr_pot. Ugh! */
+   cwrite(xfp,  (gptr*)potpar, sizeof(pot_mt), SQR(system->max_id), xdr_pot);
 
-   cwrite(save,  (gptr*)system->c_of_m, sizeof(vec_mt), system->nmols);
-   cwrite(save,  (gptr*)system->vel,    sizeof(vec_mt), system->nmols);
-   cwrite(save,  (gptr*)system->velp,   sizeof(vec_mt), system->nmols);
-   cwrite(save,  (gptr*)system->acc,    sizeof(vec_mt), system->nmols);
-   cwrite(save,  (gptr*)system->acco,   sizeof(vec_mt), system->nmols);
-   cwrite(save,  (gptr*)system->accvo,  sizeof(vec_mt), system->nmols);
+   cwrite(xfp,  (gptr*)system->c_of_m, sizeof(real), 3*system->nmols, xdr_real);
+   cwrite(xfp,  (gptr*)system->vel,    sizeof(real), 3*system->nmols, xdr_real);
+   cwrite(xfp,  (gptr*)system->velp,   sizeof(real), 3*system->nmols, xdr_real);
+   cwrite(xfp,  (gptr*)system->acc,    sizeof(real), 3*system->nmols, xdr_real);
+   cwrite(xfp,  (gptr*)system->acco,   sizeof(real), 3*system->nmols, xdr_real);
+   cwrite(xfp,  (gptr*)system->accvo,  sizeof(real), 3*system->nmols, xdr_real);
    if(system->nmols_r > 0)
    {
-      cwrite(save,  (gptr*)system->quat,    sizeof(quat_mt), system->nmols_r);
-      cwrite(save,  (gptr*)system->qdot,    sizeof(quat_mt), system->nmols_r);
-      cwrite(save,  (gptr*)system->qdotp,   sizeof(quat_mt), system->nmols_r);
-      cwrite(save,  (gptr*)system->qddot,   sizeof(quat_mt), system->nmols_r);
-      cwrite(save,  (gptr*)system->qddoto,  sizeof(quat_mt), system->nmols_r);
-      cwrite(save,  (gptr*)system->qddotvo, sizeof(quat_mt), system->nmols_r);
+      cwrite(xfp,  (gptr*)system->quat,    sizeof(real), 4*system->nmols_r, xdr_real);
+      cwrite(xfp,  (gptr*)system->qdot,    sizeof(real), 4*system->nmols_r, xdr_real);
+      cwrite(xfp,  (gptr*)system->qdotp,   sizeof(real), 4*system->nmols_r, xdr_real);
+      cwrite(xfp,  (gptr*)system->qddot,   sizeof(real), 4*system->nmols_r, xdr_real);
+      cwrite(xfp,  (gptr*)system->qddoto,  sizeof(real), 4*system->nmols_r, xdr_real);
+      cwrite(xfp,  (gptr*)system->qddotvo, sizeof(real), 4*system->nmols_r, xdr_real);
    }
-   cwrite(save,  (gptr*)system->h,       sizeof(vec_mt), 3);
-   cwrite(save,  (gptr*)system->hdot,    sizeof(vec_mt), 3);
-   cwrite(save,  (gptr*)system->hdotp,   sizeof(vec_mt), 3);
-   cwrite(save,  (gptr*)system->hddot,   sizeof(vec_mt), 3);
-   cwrite(save,  (gptr*)system->hddoto,  sizeof(vec_mt), 3);
-   cwrite(save,  (gptr*)system->hddotvo, sizeof(vec_mt), 3);
+   cwrite(xfp,  (gptr*)system->h,       sizeof(real), 9, xdr_real);
+   cwrite(xfp,  (gptr*)system->hdot,    sizeof(real), 9, xdr_real);
+   cwrite(xfp,  (gptr*)system->hdotp,   sizeof(real), 9, xdr_real);
+   cwrite(xfp,  (gptr*)system->hddot,   sizeof(real), 9, xdr_real);
+   cwrite(xfp,  (gptr*)system->hddoto,  sizeof(real), 9, xdr_real);
+   cwrite(xfp,  (gptr*)system->hddotvo, sizeof(real), 9, xdr_real);
 
    ap = av_ptr(&asize);				/* get addr, size of database */
-   cwrite(save, ap, asize, 1);
+   xdr_set_av_size(asize);		/* Pass asize to xdr_averages.  Ugh! */
+   cwrite(xfp, ap, asize, 1, xdr_averages);
    
    if(control.rdf_interval > 0)			/* If we have rdf data	      */
    {
-      cwrite(save,  (gptr*)&one, sizeof(int), 1);/* Flag rdf data in file      */
-      cwrite(save,  (gptr*)rdf[1][1], sizeof(int), rdf_size);/* write data     */
+      cwrite(xfp,  (gptr*)&one, sizeof(int), 1, xdr_bool);/* Flag rdf data in file      */
+      cwrite(xfp,  (gptr*)rdf[1][1], sizeof(int), rdf_size, xdr_int);/* write data     */
    }
    else
-      cwrite(save,  (gptr*)&zero, sizeof(int), 1);/* Otherwise flag no rdf data*/
+      cwrite(xfp,  (gptr*)&zero, sizeof(int), 1, xdr_bool);/* Otherwise flag no rdf data*/
       
+#ifdef USE_XDR
+   if( control.xdr_write )
+      xdr_destroy(xfp.xp);
+#endif
+
    if( ferror(save) || fclose(save) )            /* Delayed write error?       */
       message(NULLI, NULLP, FATAL, REWRT, strerror(errno));
 

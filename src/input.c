@@ -29,6 +29,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	input.c,v $
+ * Revision 2.0  93/03/15  14:49:08  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.8.1.21  93/03/12  12:14:14  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
@@ -142,7 +147,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/input.c,v 1.8.1.21 93/03/12 12:14:14 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/input.c,v 2.0 93/03/15 14:49:08 keith Rel $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -202,6 +207,7 @@ match_mt	match[] = {
 {"backup-file",      SFORM,  BACKUP_FILE,    (gptr*)control.backup_file},
 {"temp-file",        SFORM,  TEMP_FILE,      (gptr*)control.temp_file},
 {"strict-cutoff",    "%d",   "0",            (gptr*)&control.strict_cutoff},
+{"xdr",    	     "%d",   "0",            (gptr*)&control.xdr_write},
 {"strain-mask",	     "%d",   "200",	     (gptr*)&control.strain_mask},
 {"nbins",            "%d",   "100",          (gptr*)&control.nbins},
 {"seed",             "%d",   "1234567",      (gptr*)&control.seed},

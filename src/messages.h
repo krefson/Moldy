@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/messages.h,v 1.3.1.14 92/06/11 20:31:51 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/messages.h,v 2.0 93/03/15 14:49:34 keith Rel $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -148,4 +148,6 @@ number of words"
 #define LOCKED   "Another instance of MOLDY is accessing the same %s files.\n\
      Delete lockfile \"%s\" if the previous run crashed."
 #define LOCKFL  "Failed to create lockfile \"%s\""
+#define XDRFL	"XDR call failed"
+#define GPFAIL  "Get file position failed on file  \"%s\"\n    -  %s"
 #endif

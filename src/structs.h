@@ -19,9 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/structs.h,v 1.6.1.15 93/03/12 12:14:34 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/structs.h,v 2.0 93/03/15 14:49:26 keith Rel $
  *
  * $Log:	structs.h,v $
+ * Revision 2.0  93/03/15  14:49:26  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.6.1.15  93/03/12  12:14:34  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
@@ -128,8 +133,9 @@ typedef struct			/* Control parameters for simulation	      */
 		dump_file[L_name],	/* Name of file 'dump' writes to      */
    		backup_file[L_name],	/* Name of backup save file	      */
    		temp_file[L_name];	/* Temporary file for writing restart */
-   int	 	spare[30];	/* Extra space for expansion 	              */
-   boolean	strict_cutoff;  /* Perform real-space cutoff rigorously       */
+   int	 	spare[29];	/* Extra space for expansion 	              */
+   boolean	xdr_write,	/* Write restart, dump files in portable way. */
+                strict_cutoff;  /* Perform real-space cutoff rigorously       */
    int		strain_mask;	/* Mask of constrained elements of h matrix   */
    int		nbins;		/* Number of bins for rdf calculation         */
    unsigned long seed; 		/* Seed for random number generator	      */
@@ -302,4 +308,35 @@ typedef struct			/* Dump file header format		      */
    		dump_init,	/* Time dump run was started (ie first file)  */
    		restart_timestamp;/* Time corresponding restart file written  */
 }	dump_mt;
+
+#define	MAX_ROLL_INTERVAL	100
+typedef struct
+{   double	value,
+   		sum,
+   		sum_sq,
+		mean,
+		sd,
+   		roll[MAX_ROLL_INTERVAL],
+   		roll_mean,
+   		roll_sd;
+} old_av_mt;
+
+typedef	union
+{
+   old_av_mt		av;
+   struct
+   {	
+      int	av, roll;
+   }		cnt;
+} old_av_u_mt;
+
+typedef	struct
+{	
+   int		nav, 
+   		nroll, 
+		iroll, 
+		pad;
+   double align;
+} av_head_mt;
+
 #endif
