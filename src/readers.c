@@ -53,8 +53,6 @@ what you give them.   Help stamp out software-hoarding! */
 #define TITLE_SIZE  80
 #define DATAREC "%d record%ssuccessfully read from %s"
 
-#define xtoupper(c) (islower(c) ? toupper(c) : c)
-
 /*========================== External data references ========================*/
 extern  const pots_mt   potspec[];           /* Potential type specification  */
 extern  const T_TabSgName TabSgName[];       /* Space group names, etc */
