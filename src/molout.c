@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/molout.c,v 1.2 1999/10/29 16:44:28 keith Exp keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/molout.c,v 1.3 1999/11/01 17:24:49 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -172,18 +172,20 @@ char		*insert;
  * Brookhaven Protein Data Bank (pdb) file                                    *
  ******************************************************************************/
 static void
-pdb_out(system, h, species, site_info, insert)
+pdb_out(system, h, species, site_info, insert, intyp)
 system_mt	*system;
+mat_mp		h;
 site_mt		site_info[];
 char		*insert;
 spec_mt		species[];
-mat_mp		h;
+int		intyp;
 {
    double	**site = (double**)arralloc(sizeof(double),2,
                                             0,2,0,system->nsites-1);
    mat_mt	hinv;
    spec_mt	*spec;
    double	a,b,c, alpha, beta, gamma;
+   double	qconv;	/* Variable for converting charge from program units */ 
    char         *atom_name;
    double	atom_charge;
    int		imol, isite, itot=1, ispec=1;
@@ -197,6 +199,11 @@ mat_mp		h;
    alpha = 180/PI*acos((h[0][1]*h[0][2]+h[1][1]*h[1][2]+h[2][1]*h[2][2])/b/c);
    beta  = 180/PI*acos((h[0][0]*h[0][2]+h[1][0]*h[1][2]+h[2][0]*h[2][2])/a/c);
    gamma = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/a/b);
+
+   if( intyp == 'r' )
+      qconv = CONV_Q;
+   else
+      qconv = 1.0;
 
 /* Write the pdb header */
    (void)printf("HEADER     %-40s%10s%4d\n", "Moldy output", atime(), 1);
@@ -219,7 +226,7 @@ mat_mp		h;
        for(is = 0; is < spec->nsites; is++)
        {
          atom_name = site_info[spec->site_id[is]].name;
-	 atom_charge = site_info[spec->site_id[is]].charge;
+	 atom_charge = site_info[spec->site_id[is]].charge*qconv;
          if(fabs(site_info[spec->site_id[is]].mass) != 0)
             (void)printf("HETATM%5d %2s%-2d NON A   1     %7.3f %7.3f %7.3f\
  %5.2f %5.2f          %2s%1.0f%c\n",
@@ -507,6 +514,7 @@ char		*insert;
       centre_mass(species, system->nspecies, c_of_m);
       shift(system->c_of_m, system->nmols, c_of_m);
    }
+
    switch (outsw)
    {
     case CSSR:
@@ -519,7 +527,7 @@ char		*insert;
       schakal_out(system, h, species, site_info, insert, n);
       break;
     case PDB:
-      pdb_out(system, h, species, site_info, insert);
+      pdb_out(system, h, species, site_info, insert, intyp);
       break;
     case XYZ:
       xyz_out(system, h, species, site_info, insert);

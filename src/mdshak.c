@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 2.19 1999/10/11 14:05:19 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 2.20 1999/10/29 16:44:28 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -273,14 +273,14 @@ char	*argv[];
    {
     case 's':				/* Lattice_start file		      */
 	lattice_start(Fp, &sys, species, qpf);
-	moldy_out(0, 0, 1, &sys, sys.h, species, site_info, outsw, 0, insert);
+	moldy_out(0, 0, 1, &sys, sys.h, species, site_info, outsw, intyp, insert);
       break;
     case 'r':				/* Restart file			      */
 	init_averages(sys.nspecies, restart_header.vsn,
 		      control.roll_interval, control.roll_interval,
 		      &av_convert);
 	read_restart(Fp, restart_header.vsn, &sys, av_convert);
-	moldy_out(0, 0, 1, &sys, sys.h, species, site_info, outsw, 0, insert);
+	moldy_out(0, 0, 1, &sys, sys.h, species, site_info, outsw, intyp, insert);
       break;
     case 'd':				/* Dump dataset			      */
 	if( dump_name == 0 )
@@ -367,7 +367,7 @@ char	*argv[];
                traj_con(&sys, prev_cofm, irec-start);
            }
 
-	   moldy_out(iout++, irec, inc, &sys, sys.h, species, site_info, outsw, 0, insert);
+	   moldy_out(iout++, irec, inc, &sys, sys.h, species, site_info, outsw, intyp, insert);
 #ifdef DEBUG
 	   fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
 		   irec%header.maxdumps, dump_name);
