@@ -22,7 +22,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * Ewald	The reciprocal-space part of the standard Ewald sum technique *
  ******************************************************************************
  *      Revision Log
- *       $Log: ewald.c,v $
+ *       $Log: ewald_parallel.c,v $
  * Revision 2.7  1994/06/08  13:13:59  keith
  * New version of array allocator which breaks up requests for DOS.
  * Now must use specific "afree()" paired with arralloc().
@@ -42,47 +42,64 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Declared as "static"  all functions which should be.
  *
- * Revision 2.5  1994/01/18  13:32:27  keith
- * Null update for XDR portability release
+ * Added CONST qualifier to (re-)declarations of ANSI library
+ * emulation routines to give reliable compilation even
+ * without ANSI_LIBS macro. (#define's away for K&R
+ * compilers)
  *
- * Revision 2.3  93/10/28  10:27:48  keith
+ * Revision 2.5  1994/01/26  16:34:36  keith
+ * Fixed non-ansi #endif.
+ *
+ * Revision 2.3  93/10/28  10:28:59  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
- * Revision 2.1  93/09/02  12:31:55  keith
+ * Revision 2.1  93/09/02  12:34:44  keith
  * Optimized qsincos() -- should give up to 25% speed improvement on
  * compilers without assert no aliasing options.
  * 
- * Revision 2.1  93/05/17  10:42:22  keith
- * Optimized qsincos() -- should give up to 25% speed improvement on
- * compilers without assert no aliasing options.
- * 
- * Revision 2.0  93/03/15  14:49:02  keith
+ * Revision 2.0  93/03/15  14:49:49  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
  * consent only).
  * 
- * Revision 1.23  93/03/12  12:22:38  keith
+ * Revision 1.22  93/03/12  12:23:05  keith
  * Reorganized defines to recognise all ANSI (__type__) forms.
  * Moved spxpy() from aux.c to force.c and force_parallel.c
  * 
  * 
- * Revision 1.23  93/03/12  12:21:50  keith
- * *** empty log message ***
- * 
- * Revision 1.22  93/03/09  15:58:28  keith
+ * Revision 1.21  93/03/09  15:59:58  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
  * 
- * Revision 1.21  92/06/26  17:02:58  keith
+ * Revision 1.20  93/03/05  15:01:53  keith
+ * Added CRAY parallelising directives
+ * 
+ * Revision 1.19  92/08/13  17:56:58  keith
+ * Modified nprocessors to limit execution to 1 proc
+ * unless env var THREADS explicitly set.
+ * 
+ * Revision 1.18  92/06/26  17:03:02  keith
  * Got rid of assumption that memory returned by talloc() or
  * arralloc() is zeroed.  This enhances ANSI compatibility.
  * Removed memory zeroing from alloc.c() in consequence.
  * 
- * Revision 1.20  91/11/26  10:26:34  keith
+ * Revision 1.17  92/02/26  14:33:48  keith
+ * Got rid of pstrip pragmas for convex -- they just broke things
+ * 
+ * Revision 1.16  91/11/27  15:15:56  keith
  * Corrected calculation of sheet energy term for charged framework.
  * Split force loop so as to omit frame-frame force (and stress) terms.
+ * Added spaces so that Stellix compiler doesn't choke on "=*"
+ * Replaced main loop variable with pointer to work round Stellix 2.3 bug
  * 
- * Revision 1.19  91/08/15  18:11:52  keith
+ * Revision 1.16  91/11/26  12:48:43  keith
+ * Put #ifdefs around machine-specific pragmas for portability.  Now
+ * supports Stardent 1000,2000 & 3000 (titan) series and convex.
+ * 
+ * Revision 1.13  91/08/24  16:55:18  keith
+ * Added pragmas for convex C240 parallelization
+ * 
+ * Revision 1.12  91/08/15  18:13:17  keith
  * Modifications for better ANSI/K&R compatibility and portability
  * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
  * --Tidied up memcpy calls and used struct assignment.
@@ -92,48 +109,41 @@ what you give them.   Help stamp out software-hoarding!  */
  * --Modified declaration of size_mt and inclusion of sys/types.h in aux.c
  *   for GNU compiler with and without fixed includes.
  * 
- * Revision 1.18  91/05/29  16:33:01  keith
- * Modified code for speed improvement in TITAN
+ * Revision 1.11  91/05/29  17:02:00  keith
+ * Modified for minor speed improvement on Stardent titan
  * 
- * Revision 1.17  91/03/12  15:42:31  keith
- * Tidied up typedefs size_mt and include file <sys/types.h>
- * Added explicit function declarations.
+ * Revision 1.10  91/03/12  16:30:08  keith
+ * Stardent Titan (ST3000) version.
  * 
- * Revision 1.16  91/02/07  16:52:18  keith
- * Rewrote trig identity loops for better vectorization on Titan.
- * Finally deleted ancient commented-out code (#if OLDEWALD and VCALLS).
- * 
- * Revision 1.15  90/09/28  13:29:15  keith
+ * Revision 1.9  90/09/28  13:29:19  keith
  * Inserted braces around VECTORIZE directives and changed include files
  * for STARDtardent 3000 series (via cond. comp symbol "ardent").
  * 
- * Revision 1.14  90/08/29  11:01:19  keith
- * Modified to keep consistency with ewald_parallel.c r1.8
+ * Revision 1.8  90/08/29  11:00:49  keith
+ * Speeded up loop at 231 to improve parallel efficiency.
  * 
- * Revision 1.13  90/08/02  15:50:17  keith
+ * Revision 1.7  90/08/01  19:11:40  keith
  * Modified to exclude framework-framework interactions.
  * N.B. Excluded from pe and stress but NOT forces (as they sum to 0).
  * 
- * Revision 1.12  90/05/16  18:40:04  keith
+ * Revision 1.6  90/05/16  18:40:57  keith
  * Renamed own freer from cfree to tfree.
  * 
- * Revision 1.11  90/05/02  15:33:27  keith
- * Make declaration of saxpy() conditional along with use.
+ * Revision 1.5  90/05/16  14:20:47  keith
+ * *** empty log message ***
  * 
- * Revision 1.10  90/01/15  12:24:05  keith
- * Corrected declaration of arralloc from void* to char* to keep lint happy.
+ * Revision 1.4  90/05/02  15:37:31  keith
+ * Removed references to size_mt and time_t typedefs, no longer in "defs.h"
  * 
- * Revision 1.9  90/01/01  20:07:20  keith
- * Parcelled up generation of qcoskr etc into separate function and
- * created temp's site_fx etc to point at site_force[0] etc.
- * - Generates substabtially better code on Stellar.
+ * Revision 1.3  90/04/26  15:29:48  keith
+ * Changed declaration of arralloc back to char*
  * 
- * Revision 1.8  89/12/22  19:31:53  keith
- * New version of arralloc() orders memory so that pointers come FIRST.
- * This means you can simply free() the pointer returned (if l.b. = 0).
+ * Revision 1.2  90/04/25  10:37:06  keith
+ * Fixed bug which led to ihkl[] accessing outside bounds of chx[] etc arrays
+ * when in const-pressure mode and MD cell expanded between steps.
  * 
- * Revision 1.7  89/12/21  16:29:47  keith
- * Reversed indices in 'site' and 'site_force' to allow stride of 1 in ewald.
+ * Revision 1.1  90/01/31  13:18:59  keith
+ * Initial revision
  * 
  * Revision 1.6  89/12/15  12:56:26  keith
  * Added conditional ionclusion of <fastmath.h> for stellar
@@ -164,20 +174,21 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 2.7 1994/06/08 13:13:59 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 2.7 1994/06/08 13:13:59 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
-#include "defs.h"
+#include 	"defs.h"
 /*========================== Library include files ===========================*/
 #ifdef stellar
 #   include 	<fastmath.h>
 #else
-#ifdef ardent
+#ifdef titan
 #   include 	<vmath.h>
 #else
 #   include 	<math.h>
 #endif
 #endif
+#include	"stddef.h"
 #include 	"stdlib.h"
 /*========================== Program include files ===========================*/
 #include 	"structs.h"
@@ -191,18 +202,25 @@ double	det();				/* Determinant of 3x3 matrix	      */
 void	invert();			/* Inverts a 3x3 matrix		      */
 void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
 void	mat_sca_mul();			/* Multiplies a 3x3 matrix by scalar  */
+void	transpose();			/* Transposes a 3x3 matrix	      */
+void    zero_real();            	/* Initialiser                        */
+void    zero_double();          	/* Initialiser                        */
 double	sum();				/* Sum of elements of 'real' vector   */
+void	ewald_inner();			/* Inner loop forward reference       */
+int	nprocessors();			/* Return no. of procs to execute on. */
 #if defined(ANSI) || defined(__STDC__)
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
-void	note(char *,...);		/* Write a message to the output file */
-void	message(int *,...);		/* Write a warning or error message   */
+void	note(char *, ...);		/* Write a message to the output file */
+void	message(int *, ...);		/* Write a warning or error message   */
 #else
 gptr	*arralloc();	        	/* Array allocator		      */
 void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 #endif
+void ewald_inner();
 /*========================== External data references ========================*/
-extern	contr_mt	control;	/* Main simulation control record     */
+extern	contr_mt	control;       	/* Main simulation control record     */
+extern int		ithread, nthreads;
 /*========================== Macros ==========================================*/
 #define astar hinvp[0]
 #define bstar hinvp[1]
@@ -211,6 +229,7 @@ extern	contr_mt	control;	/* Main simulation control record     */
 #define modb(hmat) sqrt(SQR(hmat[0][1]) + SQR(hmat[1][1]))
 #define modc(hmat) sqrt(SQR(hmat[0][2]) + SQR(hmat[1][2]) + SQR(hmat[2][2]))
 /*============================================================================*/
+   struct _hkl {double kx, ky, kz; int h,k,l;};
 /*****************************************************************************
  * qsincos().  Evaluate q sin(k.r) and q cos(k.r).  This is in a separate    *
  * function because some compilers (notably Stellar's) generate MUCH better  *
@@ -299,21 +318,14 @@ mat_mt		stress;			/* Stress virial		(out) */
 {
    mat_mt	hinvp;			/* Matrix of reciprocal lattice vects*/
    register	int	h, k, l;	/* Recip. lattice vector indices     */
-		int	i, j, is, ssite;/* Counters.			     */
+		int	i, is, ssite;/* Counters.			     */
    		spec_mp	spec;		/* species[ispec]		     */
    register	int	nsites = system->nsites;
-   register	real	pe_k,		/* Pot'l energy for current K vector */
-		        coeff, coeff2;	/* 2/(e0V) * A(K) & similar	     */
-   register	real	sqcoskr,sqsinkr,/* Sum q(i) sin/cos(K.r(i))          */
-   			sqcoskrn, sqsinkrn,
-			sqcoskrf, sqsinkrf;
-   register	real	coss;
-		double	ksq;		/* Squared magnitude of K vector     */
    		double	kx,ky,kz;
    		vec_mt	kv;		/* (Kx,Ky,Kz)  			     */
-   real		*site_fx = site_force[0],
-   		*site_fy = site_force[1],
-   		*site_fz = site_force[2];
+   	 	struct _hkl *hkl;
+   		int	nhkl = 0;
+   register	real	coss;
 /*
  * Maximum values of h, k, l  s.t. |k| < k_cutoff
  */
@@ -321,33 +333,41 @@ mat_mt		stress;			/* Stress virial		(out) */
 			kmax = floor(control.k_cutoff/(2*PI)*modb(system->h)),
 			lmax = floor(control.k_cutoff/(2*PI)*modc(system->h));
 /*
+ * Kludge to optimize performance on RS6000s with 4-way assoc. cache.
+ */
+#ifdef RS6000
+   int		nsarray = (nsites+64)/512*512 + MAX((nsites+64)%512-64,64);
+#else
+   int		nsarray = nsites;
+#endif
+/*
  * Arrays for cos & sin (h x(i)), (k y(i)) and (l z(i)) eg chx[h][isite]
  * and pointers to a particular h,k or l eg coshx[is] = chh[2][is]
  */
    real		**chx = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, hmax, 0, nsites-1),
+					 0, hmax, 0, nsarray-1),
 		**cky = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, kmax, 0, nsites-1),
+					 0, kmax, 0, nsarray-1),
 		**clz = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, lmax, 0, nsites-1),
+					 0, lmax, 0, nsarray-1),
 		**shx = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, hmax, 0, nsites-1),
+					 0, hmax, 0, nsarray-1),
 		**sky = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, kmax, 0, nsites-1),
+					 0, kmax, 0, nsarray-1),
 		**slz = (real**)arralloc((size_mt)sizeof(real),2,
-					 0, lmax, 0, nsites-1);
+					 0, lmax, 0, nsarray-1);
    real		*coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
-   real		*c1, *s1, *cm1, *sm1;
+   real               *c1, *s1, *cm1, *sm1;
    real		*site0, *site1, *site2;
-   real		*qcoskr = dalloc(nsites),	/* q(i) cos(K.R(i))	      */
-		*qsinkr = dalloc(nsites);	/* q(i) sin(K.R(i))	      */
-   real		force_comp, kv0, kv1, kv2;
    double	r_4_alpha = -1.0/(4.0 * control.alpha * control.alpha);
    double	vol = det(system->h);	/* Volume of MD cell		      */
    static	double	self_energy,	/* Constant self energy term	      */
    			sheet_energy;	/* Correction for non-neutral system. */
    static	boolean init = true;	/* Flag for the first call of function*/
    static	int	nsitesxf;	/* Number of non-framework sites.     */
+
+   invert(system->h, hinvp);		/* Inverse of h is matrix of r.l.v.'s */
+   mat_sca_mul(2*PI, hinvp, hinvp);
 
 /*
  * First call only - evaluate self energy term and store for subsequent calls
@@ -388,6 +408,7 @@ mat_mt		stress;			/* Stress virial		(out) */
        * Sqxf is total non-framework charge.  Calculate grand total in sq.
        */
       sqxf = sq;
+
       for(; is < nsites; is++)
 	 sq += chg[is];
       /*
@@ -413,20 +434,45 @@ mat_mt		stress;			/* Stress virial		(out) */
       note("Ewald self-energy = %f Kj/mol",self_energy*CONV_E);
       init = false;
    }
+   
+   /*
+    * Build array hkl[] of k vectors within cutoff
+    */
+   hkl = aalloc(4*(hmax+1)*(kmax+1)*(lmax+1), struct _hkl);
+   for(h = 0; h <= hmax; h++)
+      for(k = (h==0 ? 0 : -kmax); k <= kmax; k++)
+      {
+	 kv[0] = h*astar[0] + k*bstar[0];
+	 kv[1] = h*astar[1] + k*bstar[1];
+	 kz = h*astar[2] + k*bstar[2];
+	 for(l = (h==0 && k==0 ? 1 : -lmax); l <= lmax; l++)
+	 {
+	  /*  kv[0] = kx + l*cstar[0]; 
+	    kv[1] = ky + l*cstar[1]; */
+	    kv[2] = kz + l*cstar[2];
+	    if( SUMSQ(kv) < SQR(control.k_cutoff) )
+	    {
+	       hkl[nhkl].h = h; hkl[nhkl].k = k; hkl[nhkl].l = l;
+	       hkl[nhkl].kx = kv[0];
+	       hkl[nhkl].ky = kv[1];
+	       hkl[nhkl].kz = kv[2];
+	       nhkl++;
+	    }
+	 }
+      }
 
-   *pe -= self_energy;			/* Subtract self energy term	      */
-   *pe += sheet_energy/vol;		/* Uniform charge correction	      */
-   for(i=0; i<3; i++)
-      stress[i][i] += sheet_energy/vol;
-
-   invert(system->h, hinvp);		/* Inverse of h is matrix of r.l.v.'s */
-   mat_sca_mul(2*PI, hinvp, hinvp);
-
+   if( ithread == 0 )
+   {
+      *pe -= self_energy;		/* Subtract self energy term	      */
+      *pe += sheet_energy/vol;		/* Uniform charge correction	      */
+      for(i=0; i<3; i++)
+	 stress[i][i] += sheet_energy/vol;
+   }
 /*
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
  */
-   sinhx = shx[0]; sinky = sky[0]; sinlz = slz[0];
    coshx = chx[0]; cosky = cky[0]; coslz = clz[0];
+   sinhx = shx[0]; sinky = sky[0]; sinlz = slz[0];
 VECTORIZE
    for(is = 0; is < nsites; is++)
    {
@@ -500,27 +546,61 @@ VECTORIZE
  * To avoid calculating K and -K, only half of the K-space box is covered. 
  * Points on the axes are included once and only once. (0,0,0) is omitted.
  */
-   for(h = 0; h <= hmax; h++)
-   for(k = (h==0 ? 0 : -kmax); k <= kmax; k++)
-   for(l = (h==0 && k==0 ? 1 : -lmax); l <= lmax; l++)
+   ewald_inner(ithread, nthreads, nhkl, hkl, nsarray, nsites, nsitesxf, 
+		  chx, cky, clz, shx, sky, slz, chg, &vol, &r_4_alpha,
+		  stress, pe, site_force);
+
+   afree((gptr*)chx); afree((gptr*)cky); afree((gptr*)clz); 
+   afree((gptr*)shx); afree((gptr*)sky); afree((gptr*)slz);
+   xfree(hkl);
+}
+/*****************************************************************************
+ *  Ewald_inner().  Part of Ewald sum to run in parallel on multi-stream or  *
+ *  multi-processor computers.  It splits up the loop over k-vectors by using*
+ *  a stride of the number of threads in use.  The loop starts from a value  *
+ *  unique to the thread.    Summable quantities, pe, stress, site_force are *
+ *  accumulated where specified by the arguments so it is the callers	     *
+ *  responsibility to provide a separte area and accumulate the grand totals *
+ *****************************************************************************/
+void
+ewald_inner(ithread, nthreads, nhkl, hkl, nsarray, nsites, nsitesxf, 
+            chx, cky, clz, shx, sky, slz,
+	    chg, volp, r_4_alphap, stress, pe, site_force)
+int ithread, nthreads, nhkl;
+struct _hkl hkl[];
+int nsarray;
+int nsites;
+int nsitesxf;			/* N sites excluding framework sites.	      */
+real **chx, **cky, **clz, **shx, **sky, **slz;
+double *volp, *r_4_alphap;
+mat_mt	stress;
+double *pe;
+real	chg[];
+real	**site_force;
+{
+   vec_mt	kv;
+   double ksq, coeff, coeff2, pe_k;
+   double sqcoskr, sqsinkr, sqcoskrn, sqsinkrn, sqcoskrf, sqsinkrf;
+   real *coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
+   int is, i, j, h, k, l;
+   struct _hkl *phkl;
+   double vol = *volp, r_4_alpha = *r_4_alphap;
+   real		force_comp, kv0, kv1, kv2;
+   real *qcoskr = dalloc(nsarray), *qsinkr = dalloc(nsarray);
+   real		*site_fx = site_force[0],
+   		*site_fy = site_force[1],
+   		*site_fz = site_force[2];
+
+   for(phkl = hkl+ithread; phkl < hkl+nhkl; phkl += nthreads)
    {
-/*
- * Calculate actual K vector and its squared magnitude.
- */
-      kv0 = kv[0] = h*astar[0] + k*bstar[0] + l*cstar[0]; 
-      kv1 = kv[1] = h*astar[1] + k*bstar[1] + l*cstar[1]; 
-      kv2 = kv[2] = h*astar[2] + k*bstar[2] + l*cstar[2];
-      
-      ksq = SUMSQ(kv);
-      
-/*
- * Test whether K is within the specified cut-off and skip rest of loop if not
- */
-      if(ksq >= SQR(control.k_cutoff)) continue;
-      
+      h  = phkl->h;	    k     = phkl->k;  l     = phkl->l;
+      kv0 = kv[0] = phkl->kx; 
+      kv1 = kv[1] = phkl->ky; 
+      kv2 = kv[2] = phkl->kz;
 /*
  * Calculate pre-factors A(K) etc
  */
+      ksq = SUMSQ(kv);
       coeff  = 2.0 / (EPS0 * vol) * exp(ksq * r_4_alpha) / ksq;
       coeff2 = 2.0 * (1.0 - ksq * r_4_alpha) / ksq;
       
@@ -557,6 +637,7 @@ VECTORIZE
 /*
  * Calculate long-range coulombic contribution to stress tensor
  */
+NOVECTOR
       for(i = 0; i < 3; i++)
       {
 	 stress[i][i] += pe_k;
@@ -564,6 +645,7 @@ NOVECTOR
 	 for(j = i; j < 3; j++)
 	    stress[i][j] -= pe_k * coeff2 * kv[i] * kv[j];
       }
+
 /*
  * Evaluation of site forces.   Non-framework sites interact with all others
  */
@@ -588,12 +670,10 @@ VECTORIZE
 	 site_fz[is] += kv2 * force_comp;
       }
 #endif
-   }
-
 /*
  * End of loop over K vectors.
  */
-   afree((gptr*)chx); afree((gptr*)cky); afree((gptr*)clz); 
-   afree((gptr*)shx); afree((gptr*)sky); afree((gptr*)slz);
+   }
    xfree(qcoskr); xfree(qsinkr);
 }
+

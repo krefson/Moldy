@@ -29,162 +29,14 @@ what you give them.   Help stamp out software-hoarding!  */
  *		module (kernel.c) for ease of modification.		      *
  ******************************************************************************
  *      Revision Log
- *       $Log: force.c,v $
- * Revision 2.6  1994/02/17  16:38:16  keith
- * Significant restructuring for better portability and
- * data modularity.
- *
- * Got rid of all global (external) data items except for
- * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
- * qualifier macro which evaluates to "const" or nil
- * depending on ANSI/K&R environment.
- * Also moved as many "write" instantiations of "control"
- * members as possible to "startup", "main" leaving just
- * "dump".
- *
- * Declared as "static"  all functions which should be.
- *
- * Revision 2.5  1994/01/18  13:32:31  keith
- * Null update for XDR portability release
- *
- * Revision 2.4  94/01/13  14:42:44  keith
- * Minor optimization using "store at end of loop" trick.
+ * Revision 1.3  90/03/29  15:44:51  keith
+ * Merged force.c revisions 1.8.1.11-1.8.1.13
  * 
- * Revision 2.3  1993/10/28  15:23:38  keith
- * Corrected declarations of stdargs functions to be standard-conforming
- *
- * Revision 2.3  93/10/28  15:22:53  keith
- * Corrected declarations of stdargs functions to be standard-conforming
+ * Revision 1.2  90/03/09  17:30:29  keith
+ * Modified FKERNEL ifdefs for UNICOS.
  * 
- * Revision 2.3  93/10/28  12:27:22  keith
- * Corrected declarations of stdargs functions to be standard-conforming
- * 
- * Revision 2.3  93/10/28  12:25:05  keith
- * Corrected declarations of stdargs functions to be standard-conforming
- * 
- * Revision 2.3  93/10/28  10:27:49  keith
- * Corrected declarations of stdargs functions to be standard-conforming
- * 
- * Revision 2.0  93/03/15  14:49:05  keith
- * Added copyright notice and disclaimer to apply GPL
- * to all modules. (Previous versions licensed by explicit 
- * consent only).
- * 
- * Revision 1.8.1.37  93/03/12  12:21:06  keith
- * Reorganized defines to recognise all ANSI (__type__) forms.
- * Moved spxpy() from aux.c to force.c and force_parallel.c
- * 
- * Revision 1.8.1.36  93/03/09  15:58:30  keith
- * Changed all *_t types to *_mt for portability.
- * Reordered header files for GNU CC compatibility.
- * 
- * Revision 1.8.1.35  92/10/28  14:08:38  keith
- * Added spaces around "=" in strict-neighbour list for brain-damaged
- * V6 and VMS compilers!
- * 
- * Revision 1.8.1.34  92/10/01  18:06:14  keith
- * Modified strict cutoff by extending radius to include all pissible
- * site-site contacts within cutoff.
- * Modified parameters of fill_cells to work with -va option of Convex cc.
- * 
- * Revision 1.8.1.33  92/09/22  14:54:51  keith
- * Added support for "strict cutoff" mode.
- * 
- * Revision 1.8.1.32  92/06/26  17:03:04  keith
- * Got rid of assumption that memory returned by talloc() or
- * arralloc() is zeroed.  This enhances ANSI compatibility.
- * Removed memory zeroing from alloc.c() in consequence.
- * 
- * Revision 1.8.1.31  92/06/15  16:50:23  keith
- * Fixed xfree() of reloc bug introduced in 1.8.1.30 .
- * 
- * Revision 1.8.1.30  92/06/05  13:26:50  keith
- * Changed to initialize cell neighbour list every step.
- * Necessary for const pressure simulations.  Also means
- * that restarts are now exact.
- * 
- * Revision 1.8.1.29  92/04/21  17:49:28  keith
- * Increased NMULT to do Buckyballs
- * 
- * Revision 1.8.1.28  92/03/19  15:48:15  keith
- * Added declaration of spxpy()
- * 
- * Revision 1.8.1.27  91/11/26  12:46:02  keith
- * Changed size of "neighbour list" arrays using a new algorithm which
- * scales with cutoff.  Improved diagnostics if limits exceeded.
- * 
- * Revision 1.8.1.26  91/11/26  10:47:13  keith
- * Replaced saxpy() with sxpy() -- UNVECTORIZED as indices may be repeated.
- * 
- * Revision 1.8.1.25  91/10/17  14:19:41  keith
- * Made "cellbin" function more robust.
- * 
- * Revision 1.8.1.24  91/10/02  13:55:42  keith
- * Reordered statements in vector loops to work around bug in
- * Stellix 2.3 C compiler (v23.7) ... Sigh!
- * 
- * Revision 1.8.1.23  91/08/15  18:11:54  keith
- * Modifications for better ANSI/K&R compatibility and portability
- * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
- * --Tidied up memcpy calls and used struct assignment.
- * --Moved defn of NULL to stddef.h and included that where necessary.
- * --Eliminated clashes with ANSI library names
- * --Modified defs.h to recognise CONVEX ANSI compiler
- * --Modified declaration of size_mt and inclusion of sys/types.h in aux.c
- *   for GNU compiler with and without fixed includes.
- * 
- * Revision 1.8.1.22  91/05/29  16:34:40  keith
- * Modified code for speed improvement in TITAN
- * 
- * Revision 1.8.1.21  91/03/12  15:42:36  keith
- * Tidied up typedefs size_mt and include file <sys/types.h>
- * Added explicit function declarations.
- * 
- * Revision 1.8.1.20  91/02/07  16:30:50  keith
- * Moved allocation of work array from site_neighbour_list() to force_calc().
- * This substantially reduces the number of mallocs/frees.
- * Removed dead code under #ifdefs CC40, VCALLS, FKERNEL
- * 
- * Revision 1.8.1.19  90/11/13  16:54:44  keith
- * Increased slop in binning range to cope with mahines with poor quality
- * floating point such as cray.  (in cellbin())
- * 
- * Revision 1.8.1.18  90/10/25  18:53:20  keith
- * Increased value on n_nab_sites to 3/2 nsites for clay simulations.
- * 
- * Revision 1.8.1.17  90/10/18  17:09:19  keith
- * Replaced insecure macro BIN with safe function cellbin().  BIN put
- * sites situated exactly at a boundary into the wrong bins, giving
- * inconsistency with the relocation table vectors and wrong results.
- * Also added extra "bounds check" parameter to gather().
- * Also added much debugging code.
- * 
- * Revision 1.8.1.16  90/09/28  13:29:22  keith
- * Inserted braces around VECTORIZE directives and changed include files
- * for STARDtardent 3000 series (via cond. comp symbol "ardent").
- * 
- * Revision 1.8.1.15  90/05/16  18:40:07  keith
- * Renamed own freer from cfree to tfree.
- * 
- * Revision 1.8.1.14  90/05/02  15:35:03  keith
- * Removed references to size_mt and time_t typedefs, no longer in "defs.h"
- * 
- * Revision 1.8.1.13  90/03/09  20:50:43  keith
- * Replaced 'vadd' and 'calcdist' with inline code (OK UNDER CRAY C 4.1)
- * 
- * Revision 1.8.1.12  90/03/09  17:29:00  keith
- * Modified FKERNEL ifdefs for unicos.
- * 
- * Revision 1.8.1.11  90/01/15  12:24:10  keith
- * Corrected declaration of arralloc from void* to char* to keep lint happy.
- * 
- * Revision 1.8.1.10  89/12/22  19:31:41  keith
- * New version of arralloc() orders memory so that pointers come FIRST.
- * This means you can simply free() the pointer returned (if l.b. = 0).
- * 
- * Revision 1.8.1.9  89/12/21  16:29:50  keith
- * Reversed indices in 'site' and 'site_force' to allow stride of 1 in ewald.
+ * Revision 1.1  90/01/31  13:19:28  keith
+ * Initial revision
  * 
  * Revision 1.8.1.8  89/11/01  17:34:15  keith
  * Modified to use SPAXPY vectorised scattered add.
@@ -240,7 +92,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 2.7 1994/06/08 13:13:59 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -250,41 +102,45 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force.c,v 2.6 199
 #else
 #include 	<math.h>
 #endif
-#include 	"string.h"
 #include	"stddef.h"
+#include 	"string.h"
 /*========================== Program include files ===========================*/
-#include "structs.h"
-#include "messages.h"
+#include 	"structs.h"
+#include 	"messages.h"
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
 void            afree();	       /* Free allocated array	      	      */
-int     search_lt();			/* Search a vector for el. < scalar   */
-double  vdot();                         /* Vector dot product                 */
-double  sum();                          /* Sum a vector                       */
-void    gather();                       /* Interface to CRAY gather routine   */
-void	gatheri();			/* Integer gather		      */
-int	wheneq();			/* Array indexer		      */
-void    mat_mul();                      /* Matrix multiplier                  */
-double	det();				/* Determinant of 3x3 matrix	      */
-void	invert();			/* 3x3 matrix inverter		      */
-void	mat_vec_mul();			/* Matrix by vector multiplier        */
-void	transpose();			/* Generate 3x3 matrix transpose      */
-void    zero_real();                    /* Initialiser                        */
-double	precision();			/* Floating pt precision.	      */
-void    kernel();                       /* Force kernel routine               */
-double  mol_radius();			/* Radius of largest molecule.        */
+int     	search_lt();            /* Search a vector for el. < scalar   */
+double  	vdot();                 /* Vector dot product                 */
+double  	sum();                  /* Sum a vector                       */
+void    	gather();               /* Interface to CRAY gather routine   */
+void    	gatheri();              /* Integer gather                     */
+int     	wheneq();               /* Array indexer                      */
+void    	mat_mul();              /* Matrix multiplier                  */
+double		det(); 			/* Determinant of 3x3 matrix	      */
+void    	invert();               /* 3x3 matrix inverter                */
+void    	mat_vec_mul();          /* Matrix by vector multiplier        */
+void    	transpose();            /* Generate 3x3 matrix transpose      */
+void    	zero_real();            /* Initialiser                        */
+void    	zero_double();          /* Initialiser                        */
+void    	force_inner();          /* Inner loop forward reference       */
+int     	nprocessors();          /* Return no. of procs to execute on. */
+double  	precision();            /* Floating pt precision.             */
+void    	kernel();               /* Force kernel routine               */
+double 		mol_radius();           /* Radius of largest molecule.        */
 #if defined(ANSI) || defined(__STDC__)
-gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
-void	note(char *, ...);		/* Write a message to the output file */
-void	message(int *, ...);		/* Write a warning or error message   */
+gptr		*arralloc(size_mt,int,...); /* Array allocator		      */
+void		note(char *, ...);	/* Write a message to the output file */
+void		message(int *, ...);	/* Write a warning or error message   */
 #else
-gptr	*arralloc();	        	/* Array allocator		      */
-void	note();				/* Write a message to the output file */
-void	message();			/* Write a warning or error message   */
+gptr		*arralloc();	        /* Array allocator		      */
+void		note();			/* Write a message to the output file */
+void		message();		/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
-extern contr_mt control;                    /* Main simulation control parms. */
+extern  contr_mt control;                   /* Main simulation control parms. */
+extern int		ithread, nthreads;
 /*========================== Structs local to module =========================*/
 typedef struct cell_s			/* Prototype element of linked list of*/
 {					/* molecules within interaction range */
@@ -294,7 +150,7 @@ typedef struct cell_s			/* Prototype element of linked list of*/
 
 typedef struct				/* Prototype of neighbour cell list   */
 {					/* element.			      */
-   int i, j, k;
+   int	 	i, j, k;
 }		ivec_mt;
 
 typedef struct				/* Prototype for a 3Nx x 3Ny x 3Nz    */
@@ -351,7 +207,6 @@ NOVECTOR
  *  Any error at the boundaries is disasterous and hard to detect.            *
  *  Results may depend on machine-dependant rounding etc.		      *
  ******************************************************************************/
-static
 int cellbin(rc, nc, eps)
 double rc, eps;
 int nc;
@@ -557,7 +412,7 @@ double  cutoff;
                   dist += s[i]*G[i][j]*s[j];
             if(dist < SQR(cutoff))
             {
-	       for(i = 0; i<= 1; i++)
+	       for(i=0; i<=1; i++)
 		  for(j = -1; j <= 1; j++)
 		     for(k = -1; k <= 1; k++)
 			cellmap[ix+i][iy+j][iz+k] = 1;
@@ -719,7 +574,6 @@ int	*frame_type;			/* Framework type counter	 (out)*/
  *  site_neightbour list.  Build the list of sites withing interaction radius *
  *                         from the lists of sites in cells.		      *
  ******************************************************************************/
-static
 int	site_neighbour_list(nab, reloc_i, n_nab_sites, nfnab, n_frame_types,
 			    n_nabors, ix, iy, iz, nabor, cell, reloc, work )
 int	*nab;				/* Array of sites in list      (out) */
@@ -732,7 +586,7 @@ int	ix, iy, iz;			/* Labels of current cell	(in) */
 ivec_mt	*nabor;				/* List of neighbour cells	(in) */
 cell_mt	**cell;				/* Head of cell list		(in) */
 reloc_mt	***reloc;			/* Relocation index array	(in) */
-int	*work;				/* Workspace			     */
+int   	*work;                          /* Workspace                         */
 {
    int	jx, jy, jz;			/* Labels of cell in neighbour list  */
    int	jcell, jnab, jsite, rl;		/* Counters for cells etc	     */
@@ -760,8 +614,6 @@ int	*work;				/* Workspace			     */
       for(cmol = cell[jcell]; cmol != NULL; cmol = cmol->next)
       {
          if( jnab > 0 || cmol->frame_type == 0 )
-	 {	
-NOVECTOR
 	    for(jsite = 0; jsite < cmol->num; jsite++)
 	    {
 	       nabf[nnabf] = cmol->isite + jsite;
@@ -769,9 +621,8 @@ NOVECTOR
 	       frame_key[nnabf] = cmol->frame_type;
 	       nnabf++;
 	    }
-         }
 	 if(nnabf > n_nab_sites) 
-	    message(NULLI,NULLP,FATAL,TONAB,nnabf,n_nab_sites);
+ 	    message(NULLI,NULLP,FATAL,TONAB,nnabf,n_nab_sites);
       }
    }
 
@@ -818,21 +669,15 @@ pot_mt          potpar[];               /* Array of potential parameters (in) */
 double          *pe;                    /* Potential energy             (out) */
 mat_mt          stress;                 /* Stress virial                (out) */
 {
-   int          imol,                   /* Counter for molecules i            */
-                icell,			/* Index for cells of molecule pair   */
-                nnab, jbeg, jmin, jmax,	/* Number of sites in neighbour list  */
-                isite, jsite,           /* Site counter i,j                   */
-   		i_id, lim, ipot;	/* Miscellaneous		      */
-   int		n_frame_types, *nfnab;
-   int          ix, iy, iz;		/* 3-d cell indices for ref and neig. */
+   int		isite, imol,            /* Site counter i,j                   */
+   		i_id, ipot;		/* Miscellaneous		      */
+   int		n_frame_types;
    int          nsites = system->nsites,/* Local copy to keep optimiser happy */
                 n_potpar = system->n_potpar,
    		max_id = system->max_id;
-   double       norm = 2.0*control.alpha/sqrt(PI);	/* Coulombic prefactor*/
-   double	cutoffsq = SQR(control.cutoff),
-                cutoff100sq = 10000.0*cutoffsq;
-   int          ncells;			/* Total number of cells	      */
+   int          icell, ncells;		/* Total number of cells	      */
    int          tx, ty, tz;             /* Temporaries for # unit cell shifts */
+   int		ix, iy, iz;
    int		*id      = ialloc(nsites),   	/* Array of site_id[nsites]   */
    		*id_ptr;                /* Pointer to 'id' array              */
    real         ***potp				/* Expanded pot'l parameters  */
@@ -852,46 +697,23 @@ mat_mt          stress;                 /* Stress virial                (out) */
 #else
                             NMULT*4.19*CUBE(control.cutoff)/det(system->h);
 #endif
-   int          *nab     = ialloc(n_nab_sites),	/* Neigbour site gather vector*/
-                *reloc_i = ialloc(n_nab_sites),	/* Vector of pbc relocations  */
-   		*work  = ialloc(4*n_nab_sites); /* Workspace for s_n_list     */
-   real         *R       = dalloc(n_nab_sites);	/* pbc site relocation cpt    */
-   real         *nab_sx  = dalloc(n_nab_sites),	/* 'Gathered' list of         */
-   		*nab_sy  = dalloc(n_nab_sites),	/*   neighbour site co-ords   */
-                *nab_sz  = dalloc(n_nab_sites),	/*   - x,y,z components.      */
-                *forcejx = dalloc(n_nab_sites),	/* List of neighbour site     */
-                *forcejy = dalloc(n_nab_sites),	/*  forces in gathered form   */
-                *forcejz = dalloc(n_nab_sites),	/*  - xyz components.	      */
-                *rx      = dalloc(n_nab_sites),	/* Reference to neigbour site */
-                *ry      = dalloc(n_nab_sites),	/* - site vector adjusted for */
-                *rz      = dalloc(n_nab_sites),	/*  periodic boundaries. xyz. */
-                *r_sqr   = dalloc(n_nab_sites),	/* Squared site-site distance */
-                *nab_chg = dalloc(n_nab_sites),	/* Gathered neig. site charges*/
-                *forceij = dalloc(n_nab_sites);	/* -V'(r) / r		      */
-   real         force_cpt, site0, site1, site2, s00, s01, s02, s11, s12, s22;
-   register	real rrx,rry,rrz;
-   real         reloc_v[3][CUBE(NSHELL)];	/* PBC relocation vectors     */
-   real         **nab_pot			/* Gathere'd pot par array    */
-   		= (real**)arralloc((size_mt)sizeof(real), 2,
-				   0, n_potpar-1, 0, n_nab_sites-1);
-   double	subcell = control.subcell;	/* Local copy. May change it. */
    static	int n_cell_list = 1;
    cell_mt      *c_ptr = aalloc(n_cell_list, cell_mt );
    spec_mp      spec;
-   cell_mt      *cmol;
    cell_mt      **cell;
    ivec_mt      *nabor;
    
    static boolean       init = true;
    static int           n_nabors;
    static reloc_mt      ***reloc = 0;
+   double	subcell = control.subcell;	/* Local copy. May change it. */
+
 #ifdef DEBUG2
    double ppe, rr[3], ss[3];
    int im, is, i;
    mat_mp h = system->h;
    mat_mt hinv;
 #endif
-  
 
    if(subcell <= 0.0) subcell = control.cutoff/5.0;
    nx = system->h[0][0]/subcell+0.5;
@@ -921,9 +743,6 @@ mat_mt          stress;                 /* Stress virial                (out) */
                      }
       onx = nx; ony = ny; onz = nz;
    }
-#ifdef titan
-#pragma asis
-#endif
    if(init)
    {
       for(spec = species; spec < species+system->nspecies; spec++)
@@ -931,7 +750,6 @@ mat_mt          stress;                 /* Stress virial                (out) */
 	    n_cell_list += spec->nmols*spec->nsites;
 	 else 
 	    n_cell_list += spec->nmols;
-
       xfree(c_ptr);
       c_ptr = aalloc(n_cell_list, cell_mt);
       init = false;
@@ -958,7 +776,9 @@ mat_mt          stress;                 /* Stress virial                (out) */
    for(ipot = 0; ipot < n_potpar; ipot++)
       for(i_id = 1; i_id < max_id; i_id++)
       {
+#ifdef titan
 NOVECTOR
+#endif
          for(isite = 0; isite < nsites; isite++)
             potp[i_id][ipot][isite] = potpar[i_id*max_id+id[isite]].p[ipot];
       }
@@ -968,17 +788,8 @@ NOVECTOR
    if( n_frame_types > 2 )
       message(NULLI, NULLP, FATAL,
 	      "Multiple framework molecules are not supported");
-   nfnab = ialloc(n_frame_types+1);		/* Extra element has value 0  */
    
-   reloc_alloc(system->h, reloc_v);
-#ifdef DEBUG6
-   { int i;
-     for(i = 0; i < CUBE(NSHELL); i++)
-	printf("%f %f %f\n", reloc_v[0][i], reloc_v[1][i], reloc_v[2][i]);
-  }
-#endif
 
-   s00 = s01 = s02 = s11 = s12 = s22 = 0.0;	/* Accumulators for stress    */
 #ifdef DEBUG2
    ppe = 0;
    spec = species; isite = 0;
@@ -1015,6 +826,84 @@ NOVECTOR
    histout();
    note("Direct pot. energy = %g",ppe*CONV_E);
 #endif
+   force_inner(ithread, nthreads, site, chg, potp, id,
+	       n_nab_sites, n_nabors, nabor, cell, reloc, n_frame_types, 
+	       system,
+	       stress, pe, site_force);
+
+#ifdef DEBUG2
+   histout();
+#endif
+   afree((gptr*)(potp+1));  xfree(c_ptr); 
+   xfree(cell);        xfree(id); 
+   xfree(nabor);
+}
+/******************************************************************************
+ *  Force_inner() Paralellised inner loops of force_calc.  Loops over cells   *
+ *  in MD cell with stride = nomber of processors available.  Should be       *
+ *  called once for each parallel thread.				      *
+ ******************************************************************************/
+void
+force_inner(ithread, nthreads, site, chg, potp, id, n_nab_sites, n_nabors, 
+	    nabor, cell, reloc, n_frame_types, system,
+	    stress, pe, site_force)
+int	ithread, nthreads;
+real	**site, **site_force;
+real	chg[];
+real	***potp;
+int	id[];
+int	n_nab_sites;
+int	n_nabors;
+int	n_frame_types;
+system_mt *system;
+cell_mt	**cell;
+reloc_mt	***reloc;
+ivec_mt	*nabor;
+real	*pe;
+mat_mt	stress;
+{
+   int          *nab  = ialloc(n_nab_sites),	/* Neigbour site gather vector*/
+                *reloc_i = ialloc(n_nab_sites),	/* Vector of pbc relocations  */
+   		*work = ialloc(4*n_nab_sites);  /* Workspace for s_n_list     */
+   real         *nab_sx  = dalloc(n_nab_sites),	/* 'Gathered' list of         */
+   		*nab_sy  = dalloc(n_nab_sites),	/*   neighbour site co-ords   */
+                *nab_sz  = dalloc(n_nab_sites),	/*   - x,y,z components.      */
+                *forcejx = dalloc(n_nab_sites),	/* List of neighbour site     */
+                *forcejy = dalloc(n_nab_sites),	/*  forces in gathered form   */
+                *forcejz = dalloc(n_nab_sites),	/*  - xyz components.	      */
+                *rx      = dalloc(n_nab_sites),	/* Reference to neigbour site */
+                *ry      = dalloc(n_nab_sites),	/* - site vector adjusted for */
+                *rz      = dalloc(n_nab_sites),	/*  periodic boundaries. xyz. */
+                *r_sqr   = dalloc(n_nab_sites),	/* Squared site-site distance */
+                *nab_chg = dalloc(n_nab_sites),	/* Gathered neig. site charges*/
+                *forceij = dalloc(n_nab_sites),	/* -V'(r) / r		      */
+                *R = dalloc(n_nab_sites);    	/* pbc site relocation cpt    */
+   real         **nab_pot			/* Gathere'd pot par array    */
+   		= (real**)arralloc((size_mt)sizeof(real), 2,
+				   0, system->n_potpar-1, 0, n_nab_sites-1);
+   real         force_cpt, site0, site1, site2, s00, s01, s02, s11, s12, s22;
+   register real rrx,rry,rrz;
+   real         reloc_v[3][CUBE(NSHELL)];	/* PBC relocation vectors     */
+   real 	**pp, **ppp;
+   int          ix, iy, iz;		/* 3-d cell indices for ref and neig. */
+   int          icell,			/* Index for cells of molecule pair   */
+                nnab, jbeg, jmin, jmax,	/* Number of sites in neighbour list  */
+   		isite, jsite, ipot, lim;
+   int		nsites = system -> nsites;
+   int		nfnab[2];
+   cell_mt      *cmol;
+   double       norm = 2.0*control.alpha/sqrt(PI);	/* Coulombic prefactor*/
+   double	cutoffsq = SQR(control.cutoff),
+                cutoff100sq = 10000.0*cutoffsq;
+   s00 = s01 = s02 = s11 = s12 = s22 = 0.0;	/* Accumulators for stress    */
+   reloc_alloc(system->h, reloc_v);
+#ifdef DEBUG6
+   { int i;
+     for(i = 0; i < CUBE(NSHELL); i++)
+	printf("%f %f %f\n", reloc_v[0][i], reloc_v[1][i], reloc_v[2][i]);
+  }
+#endif
+
 /******************************************************************************
  *  Start of main loops.  Loop over species, ispec, molecules, imol, and      *
  *  sites, isite_mol on imol.  Isite is index into 'site' of site specified   *
@@ -1022,12 +911,12 @@ NOVECTOR
  *  so jsite, counts from jbase to end.  Thus isite, jsite run over all site  *
  *  site pairs on distinct molecules.                                         *
  ******************************************************************************/
-   icell = -1;
-   for(ix = 0; ix < nx; ix++)
-      for(iy = 0; iy < ny; iy++)
-         for(iz = 0; iz < nz; iz++)
+   for( icell = ithread; icell < nx*ny*nz; icell += nthreads)
    {
-      if(cell[++icell] == NULL) continue;       /* Empty cell - go on to next */
+      if(cell[icell] == NULL) continue;       /* Empty cell - go on to next */
+      ix = icell/ (ny*nz);
+      iy = icell/nz - ny*ix;
+      iz = icell - nz*(iy + ny*ix);
       nnab = 0;
 #ifdef DEBUG1
       printf("Working on cell %4d (%d,%d,%d) (sites %4d to %4d)\n", icell,
@@ -1072,7 +961,6 @@ VECTORIZE
             			/* Loop over all molecules in cell icell. */
       for(cmol = cell[icell]; cmol != NULL; cmol = cmol->next)
       {
-	 real **pp, **ppp;
 	 if( cmol->frame_type )
 	 {
 	    jmin = 0;
@@ -1086,12 +974,12 @@ VECTORIZE
          lim = cmol->isite + cmol->num;
          for(isite = cmol->isite; isite < lim; isite++)
          {                                   /* Loop over sites in molecule */
-	    pp = potp[id[isite]];
-	    ppp = nab_pot;
-            for(ipot = 0; ipot < n_potpar; ipot++)
-	    {
+            pp = potp[id[isite]];
+            ppp = nab_pot;
+            for(ipot = 0; ipot < system->n_potpar; ipot++)
+            {
                gather(jmax, *ppp++, *pp++, nab, nsites);
-	    }
+            }
 #ifdef DEBUG1
             if(isite == 100)
 #endif
@@ -1103,12 +991,11 @@ VECTORIZE
 #endif
 	    site0=site[0][isite]; site1=site[1][isite]; site2=site[2][isite];
 VECTORIZE
-   
             for(jsite=jmin; jsite < jmax; jsite++)
             {
-	       rrx = nab_sx[jsite] - site0;
-	       rry = nab_sy[jsite] - site1;
-	       rrz = nab_sz[jsite] - site2;
+               rrx = nab_sx[jsite] - site0;
+               rry = nab_sy[jsite] - site1;
+               rrz = nab_sz[jsite] - site2;
                r_sqr[jsite] = rrx*rrx+rry*rry+rrz*rrz;
                rx[jsite] = rrx;
                ry[jsite] = rry;
@@ -1177,16 +1064,10 @@ VECTORIZE
    stress[1][2]  += s12;
    stress[2][2]  += s22;
 
-
-#ifdef DEBUG2
-   histout();
-#endif
-   afree((gptr*)(potp+1)); afree((gptr*)nab_pot); xfree(work);
-   xfree(r_sqr);   xfree(nfnab);    xfree(c_ptr); 
-   xfree(R);       xfree(reloc_i);  xfree(nab_chg);
-   xfree(rx);      xfree(ry);       xfree(rz);
-   xfree(forcejx); xfree(forcejy);  xfree(forcejz);
-   xfree(nab);     xfree(cell);     xfree(nabor);
-   xfree(nab_sx);  xfree(nab_sy);   xfree(nab_sz);
-   xfree(id);      xfree(forceij);
+   afree((gptr*)nab_pot); xfree(work);  
+   xfree(nab);     xfree(reloc_i);  xfree(nab_chg);
+   xfree(r_sqr);   xfree(R);       xfree(forceij);
+   xfree(rx);      xfree(ry);      xfree(rz);
+   xfree(forcejx); xfree(forcejy); xfree(forcejz);
+   xfree(nab_sx);  xfree(nab_sy);  xfree(nab_sz);
 }
