@@ -34,6 +34,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.9  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.8  1996/10/04 17:27:24  keith
  *       Rescheduled line order to overlap divide/computation on DEC Alpha/T3D.
  *
@@ -142,7 +147,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/kernel.c,v 2.8 1996/10/04 17:27:24 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/kernel.c,v 2.9 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -172,7 +177,10 @@ const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 		              {"generic",6},
 		              {0,0}};	            /* MUST be null-terminated*/
 /*
- *  Array of dimensions of pot'l parameters.  Powers of {m,l,t} per parameter.
+ *  Array of dimensions of pot'l parameters.  Triplets contain powers
+ *  of {m,l,t} for each parameter and are used to convert from input
+ *  to program units.   E.g LJ, e is an energy: kgm**2s-2 => {1,2,-2},
+ *  sigma ls a length => {0,1,0}.
  */
 const dim_mt   pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
                                  {{1,8,-2},{1,2,-2},{0,-1,0}},
@@ -198,8 +206,8 @@ const dim_mt   pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
 #define GENPOT 3
 /*============================================================================*/
 /******************************************************************************
- *  dist_pot   return attractive part of potential integrated from cutoff to  *
- *  infinity for distant pressure calculation.				      *
+ *  dist_pot   return attractive part of potential integrated outside cutoff. *
+ *  dist_pot = - int_{r_c}^{infty} r^2 U(r) dr                                *
  ******************************************************************************/
 double	dist_pot(potpar, cutoff, ptype)
 real	potpar[];			/* Array of potential parameters      */
@@ -236,7 +244,7 @@ int	ptype;			/* Index of potential type in potspec[]. (in) */
 double	*pe;			/* Potential energy accumulator.     (in/out) */
 double	alpha, norm;		/* Ewald parameter and 2*alpha/sqrt(pi). (in) */
 double	chg;			/* Electric charge of reference site.    (in) */
-real	forceij[];		/* Vector of dU(r)/dr for each in r_sqr.(out) */
+real	forceij[];		/* Vector of -1/r * dU(r)/dr            (out) */
 real	r_sqr[];		/* Vector of site-site distances (**2).  (in) */
 real	nab_chg[];		/* Vector of charges of neighbour sites. (in) */
 real	*pot[];			/* Vectors of potential parameters.	 (in) */
