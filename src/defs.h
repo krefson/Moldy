@@ -1,7 +1,10 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.16 91/08/17 13:58:59 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.17 91/08/19 16:49:34 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.17  91/08/19  16:49:34  keith
+ * Moved #if so that errno.h is included for system V.
+ * 
  * Revision 1.16  91/08/17  13:58:59  keith
  * Added "__unix__" symbol for ANSI unix compilers.
  * 
@@ -72,8 +75,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.16 $"
-#define		 REVISION_DATE    "$Date: 91/08/17 13:58:59 $"
+#define          REVISION         "$Revision: 1.17 $"
+#define		 REVISION_DATE    "$Date: 91/08/19 16:49:34 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -160,9 +163,9 @@
 #      define NOVECTOR  ## novector
 #   endif
 #else
-#ifdef convexvc
-#   define VECTORIZE __dir no_recurrence :
-#   define NOVECTOR  __dir scalar :
+#ifdef __convexc__
+#   define VECTORIZE ;/* $dir no_recurrence */;
+#   define NOVECTOR  ;/* $dir scalar */;
 #else
 #ifdef stellar
 #   define VECTORIZE __dir NO_RECURRENCE :
