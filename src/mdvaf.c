@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.19 2005/01/13 11:53:42 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.20 2005/02/04 14:52:15 cf Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,10 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.19 2005/01/
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.20  2005/02/04 14:52:15  cf
+ *  Reads header info with dumpext to determine system info and maximum time slice range.
+ *  Common utility messages/errors moved to utlsup.h.
+ *
  *  Revision 1.19  2005/01/13 11:53:42  cf
  *  Removed unused -3 and -c options.
  *
@@ -137,13 +141,8 @@ int ithread=0, nthreads=1;
 
 #define VAF  0
 #define VTF  1
-void	zero_float(float *r, int n)
-{
-   int i;
-   for(i=0; i < n; i++)
-      r[i] = 0.0;
-}
-double vdotf(int n, float *x, int ix, float *y, int iy)
+
+double vdotf(int n, real *x, int ix, real *y, int iy)
 {
    register double      dot=0.0;
    register int i, j;
@@ -225,11 +224,11 @@ void header_to_moldy(FILE *Fp, system_mt *sys, spec_mp *spec_pp,
  ***********************************************************************/    
 void
 vaf_calc(spec_mt *species, char *spec_mask, int nspecies, int vstart, int vfinish,
-	 int vinc, int max_av, int it_inc, float (**vel)[3], float **vaf, int aflg)
+	 int vinc, int max_av, int it_inc, real (**vel)[3], real **vaf, int aflg)
 {
    register int i, it, irec, totmol, ivaf, ispec;
    spec_mp      spec;
-   float	(*vel0)[3], (*vel1)[3];
+   real		(*vel0)[3], (*vel1)[3];
 
    /* Outer loop for selecting initial time slice */
    for(it = 0; it <= (max_av-1)*it_inc; it+=it_inc)
@@ -261,12 +260,12 @@ vaf_calc(spec_mt *species, char *spec_mask, int nspecies, int vstart, int vfinis
  ***********************************************************************/    
 void
 vtf_calc(spec_mt *species, char *spec_mask, int nspecies, int vstart, int vfinish, int vinc, 
-	 int max_av, int it_inc, float (**vel)[3], float **vtf, int aflg)
+	 int max_av, int it_inc, real (**vel)[3], real **vtf, int aflg)
 {
    register int it, irec, totmol, ivtf, ispec, imol, i;
    spec_mp      spec;
-   float	(*vel0)[3], (*vel1)[3];
-   float	vtftmp0[3], vtftmp1[3];
+   real		(*vel0)[3], (*vel1)[3];
+   real		vtftmp0[3], vtftmp1[3];
 
    /* Outer loop for selecting initial time slice */
    for(it = 0; it <= (max_av-1)*it_inc; it+=it_inc)
@@ -298,10 +297,10 @@ vtf_calc(spec_mt *species, char *spec_mask, int nspecies, int vstart, int vfinis
  * vaf_out().  Output routine for displaying vaf results                      *
  ******************************************************************************/
 void
-vaf_out(spec_mt *species, float **vaf, int max_av, int nvaf, char *spec_mask, int nspecies, int aflg, float tstep, int outsw)
+vaf_out(spec_mt *species, real **vaf, int max_av, int nvaf, char *spec_mask, int nspecies, int aflg, float tstep, int outsw)
 {
    register int i, ispec=0, ivaf;
-   float	total;
+   real		total;
    spec_mp      spec;
 
    for( spec=species; spec < species+nspecies; spec++, ispec++)
@@ -369,9 +368,9 @@ main(int argc, char **argv)
    FILE         *Dp, *Hp;
    system_mt    sys;
    spec_mt      *species;
-   float        (**vel)[3];
+   real         (**vel)[3];
    int          nvaf, max_av, nspecies;
-   float        **vaf;
+   real         **vaf;
    char         *spec_list = NULL;
    char         *spec_mask = NULL;
    int          arglen, ind, genflg=0;
@@ -584,8 +583,8 @@ main(int argc, char **argv)
    dump_size = 3*(aflg?sys.nmols_r:sys.nmols)*sizeof(float);
 
   /* Allocate memory for velocity data and zero */
-   vel = (float (**)[3])arralloc(sizeof(float[3]),2,0,nslices-1,0,(aflg?sys.nmols_r:sys.nmols)-1);
-   zero_float(vel[0][0], nslices*(aflg?sys.nmols_r:sys.nmols)*3);
+   vel = (real (**)[3])arralloc(sizeof(real[3]),2,0,nslices-1,0,(aflg?sys.nmols_r:sys.nmols)-1);
+   zero_real(vel[0][0], nslices*(aflg?sys.nmols_r:sys.nmols)*3);
 
    if( (dump_buf = (float*)malloc(dump_size)) == 0)
       error(BUFFMEM, dump_size);
@@ -643,9 +642,9 @@ main(int argc, char **argv)
      if (max_av < 1)
         max_av = 1;
 
-     vaf = (float**)arralloc(sizeof(float),2,0,nvaf-1,0,
+     vaf = (real**)arralloc(sizeof(real),2,0,nvaf-1,0,
                              outsw?nspecies-1:3*nspecies-1);
-     zero_float(vaf[0],nvaf*(outsw?nspecies:3*nspecies));
+     zero_real(vaf[0],nvaf*(outsw?nspecies:3*nspecies));
 
   /* Calculate and print vaf/vtf values */
      if( outsw )
