@@ -19,9 +19,13 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.14 2000/11/15 17:52:00 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.15 2000/11/16 10:54:20 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.15  2000/11/16 10:54:20  keith
+ * Corrected bad declaration of struct mol_mt in structs.h
+ * Removed obsolete "acceleration interpolation" from startup.
+ *
  * Revision 2.14  2000/11/15 17:52:00  keith
  * Changed format of dump files.
  * Added second struct with sufficient information
@@ -244,14 +248,14 @@ typedef struct                  /* Whole system information                   */
                 /* Dimensions for C of M quantities are [nmols][3]            */
                 /* and for quaternions and derivatives, [nmols_r][4]          */
    vec_mp       c_of_m,         /* Centre of mass positions                   */
-                vel,            /* " " " velocities                           */
-                velp;           /* Predicted C of M velocities                */
+                mom,            /* " " " momenta                              */
+                momp;           /* Predicted C of M momenta                   */
    quat_mp      quat,           /* Quaternions for this component             */
                 avel,           /* Quaternion derivatives                     */
                 avelp;          /* Predicted quaternion derivatives           */
    mat_mp       h,              /* Unit cell for zero-stress simulation       */
-                hdot,           /* Unit cell derivatives                      */
-                hdotp;          /* Predicted unit cell derivatives            */
+                hmom,           /* Unit cell derivatives                      */
+                hmomp;          /* Predicted unit cell derivatives            */
                 /*
                  *  Following variables ta..., ra.. have been introduced
                  *  by VVM and have dimensions of [nspecies]
@@ -283,8 +287,8 @@ typedef struct                  /* Information for one species                */
                 /* and for quaternions and derivatives, [nmols][4]            */
                 /* If species is monatomic, quaternion pointers are null      */
    vec_mp       c_of_m,         /* Centre of mass positions                   */
-                vel,            /* " " " velocities                           */
-                velp;           /* Predicted C of M velocities                */
+                mom,            /* " " " momenta                              */
+                momp;           /* Predicted C of M momenta                   */
    quat_mp      quat,           /* Quaternions for this species               */
                 avel,           /* Quaternion derivatives                     */
                 avelp;          /* Predicted quaternion derivatives           */

@@ -34,6 +34,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: algorith.c,v $
+ *       Revision 2.17  2000/12/06 17:45:27  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.16  2000/11/06 16:02:05  keith
  *       First working version with a Nose-Poincare thermostat for rigid molecules.
  *
@@ -162,7 +169,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/algorith.c,v 2.16 2000/11/06 16:02:05 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/algorith.c,v 2.17 2000/12/06 17:45:27 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -343,63 +350,26 @@ void make_sites(mat_mt h,        /* Unit cell matrix h                   (in) */
    xfree(ssite);
 }
 /******************************************************************************
- *  Parinello   Calculate the correction to the scaled centre of mass         *
- *  accelerations in the Parinello and Rahman zero-stress method.             *
- *  Parinello M. and Rahman A. J. Appl. Phys. 52(12), 7182-7190 (1981)        *
- ******************************************************************************/
-void parinello(mat_mt h,        /* P and R's unit cell matrix            (in) */
-	       mat_mt h_dot, 	/* Derivative of h matrix                (in) */
-	       vec_mp vel, 	/* Centre of mass scaled velocities      (in) */
-	       vec_mp acc, 	/* C of M accelerations                  (in) */
-	       vec_mp acc_out,  /* C of M accelerations                 (out) */
-	       int nmols)       /* Size of vel and acc/ number molecules (in) */
-{
-   mat_mt	h_tr,		/* Transpose of h			      */
-   		h_tr_dot,	/* Transpose of h_dot			      */
-   		h_tmp_1,	/* Store for intermediate terms		      */
-   		h_tmp_2,	/* Store for intermediate terms		      */
-   		G,		/* h_tr * h	(metric tensor)		      */
-   		G_inv,		/* Inverse of G				      */
-   		G_dot,		/* Derivative of G			      */
-   		G_i_d;		/* G_inv * G_dot			      */
-   vec_mp	acc_corr=ralloc(nmols);	/* Correction term to accelerations   */
-   int		i, imol;	/* Counters				      */
-
-   transpose(h,h_tr);
-   mat_mul(h_tr,h,G);				/* We now have the G matrix   */
-   invert(G, G_inv);				/* G (-1) done                */
-   transpose(h_dot, h_tr_dot);
-   mat_mul(h_tr_dot, h, h_tmp_1);
-   mat_mul(h_tr, h_dot, h_tmp_2);
-   mat_add(h_tmp_1, h_tmp_2, G_dot);		/* G dot now complete         */
-   mat_mul(G_inv, G_dot, G_i_d);		/* G_inv * G_dot              */
-
-   mat_vec_mul(G_i_d, vel, acc_corr, nmols);    /* Calculate correction term  */
-
-   for(i = 0; i < 3; i++)                       /* Add correction term        */
-      for(imol = 0; imol < nmols; imol++)       /* to accelerations           */
-         acc_out[imol][i] = acc[imol][i] - acc_corr[imol][i];
-
-   xfree(acc_corr);
-}
-/******************************************************************************
  *  Trans_ke  calculate and return the translational kinetic energy           *
  ******************************************************************************/
 double	trans_ke(mat_mt h,       /* Unit cell matrix                      (in) */
-		 vec_mt (*vel_s),/* Scaled c of m velocities              (in) */ 
+		 vec_mt (*mom),  /* Scaled c of m momenta                 (in) */ 
 		 real s,         /* Thermostat, time scaling variable     (in) */
 		 double mass,    /* Mass of a molecule of this species    (in) */ 
 		 int nmols)      /* Number of molecules                   (in) */
 {
    double	ke;
-   vec_mp	vel = ralloc(nmols);	/* Unscaled (real) velocities         */
+   vec_mp	real_mom = ralloc(nmols);	/* Unscaled (real) momenta     */
+   mat_mt	hinv;
    
-   mat_vec_mul(h, vel_s, vel, nmols);   /* Calculate unscaled velocities      */
+   invert(h, hinv);
+   transpose(hinv,hinv);
+   mat_vec_mul(hinv, mom, real_mom, nmols);	/* Calculate unscaled momenta  */
 
-   ke = vdot(3*nmols, vel[0], 1, vel[0], 1);
+   ke = vdot(3*nmols, real_mom[0], 1, real_mom[0], 1);
 
-   xfree(vel);
-   return(0.5 * mass * ke / SQR(s));
+   xfree(real_mom);
+   return(ke / (2.0*mass*SQR(s)));
 }
    
 /******************************************************************************
@@ -424,77 +394,46 @@ double	rot_ke(quat_mt (*omega_p),/* Principal angular velocities        (in) */
 void energy_dyad(mat_mt ke_dyad,        /* Dyad is accumulated here  (in/out) */ 
 		 mat_mt h, 	        /* Unit cell matrix             (in)  */
 		 double s, 	        /* Thermostat variable           (in) */
-		 vec_mp vels, 	        /* Scaled velocities            (in)  */
+		 vec_mp mom, 	        /* Scaled momenta               (in)  */
 		 double mass, 	        /* Mass of particles            (in)  */
 		 int nmols)		/* Number of molecules          (in)  */
 {
    int		i, j;				/* Counters		      */
-   vec_mp	vel = ralloc(nmols);		/* Real velocities	      */
-
-   mat_vec_mul(h, vels, vel, nmols);	/* Calculate unscaled velocities      */
+   vec_mp	real_mom = ralloc(nmols);	/* Real momenta	      */
+   mat_mt       hinv;
+   
+   invert(h, hinv);
+   transpose(hinv,hinv);
+   mat_vec_mul(hinv, mom, real_mom, nmols);	/* Calculate real momenta     */
 
    for(i = 0; i < 3; i++)
       for(j = 0; j < 3; j++)
       {
-         ke_dyad[i][j] += mass * vdot(nmols, vel[0]+i, 3, vel[0]+j, 3)/SQR(s);
+         ke_dyad[i][j] += vdot(nmols, real_mom[0]+i, 3, real_mom[0]+j, 3)
+	    /(mass * SQR(s));
       }     
 
-   xfree(vel);
+   xfree(real_mom);
 }
-double trace(mat_mt mat)
+
+/* Calculate sigma = vol*h transpose inverse  */
+void mk_sigma(mat_mt h, mat_mt sigma)
 {
-  return(mat[0][0] + mat[1][1] + mat[2][2]);
+   int i,j,k,l,m,n;
+
+   for(i=0, j=1, k=2; i<3; i++, j=(j+1)%3, k=(k+1)%3)
+      for (l=0, m=1, n=2; l<3; l++, m=(m+1)%3, n=(n+1)%3)
+	 sigma[i][l] = h[j][m]*h[k][n] - h[k][m]*h[j][n];
 }
-/******************************************************************************
- * Rahman   Calculate the unit cell matrix accelerations                      *
- ******************************************************************************/
-void rahman(mat_mt stress_vir,          /* Stress virial                      */ 
-	    mat_mt h, 	                /* Unit cell matrix                   */
-	    mat_mt hddot,               /* Unit cell accelerations            */
-	    mat_mt ke_dyad,             /* Translational kinetic energy dyad  */
-	    double press,               /* Externally applied pressure        */
-	    double W, 	                /* Piston mass parameter              */
-	    int mask)	                /* Mask constrained el's of h matrix  */
+
+double ke_cell(mat_mt hmom, real w)
 {
-   double	vol = det(h);		/* Unit cell volume		      */
-   double       cpscale;                /* Scale factor for uniform scale case*/
-   mat_mt	stress,			/* Stress tensor		      */
-   		h_tr,			/* Transpose of h		      */
-   		h_tr_inv,		/* Inverse of transpose of h	      */
-                htrh,                   /* Product  h'h                       */
-   		sigma;			/* P & R sigma matrix 		      */
-   int		i, j;			/* Counters			      */
+   double s = 0;
+   int    i,j;
+   
+   for(i=0; i < 3; i++)
+      for(j=0; j < 3; j++)
+	 s += hmom[i][j]*hmom[i][j];
 
-   for(i = 0; i < 3; i++)
-      for(j = 0; j < 3; j++)
-         stress[i][j] = (ke_dyad[i][j] + stress_vir[i][j]) / vol;
-
-   for(i = 0; i < 3; i++)
-      stress[i][i] -= press;	/* Subtract applied pressure from diagonal    */
-
-   transpose(h, h_tr);          /* Calculate sigma = vol*h transpose inverse  */
-   if ( mask >> 9 & 1 )                         /* Uniform dilation case */
-   {
-     mat_mul(h_tr, h, htrh);
-     cpscale = 3.0*vol*trace(stress)/(W*trace(htrh));
-     mat_sca_mul(cpscale,h, hddot);
-   }
-   else                                         /* Full parrinello-rahman */
-   {
-     invert(h_tr, h_tr_inv);
-     mat_sca_mul(vol, h_tr_inv, sigma);
-
-     mat_mul(stress, sigma, hddot);	/* Calculate unit cell accelerations  */
-     mat_sca_mul(1.0/W, hddot, hddot);
-     /* 
-      * Zero unwanted degrees of freedom. Refson PhD Thesis (1986)
-      */   
-     for(i = 0; i < 9; i++)
-     {
-        if( mask & 1 )
-	   hddot[0][i] = 0.0;		/* Access as [9] rather than [3][3]   */
-	mask  >>= 1;
-     }
-   }
-
+   return 0.5/w*s;
 }

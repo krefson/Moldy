@@ -37,6 +37,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.24  2000/12/06 17:45:33  keith
+ *      Tidied up all ANSI function prototypes.
+ *      Added LINT comments and minor changes to reduce noise from lint.
+ *      Removed some unneccessary inclusion of header files.
+ *      Removed some old and unused functions.
+ *      Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *      Revision 2.23  2000/11/16 10:54:19  keith
  *      Corrected bad declaration of struct mol_mt in structs.h
  *      Removed obsolete "acceleration interpolation" from startup.
@@ -288,7 +295,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.23 2000/11/16 10:54:19 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.24 2000/12/06 17:45:33 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -327,7 +334,10 @@ void		banner_page(system_mp system, spec_mt *species,
 void		zero_real(real *r, int n);
 void		eigens(real *A, real *RR, real *E, int N);
 void		transpose(real (*a)[3], real (*b)[3]);
-void		mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
+void		mat_mul(mat_mt a, mat_mt b, mat_mt c); /* 3 x 3 matrix multiplier */
+void		mat_sca_mul(real s, mat_mt a, mat_mt b); 
+void		mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec, 
+			    int number);
 double          det(real (*a)[3]);
 void		q_mul(quat_mp p, quat_mp q, quat_mp r, int n);
 void		rot_to_q(real (*rot)[3], real *quat);
@@ -605,7 +615,7 @@ void	thermalise(system_mp system, spec_mt *species)
    /*
     *  Set accelerations to zero.
     */
-   zero_real(system->vel[0],   3*system->nmols);
+   zero_real(system->mom[0],   3*system->nmols);
    system->ts = 1.0;
    system->rs = 1.0;
    system->tsmom = 0.0;
@@ -615,13 +625,13 @@ void	thermalise(system_mp system, spec_mt *species)
    {
       if( !spec->framework)
       {
-	 root_ktm = sqrt(kB * control.temp / spec->mass) / system->h[0][0];
+	 root_ktm = system->ts*sqrt(kB * control.temp * spec->mass);
 	 total_mass += spec->mass*spec->nmols;
 	 for(imol = 0; imol < spec->nmols; imol++)
 	    for(i = 0; i < 3; i++)	/* Centre of mass co-ords -1 < x < 1  */
 	    {
-	       spec->vel[imol][i]    = system->ts* root_ktm * gauss_rand();
-	       momentum[i] += spec->mass*spec->vel[imol][i];
+	       spec->mom[imol][i]    = root_ktm * gauss_rand();
+	       momentum[i] += spec->mom[imol][i];
 	    }
 	 
 	 if(spec->rdof > 0)
@@ -641,13 +651,16 @@ void	thermalise(system_mp system, spec_mt *species)
 	 }
       }
    }
+   mat_vec_mul(system->h, system->mom, system->mom, system->nmols);
+   mat_vec_mul(system->h, &momentum, &momentum, 1);
+
    for (spec = species; spec < species+system->nspecies; spec++)
       if( !spec->framework)
       {
 	 for(i = 0; i < 3; i++)
 	    
 	    for(imol = 0; imol < spec->nmols; imol++)
-	       spec->vel[imol][i] -= momentum[i] / (system->ts * total_mass);
+	       spec->mom[imol][i] -= momentum[i] * spec->mass / (system->ts * total_mass);
       }
 }
 /******************************************************************************
@@ -796,11 +809,11 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
    		nmolr_cum = 0;		/* As above excluding point atoms     */
 
    system->c_of_m = ralloc(system->nmols);
-   system->vel    = ralloc(system->nmols);
-   system->velp   = ralloc(system->nmols);
+   system->mom    = ralloc(system->nmols);
+   system->momp   = ralloc(system->nmols);
 #ifdef	DEBUG
    printf(" *D* System Dynamic variables (all %d x 3 reals)\n",system->nmols);
-   printf(afmt,"c_of_m",system->c_of_m,"vel",system->vel,"velp",system->velp,
+   printf(afmt,"c_of_m",system->c_of_m,"vel",system->mom,"velp",system->momp,
           "acc",system->acc,"acco",system->acco,"accvo",system->accvo);
 #endif
 
@@ -815,14 +828,14 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
 
 
    system->h       = ralloc(3);
-   system->hdot    = ralloc(3);
-   system->hdotp   = ralloc(3);
+   system->hmom    = ralloc(3);
+   system->hmomp   = ralloc(3);
    zero_real(system->h[0],       9);
-   zero_real(system->hdot[0],    9);
-   zero_real(system->hdotp[0],   9);
+   zero_real(system->hmom[0],    9);
+   zero_real(system->hmomp[0],   9);
 #ifdef	DEBUG
    printf(" *D* System Dynamic variables (all 9 reals)\n");
-   printf(afmt,"h",system->h, "hdot",system->hdot, "hdotp",system->hdotp,
+   printf(afmt,"h",system->h, "hdot",system->hmom, "hdotp",system->hmomp,
        "hddot",system->hddot,"hddoto",system->hddoto,"hddotvo",system->hddotvo);
 #endif
 
@@ -830,12 +843,12 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
    {
       inhibit_vectorization();
       spec->c_of_m = system->c_of_m + nmol_cum;
-      spec->vel    = system->vel    + nmol_cum;
-      spec->velp   = system->velp   + nmol_cum;
+      spec->mom    = system->mom    + nmol_cum;
+      spec->momp   = system->momp   + nmol_cum;
 #ifdef	DEBUG
       printf(" *D* Species %d Dynamic variables (all %d x 3 reals)\n",
 	     spec-species, spec->nmols);
-      printf(afmt,"c_of_m",spec->c_of_m,"vel",spec->vel,"velp",spec->velp,
+      printf(afmt,"c_of_m",spec->c_of_m,"vel",spec->mom,"velp",spec->momp,
           "acc",spec->acc,"acco",spec->acco,"accvo",spec->accvo);
 #endif
       if(spec->rdof > 0)
@@ -1036,7 +1049,10 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
    restrt_mt	backup_header;		/* To read backup file header into    */
    contr_mt	backup_control;		/* Control struct from backup file    */
    quat_mt	*qpf=0;			/* Quat of rotation to princ. frame   */
+   spec_mt	*spec;			/* Species counter.		      */
    int		av_convert;		/* Flag for old-fmt averages in restrt*/
+   int		vmajor, vminor;		/* Version numbers		      */
+   mat_mt	htr, g, tmp_mat;	/* Temporary matricies.		      */
 
    *backup_restart = 0;
    (void)memst(restart_header,0,sizeof(*restart_header));
@@ -1292,6 +1308,24 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
 
       read_restart(restart, restart_header->vsn, system, av_convert);  
                                         /* Saved dynamic vars etc             */
+      /*
+       * Convert velocities into momenta
+       */
+      if( sscanf(restart_header->vsn, "%d.%d", &vmajor, &vminor) < 2 )
+	 message(NULLI, NULLP, FATAL, INRVSN, restart_header->vsn);
+      if( vmajor == 2 && vminor <= 18 )
+      {
+	 note("Velocities from old restart file version %d.%d converted to momenta",
+	      vmajor, vminor);
+	 transpose(system->h, htr);
+	 mat_mul(htr, system->h, g);
+	 for (spec = *species; spec < *species+system->nspecies; spec++)
+	 {
+	    mat_sca_mul(spec->mass*system->ts,g, tmp_mat);
+	    mat_vec_mul(tmp_mat, spec->mom, spec->mom, spec->nmols);
+	 }
+      }
+
       convert_averages(control.roll_interval, old_roll_interval, av_convert);
       control.reset_averages = 0;                /* This flag never propagated.*/
 
@@ -1300,11 +1334,11 @@ void start_up(char *contr_name,         /* Name of control file "" for stdin  */
 #ifdef BEEMAN
       for(i = 0; i < 9; i++)		/* Zap cell velocities if constrained */
 	 if( (control.strain_mask >> i) & 1 )
-	    system->hddot[0][i] = system->hddoto[0][i] = system->hdot[0][i] = 0;
+	    system->hddot[0][i] = system->hddoto[0][i] = system->hmom[0][i] = 0;
       if(control.const_pressure == 2 && old_const_pressure == 1) 
       {                      /* Enforce consistency if const-p method changed */
 	 for(i = 0; i < 9; i++)		           /* Zap cell velocities etc */
-	    system->hddot[0][i] = system->hddoto[0][i] = system->hdot[0][i] = 0;
+	    system->hddot[0][i] = system->hddoto[0][i] = system->hmom[0][i] = 0;
       }
 #endif
       (void)fclose(restart);

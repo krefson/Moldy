@@ -31,6 +31,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: matrix.c,v $
+ *       Revision 2.10  2000/12/06 17:45:31  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.9  2000/04/27 17:57:09  keith
  *       Converted to use full ANSI function prototypes
  *
@@ -111,7 +118,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/matrix.c,v 2.9 2000/04/27 17:57:09 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/matrix.c,v 2.10 2000/12/06 17:45:31 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -178,14 +185,23 @@ void mat_mul(mat_mt a,                      	/* Input matrix 1        (in) */
 	     mat_mt b,                      	/* Input matrix 2        (in) */ 
 	     mat_mt c)                      	/* Result matrix        (out) */
 {
-   register int	i, j;				/* Counters		      */
+   real r00, r01, r02, r10, r11, r12, r20, r21, r22;
    
-   if(c == a || c == b)
-      message(NULLI, NULLP, FATAL, OVRLAP, "mat_mul");
+   r00 = a[0][0]*b[0][0] + a[0][1]*b[1][0] + a[0][2]*b[2][0];
+   r01 = a[0][0]*b[0][1] + a[0][1]*b[1][1] + a[0][2]*b[2][1];
+   r02 = a[0][0]*b[0][2] + a[0][1]*b[1][2] + a[0][2]*b[2][2];
 
-   for(i = 0; i < 3; i++)
-      for(j = 0; j < 3; j++)
-         c[i][j] = a[i][0]*b[0][j] + a[i][1]*b[1][j] + a[i][2]*b[2][j];
+   r10 = a[1][0]*b[0][0] + a[1][1]*b[1][0] + a[1][2]*b[2][0];
+   r11 = a[1][0]*b[0][1] + a[1][1]*b[1][1] + a[1][2]*b[2][1];
+   r12 = a[1][0]*b[0][2] + a[1][1]*b[1][2] + a[1][2]*b[2][2];
+
+   r20 = a[2][0]*b[0][0] + a[2][1]*b[1][0] + a[2][2]*b[2][0];
+   r21 = a[2][0]*b[0][1] + a[2][1]*b[1][1] + a[2][2]*b[2][1];
+   r22 = a[2][0]*b[0][2] + a[2][1]*b[1][2] + a[2][2]*b[2][2];
+
+   c[0][0] = r00; c[0][1] = r01; c[0][2] = r02;
+   c[1][0] = r10; c[1][1] = r11; c[1][2] = r12;
+   c[2][0] = r20; c[2][1] = r21; c[2][2] = r22;
 }
 /******************************************************************************
  *  mat_sca_mul.  Multiply a 3x3 matrix by a scalar                           *
@@ -256,4 +272,30 @@ void invert(mat_mt a,                           /* Input matrix          (in) */
    for(i = 0, j = 1, k = 2; i < 3; i++, j=(j+1)%3, k=(k+1)%3)
       for(l = 0, m = 1, n = 2; l < 3; l++, m=(m+1)%3, n=(n+1)%3)
          b[l][i] = deter*(a[j][m]*a[k][n] - a[j][n]*a[k][m]);
+}
+
+/******************************************************************************
+ * Trace.  Calculate the trace of a 3x3 matrix.				      *
+ ******************************************************************************/
+double trace(mat_mt mat)
+{
+  return(mat[0][0] + mat[1][1] + mat[2][2]);
+}
+/******************************************************************************
+ * mvaxpy. Matrix-Vector a X + Y.					      *
+ ******************************************************************************/
+void mvaxpy(int n, mat_mt a, vec_mt (*x), vec_mt (*y))
+{
+   int i;
+   double y0, y1, y2;
+   
+   for(i=0; i<n; i++)
+   {
+      y0 = y[i][0] + a[0][0] * x[i][0] + a[0][1] * x[i][1] + a[0][2] * x[i][2];
+      y1 = y[i][1] + a[1][0] * x[i][0] + a[1][1] * x[i][1] + a[1][2] * x[i][2];
+      y2 = y[i][2] + a[2][0] * x[i][0] + a[2][1] * x[i][1] + a[2][2] * x[i][2];
+      y[i][0] = y0;
+      y[i][1] = y1;
+      y[i][2] = y2;
+   }
 }

@@ -22,6 +22,13 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.27  2000/12/06 17:45:32  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.26  2000/11/06 16:02:06  keith
  *       First working version with a Nose-Poincare thermostat for rigid molecules.
  *
@@ -105,7 +112,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2.26 2000/11/06 16:02:06 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2.27 2000/12/06 17:45:32 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -1119,8 +1126,8 @@ void	copy_dynamics(system_mp system)
    size_mt	asize;			/* Size of averages database	      */
 
    par_broadcast((gptr*)system->c_of_m,3*system->nmols, sizeof(real), 0);
-   par_broadcast((gptr*)system->vel,   3*system->nmols, sizeof(real), 0);
-   par_broadcast((gptr*)system->velp,  3*system->nmols, sizeof(real), 0);
+   par_broadcast((gptr*)system->mom,   3*system->nmols, sizeof(real), 0);
+   par_broadcast((gptr*)system->momp,  3*system->nmols, sizeof(real), 0);
    if(system->nmols_r > 0)
    {
       par_broadcast((gptr*)system->quat,    4*system->nmols_r, sizeof(real), 0);
@@ -1128,8 +1135,8 @@ void	copy_dynamics(system_mp system)
       par_broadcast((gptr*)system->avelp,   4*system->nmols_r, sizeof(real), 0);
    }
    par_broadcast((gptr*)system->h,       9, sizeof(real), 0); 
-   par_broadcast((gptr*)system->hdot,    9, sizeof(real), 0);
-   par_broadcast((gptr*)system->hdotp,   9, sizeof(real), 0); 
+   par_broadcast((gptr*)system->hmom,    9, sizeof(real), 0);
+   par_broadcast((gptr*)system->hmomp,   9, sizeof(real), 0); 
 
    ap = av_ptr(&asize,0);	      /* get addr, size of database   */
    par_broadcast(ap, 1, asize,0);

@@ -26,6 +26,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.28  2000/12/06 17:45:27  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.27  2000/11/15 17:51:57  keith
  *       Changed format of dump files.
  *       Added second struct with sufficient information
@@ -281,7 +288,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.27 2000/11/15 17:51:57 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.28 2000/12/06 17:45:27 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -298,31 +305,32 @@ gptr   *talloc(int n, size_mt size, int line, char *file);
                               /* Interface to memory allocator       */
 void   tfree(gptr *p);	       /* Free allocated memory	      	      */
 void   afree(gptr *p);	       /* Free allocated array	      	      */
-void   leapf_com(real step, vec_mt (*c_of_m), vec_mt (*vel), int nmols);
-void   leapf_vel(real step, mat_mt, vec_mt (*vel), 
-       	  vec_mt (*force), real mass, int nmols);
+void   leapf_com(real step, vec_mt (*c_of_m), vec_mt (*mom), 
+		 mat_mt h, real s, real mass, int nmols);
+void   leapf_mom(real step, mat_mt, vec_mt (*mom), 
+		 vec_mt (*force),  int nmols);
 void   leapf_quat(real step, quat_mt (*quat), quat_mt (*avel), 
-       	   real *inertia, int nmols);
+		  real *inertia, int nmols);
 void   leapf_avel(real step, quat_mt (*avel), vec_mt (*torque), 
-       	   real *inertia, int nmols);
+		  real *inertia, int nmols);
 double leapf_s(double step, real s, real smom, double Q);
 double leapf_smom_a(double step, real s, real smomo,  double Q, double gkt);
 double leapf_smom_b(double step, real s, real smomo, double Q, double gkt);
+void   leapf_hmom(double step, mat_mt hmom, mat_mt sigma, real s,
+		  real pressure, int mask);
+void   leapf_h(double step, mat_mt h, mat_mt hmom, real s, real W);
 void   make_sites(mat_mt, vec_mp c_of_m_s, quat_mp quat, 
-       	   vec_mp p_f_sites, real **site, int nmols, int nsites, 
-       	   int molflag);		/* Construct site coordinate arrays  */
+		  vec_mp p_f_sites, real **site, int nmols, int nsites, 
+		  int molflag);		/* Construct site coordinate arrays  */
 void   mol_force(real **site_force, vec_mp force, int nsites, int nmols);
                                       /* Calculate molecular from site force */
 void   mol_torque(real **site_force, vec_mp site, vec_mp torque, quat_mp quat, 
        	   int nsites, int nmols);    /* Calculate torques from site forces  */
-void   parinello(mat_mt, mat_mt, vec_mp vel, vec_mp acc,
-       	  vec_mp acc_out, int nmols); /* Get correction to c/m acceleration  */
-void   rahman(mat_mt stress_vir, mat_mt, mat_mt, 
-              mat_mt ke_dyad, double press, double W, int mask); 
 					/* Get h 2nd derivatives             */
 void   escape(vec_mt *, int);
-void   energy_dyad(mat_mt ke_dyad, mat_mt, double s, vec_mp vels, double mass,  
+void   energy_dyad(mat_mt ke_dyad, mat_mt, double s, vec_mp moms, double mass,  
        	    int nmols);			/* Calculate mvv for stress term     */
+double ke_cell(mat_mt hmom, real w);
 void   force_calc(real **site, real **site_force, system_mt *system, 
        	   spec_mt *species, real *chg, pot_mt *potpar, double *pe, 
        	   mat_mt stress);		/* Calculate direct-space forces     */
@@ -339,6 +347,10 @@ void   zero_double(double *r, int n);  /* Clear area of memory		     */
 void   invert(mat_mt , mat_mt );	/* Matrix inverter		     */
 double det(mat_mt );			/* Returns matrix determinant	     */
 void   mat_vec_mul(mat_mt , vec_mp, vec_mp, int);
+void   mat_mul(mat_mt a, mat_mt b, mat_mt c); /* 3 x 3 matrix multiplier     */
+void   mat_add(mat_mt a, mat_mt b, mat_mt c); /* Add 2 3x3 matrices          */
+void   mat_sca_mul(real s, mat_mt a, mat_mt b); 
+void   mk_sigma(mat_mt h, mat_mt sigma);
                                       /* 3 x 3 Matrix by Vector multiplier   */
 void   mean_square(vec_mt (*x), real *meansq, int nmols);
                      	                /* Calculates mean square of args    */
@@ -351,7 +363,7 @@ double sum(int n, double *x, int ix); /* Fast sum */
 void   vscale(int n, double s, real *x, int ix); /* Vector by const multiply */
 void   thermalise(system_mp system, spec_mt *species);	      
                                       /* Randomize velocities to given temp  */
-double trans_ke(mat_mt, vec_mt (*vel_s), real s, double mass, int nmols);
+double trans_ke(mat_mt, vec_mt (*mom_s), real s, double mass, int nmols);
                                      /* Compute translational kinetic energy */
 double rot_ke(quat_mt (*omega_p), real s, real *inertia, int nmols); 
                                     /* Compute rotational kinetic energy     */
@@ -386,33 +398,6 @@ extern int 	ithread, nthreads;
 #   define NLINE  (4*sizeof(double)/sizeof(real))
 #endif
 /*============================================================================*/
-/*******************************************************************************
- *  Mol_radius.  Determine and return the greatest molecular radius of any     *
- *  species in the system.  That is, the largest c-of-mass - site distance.    *
- *******************************************************************************/
-double mol_radius(spec_mt *species, int nspecies)
-{
-   spec_mp spec;
-   static double radius = -1.0;
-   double r;
-   int	isite;
-
-   if( radius >= 0.0 )
-      return radius;
-
-   radius = 0.0;
-   for(spec = species; spec < species+nspecies; spec++)
-      if( !spec->framework )
-      {
-	 for( isite = 0; isite < spec->nsites; isite++ )
-	 {
-	    r = SUMSQ(spec->p_f_sites[isite]);
-	    radius = MAX(radius, r);
-	 }
-      }
-   return radius;
-}
-
 /******************************************************************************
  *   rescale    rescale velocities and quaternion derivatives to desired temp.*
  *   Exact behaviour is controlled by flag "control.scale_options".	      *
@@ -519,7 +504,7 @@ rescale(system_mp system, spec_mp species)
       if( ! spec->framework )
       {
 	 scale = sqrt(control.temp / temp_value[2*ispec]);
-	 vscale(3 * spec->nmols,   scale, spec->vel[0], 1);
+	 vscale(3 * spec->nmols,   scale, spec->mom[0], 1);
 	 if( spec->rdof > 0 )
 	 { 
 	    scale = sqrt(control.temp / temp_value[2*ispec+1]);
@@ -545,14 +530,13 @@ rescale(system_mp system, spec_mp species)
       {
 	 total_mass += spec->mass*spec->nmols;
 	 for(i = 0; i < 3; i++)	
-	    momentum[i] += spec->mass/system->ts
-	                      *sum(spec->nmols, spec->vel[0]+i,3);
+	    momentum[i] += sum(spec->nmols, spec->mom[0]+i,3);
       }
       if(spec == species+system->nspecies)/* Normal loop exit => no framework */
 	 for (spec = species; spec < species+system->nspecies; spec++)
 	    for(i = 0; i < 3; i++)	    
 	       for(imol = 0; imol < spec->nmols; imol++)
-		  spec->vel[imol][i] -= system->ts*momentum[i] / total_mass;
+		  spec->mom[imol][i] -= momentum[i] * spec->mass / total_mass;
    }
    tfree((gptr*)temp_value);
 }
@@ -609,11 +593,22 @@ double tot_ke (system_mt *sys, spec_mt *species)
    int	    ispec;
    for(spec=species, ispec = 0; ispec < sys->nspecies; spec++, ispec++)
    {
-      ke += trans_ke(sys->h, spec->vel, sys->ts, spec->mass, spec->nmols) ;
+      ke += trans_ke(sys->h, spec->mom, sys->ts, spec->mass, spec->nmols) ;
       if(spec->rdof > 0)                     /* Only if polyatomic species */
 	 ke += rot_ke(spec->avel, sys->ts, spec->inertia, spec->nmols);
    }
    return ke;
+}
+/******************************************************************************
+ * stress_kin ().  Evaluate the kinetic part of the stress.		      *
+ ******************************************************************************/
+void stress_kin (mat_mt ke_dyad, system_mt *sys, spec_mt *species)
+{
+   spec_mt *spec;
+   zero_real(ke_dyad[0], 9);
+      
+   for (spec = species; spec < &species[sys->nspecies]; spec++)
+      energy_dyad(ke_dyad, sys->h, sys->ts, spec->mom, spec->mass, spec->nmols); 
 }
 /******************************************************************************
  * eval_forces().  This is the master potential and force evaluation routine. *
@@ -859,7 +854,7 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
 	vec_mt (*meansq_f_t)[2],        /* Mean square force and torque (out) */
 	double *pe, 		        /* Potential energy real/Ewald  (out) */
 	real *dip_mom, 		        /* Total system dipole moment   (out) */
-	mat_mt stress,	 	        /* Virial part of stress        (out) */
+	mat_mt stress_vir,	 	/* Virial part of stress        (out) */
 	restrt_mt *restart_header,      /* What the name says.           (in) */
 	int backup_restart)	        /* Flag signalling backup restart (in)*/
 {
@@ -877,8 +872,9 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    vec_mp   force_base = ralloc(sys->nmols),
             torque_base = sys->nmols_r?ralloc(sys->nmols_r):0;
    static double   ke;		       /* (translational) kinetic energy) */
+   double          vol = det(sys->h);
    static boolean  init = true;
-   mat_mt          hinv;
+   mat_mt          ke_dyad, sigma, tmp_mat;
    double	   tsold;
    spec_mp         spec;
    int             ispec, imol, imol_r;
@@ -924,18 +920,49 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    /*
     * H2 half step
     */
+   if( control.const_pressure )
+   {
+      vol = det(sys->h);
+      mk_sigma(sys->h, sigma);
+      leapf_hmom(0.5*control.step, sys->hmom, sigma, sys->ts, control.pressure, 
+		 control.strain_mask);
+
+      if( control.const_temp )
+	 sys->tsmom -= control.step*(ke_cell(sys->hmom, control.pmass)
+				     + control.pressure*vol);
+
+      leapf_h(0.5*control.step, sys->h, sys->hmom, sys->ts, control.pmass);
+
+      vol = det(sys->h);
+      mk_sigma(sys->h, sigma);
+      leapf_hmom(0.5*control.step, sys->hmom, sigma, sys->ts, control.pressure, 
+		 control.strain_mask);
+   }
+   /*
+    * H3 half step
+    */
    if( control.const_temp )
       sys->tsmom += 0.5*control.step*ke;
-   leapf_com(0.5*control.step/sys->ts, sys->c_of_m, sys->vel, sys->nmols);
+   if( control.const_pressure )
+   {
+      stress_kin(ke_dyad, sys, species);
+      mat_mul(ke_dyad, sigma, ke_dyad);
+      mat_sca_mul(0.5*control.step*sys->ts/vol, ke_dyad, ke_dyad);
+      mat_add(sys->hmom, ke_dyad, sys->hmom);
+   }
    for (spec = species; spec < &species[nspecies]; spec++)
+   {
+      leapf_com(0.5*control.step, spec->c_of_m, spec->mom, sys->h, sys->ts, 
+		spec->mass, spec->nmols);
       if( spec->rdof > 0 )
 	 leapf_quat(0.5*control.step/sys->ts, spec->quat, spec->avel, 
 		    spec->inertia, spec->nmols);
+   }
    /*
-    * H3 full step
+    * H4 full step
     */
    eval_forces(sys, species, site_info, potpar,
-	       pe, dip_mom, stress, force, torque);
+	       pe, dip_mom, stress_vir, force, torque);
    /*
     * Evaluate initial Hamiltonian H_0 at start of run or after a velocity
     * scaling step.  It's more accurate to compute H_0 here at the first 
@@ -946,14 +973,15 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    if(control.istep == 1 || just_rescaled )
    {
       sys->H_0 = ke + pe[0] + pe[1] + SQR(sys->tsmom)/(2.0*control.ttmass) 
-                            + sys->d_of_f*kB*control.temp * log(sys->ts); 
+                            + sys->d_of_f*kB*control.temp * log(sys->ts)
+	                    + ke_cell(sys->hmom, control.pmass)
+                            + control.pressure*vol;
    }
 
-   invert(sys->h, hinv);
    for (ispec = 0, spec = species; ispec < nspecies; ispec++, spec++)
    {
-      leapf_vel(control.step*sys->ts, hinv, spec->vel, force[ispec], 
-		                            spec->mass, spec->nmols);
+      leapf_mom(control.step*sys->ts, sys->h, spec->mom,  force[ispec], 
+		                            spec->nmols);
       if( spec->rdof > 0 )
 	 leapf_avel(control.step*sys->ts, spec->avel, torque[ispec], 
 		                          spec->inertia, spec->nmols);
@@ -963,16 +991,55 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    if( control.const_temp )
       sys->tsmom -= control.step*(pe[0]+pe[1] - sys->H_0);
 
+   if( control.const_pressure )
+   {
+      /* Assume sigma, vol set from H2 init step */
+      mat_mul(stress_vir, sigma, tmp_mat);
+      mat_sca_mul(control.step*sys->ts/vol, tmp_mat, tmp_mat); 
+      mat_add(sys->hmom, tmp_mat, sys->hmom);
+   }
    /*
-    * Second H2 half step.
+    * Second H3 half step.
     */
    if( control.const_temp )
       sys->tsmom += 0.5*control.step*ke;
-   leapf_com(0.5*control.step/sys->ts, sys->c_of_m, sys->vel, sys->nmols);
+   if( control.const_pressure )
+   {
+      stress_kin(ke_dyad, sys, species);
+      /* Assume sigma, vol set from H2 init step */
+      mat_mul(ke_dyad, sigma, ke_dyad);
+      mat_sca_mul(0.5*control.step*sys->ts/vol, ke_dyad, ke_dyad);
+      mat_add(sys->hmom, ke_dyad, sys->hmom);
+   }
+
    for (spec = species; spec < &species[nspecies]; spec++)
+   {
+      leapf_com(0.5*control.step, spec->c_of_m, spec->mom, sys->h, sys->ts, 
+		spec->mass, spec->nmols);
       if( spec->rdof > 0 )
 	 leapf_quat(0.5*control.step/sys->ts, spec->quat, spec->avel, 
 		    spec->inertia, spec->nmols);
+   }
+   /*
+    * Second H2 half step.
+    */
+   if( control.const_pressure )
+   {
+      /* Assume vol and sigma set from previous H2 half step */
+      leapf_hmom(0.5*control.step, sys->hmom, sigma, sys->ts, control.pressure, 
+		 control.strain_mask);
+
+      if( control.const_temp )
+	 sys->tsmom -= control.step*(ke_cell(sys->hmom, control.pmass)
+				     + control.pressure*vol);
+
+      leapf_h(0.5*control.step, sys->h, sys->hmom, sys->ts, control.pmass);
+
+      vol = det(sys->h);
+      mk_sigma(sys->h, sigma);
+      leapf_hmom(0.5*control.step, sys->hmom, sigma, sys->ts, control.pressure, 
+		 control.strain_mask);
+   }
    /*
     * Final half step for H1.  Also update the KE according to new value of s.
     */
@@ -991,13 +1058,16 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
 #ifdef DEBUG_THERMOSTAT
    if( control.istep%control.print_interval == 0)
    {
-      double H, HP, HS;
+      double H, HP, HS, HHP, HHS;
       HP = SQR(sys->tsmom)/(2.0*control.ttmass);
       HS = sys->d_of_f*kB*control.temp * log(sys->ts);
-      H = ke + pe[0] + pe[1] + HP + HS;
+      HHP = ke_cell(sys->hmom, control.pmass);
+      HHS = control.pressure*vol;
+      H = ke + pe[0] + pe[1] + HP + HS + HHP + HHS;
       fprintf(stderr,
-             "do_step:  s= %7.4g  ps= %9.5g  H= %12.7g  HK= %12.7g  HV= %12.7g  HP= %12.7g  HS= %12.7g   (H-H_0)s= %12.7g\n",
-             sys->ts,sys->tsmom, H,ke, pe[0] + pe[1], HP, HS,(H-sys->H_0)*sys->ts); 
+             "do_step:  s= %7.4g          ps= %9.5g      H= %12.7g  HK= %12.7g  HV= %12.7g  \n          HP= %12.7g    HS= %12.7g   HHP= %12.7g  HHS= %12.7g   (H-H_0)s= %12.7g\n",
+             sys->ts,sys->tsmom, H,ke, pe[0] + pe[1], HP, HS,HHP, HHS, 
+	      (H-sys->H_0)*sys->ts); 
    }
 #endif
 
@@ -1007,7 +1077,7 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
    for (spec = species; spec < &species[nspecies]; spec++)
       if( spec->framework )
       {
-	 zero_real(spec->vel[0], 3*spec->nmols);
+	 zero_real(spec->mom[0], 3*spec->nmols);
       }
 /*
  * Calculate mean-square forces and torques
@@ -1028,8 +1098,8 @@ do_step(system_mt *sys,                 /* Pointer to system info        (in) */
       if (control.dump_interval > 0 && control.dump_level != 0 &&
 	 control.istep >= control.begin_dump &&
 	  (control.istep - control.begin_dump) % control.dump_interval == 0)
-       dump(sys, species, force_base, torque_base, stress, pe[0] + pe[1], restart_header,
-	      backup_restart);
+       dump(sys, species, force_base, torque_base, stress_vir, pe[0] + pe[1], 
+	    restart_header, backup_restart);
       
    }
    xfree(force);

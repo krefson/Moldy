@@ -31,6 +31,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.18  2000/12/06 17:45:33  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.17  2000/11/10 12:16:28  keith
  *       Tidied up some dubious cases to get rid of compiler warnings.
  *       Updated configure scripts -- fix for non-pgcc linux case.
@@ -190,7 +197,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/restart.c,v 2.17 2000/11/10 12:16:28 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/restart.c,v 2.18 2000/12/06 17:45:33 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -567,8 +574,8 @@ void	read_restart(FILE *restart,       /* Open file descriptor to read from*/
    xfp.fp=restart;
 
    cread(xfp,  (gptr*)system->c_of_m, lsizeof(real), 3*system->nmols, xdr_real);
-   cread(xfp,  (gptr*)system->vel,    lsizeof(real), 3*system->nmols, xdr_real);
-   cread(xfp,  (gptr*)system->velp,   lsizeof(real), 3*system->nmols, xdr_real);
+   cread(xfp,  (gptr*)system->mom,    lsizeof(real), 3*system->nmols, xdr_real);
+   cread(xfp,  (gptr*)system->momp,   lsizeof(real), 3*system->nmols, xdr_real);
    if(system->nmols_r > 0)
    {
       cread(xfp,  (gptr*)system->quat,    lsizeof(real), 4*system->nmols_r, xdr_real);
@@ -576,8 +583,8 @@ void	read_restart(FILE *restart,       /* Open file descriptor to read from*/
       cread(xfp,  (gptr*)system->avelp,   lsizeof(real), 4*system->nmols_r, xdr_real);
    }
    cread(xfp,  (gptr*)system->h,       lsizeof(real), 9, xdr_real);
-   cread(xfp,  (gptr*)system->hdot,    lsizeof(real), 9, xdr_real);
-   cread(xfp,  (gptr*)system->hdotp,   lsizeof(real), 9, xdr_real);
+   cread(xfp,  (gptr*)system->hmom,    lsizeof(real), 9, xdr_real);
+   cread(xfp,  (gptr*)system->hmomp,   lsizeof(real), 9, xdr_real);
 
    if( vmajor > 2 || (vmajor == 2 && vminor > 7) )
    {
@@ -629,7 +636,7 @@ void	write_restart(char *save_name,  /* Name of save file to be written    */
    XDR		xdrsw;
    xfp_mt	xfp;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.17 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.19 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    save = fopen(control.temp_file, "wb");
@@ -676,8 +683,8 @@ void	write_restart(char *save_name,  /* Name of save file to be written    */
    cwrite(xfp,  (gptr*)potpar, lsizeof(pot_mt), SQR(system->max_id), xdr_pot);
 
    cwrite(xfp,  (gptr*)system->c_of_m, lsizeof(real), 3*system->nmols, xdr_real);
-   cwrite(xfp,  (gptr*)system->vel,    lsizeof(real), 3*system->nmols, xdr_real);
-   cwrite(xfp,  (gptr*)system->velp,   lsizeof(real), 3*system->nmols, xdr_real);
+   cwrite(xfp,  (gptr*)system->mom,    lsizeof(real), 3*system->nmols, xdr_real);
+   cwrite(xfp,  (gptr*)system->momp,   lsizeof(real), 3*system->nmols, xdr_real);
    if(system->nmols_r > 0)
    {
       cwrite(xfp, (gptr*)system->quat,    lsizeof(real), 4*system->nmols_r, xdr_real);
@@ -685,8 +692,8 @@ void	write_restart(char *save_name,  /* Name of save file to be written    */
       cwrite(xfp, (gptr*)system->avelp,   lsizeof(real), 4*system->nmols_r, xdr_real); 
    }
    cwrite(xfp,  (gptr*)system->h,       lsizeof(real), 9, xdr_real);
-   cwrite(xfp,  (gptr*)system->hdot,    lsizeof(real), 9, xdr_real);
-   cwrite(xfp,  (gptr*)system->hdotp,   lsizeof(real), 9, xdr_real);
+   cwrite(xfp,  (gptr*)system->hmom,    lsizeof(real), 9, xdr_real);
+   cwrite(xfp,  (gptr*)system->hmomp,   lsizeof(real), 9, xdr_real);
 
    cwrite(xfp,  (gptr*)&system->ts,      lsizeof(real), 1, xdr_real);
    cwrite(xfp,  (gptr*)&system->tsmom,   lsizeof(real), 1, xdr_real);

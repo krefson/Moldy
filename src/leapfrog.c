@@ -35,6 +35,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: leapfrog.c,v $
+ *       Revision 2.6  2000/12/06 17:45:31  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.5  2000/11/09 16:54:12  keith
  *       Updated utility progs to be consistent with new dump format
  *
@@ -60,7 +67,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.5 2000/11/09 16:54:12 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.6 2000/12/06 17:45:31 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -81,6 +88,13 @@ void	q_mul(quat_mp p, quat_mp q, quat_mp r, int n);
 void	q_conj_mul(quat_mp p, quat_mp q, quat_mp r, int n);
 void	q_mul_conj(quat_mp p, quat_mp q, quat_mp r, int n);
 void	vscale(register int n, register double s, register real *x, register int ix);
+void    transpose(mat_mt a, mat_mt b)    ;
+void    invert(mat_mt a, mat_mt b)    ;
+void    mvaxpy(int n, mat_mt a, vec_mt (*x), vec_mt (*y));
+void	mat_mul(mat_mt a, mat_mt b, mat_mt c); /* 3 x 3 matrix multiplier     */
+void	mat_add(mat_mt a, mat_mt b, mat_mt c); /* Add 2 3x3 matrices          */
+void	mat_sca_mul(register real s, mat_mt a, mat_mt b); 
+					/* Multiply 3x3 matrix by scalar      */
 void	tfree(gptr *p);
 
 void	note(char *, ...);		/* Write a message to the output file */
@@ -140,37 +154,31 @@ void escape(vec_mp c_of_m, int nmols)
    }
 }
 /******************************************************************************
- * leapf_coml(). Perform the centre-of-mass update of the leapfrog integration *
+ * leapf_com(). Perform the centre-of-mass update of the leapfrog integration *
  ******************************************************************************/
-void leapf_com(real step, vec_mt (*c_of_m), vec_mt (*vel), int nmols)
+void leapf_com(real step, vec_mt (*c_of_m), vec_mt (*mom), 
+	       mat_mt h, real s, real mass, int nmols)
 {
-   int imol;
-   real *com = c_of_m[0], *vm=vel[0];
+   mat_mt G, G_inv,  h_tr;
+   transpose(h,h_tr);
+   mat_mul(h_tr,h,G);                           /* We now have the G matrix   */
+   invert(G, G_inv);                            /* G (-1) done                */
+   mat_sca_mul(step/(mass*s), G_inv, G_inv);
 
-   for(imol = 0; imol < 3*nmols; imol++)
-      com[imol] += step * vm[imol];
+   mvaxpy(nmols, G_inv, mom, c_of_m);
+
    escape(c_of_m, nmols);
 }
 /******************************************************************************
- * leapf_vel().  Perform the velocity update of the leapfrog integration      *
+ * leapf_mom().  Perform the linear momentum  update of the integration       *
  ******************************************************************************/
-void leapf_vel(real step, real (*hinv)[3], vec_mt (*vel), vec_mt (*force), real mass, int nmols)
+void leapf_mom(real step, real (*h)[3], vec_mt (*mom), vec_mt (*force), int nmols)
 {
-   int	imol;
-   real	srmass = step/mass;
-   real hi00=hinv[0][0], hi01=hinv[0][1], hi02=hinv[0][2];
-   real hi10=hinv[1][0], hi11=hinv[1][1], hi12=hinv[1][2];
-   real hi20=hinv[2][0], hi21=hinv[2][1], hi22=hinv[2][2];
+   mat_mt h_tr;
 
-   for(imol = 0; imol < nmols; imol++)
-   {
-      vel[imol][0] += srmass*(hi00*force[imol][0] + hi01*force[imol][1] 
-                                                  + hi02*force[imol][2]);
-      vel[imol][1] += srmass*(hi10*force[imol][0] + hi11*force[imol][1] 
-                                                  + hi12*force[imol][2]);
-      vel[imol][2] += srmass*(hi20*force[imol][0] + hi21*force[imol][1] 
-                                                  + hi22*force[imol][2]);
-   }
+   transpose(h, h_tr);
+   mat_sca_mul(step, h_tr, h_tr);
+   mvaxpy(nmols, h_tr, force, mom);
 }
 /******************************************************************************
  * leapf_s().  Perform the thermostat co-ordinate update of the leapfrog.     *
@@ -447,4 +455,35 @@ void leapf_avel(real step, quat_mt (*avel), vec_mt (*torque), real *inertia, int
       avel[imol][3] += step*rinertia[2]*torque[imol][2];
    }
    
+}
+/******************************************************************************
+ * leapf_hmom().  Perform the h-matrix momentum update step.	              *
+ ******************************************************************************/
+void leapf_hmom(double step, mat_mt hmom, mat_mt sigma, real s, real pressure, 
+		int mask)
+{
+   int i,j;
+   double r = 0.5 * step * s * pressure;
+
+   for(i=0; i<3; i++)
+      for (j=0; j<3; j++)
+      {
+	 if( mask & 1 )
+	    hmom[i][j] = 0;
+	 else
+	    hmom[i][j] -= r *sigma[i][j];
+	 mask  >>= 1;    	 
+      }
+}
+/******************************************************************************
+ * leapf_h().  Perform the h-matrix update step.			      *
+ ******************************************************************************/
+void leapf_h(double step, mat_mt h, mat_mt hmom, real s, real w)
+{
+   int i,j;
+   double r = step * s / w;
+
+   for(i=0; i<3; i++)
+      for (j=0; j<3; j++)
+	 h[i][j] += r * hmom[i][j];
 }

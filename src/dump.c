@@ -43,6 +43,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.19  2000/12/06 17:45:28  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
  *       Revision 2.18  2000/11/15 17:51:58  keith
  *       Changed format of dump files.
  *       Added second struct with sufficient information
@@ -212,7 +219,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.18 2000/11/15 17:51:58 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.19 2000/12/06 17:45:28 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -233,9 +240,13 @@ void            tfree(gptr *p);	       /* Free allocated memory	      	      */
 static char	*mutate(char *name);
 double		mdrand1(void);
 void		mat_vec_mul(real (*m)[3], vec_mp , vec_mp , int );
+void		mat_sca_mul(real s, mat_mt a, mat_mt b); 
+void		invert(mat_mt , mat_mt );	/* Matrix inverter             */
+void		transpose(mat_mt a, mat_mt b); /* transpose a 3x3 matrix       */
+void            mvaxpy(int n, mat_mt a, vec_mt (*x), vec_mt (*y));
 void            vscale( int,  double,  real *, int); /* Vector* const multiply */
-static void	dump_convert(float *, system_mp, vec_mt (*), vec_mt (*), 
-			     mat_mt, double );
+static void	dump_convert(float *, system_mt (*), spec_mt (*), vec_mt (*), 
+			     vec_mt (*), mat_mt, double );
 static void	real_to_float(real *b, float *a, int n);
 static void	avel_to_float(quat_mt *b, float *a, int n, double ts);
 void		note(char *, ...);	/* Write a message to the output file */
@@ -469,7 +480,7 @@ void	dump(system_mp system, spec_mt *species,
    boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.18 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.19 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    if( ! strchr(control.dump_file, '%') )
@@ -641,7 +652,7 @@ void	dump(system_mp system, spec_mt *species,
     *
     * Dump file should already be open for write.
     */
-   dump_convert(dump_buf, system, force, torque, stress, pe);
+   dump_convert(dump_buf, system, species, force, torque, stress, pe);
    dump_header.ndumps++;
    dump_header.restart_timestamp = restart_header->timestamp;
 
@@ -693,12 +704,16 @@ static char	*mutate(char *name)
  *  All quantities are converted to floats (from real, whatever that is) and  *
  *  c_of_m and its derivatives are converted to unscaled co-ordinates.	      *
  ******************************************************************************/
-static void	dump_convert(float *buf, system_mp system, vec_mt (*force), 
-			     vec_mt (*torque), mat_mt stress, double pe)
+static void	dump_convert(float *buf, system_mt *system, spec_mt *species,
+			     vec_mt (*force), vec_mt (*torque), 
+			     mat_mt stress, double pe)
 {
    int		nmols   = system->nmols,
    		nmols_r = system->nmols_r;
+   int		imol;
    vec_mt	*scale_buf = ralloc(nmols);
+   spec_mt	*spec;
+   mat_mt	hinvt, hmomrw;
    real		ppe = pe;
 
    if( control.dump_level & 1)
@@ -716,15 +731,29 @@ static void	dump_convert(float *buf, system_mp system, vec_mt (*force),
    }
    if( control.dump_level & 2)
    {
-      mat_vec_mul(system->h, system->vel, scale_buf, nmols);
-      vscale(3 * nmols,   1.0/system->ts, scale_buf[0], 1);
+      /*
+       * Evaluate dr/dt = 1/w*hmom*rho[i] + h^{-1}'p[i]/(m_i*s)
+       * Second (main) term first.
+       */
+      invert(system->h, hinvt);
+      transpose(hinvt, hinvt);
+      mat_vec_mul(hinvt, system->mom, scale_buf, nmols);
+      for (spec = species, imol=0; spec < &species[system->nspecies]; 
+	   spec++, imol += spec->nmols)
+	 vscale(3 * spec->nmols,   1.0/(spec->mass*system->ts), scale_buf[imol], 1);
+      /*
+       * 1/w*hmom*rho[i] term.
+       */
+      mat_sca_mul(1.0/control.pmass, system->hmom, hmomrw);
+      mvaxpy(nmols, hmomrw, system->c_of_m, scale_buf);
       real_to_float(scale_buf[0],    buf, 3*nmols);	buf += 3*nmols;
+
       if( system->nmols_r > 0 )
       {
 	 avel_to_float(system->avel, buf, nmols_r, 1.0/system->ts);
 	 buf += 3*nmols_r;
       }
-      real_to_float(system->hdot[0],    buf, 9);	buf += 9;
+      real_to_float(system->hmom[0],    buf, 9);	buf += 9;
       real_to_float(&system->tsmom, buf, 1);		buf += 1;
    }
    if( control.dump_level & 8)
