@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/molout.c,v 1.8 2001/05/18 17:10:56 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/molout.c,v 1.9 2001/05/21 15:07:57 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -230,7 +230,7 @@ pdb_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info,
    spec_mt	*spec;
    double	a,b,c, alpha, beta, gamma;
    double	qconv;	/* Variable for converting charge from program units */ 
-   char         *atom_name;
+   char         atom_name[3];
    double	atom_charge;
    int		imol, isite, itot=1, ispec=1;
    int		i, is;
@@ -269,7 +269,7 @@ pdb_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info,
      {
        for(is = 0; is < spec->nsites; is++)
        {
-         atom_name = site_info[spec->site_id[is]].name;
+	  strncpy(atom_name, site_info[spec->site_id[is]].name, 2); atom_name[2] = 0;
 	 atom_charge = site_info[spec->site_id[is]].charge*qconv;
          if(fabs(site_info[spec->site_id[is]].mass) != 0)
          {
