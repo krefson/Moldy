@@ -23,6 +23,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.16  92/03/02  15:28:32  keith
+ * Fixed bug which caused dump/restart consistency check to erroneously
+ * report an error on the second dump write.
+ * Relaxed check to allow dump run to abort and restart from beginning.
+ * 
  * Revision 1.15  91/08/16  15:23:57  keith
  * Checked error returns from fread, fwrite, fseek and fclose more
  * rigourously.   Called strerror() to report errors.
@@ -82,7 +87,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.16 92/03/02 13:37:13 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.16 92/03/02 15:28:32 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -183,7 +188,7 @@ double		pe;
 	 file_pos = sizeof(dump_t)
 	            + ndumps*dump_size*sizeof(float);	/* Expected length    */
 	 if( file_len < file_pos )
-         	message(NULLI, NULLP, FATAL, CORUPT, fname, file_len, file_pos);
+         	message(NULLI, NULLP, FATAL, CORUPT, fname, file_pos, file_len);
       }
       else
       {
