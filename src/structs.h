@@ -19,9 +19,13 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/md/moldy/RCS/structs.h,v 2.6 1994/06/08 13:16:34 keith stab $
+ * $Header: /home/eeyore_data/keith/md/moldy/RCS/structs.h,v 2.7 1995/12/04 11:45:49 keith Exp keith $
  *
  * $Log: structs.h,v $
+ * Revision 2.7  1995/12/04 11:45:49  keith
+ * Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
+ * Thanks to V. Murashov.
+ *
  * Revision 2.6  1994/06/08  13:16:34  keith
  * Changed all timestep-related parameters to type "long". This means
  * that 16-bit DOS compilers can do more than 32767 timesteps.
@@ -222,12 +226,12 @@ typedef struct                  /* Whole system information                   */
                  *  Following variables ta..., ra.. have been introduced
                  *  by VVM and have dimensions of [nspecies]
                  */
-   double      *ta,             /* N-H alpha for trans temp                   */
+   real        *ta,             /* N-H alpha for trans temp                   */
                *tap,            /* Predicted N-H alpha for trans temp         */
                *tadot,          /* Derivative of trans alpha                  */
                *tadoto,         /* Old derivative of trans alpha              */
                *tadotvo;        /* Very old derivative of trans alpha         */
-   double      *ra,             /* N-H alpha for trans temp                   */
+   real        *ra,             /* N-H alpha for trans temp                   */
                *rap,            /* Predicted N-H alpha for trans temp         */
                *radot,          /* Derivative of trans alpha                  */
                *radoto,         /* Old derivative of trans alpha              */
