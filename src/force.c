@@ -29,6 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.19  1998/12/07 14:44:29  keith
+ *       Inlined and optimized spxpy().
+ *
  *       Revision 2.18  1998/07/17 14:34:06  keith
  *       Attempt at better algorithm to guess size for neighbour list arrays,
  *       "n_nab_sites".  This determines the subcell with the highest density
@@ -138,7 +141,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/force.c,v 2.18 1998/07/17 14:34:06 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/force.c,v 2.19 1998/12/07 14:44:29 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -194,6 +197,7 @@ double          precision();            /* Floating pt precision.             */
 void            kernel();               /* Force kernel routine               */
 double          mol_radius();           /* Radius of largest molecule.        */
 void            rdf_accum();            /* Bin distances for rdf evaluation.  */
+double		poteval();
 #ifdef HAVE_STDARG_H
 gptr            *arralloc(size_mt,int,...); /* Array allocator                */
 void            note(char *, ...);      /* Write a message to the output file */
@@ -214,7 +218,7 @@ static irvec_mt *ifloor; /*Lookup tables for int "floor()"    */
  * to increase this from 1, your system must be *highly* inhomogeneous
  * and may not make sense!
  */
-#define         NMULT 1.5
+#define         NMULT 16.0
 #define         TOO_CLOSE       0.25    /* Error signalled if r**2 < this     */
 #define         NCELL(ix,iy,iz) ((iz)+(nz)*((iy)+(ny)*(ix)))
 #define         LOCATE(r,eps)   NCELL(cellbin(r[0], nx, eps), \
@@ -230,6 +234,8 @@ static irvec_mt *ifloor; /*Lookup tables for int "floor()"    */
 #else                       /* ANSI, so turn it off when bounds checking.  */
 #   define P0 1
 #endif
+
+#define INTRA
 /*============================================================================*/
 
 /******************************************************************************
@@ -601,6 +607,7 @@ int     *frame_type;                    /* Framework type counter        (out)*/
       }
       else
       {
+#ifdef MOLBIN
          icell = LOCATE(c_of_m[imol], eps);
          list->isite = isite;
          list->num   = spec->nsites;
@@ -609,6 +616,25 @@ int     *frame_type;                    /* Framework type counter        (out)*/
          cell[icell] = list++;
          list->next = NULL;
          isite += spec->nsites;
+#else
+         for( is = 0; is < spec->nsites; is++)
+         {
+            ssite[0] = site[0][isite];
+            ssite[1] = site[1][isite];
+            ssite[2] = site[2][isite];
+            mat_vec_mul(hinv, (vec_mt*)ssite, (vec_mt*)ssite, 1);
+	    ssite[0]=fmod(16.5+ssite[0],1.0)-0.5;
+	    ssite[1]=fmod(16.5+ssite[1],1.0)-0.5;
+	    ssite[2]=fmod(16.5+ssite[2],1.0)-0.5;
+            icell = LOCATE(ssite, eps);
+            list->isite = isite++;
+            list->num   = 1;
+            list->next = cell[icell];
+            list->frame_type = 0;
+            cell[icell] = list++;
+            list->next = NULL;
+         }
+#endif
       }
    }
 }
@@ -776,6 +802,107 @@ cell_mt **cell;                         /* Head of cell list            (in) */
 
    return nnab;
 }
+#ifdef DEBUG2
+/******************************************************************************
+ * minimage.  Calculate "minimum-image"  histogram and energy for debugging   *
+ ******************************************************************************/
+void minimage(system, species, site, chg, potp, id)
+system_mt       *system;                /* System struct                 (in) */
+spec_mt         species[];              /* Array of species records      (in) */
+real            **site;                 /* Site co-ordinate arrays       (in) */
+real            chg[];                  /* Array of site charges         (in) */
+real            ***potp;                /* Array of potential parameters (in) */
+int		id[];			/* Site identifier array.	 (in) */
+{
+   spec_mt *spec;
+   double ppe, rr[3], ss[3];
+   int i, im, is, isite, imol, jsite;
+   double       norm = 2.0*control.alpha/sqrt(PI);      /* Coulombic prefactor*/
+   double       cutoffsq = SQR(control.cutoff), /* Temporary copy for optim'n */
+                cutoff100sq = 10000.0*cutoffsq;
+   real         *r_sqr   = dalloc(system->nsites), /* Squared site-site distance */
+                *forceij = dalloc(system->nsites); /* -V'(r) / r                 */
+   mat_mp h = system->h;
+   mat_mt hinv;
+
+   ppe = 0;
+   spec = species; isite = 0;
+   invert(h, hinv);
+   for(imol = 0, im = 0; imol < system->nmols; imol++, im++)
+   {
+      if(im == spec->nmols)
+      {
+         im = 0;
+         spec++;
+      }
+      for(is = isite; is < isite+spec->nsites; is++)
+      {
+         for(jsite = 0; jsite < isite; jsite++)
+         {
+            for( i=0; i<3; i++)
+               rr[i] = site[i][jsite] - site[i][is];
+            mat_vec_mul(hinv, rr, ss, 1);
+            for( i=0; i<3; i++)
+               ss[i] -= floor(ss[i]+0.5);
+            mat_vec_mul(h, ss, rr, 1);
+
+            r_sqr[jsite] = SUMSQ(rr);
+            if( control.strict_cutoff && r_sqr[jsite] > cutoffsq )
+                  r_sqr[jsite] = cutoff100sq;
+         }
+
+         hist(0,isite,r_sqr);
+         kernel(0,isite,forceij,&ppe,r_sqr,chg,chg[is],
+                norm,control.alpha,system->ptype,potp[id[is]]);
+      }
+      isite += spec->nsites;
+   }
+   histout();
+   note("Direct pot. energy = %g",ppe*CONV_E);
+   xfree(r_sqr); xfree(forceij);
+   }
+#endif
+/******************************************************************************
+ * Poteval	      Return potential evaluated at a single point.           *
+ ******************************************************************************/
+double
+poteval(potpar, r, ptype, chgsq)
+real	potpar[];			/* Array of potential parameters      */
+double	r;				/* Cutoff distance		      */
+int	ptype;				/* Potential type selector	      */
+real    chgsq;
+{
+   double pe = 0.0;
+   double       norm = 2.0*control.alpha/sqrt(PI);
+   real f,rr;
+   real *pp[NPOTP];
+   int  i;
+
+   for(i=0; i<NPOTP; i++)
+      pp[i] = potpar+i;
+
+   rr = SQR(r);
+   kernel(0,1,&f,&pe,&rr,&chgsq,1.0,norm,control.alpha,ptype, pp);
+   return pe;
+}
+/******************************************************************************
+ * pe_intra.  Caculate intra-molecular energy of a molecule
+ ******************************************************************************/
+double pe_intra(spec_mt *spec, real chg[], int n_potpar, int ptype, 
+		pot_mt *potpar, int max_id)
+{
+   double eintra=0.0;
+   int  jsite, isite;
+
+   for(jsite = 0; jsite < spec->nsites; jsite++)
+   {
+      for(isite = jsite+1; isite < spec->nsites; isite++)
+	 eintra += poteval(potpar[spec->site_id[jsite]*max_id+spec->site_id[isite]].p,
+			   DISTANCE(spec->p_f_sites[isite],spec->p_f_sites[jsite]),
+			   ptype,chg[isite]*chg[jsite]);
+   }
+   return eintra;
+}
 /******************************************************************************
  * Force_calc.   This is the main intermolecular site force calculation       *
  * routine                                                                    *
@@ -819,12 +946,8 @@ mat_mt          stress;                 /* Stress virial                (out) */
    spec_mt      *spec;                  /* Temp. loop pointer to species.     */
    mat_mt       htr, htrinv;            /* Transpos and inverse of h matrix   */
    double       vol = det(system->h);
-#ifdef DEBUG2
-   double ppe, rr[3], ss[3];
-   int im, is, i;
-   mat_mp h = system->h;
-   mat_mt hinv;
-#endif
+   static int init =1;
+   static	double eintra;
 
    /*
     * Choose a partition into subcells if none specified.
@@ -834,6 +957,18 @@ mat_mt          stress;                 /* Stress virial                (out) */
    ny = system->h[1][1]/subcell+0.5;
    nz = system->h[2][2]/subcell+0.5;
    ncells = nx*ny*nz;
+   if( init ) {
+      int isite=0;
+      for(spec = species; spec < species+system->nspecies; spec++)
+      {
+	 eintra+= spec->nmols*pe_intra(spec, chg+isite, n_potpar, system->ptype, potpar,max_id);
+	 isite += spec->nmols*spec->nsites;
+      }
+      note("Direct pot. energy = %g",eintra*CONV_E);
+      init=0;
+   }
+   *pe -= eintra;
+   
    if( nx != onx || ny != ony || nz != onz )
    {
       note("MD cell divided into %d subcells (%dx%dx%d)",ncells,nx,ny,nz);
@@ -891,7 +1026,7 @@ NOVECTOR
     */
    n_cell_list = 1;
    for(spec = species; spec < species+system->nspecies; spec++)
-      if( spec->framework )
+      if( 1 || spec->framework )
          n_cell_list += spec->nmols*spec->nsites;
       else 
          n_cell_list += spec->nmols;
@@ -924,45 +1059,10 @@ NOVECTOR
    else
       n_nab_sites=NMULT*4.19*CUBE(cutoff)*max_density(cell, vol, ncells);
 #ifdef DEBUG2 
-   n_nab_sites = nsites;
+   n_nab_sites = NMULT*nsites;
+   minimage(system, species, site, chg, potp, id);
 #endif
 
-#ifdef DEBUG2
-   ppe = 0;
-   spec = species; isite = 0;
-   invert(h, hinv);
-   for(imol = 0, im = 0; imol < system->nmols; imol++, im++)
-   {
-      if(im == spec->nmols)
-      {
-         im = 0;
-         spec++;
-      }
-      for(is = isite; is < isite+spec->nsites; is++)
-      {
-         for(jsite = 0; jsite < isite; jsite++)
-         {
-            for( i=0; i<3; i++)
-               rr[i] = site[i][jsite] - site[i][is];
-            mat_vec_mul(hinv, rr, ss, 1);
-            for( i=0; i<3; i++)
-               ss[i] -= floor(ss[i]+0.5);
-            mat_vec_mul(h, ss, rr, 1);
-
-            r_sqr[jsite] = SUMSQ(rr);
-            if( control.strict_cutoff && r_sqr[jsite] > cutoffsq )
-                  r_sqr[jsite] = cutoff100sq;
-         }
-
-         hist(0,isite,r_sqr);
-         kernel(0,isite,forceij,&ppe,r_sqr,chg,chg[is],
-                norm,control.alpha,system->ptype,potp[id[is]]);
-      }
-      isite += spec->nsites;
-   }
-   histout();
-   note("Direct pot. energy = %g",ppe*CONV_E);
-#endif
    force_inner(ithread, nthreads, site, chg, potp, id, n_nab_sites, 
                n_nabors, nabor, nx, ny, nz, cell, n_frame_types, system,
                stress, pe, site_force);
@@ -989,6 +1089,19 @@ NOVECTOR
    xfree(cell);        xfree(id); 
    xfree(nabor);
 }
+#ifdef DEBUG3
+void dump_neighbour_list(int n, int jmin, int isite, int nab[],double r_sqr[], 
+			 rvec_mt reloc[], int id[])
+{
+   int jnab;
+   printf("      i(type)  j(type)   relocation   dist\n--------------------------\n");
+   for(jnab = jmin; jnab < n; jnab++)
+      printf("%4d %4d(%3d) %4d(%3d) (%3.0f,%3.0f,%3.0f) %12.5f\n", 
+	     jnab,isite,id[isite],nab[jnab],id[nab[jnab]],
+	     reloc[jnab].i,reloc[jnab].j,reloc[jnab].k,sqrt(r_sqr[jnab]));
+   printf("\n");
+}
+#endif
 /******************************************************************************
  *  Force_inner() Paralellised inner loops of force_calc.  Loops over cells   *
  *  in MD cell with stride = nomber of processors available.  Should be       *
@@ -1077,7 +1190,7 @@ real            **site_force;           /* Site force arrays            (out) */
       iy = icell/nz - ny*ix;
       iz = icell - nz*(iy + ny*ix);
       nnab = 0;
-#ifdef DEBUG1
+#ifdef DEBUG3
       printf("Working on cell %4d (%d,%d,%d) (sites %4d to %4d)\n", icell,
              ix,iy,iz,cell[icell]->isite,cell[icell]->isite+cell[icell]->num-1);
       printf("\n jcell\tjx jy jz\tNsites\n");
@@ -1087,11 +1200,6 @@ real            **site_force;           /* Site force arrays            (out) */
        */ 
       nnab = site_neighbour_list(nab, reloc, n_nab_sites, nfnab, n_frame_types, 
                                  n_nabors, ix, iy, iz, nx, ny, nz, nabor, cell);
-#ifdef DEBUG4
-      for(jsite=0; jsite<nnab; jsite++)
-         printf("%d %d %d %d\n",nab[jsite], 
-                reloc[jsite].i,reloc[jsite].j,reloc[jsite].j);
-#endif
       gather(nnab, nab_sx, site[0], nab, nsites); /* Construct list of site  */
       gather(nnab, nab_sy, site[1], nab, nsites); /* co-ordinates from nabor */
       gather(nnab, nab_sz, site[2], nab, nsites); /* list.                   */
@@ -1113,9 +1221,11 @@ VECTORIZE
          nab_sy[jsite] = rry;
          nab_sz[jsite] = rrz;
       }
-#ifdef DEBUG7
+#ifdef DEBUG4
       for(jsite = 0; jsite < nnab; jsite++)
-         printf("%f %f %f\n",nab_sx[jsite],nab_sy[jsite],nab_sz[jsite]);
+         printf("%4d %4d %11.5f %11.5f %11.5f    %11.5f %11.5f %11.5f\n",jsite,nab[jsite],
+		reloc[jsite].i,reloc[jsite].j,reloc[jsite].k,
+		nab_sx[jsite],nab_sy[jsite],nab_sz[jsite]);
 #endif
       gather(nnab, nab_chg, chg, nab, nsites); /* Gather site charges as well*/
       zero_real(forcejx,nnab);
@@ -1124,6 +1234,9 @@ VECTORIZE
 
       jbeg = 0;                 /* Extra element alllocated makes [1] safe*/
                                 /* Loop over all molecules in cell icell. */
+#ifdef INTRA
+      jmin = 0;
+#endif
       for(cmol = cell[icell]; cmol != NULL; cmol = cmol->next)
       {
          if( cmol->frame_type )
@@ -1133,12 +1246,20 @@ VECTORIZE
          }
          else
          {
-            jmin = jbeg += cmol->num;
+#ifndef INTRA
+	    jmin = jbeg += cmol->num;
+#endif
             jmax = nnab;
          }
          lim = cmol->isite + cmol->num;
          for(isite = cmol->isite; isite < lim; isite++)
          {                                   /* Loop over sites in molecule */
+#ifdef INTRA
+	    jmin++;
+#endif
+#ifdef DEBUG1
+	    printf("icell %d:\tisite=%d\tjmin=%d\tjbeg=%d\n",icell,isite,jmin,jbeg);
+#endif
             /*
              * Construct pot'l param arrays corresponding to neighbour sites.
              */
@@ -1148,15 +1269,6 @@ VECTORIZE
             {
                gather(jmax, *ppp++, *pp++, nab, nsites);
             }
-#ifdef DEBUG1
-            if(isite == 100)
-#endif
-#if defined(DEBUG1) || defined(DEBUG5)
-            { int jnab;
-            for(jnab = jmin; jnab < jmax; jnab++)
-               printf("%4d %4d\n", jnab,nab[jnab]);
-           }
-#endif
             site0=site[0][isite]; site1=site[1][isite]; site2=site[2][isite];
 VECTORIZE
             for(jsite=jmin; jsite < jmax; jsite++)
@@ -1169,6 +1281,12 @@ VECTORIZE
                ry[jsite] = rry;
                rz[jsite] = rrz;
             }
+#ifdef DEBUG3
+            if(isite == 15 || isite==16)
+#endif
+#if defined(DEBUG3) || defined(DEBUG5)
+	       dump_neighbour_list(jmax,jmin,isite,nab,r_sqr,reloc,id);
+#endif
             if( (jsite = jmin+search_lt(jmax-jmin, r_sqr+jmin, 1, TOO_CLOSE))
                < jmax )
                message(NULLI, NULLP, WARNING, TOOCLS,
@@ -1182,7 +1300,6 @@ VECTORIZE
 #ifdef DEBUG2
             hist(jmin, jmax, r_sqr);
 #endif
-               
             /*  Call the potential function kernel                            */
             kernel(jmin, jmax, forceij, pe, r_sqr, nab_chg, chg[isite],
                    norm, control.alpha, system->ptype, nab_pot);
@@ -1217,7 +1334,7 @@ VECTORIZE
             sf0[isite] += site0;
             sf1[isite] += site1;
             sf2[isite] += site2;
-#ifdef DEBUG3
+#ifdef DEBUG5
             printf("PE = %f\n",pe[0]);
 #endif
          }
