@@ -156,8 +156,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.24 $ $}
-\newcommand{\moldyversion}{2.14}
+\newcommand{\RCSrevision}{$ $Revision: 2.25.2.6 $ $}
+\newcommand{\moldyversion}{2.16}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -646,8 +646,7 @@ and $\bm{\delta}$ is the unit matrix.
 \subsection{Potential Functions}
 \label{sec:potentials}
 % LJ, Buckingham (Born-Mayer) & MCY
-\moldy\ supports most common forms of potential function.  In
-particular, 
+\moldy\ supports most common forms of potential function including,
 \begin{list}{}{%
 \setlength{\parsep}{0in} 
 \setlength{\labelwidth}{1in}
@@ -986,16 +985,6 @@ arrangement, the list of neighbouring subcells is fixed and may be
 precomputed.  Its construction takes only $O(N)$ operations and only
 $O(N)$ pair interactions need be calculated.
 
-% Molecular nature of cutoffs.
-
-When the system consists of polyatomic molecules it is important that
-all sites belonging to a particular molecule are assigned to the same
-cell.  Otherwise it is impossible to calculate the stress and pressure
-(equation~\ref{eqn:ewald-stress}) correctly as MD cell vectors are
-added to some intra-molecular distances.  Therefore all sites of any
-molecule are assigned to a cell if the molecular centre-of-mass lies
-inside it.
-
 One drawback of the link cell method has been the difficulty of
 implementing it efficiently for vector processors.  The linked list of
 ``neighbour'' particles is not stored in the regular-stride array
@@ -1007,6 +996,87 @@ interaction potential and forces could be evaluated in vector mode.  A
 the total force array.  This is the technique used in \moldy.  Almost
 all modern vector machines have scatter/gather hardware which means
 these operations are fairly cheap.
+
+\subsection{Molecular Aspects}
+
+The treatment of molecules as rigid bodies adds an additional
+complication to link-cell and neighbour-list algorithms.  If atomic
+sites are assigned to link-cells, then there is no obvious way of
+determining in the innermost force loop whether two sites belong to
+the same, or to different molecules.  It is therefore not possible to
+exclude intra-molecular site-site interactions from the force and
+potential energy calculation.  Furthermore molecules may be
+``split'' by the periodic boundaries, for example half of the sites of
+some molecule may reside near the bottom of the MD box and the
+remainder near the top.  This means that there is no longer a unique
+molecular centre of mass and equations~\ref{eqn:stress-sr}
+and~\ref{eqn:ewald-stress} can no longer be used to compute the internal
+stress or pressure.
+
+On the other hand, entire molecules may be assigned to subcells on the
+basis of their centre-of-mass co-ordinates. All atomic sites belonging
+to a molecule are placed in the list belonging to the particular cell
+containing the molecular centre of mass.  This enables intramolecular
+interactions to be excluded from the calculation and
+equations~\ref{eqn:stress-sr} and~\ref{eqn:ewald-stress} can be used to
+compute the internal stress.  There is however a computational
+disadvantage, which arises because sites belonging to a large molecule
+may lie outside the subcell.  In order to correctly include site-site
+interactions within the cutoff, the list of neighbour cells must be
+extended to include all cells where any parts are closer than $r_c + 2
+r_\textnormal{mol}$ where $r_\textnormal{mol}$ is the molecular
+radius.  There is an inevitable increase in computer time required to
+process the lists, and in the case of a ``strict cutoff'' many
+unnecessary intra-site interactions must be evaluated.  In the case of
+a system containing a mixture of (perhaps a few) very large molecules
+and other, small molecules the computer-time penalty may be very large
+indeed.
+
+Versions of \moldy\ prior to 2.16 used this ``molecular
+binning'' approach and suffered from the associated computational
+penalty. Versions 2.16 and later adopt the former ``site binning''
+approach, which is much more efficient.  The intra-molecular potential
+energy (which is necessarily included in the site-site interactions)
+is computed separately and subtracted from the total, to yield just
+the inter-molecular part.  Intra-molecular \emph{forces} sum to zero
+in the calculation of the centre-of-mass forces and molecular torques,
+just as with the reciprocal-space contribution to the forces.  
+
+The internal stress is computed using a novel approach, inspired by
+the extension of the Verlet neighbour list algorithm developed by
+Bekker \emph{et al.}\cite{bekker:95}.  Bekker showed that the (tensor)
+virial may be written
+\begin{eqnarray}
+  \label{eqn:bekker-virial}
+  \bm{W} &=& \sum_{\bm{n}}\sum_{i=1}^{N} \sum_{j=i+1}^{N}
+  \bm{r}_{i(j.\bm{n})}\bm{f}_{i(j.\bm{n})} \nonumber\\
+         &=& \sum_{i=1}^{N} \sum_{j=i+1}^{N}
+  \bm{r}_{i}\bm{f}_{i} + \sum_{\bm{n}} \bm{n}\bm{g}_{\bm{n}}
+\end{eqnarray}
+where $\bm{n}$ is the lattice vector between the central MD cell and
+its periodic images and is also used as an index to represent a sum
+over all image cells and the expression $(j.\bm{n})$ refers to
+the periodic image of particle $j$ in image cell $\bm{n}$.  The
+quantity $\bm{g}_{\bm{n}}$
+\begin{equation}
+  \label{eqn:bekker-g}
+  \bm{g}_{\bm{n}} = \sum_{i=1}^{N} \sum_{j=i+1}^{N}\bm{f}_{(j.\bm{n})i} = 
+  \frac{1}{2} \sum_{i=1}^{N} \sum_{j=1}^{N}\bm{f}_{(j.\bm{n})i}
+\end{equation}
+is half the total force exerted by all particles in the central MD
+cell on all particles in image cell $\bm{n}$.  This is easily
+evaluated in the inner loops of the link-cell force calculation by
+summing separately the pair forces on all particles in each image cell. The
+image-cell translation vector $\bm{n}_{ij}$ has already been computed in
+order to evaluate the site-site vector $\bm{r}_{ij} +\bm{n}_{ij}$.
+
+Using equation~\ref{eqn:bekker-virial} to compute the virial has
+another advantage. It is not necessary to perform the sum of
+contributions within the inner loop of the force calculation (c.f.
+equation~\ref{eqn:stress-sr}) since it depends only on the site
+co-ordinates and the total force acting on each site.  This gives a
+considerable reduction in the number of computations in the costliest
+part of the whole calculation.
 
 \subsection{No minimum-image convention}
 One notable feature of the implementation of the link cell method in
@@ -1028,20 +1098,19 @@ by the \Lit{strict-cutoff} control parameter.
 In cell-based mode (\Lit{strict-cutoff=0}) the neighbour cell list is
 built to include only those cells whose centre is within the cutoff
 radius of the centre of the reference cell.  All interactions between
-sites belonging to molecules in the neighbouring cell list are
-computed.  This is a ``quick and dirty'' method as some interactions
-between sites closer than the cutoff will inevitably be excluded
-whereas some outside the cutoff range will be included.
+sites in the neighbouring cell list are computed.  This is a ``quick
+and dirty'' method as some interactions between sites closer than the
+cutoff will inevitably be excluded whereas some outside the cutoff
+range will be included.
 
 In strict mode (\Lit{strict-cutoff=1}) all interactions between pairs
-of \emph{sites} within the cutoff are included.  The neighbouring cell
-list contains all pairs of cells with any parts closer than the cutoff
-plus twice the greatest molecular radius.  This ensures that all
-appropriate interactions are included.  Furthermore, all interactions
-between sites further apart than the cutoff are excluded (by the
-expedient of setting their separation to a large value in the
-potential calculation).  This means that large and asymmetric
-molecules are handled correctly.  
+of sites within the cutoff are included.  The neighbouring cell list
+contains all pairs of cells with any parts closer than the cutoff
+radius.  This ensures that all appropriate interactions are included.
+Furthermore, all interactions between sites further apart than the
+cutoff are excluded (by the expedient of setting their separation to a
+large value in the potential calculation).  This means that large and
+asymmetric molecules are handled correctly.
 
 For a given cutoff radius the cell-based mode is rather quicker than
 the strict mode since the neighbouring cell list is much smaller and
@@ -1269,18 +1338,20 @@ therefore dynamics nor for fluctuations.
 It is frequently desirable to conduct simulations under conditions of
 constant pressure or stress, rather than constant volume.  For
 example, this allows the simulation of a solid-state phase transition
-with a change of symmetry or unit cell size.  \moldy\ incorporates the
-constant pressure method of Parrinello and Rahman\cite{parrinello:81}
-and a variant which constrains the MD cell to uniform dilation to give 
-an isobaric ensemble.
+with a change of symmetry or unit cell size.  \moldy\ incorporates two
+constant-stress methods which allow the MD cell to change size and
+shape, and two variants which constrains the MD cell to uniform
+dilation to give an isobaric ensemble.
 
 In a constant-stress simulation the MD cell changes in size and shape
 in response to the imbalance between the internal and externally
 applied pressure.  For an exposition of the method the reader should
-refer to Parrinello and Rahman's paper\cite{parrinello:81} and to
-Nos\'{e} and Klein's extension to rigid molecular
-systems\cite{nose:83}.  The equation of motion for the reduced
-centre-of-mass co-ordinates $\bm{S}_i = \bm{h}^{-1}\bm{R}_i$ is
+refer to the papers of Andersen\cite{andersen:80}, Parrinello and
+Rahman \cite{parrinello:81}, Wentzcovitch\cite{wentzcovitch:91},
+Cleveland\cite{cleveland:88} and to Nos\'{e} and Klein's extension to
+rigid molecular systems\cite{nose:83}.  The equation of motion for the
+reduced centre-of-mass co-ordinates $\bm{S}_i = \bm{h}^{-1}\bm{R}_i$
+is
 \begin{equation}
 \label{eqn:par}
 M_i\ddot{\bm{S}}_i = \bm{h}^{-1} \bm{F}_i - M_i \bm{G}^{-1}\dot{\bm{G}}\dot{\bm{S}}_i
@@ -1292,8 +1363,8 @@ centre-of-mass force and $\bm{G} =\bm{h^\prime h}$.
 Equation~\ref{eqn:euler}, the Euler equation, governs the angular
 motion exactly as in the constant-volume case.
 
-The dynamics of the unit cell matrix $\bm{h}$ are governed by the
-equation
+In the Parrinello-Rahman method the dynamics of the unit cell matrix
+$\bm{h}$ are governed by the equation
 \begin{equation}
 \label{eqn:rahman}
 W\ddot{\bm{h}} = \left ( \bm{\pi} - p \right ) \bm{\sigma}
@@ -1309,10 +1380,35 @@ instantaneous internal stress $\bm{\pi}$ is given by
 with the short-ranged and electrostatic components given by
 equations~\ref{eqn:stress-sr} and~\ref{eqn:ewald-stress} respectively.
 
-The choice of fictitious mass, $W$ is governed by similar
-considerations to those concerning the heat bath mass, $Q$
-discussed in section~\ref{sec:const-temp}.
+Wentzcovitch\cite{wentzcovitch:91} and Cleveland\cite{cleveland:88}
+showed that the Parrinello-Rahman equations suffer from at least one
+significant flaw, namely that they are not ``modularly invariant''.
+The dynamics depends on the choice of MD cell which can give rise
+to unphysical symmetry breaking effects.  They offer an improved, but
+more complicated expression for the unit cell dynamics
+\begin{equation}
+  \label{eqn:wentzcovitch}
+  W\ddot{\bm{h}} = \frac{1}{V}\left ( \bm{\pi} - p \right ) \bm{h} + W
+  \left (
+    -\frac{2 \dot{V}}{V} \dot{\bm{h}} + \frac{1}{V^2}\textnormal{Tr}(\bm{\sigma'} \bm{\sigma}
+      \dot{\bm{h'}} \dot{\bm{h}} ) \bm{h} + \frac{1}{V} \dot{\bm{h}} \bm{\sigma'} \dot{\bm{h}}
+      + \frac{1}{V^2} ( \dot{\bm{h}} \bm{\sigma' \sigma} \dot{\bm{h'}} - \bm{\sigma} \dot{\bm{h'}}
+      \dot{\bm{h}} \bm{\sigma'}) \bm{h}
+  \right )
+\end{equation}
+which rectifies these deficiencies.  The atomic dynamics are governed
+by equation~\ref{eqn:par} as before.
 
+The choice of fictitious mass, $W$ is governed by similar
+considerations to those concerning the heat bath mass, $Q$ discussed
+in section~\ref{sec:const-temp}.  \footnote{Because of the
+different forms of the fictitious kinetic energy term in the
+Lagrangians, typical values of $W$ for equation~\ref{eqn:wentzcovitch}
+are smaller by a factor of the order of $L^4$, where $L$ is the MD
+cell edge, than those useful when the dynamics is given by
+equation~\ref{eqn:par}.}
+
+\subsection{Constrained \textit{\textbf{h}} Matrix}
 Nos\'{e} and Klein\cite{nose:83} describe and address the problem of
 the whole MD cell rotating during the course of the simulation.  This
 is because angular momentum is not conserved in a periodic system, and
@@ -1321,11 +1417,11 @@ needed to specify the position and orientation of the MD cell.  Their
 solution is to constrain the $\bm{h}$ matrix to be symmetric, and
 involves a modification of the Parrinello-Rahman equations.
 
-\moldy\ incorporates a rather different constraint which is not only
+\moldy\ incorporates a different constraint which is 
 simpler to implement (as it does not require modification of the
-equations of motion) but which also has a more obvious physical
-interpretation.  The lower three sub-diagonal elements of the $\bm{h}$
-matrix are constrained to zero.  In other words the MD cell vector
+equations of motion) and which also has a more obvious physical
+interpretation.  The three sub-diagonal elements of the $\bm{h}$
+matrix are constrained to zero.  That is, the MD cell vector
 $\bm{a}$ is constrained to lie along the $x$-axis and $\bm{b}$ is
 constrained to lie in the $xy$-plane.  Physically this may be thought
 of as implementing an MD box lying on a horizontal surface under the
@@ -1336,19 +1432,48 @@ fictitious opposing force.
 
 This constraint technique is not restricted merely to eliminating
 redundant degrees of freedom, but can also be used for other purposes.
-For example it may be used to allow uniaxial expansion only.  The most
-important use of $\bm{h}$ matrix constraints however is probably for
-simulations of liquids.  Since a liquid can not support shear stress
-there is no restoring force to keep the simulation cell nearly cubic,
-and it will therefore drift to a parallelepiped shape.  To counter
-this tendency $\bm{h}$ may be constrained so that only the diagonal
-elements are non-zero and allowed to change.  This does not give a
-completely isotropic MD cell expansion, but the time average should
-tend towards a cubic cell.
-
+For example it may be used to allow uniaxial expansion only.  
 MD cell constraints are selected using the control parameter
 \Lit{strain-mask} (see section~\ref{sec:cp-constraints}).  A value of
-238 will freeze the off-diagonal components of $\bm{h}$.
+238 will freeze all of the off-diagonal components of $\bm{h}$.
+
+\subsection{Constant-Pressure}
+
+The above $\bm{h}$ matrix constraints are not adequate for
+simulations of liquids at constant pressure.  Since a liquid can not
+support shear stress there is no restoring force to keep the
+simulation cell nearly cubic, and it will therefore drift to a
+parallelepiped or elongated shape.  \moldy\ also supports an
+alternative constraint which only permits isotropic MD cell
+expansion.  The isotropic variant of
+equation~\ref{eqn:wentzcovitch} gives 
+\begin{equation}
+  \label{eqn:went-unif}
+    W\ddot{\bm{h}} = \frac{1}{3 V}\textnormal{Tr}\left ( \bm{\pi} - p \right ) \bm{h} 
+    -\frac{2 W}{9} \left ( \frac{\dot{V}}{V}\right )^2 \bm{h}
+\end{equation}
+and if the cell is cubic this is equivalent to the 
+constant-pressure dynamics of Andersen\cite{andersen:80}, with
+$W$ = $3 M_\textnormal{Andersen}$.
+
+Applying a uniform-dilation constraint to the Parrinello-Rahman
+Lagrangian gives equations of motion
+\begin{equation}
+  \label{eqn:p+r-unif}
+  W\ddot{\bm{h}} = V \frac{\textnormal{Tr}\left ( \bm{\pi} - p \right)}{
+    \textnormal{Tr}\left (  \bm{h'} \bm{h} \right )}\bm{h}
+\end{equation}
+which replace equation~\ref{eqn:rahman}.
+
+Both of the above equations cause the MD cell to dilate or contract
+uniformly, and apply whether or not the initial $\bm{h}$-matrix
+corresponds to a cubic cell.  It is therefore possible to switch
+between a constant-stress and the corresponding constant-pressure
+ensemble during a run.  This is the only reason to choose
+equation~\ref{eqn:p+r-unif}.  
+Equation~\ref{eqn:went-unif} (selected by \Lit{const-pressure=4}) is
+normally  the best option for liquid simulations.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Radial Distribution Functions}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1877,13 +2002,15 @@ table~\ref{tab:parameters}.
 \afterpage{%
 \begin{longtable}{|l|l|l|>{\saferagged}p{2.9in}|}
 \caption{Control Parameters}\\\hline
-\textbf{name} & \textbf{type} & \textbf{default} & \textbf{function}
+\textbf{name} & \textbf{type} & \textbf{default} & \textbf{function}\\\hline\hline
 \endfirsthead
 %begin{latexonly}
 \caption[]{Control Parameters (\emph{continued})}\\\hline
 %end{latexonly}
-\textbf{name} & \textbf{type} & \textbf{default} & \textbf{function} \endhead
-\hline\hline
+\textbf{name} & \textbf{type} & \textbf{default} & \textbf{function}\\ \hline\hline
+\endhead
+\hline
+\endfoot
 \setlength{\rightskip}{0pt plus 2cm}
 \label{tab:parameters}
 \Lit{title} &                  character  & {\small Test Simulation} &
@@ -1926,10 +2053,24 @@ Rotational inertia parameter for Nos{\'e}-Hoover thermostat
 Select variations on scaling or thermostat. \\
 \Lit{temperature} &            real &                  0 &
 Temperature of initial configuration for scaling and thermostat (K). \\ \hline
-\Lit{const-pressure} &         boolean &               false  &
-1 for Parrinello and Rahman constant stress or 2 for constant pressure ensemble. \\
+\Lit{const-pressure} &         integer &               0  & %
+\noindent%
+\begin{list}{}{%
+\vspace{-\topsep}\vspace{-\partopsep}%
+\setlength{\partopsep}{0pt}%
+\setlength{\topsep}{0pt}%
+\setlength{\leftmargin}{1em}%
+\setlength{\itemsep}{0pt}%
+\setlength{\parsep}{0pt}%
+}
+\item[1] Parrinello and Rahman constant stress
+\item[2] P-R compatible constant pressure ensemble
+\item[3] Wentzcovitch/Cleveland constant stress
+\item[4] Andersen constant pressure.
+\end{list}
+\vspace{-\topsep}\vspace{-\partopsep}\\
 \Lit{w} &                      real &                  100.0 &
-Value of P \& R mass parameter (amu). \\
+Extended system mass parameter (amu). \\
 \Lit{pressure} &               real &                  0 &
 External applied pressure (MPa). \\
 \Lit{strain-mask} &            integer &               200 &
@@ -1943,7 +2084,7 @@ Direct space cutoff distance in {\AA}. \\
 \Lit{strict-cutoff} &          boolean &               false &
 Flag to select rigorous or cheap but approximate cutoff algorithm. \\
 \Lit{surface-dipole} & boolean &               false  &
-Include De Leeuw \& Perram term in Ewald sum. \\ \hline
+Include surface dipole term in Ewald sum. \\ \hline
 \Lit{roll-interval} &          integer &               10 &
 Period over which to calculate rolling averages. \\
 \Lit{print-interval} &         integer &               10 &
@@ -2070,12 +2211,12 @@ m & n & p^{1}_{mn} & p^{2}_{mn} & \ldots & p^{r}_{mn}  \\
 \end{array}
 \end{displaymath}
 where \emph{potential-type} is one of the keywords
-\Lit{Lennard-Jones}, \Lit{Buckingham} or \Lit{MCY} or
-\Lit{generic} to identify the kind of potentials to be used, $i, j,
-k, l, m, n$ are site ids and $p^{\alpha}_{ij}$ is the $\alpha^{th}$
-potential parameter between sites $i$ and $j$.  There should be one
-line for each distinct pair of site ids.  If any pair is omitted a
-warning is issued and the parameter values are set to zero.
+\Lit{Lennard-Jones}, \Lit{Buckingham}, \Lit{MCY}, \Lit{generic},
+\Lit{morse} or \Lit{hiw} to identify the kind of potentials to be
+used, $i, j, k, l, m, n$ are site ids and $p^{\alpha}_{ij}$ is the
+$\alpha^{th}$ potential parameter between sites $i$ and $j$.  There should
+be one line for each distinct pair of site ids.  If any pair is
+omitted a warning is issued and the parameter values are set to zero.
 
 The meaning of the parameters for the currently defined potentials is
 as follows:
@@ -2092,7 +2233,7 @@ specified in the standard form.
 \item[Buckingham] This includes potentials of the Born-Mayer type and
 has formula \[\phi(r_{ij}) = -A_{ij}/r^{6}_{ij} + B_{ij}\exp(-C_{ij}r_{ij}).\]
 The three parameters appear on each line in the order $A, B, C$.
-\item[MCY] This type supports potentials of the same form as the water
+\item[MCY] This type supports potentials of the form of the water
 model of Matsuoka, Clementi and Yoshimine\cite{matsuoka:75}, 
 \[\phi(r_{ij}) = A_{ij}\exp(-B_{ij}r_{ij}) - C_{ij}\exp(-D_{ij}r_{ij}),\]
 and the four parameters appear on the line in the order $A, B, C, D$.
@@ -2102,6 +2243,15 @@ and the four parameters appear on the line in the order $A, B, C, D$.
 \[\phi(r_{ij}) = A_{ij} \exp(-B_{ij}r_{ij}) + C_{ij}/r_{ij}^{12} -
   D_{ij}/r_{ij}^4 -E_{ij}/r_{ij}^6 -F_{ij}/r_{ij}^8\]
 with the six parameters $A_{ij}$ -- $F_{ij}$.
+\item[morse] This is the Busing-Ida-Gilbert plus Morse-potential as
+  used in the Japanese MD program Mdxorto.  It has the form
+\[\phi(r_{ij}) = B_{ij}  exp ((C_{ij}-r_{ij})D_{ij})   - E_{ij}/r_{ij}^6 + F_{ij} \exp (-2G_{ij}(r_{ij}-H_{ij})) - 2F_{ij}\exp (-G_{ij}(r_{ij}-H_{ij}))\]
+with seven parameters $B_{ij}$ -- $H_{ij}$.
+\item[HIW]  This is a Lennard-Jones potential with an extra
+  fourth-power term to describe ion-water interactions in solution
+  using the \emph{HIW} model of R. R Pappalardo and
+  E. Sanchez-Marcos\cite{pappalardo:93}.  The form is
+\[\phi(r_{ij}) =  A_{ij}/r_{ij}^4 + B_{ij}/r_{ij}^6 + C_{ij}/r_{ij}^{12}\]
 \end{Litdescription}
 \noindent
 Other types of potential may be easily added: see section~\ref{sec:newpot}.
@@ -2113,7 +2263,10 @@ themselves specified in SI units). All potential parameters, site
 masses and charges, but not co-ordinates are taken to be in those
 units. Their default values are amu, {\AA}, 0.1ps and $q_{e}$, which means
 that the unit of energy is kJ\,mol$^{-1}$.  So to read in {\AA}, amu and
-kcal mol$^{-1}$, specify \Lit{time-unit=4.8888213e-14}.
+kcal mol$^{-1}$, specify \Lit{time-unit=4.8888213e-14}, for  {\AA}, amu
+and eV use \Lit{time-unit=1.0181e-14}, and for Lennard-Jones
+potentials specified in  {\AA}, amu and $\epsilon$ in K (ie  $E/k_B$) use
+\Lit{time-unit=0.548343e-12}, which includes the extra factor of 4.
 
 Once the system specification has been read in, all quantities are
 converted to `internal' units: a.m.u., {\AA}, ps, and $\insqrt (
@@ -2731,17 +2884,36 @@ and back again. It is described in appendix~\ref{sec:dumpconv}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Constant Stress Simulation}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Constant Stress or Pressure Simulation}%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Setting  the control parameter   \Lit{const-pressure} switches from a
-constant-volume  simulation to a con\-stant-stress  simulation using the
-method     of    Parrinello     and    Rahman\cite{parrinello:81}   (see
-section~\ref{sec:const-stress}).   The value of  the MD cell mass
-parameter,  $W$,  is given by the control  parameter \Lit{w}  and  the
-external pressure by \Lit{pressure}. At present it is not possible to
-specify an anisotropic external stress, though this  capability may be
-added in future versions of the program.
+The control parameter \Lit{const-pressure} switches from a
+constant-volume simulation to one of several con\-stant-stress or
+constant-pressure ensembles (see section~\ref{sec:const-stress})
+according to its value.  Available values are
+\begin{enumerate}
+\item The constant-stress method of Parrinello and
+  Rahman\cite{parrinello:81}.
+\item A constant-pressure method which is the uniform-dilation limit
+  of the Parrinello and Rahman dynamics.  This is convenient if
+  switching between the two, but like P-R, the dynamics is not
+  modularly invariant and does not preserve the virial.
+\item The improved constant-stress method of
+  Cleveland\cite{cleveland:88} and Wentzcovitch\cite{wentzcovitch:91}.
+\item The Andersen constant-pressure method\cite{andersen:80}, which is the
+  uniform-dilation limit of Wentzcovitch dynamics.
+\end{enumerate}
+The value of the MD cell mass parameter, $W$, is given by the control
+parameter \Lit{w} and the external pressure by \Lit{pressure}.  Note
+that because of the different ficticious kinetic energy term in the
+Lagrangians, typical values of $W$ for the Wentzcovitch and Andersen
+ensembles are smaller by a factor of the order of $L^4$, where $L$ is
+the MD cell edge, than those useful in the Parrinello-Rahman and
+compatible uniform-dilation cases.
+
+At present it is not possible to specify an anisotropic external
+stress, though this capability may be added in future versions of the
+program.
 
 \label{sec:cp-constraints}
 The $\bm{h}$ matrix may be constrained so as to disable motion of any
@@ -3824,13 +3996,13 @@ int    i, j;\\
 \}
 \end{quote}}\\
 \noindent
-since the underlying pointer arrays contain all the necessary shape
-information to access it. Function \Lit{arralloc()} is implemented so
-as to lay out the individual pointer and data arrays as part of a
-single block of memory which is allocated by a single call to
-\Lit{talloc()}. It then sets up the values of the pointers to emulate
-the requested array. The memory can be freed with a single call to
-\Lit{tfree().}
+since the underlying pointer arrays contain all the necessary
+information to access indivual elements. Function \Lit{arralloc()} is
+implemented so as to lay out the individual pointer and data arrays as
+part of a single block of memory which is allocated by a single call
+to \Lit{talloc()}. It then sets up the values of the pointers to
+emulate the requested array. The memory can be freed with a single
+call to \Lit{tfree().}
 
 The \Lit{arralloc()} mechanism is unnecessary for 2D arrays where
 the innermost dimensions are fixed, such as for an array of position
@@ -5088,30 +5260,35 @@ each record.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Mdshak/Mdxyz}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\emph{Mdshak} was written as an interface between \moldy\ 
+\emph{Mdshak} was originally written as an interface between \moldy\ 
 configurations and a molecular graphics program called
-SCHAKAL\cite{schakal:88}.  It will also, optionally, write the output
-in PDB or XYZ form, suitable for input to the freely available viewers
-\emph{Xmol} and \emph{RasMol}.  The output format is sufficiently
-transparent that it should not be hard to modify it for any other
-molecular graphics package, but note that the \emph{babel} package,
-also freely available on the Internet will convert between the XYZ
-file format and many others. There is also a SCHAKAL file viewer
-called ``read\_shak'' written by the author for use with AVS, the
-general purpose visualization program, and available free from the
-International AVS Center.\footnote{It may be obtained using anonymous
-  ftp from \Lit{avs.ncsc.org} or by writing to The International AVS
-  Center, PO Box 12889, 3021 Cornwallis Road, RTP, NC 27709, USA.}
+SCHAKAL\cite{schakal:88}.  The current version can write the output in
+additional formats: Brookhaven PDB, Cambridge CSSR, or XYZ form, suitable
+for input to the freely available viewers such as
+\emph{VMD}\footnote{Available from
+  \url{http://www.ks.uiuc.edu/Research/vmd/}.}, \emph{Xmol} and
+\emph{RasMol}.  There is also a file viewer called
+``crystal'' written by the author for use with AVS, the general
+purpose visualization program, and available free from the
+International AVS Centre.\footnote{\url{http://www.iavsc.org/}.}
 
-\emph{Mdshak} writes a SCHAKAL file containing the co-ordinates of a
+\emph{Mdshak} writes a file containing the co-ordinates of a
 single or of multiple time slices during a MD run.  It can read
 configurations from (\emph{a}) a system specification file plus
 lattice start, (\emph{b}) a system specification file plus dump file
 (\emph{c}) a restart file or (\emph{d}) a restart file plus dump file.
 It can be driven either interactively or using command-line arguments.
 If the executable file is named \Fname{mdshak} then the default output
-is in SCHAKAL file format. If it is renamed to \Fname{mdxyz} or
-\Fname{mdpdb} then the default is XYZ or PDB file format respectively.
+is in SCHAKAL file format. If it is renamed to \Fname{mdxyz},
+\Fname{mdpdb}, \Fname{mdcssr}  or \Fname{mddcd} then the default
+output format is of the corresponding type.
+
+To assist in making animations of a simulation, the trajectory from
+many timesteps can be written to a file in the  CHARMM and Xplor DCD
+format, using the \Lit{[-v]} option.  In conjunction with a PDB file
+this may be used as input to the VMD visualization program.  Tools for
+manipulating DCD files and converting to other formats are also
+available from \url{http://www.ks.uiuc.edu/Development/MDTools/}.
 
 In interactive mode you are prompted for the source of the system
 specification (sys-spec or restart file) and the configurational
@@ -5127,7 +5304,8 @@ Alternatively, the command line options are
 \Lit{[-d} \textit{dump-file-format} \Lit{]}
 \Lit{[-t} \textit{dump-range} \Lit{]} \\
 \Lit{[-c]}
-\Lit{[-x]|[-b]}
+\Lit{[-x|-v|-h|-p|-g|-b]}
+\Lit{[-y]}
 \Lit{[-i} \textit{extra-text} \Lit{]}
 \Lit{[-o} \textit{output-file} \Lit{]}
 \end{center}
@@ -5147,17 +5325,24 @@ format.
 to add extra SCHAKAL commands, such as BOX.
 \item[-x] Write an output file in XYZ format suitable for \emph{Xmol}
   or \emph{RasMol}
+\item[-v] Write co-ordinates from multiple dump files to an output
+  file in DCD format suitable for animation by \emph{VMD}.
+\item[-h] Write an output file in SCHAKAL format.
 \item[-p] Write an output file in Brookhaven PDB format suitable for
   \emph{VMD}, \emph{Xmol}  or \emph{RasMol}
-\item[-b] Write the atom co-ordinates in raw binary (unformatted) format.
+\item[-g] Write an output file in Cambridge CSSR format suitable for
+  reading by, \eg\ Cerius2.
+\item[-b] Write the atom co-ordinates in raw binary (unformatted)
+  format.
+\item[-y] Join up trajectory fragments to eliminate jumps when a
+  molecule exits from one side of the MD cell and re-enters the
+  opposite side.
 \end{Argdescription}
 
 \emph{Mdshak} may be useful for more than just visualization purposes
 as it extracts atomic co-ordinates from the system specification,
-positions and quaternions.  It is written so that only the output routine
-(called \Lit{schakal\_out()}) is SCHAKAL specific.  This is quite
-short and can easily be replaced with one tailored to a different
-purpose.
+positions and quaternions.  It is written in a modular fashion
+to make it easy to add a new output routine (in file \Fname{molout.c}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Msd}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -5304,7 +5489,8 @@ be calculated directly from the VTF via:
 where $V$ is the volume of the simulation box, $k_{B}$ is Boltzmann's
 constant and $T$ is temperature.
 
-The command line options are:\\
+The command line options are:
+
 \begin{center}
 \Lit{mdvaf}
 \Lit{[-s} \textit{system-specification} \Lit{]|}
@@ -5543,6 +5729,60 @@ polyatomic species can easily be added manually by modifying the system
 specification file created by ransub. It is also possible to introduce
 randomly distributed vacancies by prefixing the solute name with ``\#''.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Plotrdf}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Plotrdf is a \emph{perl} script which reads \moldy\ output files and
+extracts RDF information, skipping page breaks.  It produces output
+suitable for reading into most graphics programs, but most notably
+\emph{gnuplot} and \emph{xmgrace}%
+\footnote{\emph{Gnuplot} can be downloaded from
+  \url{http://www.gnuplot.org} and
+\emph{Xmgrace} may be obtained from
+\url{http://plasma-gate.weizmann.ac.il/Grace/}.}.
+It can also write a command script
+for either of these two programs if requested.  Obviously you must
+have \emph{perl} installed on your computer to use it.
+
+\begin{center}
+  \Lit{plotrdf}
+ \Lit{[-a]} 
+ \Lit{[-gp|-xg]}
+ \Lit{[-ps|-eps]}
+ \Lit{[-np]}
+ \Lit{[-m} \textit{REGEXP}\Lit{]} 
+ \textit{moldy-output-file} ...
+\end{center}
+
+\begin{Argdescription}  
+      \item[-a]         Take average of multiple RDF blocks.
+      \item[-gp]        Write a script and invoke GNUPLOT to plot data.
+      \item[-xg]        Write a script and invoke GRACE to plot data.
+      \item[-ps]        Invoke GNUPLOT or GRACE to plot data and write as a PostScript file.
+      \item[-eps]       Invoke GNUPLOT or GRACE to plot data and write as an encapsulated PostScript (EPS) file.
+      \item[-np]        Do not plot data, write a GNUPLOT or GRACE script.                                      \item[-m]  output/plot only columns which match the (perl) regular expression REGEXP. (no '//' needed)    
+\end{Argdescription}
+
+The output format is in columns with different components laid out
+across the page "r rdf1 rdf2 rdf3 ...".  Multiple RDF blocks in one or
+multiple files are processed and output sequentially except if the \Lit{-a}
+flag is given, whereupon they are averaged.
+
+If no options or only \Lit{-a} or \Lit{-m} are given, columnar data is
+written to standard output.  If either of the plot program commands
+\Lit{-pg} or \Lit{-xg} is given, the selected plotting program is
+invoked to display the plot. The columnar RDF data  is left in a file
+named according to the input file with \Lit{.data} appended.
+If either of the \Lit{-ps} or \Lit{-eps} options is given the selected
+plot program is used to create a PostScript (or encapsulated
+PostScript) file containing the plot.  The \Lit{-np} option modifies
+all of the above actions by stopping the invocation of the plot
+program and writing the script to standard output instead.
+
+Columns may be selected by matching with a PERL regular expression
+(without the usual delimiters) given as the argument to the \Lit{-m}
+option.
+
 \bibliography{abbrevjn,simulation,mypubs}
 \bibliographystyle{amsplain}
 
@@ -5550,7 +5790,7 @@ randomly distributed vacancies by prefixing the solute name with ``\#''.
 % LocalWords:  Fndescription Litdescription erf erfc subfig superfig Refson MCY
 % LocalWords:  Parrinello Rahman Lennard Buckingham Stardent Alliant cray XMP
 % LocalWords:  MFlop SGI SP Tildesley Pawley Powles Sonnenschein Rodger Nos co
-% LocalWords:  Fincham Beeman's Perram Tildesley's subcells subcell Heyes 
+% LocalWords:  Fincham Beeman's Perram Tildesley's subcells subcell Heyes  CSSR
 % LocalWords:  Rahman's RDF dat const Matsuoka Clementi Yoshimine MDBACKUP KE
 % LocalWords:  Microsystems RDFs Leuuw Coulombic Leeuw unix DUSE TCGMSG BSP MPI
 % LocalWords:  SPMD SHMEM defs struct structs auxil beeman ewald eigens rdf xdr
@@ -5559,4 +5799,6 @@ randomly distributed vacancies by prefixing the solute name with ``\#''.
 % LocalWords:  Dumpanal Dumpconv dumpconv SCHAKAL Quentrec nsteps rtmass mol ps
 % LocalWords:  amu MPa nbins ndumps Debye MDDUMP dumpanal stdlib stddef LIBS mt
 % LocalWords:  aalloc alloc arralloc talloc tfree nspecies nsites nmols NPOTP
-% LocalWords:  algorith ansi pre
+% LocalWords:  algorith ansi pre Pappalardo mdavpos bdist Murashov mdbond
+% LocalWords:  ransub mdshak Fernandez Wentzcovitch wentzcovitch characterizing
+% LocalWords:  visualization Cerius CHARMM Plotrdf gnuplot Bekker

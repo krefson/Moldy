@@ -7,8 +7,16 @@ eval 'exec perl -S $0 ${1+"$@"}'
 # Plotrdf.  This script reads "Moldy" output files and extracts RDF information
 # skipping page breaks.
 #
-# Usage: plotrdf [-a] [-m REGEXP] -g moldy-output-file ...
-#
+#  Usage: plotrdf [-a] [-gp|-xg] [-ps|-eps] [-np] [-m REGEXP] moldy-output-file ...
+#      -a         Take average of multiple RDF blocks
+#      -gp        Write a script and invoke GNUPLOT to plot data
+#      -xg        Write a script and invoke GRACE to plot data
+#      -ps        Invoke GNUPLOT or GRACE to plot data and write as a PostScript file
+#      -eps       Invoke GNUPLOT or GRACE to plot data and write as an encapsulated 
+#                 PostScript (EPS) file
+#      -np        Do not plot data, write a GNUPLOT or GRACE script
+#      -m REGEXP  output/plot only columns which match the (perl) regular 
+#                 expression REGEXP. (no '//' needed)    
 # Output format is in columns with different components laid out
 # across the page "r rdf1 rdf2 rdf3 ..."
 #
@@ -48,26 +56,34 @@ sub rdfout  {
 }
 
 sub usage {
-   printf STDERR "Usage: plotrdf [-a] [-m REGEXP] [-g] moldy-output-file ...\n";
+   printf STDERR "Usage: [-a] [-a] [-gp|-xg] [-ps|-eps] [-np] [-m REGEXP] moldy-output-file ...\n";
    printf STDERR "    -a         Take average of multiple RDF blocks\n";
-   printf STDERR "    -g         Write a GNUPLOT script to plot data\n";
-   printf STDERR "    -gg        Write a script and invoke GNUPLOT to plot data\n";
-   printf STDERR "    -ps        Invoke GNUPLOT to plot data and write as a PostScript file\n";
-   printf STDERR "    -eps       Invoke GNUPLOT to plot data and write as an encapsulated PostScript (EPS) file\n";
+   printf STDERR "    -gp        Write a script and invoke GNUPLOT to plot data\n";
+   printf STDERR "    -xg        Write a script and invoke GRACE to plot data\n";
+   printf STDERR "    -ps        Invoke GNUPLOT or GRACE to plot data and write as a PostScript file\n";
+   printf STDERR "    -eps       Invoke GNUPLOT or GRACE to plot data and write as an encapsulated PostScript (EPS) file\n";
+   printf STDERR "    -np        Do not plot data, write a GNUPLOT or GRACE script\n";
    printf STDERR "    -m REGEXP  output/plot only columns which match the (perl) regular expression REGEXP. (no '//' needed)\n";
 }
 
+sub pfout {
+    my($hdrlist, $plotfile, $psflag, $title) = @_;
+    gpout(@_) if $gpflag > 0;
+    graceout(@_) if $grflag > 0;
+
+}
+
 sub gpout {
-    my($hdrlist, $plotfile, $gpflag, $title) = @_;
+    my($hdrlist, $plotfile, $psflag, $title) = @_;
     my($i);
     
     $| = 1;
 
-    if( $gpflag == 3){
+    if( $psflag == 1){
       print   "set terminal postscript landscape color solid\n";
       printf   "set output \"%s.ps\"\n", $plotfile;
     }
-    if( $gpflag == 4){
+    if( $psflag == 2){
       print   "set terminal postscript eps color solid\n";
       printf   "set output \"%s.eps\"\n", $plotfile;
     }
@@ -83,26 +99,70 @@ sub gpout {
     print   "\npause -1\n";
 }
 
+sub graceout {
+    my($hdrlist, $plotfile, $psflag, $title) = @_;
+    my($i);
+    
+    $| = 1;
+
+    print   "\@timestamp def \"",scalar(localtime),"\"\n";
+    print   "\@with g0\n";
+    print   "\@title \"",$title,"\"\n";
+    print   "\@xaxis label \"r(A)\"\n";
+    print   "\@yaxis label \"g(r)\"\n";
+
+    $ncols = $#$hdrlist;
+
+    print   "\@read block \"$plotfile\"\n";
+    foreach $i (0..$ncols ) {
+        print "\@with s",$i,"\n";
+	print "\@block xy \"1:",$i+2,"\"\n";
+	print "\@s",$i," legend \"$$hdrlist[$i]\"\n" ;
+    }
+    if( $psflag == 1){
+      print   "\@hardcopy device \"PS\"\n";
+      printf  "\@print to \"%s.ps\"\n\@print\n", $plotfile;
+    }
+    if( $psflag == 2){
+      print   "\@hardcopy device \"EPS\"\n\@device \"EPS\" op \"bbox:tight\"\n";
+      printf  "\@print to \"%s.eps\"\n\@print\n", $plotfile;
+    }
+}
+
+
 $gpflag = 0;
+$grflag = 0;
+$plotflag = 0;
+$psflag = 0;
 $aflag = 0;
 $plotfd=*STDOUT;
 $match = ".";
 while ($#ARGV >= 0 && $ARGV[0] =~ /^-\w+/ ) {
     $flag=shift @ARGV;
-    if ($flag eq "-g" ) {
+    if ($flag eq "-gp" ) {
+	$plotflag=1;
+        $grflag = 0;
 	$gpflag=1 ;
 	$flag = "";
     }
-    if ($flag eq "-gg" ) {
-	$gpflag=2 ;
+    if ($flag eq "-xg" ) {
+	$plotflag=1;
+        $gpflag = 0;
+	$grflag=1 ;
+	$flag = "";
+    }
+    if ($flag eq "-np" ) {
+	$plotflag=0;
 	$flag = "";
     }
     if ($flag eq "-ps" ) {
-	$gpflag=3 ;
+	$psflag=1 ;
+	$plotflag=1;
 	$flag = "";
     }
      if ($flag eq "-eps" ) {
-	$gpflag=4 ;
+	$psflag=2 ;
+	$plotflag=1;
 	$flag = "";
     }
    if( $flag eq "-a") {
@@ -119,15 +179,23 @@ while ($#ARGV >= 0 && $ARGV[0] =~ /^-\w+/ ) {
     }
 }
 $title=$ARGV[0];
-if ($gpflag ) {
+if ($gpflag || $grflag) {
     $plotfile = $title.".data";
     open PLOTFILE, ">$plotfile" || die "Failed to open plot file $plotfile for writing\n";
     $plotfd=*PLOTFILE;
     $| = 1;
 }
 
-if ($gpflag > 1) {
-    open STDOUT, "| gnuplot -persist" or die "Failed to open pipe to GNUPLOT process";
+if( $plotflag ) {
+    if ($gpflag) {
+	open STDOUT, "| gnuplot -persist" or die "Failed to open pipe to GNUPLOT process";
+    } elsif ($grflag) {
+	if( $psflag ) {
+	    open STDOUT, "| gracebat -pipe" or die "Failed to open pipe to GRACEBAT process";
+	} else {
+	    open STDOUT, "| xmgrace -pipe" or die "Failed to open pipe to GRACE process";
+	}
+    }
 }
 
 $be = 0;
@@ -198,7 +266,7 @@ while ( <> ) {
 		$firstblock = 0;
 		if( ! $aflag ) {
 		    rdfout(\%rdflist, $binw, $plotfd, 1.0);
-		    gpout([keys %rdflist], $plotfile, $gpflag, $title) if ($gpflag);
+		    pfout([keys %rdflist], $plotfile, $psflag, $title) if ($gpflag || $grflag);
 		}
 		
 	    }
@@ -207,6 +275,6 @@ while ( <> ) {
 }
 if( $aflag ) {
     rdfout(\%rdflist, $binw, $plotfd, 1.0/$nrdfblocks);
-    gpout([keys %rdflist], $plotfile, $gpflag, $title) if ($gpflag);
+    pfout([keys %rdflist], $plotfile, $psflag, $title) if ($gpflag || $grflag);
 }
 	
