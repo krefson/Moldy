@@ -28,9 +28,42 @@ typedef struct list_t
 typedef struct cpt_t
 {
    int ncpt, offset, size, mols;
+   char name[32];
 } cpt_t;
 
+/******************************************************************************
+ * get_int().  Read an integer from stdin, issuing a prompt and checking      *
+ * validity and range.  Loop until satisfied, returning EOF if appropriate.   *
+ ******************************************************************************/
+int get_int(prompt, lo, hi)
+char    *prompt;
+int     lo, hi;
+{
+   char         ans_str[80];
+   int          ans_i, ans_flag;
 
+   ans_flag = 0;
+   while( ! feof(stdin) && ! ans_flag )
+   {
+      fputs(prompt, stderr);
+      fflush(stderr);
+      fgets(ans_str, sizeof ans_str, stdin);
+      if( sscanf(ans_str, "%d", &ans_i) == 1 && ans_i >= lo && ans_i <= hi)
+         ans_flag++;
+   }
+   if( feof(stdin) )
+   {
+      fprintf(stderr,"\nExit requested\n");
+      exit(3);
+   }
+   if( ans_flag )
+      return(ans_i);
+   else
+      return(EOF);
+}
+/******************************************************************************
+ * List manipulation procedures						      *
+ ******************************************************************************/
 void
 insert(entry, head)
 list_t	*entry, *head;
@@ -206,9 +239,9 @@ char	*argv[];
    extern int	optind;
    extern char	*optarg;
    int		errflg = 0, genflg = 0, tsflg = 0, bflg = 0;
-   int          nmols, nmols_r;
-   int		cpt_mask;
-   char		*dump_name;
+   int          nmols=0, nmols_r=0;
+   int		xcpt=0;
+   char		*dump_name=0, *out_name=0;
    char		*tsrange, *filerange;
    char		**filelist;
    FILE		*dump_file;
@@ -217,19 +250,19 @@ char	*argv[];
    int		tslice, numslice, maxslice;
    int		find, offset, icpt;
    
-   static cpt_t cpt[] = {{3, 0, 3, 1},
-			  {4, 0, 4, 1},
-			  {9, 0, 1, 0},
-			  {1, 0, 1, 0},
-			  {3, 0, 3, 1},
-			  {4, 0, 4, 1},
-			  {9, 0, 1, 0},
-			  {3, 0, 3, 1},
-			  {4, 0, 4, 1},
-			  {9, 0, 1, 0},
-			  {3, 0, 3, 1},
-			  {3, 0, 3, 1},
-			  {9, 0, 1, 0} };
+   static cpt_t cpt[] = {{3, 0, 3, 1, "C of M positions"},
+			 {4, 0, 4, 1, "quaternions"},
+			 {9, 0, 1, 0, "unit cell matrix"},
+			 {1, 0, 1, 0, "potential energy"},
+			 {3, 0, 3, 1, "C of M velocities"},
+			 {4, 0, 4, 1, "quaternion derivatives"},
+			 {9, 0, 1, 0, "unit cell velocities"},
+			 {3, 0, 3, 1, "C of M accelerations"},
+			 {4, 0, 4, 1, "quaternion accelerations"},
+			 {9, 0, 1, 0, "unit cell accelerations"},
+			 {3, 0, 3, 1, "C of M forces"},
+			 {3, 0, 3, 1, "torques"},
+			 {9, 0, 1, 0, "stress tensor"} };
 #define NCPT (sizeof(cpt)/sizeof(cpt_t))
 
    static int level_mask[16] = {  0x0000,0x000f,0x0070,0x007f,
@@ -245,11 +278,11 @@ char	*argv[];
 
    mol_head.next = NULL;
 
-   while( (c = getopt(argc, argv, "c:bR:Q:n:t:m:") ) != EOF )
+   while( (c = getopt(argc, argv, "c:bR:Q:n:t:m:o:") ) != EOF )
       switch(c)
       {
        case 'c':
-	 cpt_mask = strtol(optarg,(char*)NULL,0);
+	 xcpt = strtol(optarg,(char*)NULL,0);
 	 break;
        case 'b':
 	 bflg++;
@@ -263,6 +296,9 @@ char	*argv[];
        case 'n':
 	 filerange = optarg;
 	 genflg++;
+	 break;
+       case 'o':
+	 out_name = optarg;
 	 break;
        case 't':
 	 if( tsflg++ == 0)
@@ -280,7 +316,8 @@ char	*argv[];
 	    insert(cur, &mol_head);
 	 }	 
 	 break;
-       case '?':
+       case '?': 
+       case 'h':
 	 errflg++;
       }
 
@@ -293,9 +330,34 @@ char	*argv[];
    if( errflg )
    {
       fprintf(stderr,
-	   "Usage: dumpextract [-Rn] [-Qn] [-b] [-n range] [-c cpts]\
- [-t timeslices] [-m molecules] dumpfiles\n");
+	   "Usage: dumpextract [-Rn] [-Qn] [-b] [-n dumpfile-range] [-c cpt]\
+ [-t timeslices] [-m molecules] [-o output-file] dumpfiles\n");
       exit(2);
+   }
+   /*
+    *  Interactive input of parameters not supplied as argument
+    */
+   if( ! nmols )
+      nmols = get_int("Number of molecules? ",1,1000000);
+   if( ! nmols_r )
+      nmols_r = get_int("Number of polyatomic molecules? ",0,1000000);
+   if( ! xcpt )
+   {
+      fprintf(stderr,"Which quantity do you require?\n");
+      for(icpt = 0; icpt < NCPT; icpt++)
+	 fprintf(stderr,"\t%-32s %d\n",cpt[icpt].name,icpt+1);
+      xcpt=get_int("Quantity index (1-13)? ",1,NCPT);
+   }
+
+   /*
+    *  Molecule mask
+    */
+   if(mol_head.next == 0)
+   {
+      cur = (list_t*)calloc(1,sizeof(list_t));
+      cur->i = 0;
+      cur->num = nmols;
+      mol_head.next = cur;
    }
 
    /*
@@ -311,7 +373,7 @@ char	*argv[];
    }
    else
       filelist = argv+optind;
-
+   
    /*
     *  Check all dump files for correctness and build ordered list
     */
@@ -354,10 +416,10 @@ char	*argv[];
 #endif
    }
 
-   if( (cpt_mask & level_mask[proto_header.dump_level]) != cpt_mask )
+   if( ! (1 << xcpt-1 & level_mask[proto_header.dump_level]) )
    {
-      fprintf(stderr,"Sorry the components requested by mask %d",cpt_mask);
-      fprintf(stderr," are not contained in a dump of level %d\n",
+      fprintf(stderr,"Sorry the component requested (%s)",cpt[xcpt-1].name);
+      fprintf(stderr," is not contained in a dump of level %d\n",
 	      header.dump_level);
       exit(2);
    }
@@ -411,17 +473,6 @@ char	*argv[];
 	 exit(2);
       }
    }
-
-   /*
-    *  Molecule mask
-    */
-   if(mol_head.next == 0)
-   {
-      cur = (list_t*)calloc(1,sizeof(list_t));
-      cur->i = 0;
-      cur->num = nmols;
-      mol_head.next = cur;
-   }
    /*
     *  Set up component size and offsets
     */
@@ -451,13 +502,23 @@ char	*argv[];
       exit(3);
    }
    /*
+    * Open output file  if requested
+    */
+   if( out_name )
+      if( ! freopen(out_name, bflg?"wb":"w", stdout) )
+      {
+	 fprintf(stderr,"Failed to open file \"%s\" for output - ",out_name);
+	 perror("");
+	 exit(4);
+      }
+   /*
     *  Do the extraction
     */
    for( cur = f_head.next; cur; cur = cur->next)
    {
       if( cur->i <= tslice && tslice < MIN(cur->i + cur->num, numslice) )
       {
-	 extract(cur->p, cpt_mask, mol_head.next, cpt, NCPT, tslice-cur->i,
+	 extract(cur->p, 1<<xcpt-1, mol_head.next, cpt, NCPT, tslice-cur->i,
 		 MIN(cur->num,numslice-cur->i), inc, bflg, nmols);
 	 tslice += (cur->i + cur->num - tslice - 1) / inc * inc + inc;
       }
