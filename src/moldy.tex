@@ -25,7 +25,7 @@
 \topmargin=0pt
 \textheight=9in
 {\def\$#1${#1}%                               %%% Special Kludge for RCS
-\xdef\RCSrevision{\$Revision: 2.5 $}\xdef\manversA{$\$junk $ $}}
+\xdef\RCSrevision{\$Revision: 2.6 $}\xdef\manversA{$\$junk $ $}}
 \title{{\Huge Moldy User's Manual}\\ \RCSrevision}
 \author{Keith Refson\\Department of Earth Sciences\\Parks Road
 \\Oxford OX1 3PR\\keith@earth.ox.ac.uk\\}
@@ -2160,7 +2160,8 @@ figure~\ref{fig:output}.  The frequency of periodic output may be
 altered by setting the control parameter \verb'print-interval' to the
 interval required.  (This may be necessary to constrain the size of
 the output file which can grow to be very large indeed with the
-default interval of only 10.)  
+default interval of only 10.)
+
 \begin{figure}
 \caption[Sample \moldy\  output.]{Sample \moldy\  output from a simulation 
 of a two component mixture.  The first component is a polyatomic
@@ -2227,6 +2228,21 @@ variables printed as part of the periodic output, the pressure, the
 virial, mean square forces, mean square torques and total dipole
 moments are calculated.
 
+\subsection{Output units}
+All of the various forms of output use the same units, though for
+brevity they are not explicitly mentioned on the periodic output.
+Lengths are measured in \AA, energies are all expressed in kJ
+mol$^{-1}$, temperatures in Kelvin, pressure and stress in MPa, mean
+square forces and torques in torques in N$^2$ mol$^{-1}$ and Nm$^2$
+mol$^{-1}$, charge in electron charges and dipole moments in Debye.
+Because energy is an extensive quantity the printed values refer to
+the {\em whole system}.  (There is no practical way of expressing
+energies per mole of any particular constituent in a program cabable
+of simulating arbitrary mixtures.)
+
+If these units do not suit, they can be changed in the configuration
+file \verb'defs.h', where the conversion from internal to output units
+is parameterized.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Radial Distribution Functions}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -3005,11 +3021,12 @@ be so easy!
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{verbatim}
 # LJ Argon - about as simple as you can get
+# Parameters from Allen and Tildesley Table 1.1
 Argon 128
 1          0           0          0    36 0 Ar
 end
 Lennard-Jones
-1 1 3984.08 3.41
+1 1 3.984 3.41
 \end{verbatim}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{TIPS2 Water}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
