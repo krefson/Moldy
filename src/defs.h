@@ -1,7 +1,10 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.18 92/02/26 14:29:04 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.19 92/06/10 15:53:33 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.19  92/06/10  15:53:33  keith
+ * Added new potential type "generic" for Neal.
+ * 
  * Revision 1.18  92/02/26  14:29:04  keith
  * Updated vectorization directive substitution for Convex C vsn 4.3
  * 
@@ -78,8 +81,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.18 $"
-#define		 REVISION_DATE    "$Date: 92/02/26 14:29:04 $"
+#define          REVISION         "$Revision: 1.19 $"
+#define		 REVISION_DATE    "$Date: 92/06/10 15:53:33 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -105,12 +108,22 @@
  * Define operating-system dependant default filenames
  */
 #ifdef VMS
-#define BACKUP_FILE	"MDBACKUP.DAT"
-#define TEMP_FILE	"MDTEMPXXXX.DAT"
+#   define BACKUP_FILE	"MDBACKUP.DAT"
+#   define TEMP_FILE	"MDTEMPXXXX.DAT"
+#   define LOCKEX		"$LCK"
 #endif
 #ifdef CMS
-#define BACKUP_FILE	"MDBACKUP MOLDY A1"
-#define TEMP_FILE	"MDTEMP XXXXXXXX A1"
+#   define BACKUP_FILE	"MDBACKUP MOLDY A1"
+#   define TEMP_FILE	"MDTEMP XXXXXXXX A1"
+#endif
+#ifdef unix
+#   define LOCKEX		".lck"
+#endif
+#ifdef __unix__
+#   define LOCKEX		".lck"
+#endif
+#ifndef LOCKEX
+#   define LOCKEX		"LK"
 #endif
 /*
  * Set ANSI_LIBS only if you have the standard ANSI headers and libraries
