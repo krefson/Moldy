@@ -43,6 +43,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.23  2001/07/31 17:58:18  keith
+ *       Incorporated all info from "species" struct into dump file headers.
+ *
  *       Revision 2.22  2001/05/24 16:26:43  keith
  *       Updated program to store and use angular momenta, not velocities.
  *        - added conversion routines for old restart files and dump files.
@@ -230,7 +233,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.22 2001/05/24 16:26:43 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.23 2001/07/31 17:58:18 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -281,7 +284,7 @@ FILE  *open_dump(char *fname, char *mode)
 #ifdef USE_XDR
    if( dumpf )
    {
-      if( mode[0] == 'w' || mode[0] && mode[1] == '+' ||  mode[1] && mode[2] == '+')
+      if( mode[0] == 'w' || (mode[0] && mode[1] == '+') ||  (mode[1] && mode[2] == '+'))
 	 xdrstdio_create(&xdrs, dumpf, XDR_ENCODE);
       else
 	 xdrstdio_create(&xdrs, dumpf, XDR_DECODE);

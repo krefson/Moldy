@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.h,v $
+ *       Revision 2.14  2001/07/31 17:58:19  keith
+ *       Incorporated all info from "species" struct into dump file headers.
+ *
  *       Revision 2.13  2000/11/15 17:52:00  keith
  *       Changed format of dump files.
  *       Added second struct with sufficient information
@@ -89,7 +92,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSidh = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.h,v 2.13 2000/11/15 17:52:00 keith Exp $";
+static char *RCSidh = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.h,v 2.14 2001/07/31 17:58:19 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef USE_XDR
@@ -180,7 +183,7 @@ bool_t  xdr_bool(void);
 #define XDR_RESTRT_SIZE  (2*XDR_ULONG_SIZE+(DLEN)+(L_name)+L_vsn+XDR_INT_SIZE)
 #define XDR_DUMP_SIZE    ((L_name)+L_vsn+6*XDR_INT_SIZE+4*XDR_ULONG_SIZE)
 #define XDR_SYSINFO_SIZE_PRE22(nspecies) (XDR_FLOAT_SIZE+(3+2*nspecies)*XDR_INT_SIZE + 32*nspecies)
-#define XDR_SYSINFO_SIZE(nspecies) (XDR_FLOAT_SIZE+2*XDR_INT_SIZE+\
+#define XDR_SYSINFO_SIZE(nspecies) (XDR_FLOAT_SIZE+3*XDR_INT_SIZE+\
 				    nspecies*( 6*XDR_FLOAT_SIZE\
 					      +3*XDR_INT_SIZE\
-					      +L_name))
+					      +L_spec))

@@ -117,7 +117,7 @@ FILE  *open_dump(char *fname, char *mode)
 #ifdef USE_XDR
    if( dumpf )
    {
-      if( mode[0] == 'w' || mode[0] && mode[1] == '+' ||  mode[1] && mode[2] == '+')
+      if( mode[0] == 'w' || (mode[0] && mode[1] == '+') ||  (mode[1] && mode[2] == '+'))
 	 xdrstdio_create(&xdrs, dumpf, XDR_ENCODE);
       else
 	 xdrstdio_create(&xdrs, dumpf, XDR_DECODE);
@@ -247,7 +247,6 @@ extract(char *dump_name, int cpt_mask, list_mt *molecules, cpt_mt *cpt, int ncpt
    long		dump_base;
    int		icpt, start, nitems;
    list_mt	*mol;
-   int		errflg = 0;
    dump_sysinfo_mt *dump_sysinfo =  (dump_sysinfo_mt*)malloc(sysinfo_size);
    
    if( (dump_file = open_dump(dump_name, "rb")) == NULL)

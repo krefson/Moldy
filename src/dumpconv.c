@@ -19,11 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dumpconv.c,v 2.14 2000/11/15 17:51:59 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dumpconv.c,v 2.15 2001/07/31 17:58:18 keith Exp $";
 #endif
 
 /*
  * $Log: dumpconv.c,v $
+ * Revision 2.15  2001/07/31 17:58:18  keith
+ * Incorporated all info from "species" struct into dump file headers.
+ *
  * Revision 2.14  2000/11/15 17:51:59  keith
  * Changed format of dump files.
  * Added second struct with sufficient information
@@ -139,6 +142,9 @@ XDR	 xdrsw;
 bool_t xdr_dump(XDR *xdrs, dump_mt *sp);
 #endif
 
+#undef OLDVSN
+#define OLDVSN "Can not determine dump file version - \"%s\""
+
 /******************************************************************************
  * strstr replacement for pre-ANSI machines which don't have it.              *
  ******************************************************************************/
@@ -170,7 +176,7 @@ void error(char *format, ...)
  *  message.   Deliver error message to possibly exiting.  It can be called   *
  *             BEFORE output file is opened, in which case output to stderr.  *
  ******************************************************************************/
-char    *comm;             
+char    *comm = "dumpconv";             
 /*VARARGS*/
 void    message(int *nerrs, ...)
 {
@@ -227,7 +233,7 @@ int	read_header(dump_mt *header, dump_sysinfo_mt **sysinfo)
 {
    int num, ispec;
    char *c;
-   
+   mol_mt *mol_p;
    
    fgets(header->title, sizeof header->title, stdin);
    if((c = strchr(header->title, '\n')))
@@ -240,7 +246,7 @@ int	read_header(dump_mt *header, dump_sysinfo_mt **sysinfo)
 	  &header->dump_level, &header->maxdumps, &header->ndumps);
    num += scanf("%ld %ld %ld %d %ld",&header->timestamp, &header->restart_timestamp,
 		 &header->dump_init, &header->dump_size, &header->sysinfo_size);
-   if( num < 10 ) 
+   if( num < 12 ) 
       return -1;
    if ( ( dump_sysinfo = *sysinfo = malloc(header->sysinfo_size)) == 0)
       error("Failed to malloc memory for sysinfo header");
@@ -248,12 +254,17 @@ int	read_header(dump_mt *header, dump_sysinfo_mt **sysinfo)
 	                      &dump_sysinfo->nmols_r, &dump_sysinfo->nspecies);
    for(ispec = 0; ispec < dump_sysinfo->nspecies; ispec++)
    {
+      mol_p = &dump_sysinfo->mol[ispec];
       fgets(dump_sysinfo->mol[ispec].name, L_spec, stdin);     
       if((c = strchr(dump_sysinfo->mol[ispec].name, '\n')))
 	 *c = '\0';
-      num += scanf("%d %d", &dump_sysinfo->mol[ispec].nmols, &dump_sysinfo->mol[ispec].rdof);
+      num ++;
+      num += scanf("%d %d %d", &mol_p->nmols, &mol_p->framework, &mol_p->rdof);
+      num += scanf("%f %f %f %f", &mol_p->mass, &mol_p->inertia[0],
+		   &mol_p->inertia[1],&mol_p->inertia[2]);
+      num += scanf("%f %f", &mol_p->charge, &mol_p->dipole);
    }
-   if( num < 4+2*dump_sysinfo->nspecies) 
+   if( num < 4+10*dump_sysinfo->nspecies) 
       return -1;
    return 0;
 }
@@ -272,8 +283,14 @@ void	print_header(dump_mt *header, dump_sysinfo_mt *sysinfo)
    printf("%.8g %d %d %d\n", sysinfo->deltat, sysinfo->nmols, 
 	                     sysinfo->nmols_r, sysinfo->nspecies);
    for(ispec = 0; ispec < sysinfo->nspecies; ispec++)
-      printf("%s\n%d %d\n",sysinfo->mol[ispec].name,sysinfo->mol[ispec].nmols,
-	                   sysinfo->mol[ispec].rdof);
+   {
+      printf("%s\n%d %d %d\n",sysinfo->mol[ispec].name,sysinfo->mol[ispec].nmols,
+	                   sysinfo->mol[ispec].framework, sysinfo->mol[ispec].rdof);
+      printf("%.8g %.8g %.8g %.8g\n", sysinfo->mol[ispec].mass,
+	     sysinfo->mol[ispec].inertia[0],sysinfo->mol[ispec].inertia[1],
+	     sysinfo->mol[ispec].inertia[2]);
+      printf("%.8g %.8g\n",sysinfo->mol[ispec].charge,sysinfo->mol[ispec].dipole);
+   }
 }
 
 
@@ -286,7 +303,7 @@ FILE  *open_dump(char *fname, char *mode)
 #ifdef USE_XDR
    if( dumpf )
    {
-      if( mode[0] == 'w' || mode[0] && mode[1] == '+' ||  mode[1] && mode[2] == '+')
+      if( mode[0] == 'w' || (mode[0] && mode[1] == '+') ||  (mode[1] && mode[2] == '+'))
 	 xdrstdio_create(&xdrs, dumpf, XDR_ENCODE);
       else
 	 xdrstdio_create(&xdrs, dumpf, XDR_DECODE);
@@ -301,7 +318,7 @@ FILE  *reopen_dump(FILE *dumpf, char *mode)
 #ifdef USE_XDR
    if( dumpf )
    {
-      if( mode[0] == 'w' || mode[0] && mode[1] == '+' ||  mode[1] && mode[2] == '+')
+      if( mode[0] == 'w' || (mode[0] && mode[1] == '+') ||  (mode[1] && mode[2] == '+'))
 	 xdrstdio_create(&xdrs, dumpf, XDR_ENCODE);
       else
 	 xdrstdio_create(&xdrs, dumpf, XDR_DECODE);
@@ -531,7 +548,7 @@ main(int argc, char **argv)
 	  xdrout=0;
 	 break;
        default:
-	 fprintf(stderr,"Usage: dumpconvert [-d] [-x] infile outfile\n");
+	 fprintf(stderr,"Usage: dumpconvert [-b] [-d] [-n] infile outfile\n");
 	 exit(2);
       }
       argc--; argv++;

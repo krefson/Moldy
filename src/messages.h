@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/messages.h,v 2.26 2001/07/26 17:30:17 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/messages.h,v 2.27 2001/07/31 14:14:13 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -150,7 +150,7 @@ correction of %g kJmol(-1) added to self energy"
 number of words"
 #define NCNVRG  "Do_step: velocities failed to converge after %d iterations \
 - dist = %f"
-#define INRVSN	"Values.c:init_averages: Invalid RCS version \"%s\""
+#define INRVSN	"Init_averages: Invalid RCS version \"%s\""
 #define OLDVSN	"Attempt to append to incompatible version of dump files (RCS version \"%s\")"
 #define CPOTFL  "Not enough space to store potential parameters from restart\
  file.  Increase NPOTP in \"defs.h\" from %d to at least %d and recompile"
