@@ -42,7 +42,7 @@ dnl
      sparc-sun-sunos*)  : ${OPT=-fast\ -O4} ${OPT2=$OPT} \
                           ${LDFLAGS=-fast} ;;
      sparc-sun-solaris*): ${OPT=-fast\ -xO4}  \
-                          ${OPT2="${OPT}\ -fsimple\ -xrestrict=%all"} \
+                          ${OPT2=${OPT}\ -fsimple\ -xrestrict=%all} \
                           ${LDFLAGS=-fast} ;;
      rs6000-ibm-aix*)   : ${OPT=-qansialias\ -O3}  ${OPT2=$OPT};;
      mips-sgi-irix5*)   : ${OPT=-O2\ -mips2} ${OPT2=$OPT} \
@@ -208,10 +208,11 @@ if test $parlib = "tcgmsg" ; then
 fi
 if test $parlib = "shmem" ; then
    AC_CHECK_HEADERS(mpp/shmem.h)
-   AC_CHECK_FUNCS(barrier)
-   if test $ac_cv_func_barrier = yes && test $ac_cv_header_mpp_shmem_h = yes; then 
+   AC_CHECK_LIB(sma,shmem_barrier_all)
+   if test $ac_cv_lib_sma_shmem_barrier_all = yes && test $ac_cv_header_mpp_shmem_h = yes; then 
       AC_DEFINE(SPMD) 
       AC_DEFINE(SHMEM)
+      AC_CHECK_FUNCS(shmem_long_get globalexit sbreak)
    else
       AC_MSG_WARN(Unable to compile and link with SHMEM libraries)
    fi

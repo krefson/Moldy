@@ -22,6 +22,14 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.21  1998/07/17 12:06:53  keith
+ *       Ported SHMEM parallel interface to Irix for Origin systems
+ *
+ *       Revision 2.20  1997/08/26 16:40:59  keith
+ *       Updated with interface to new BSPlib standard and tested with Oxford
+ *       BSPlib.
+ *       Entries for old BSP remain - define preprocessor symbol BSP0 to use.
+ *
  *       Revision 2.19  1996/10/15 13:50:45  keith
  *       Corrections to Cray SHMEM library interface.
  *
@@ -68,7 +76,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/parallel.c,v 2.19 1996/10/15 13:50:45 keith Exp $";
+static char *RCSid = "$Header: /home/users/keith/data/moldy/src/RCS/parallel.c,v 2.21 1998/07/17 12:06:53 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -94,6 +102,13 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/parallel.c,v
 #include	<malloc.h>
 #include	<mpp/shmem.h>
 #include        <unistd.h>
+#ifndef HAVE_SBREAK
+#define sbreak(x) sbrk(x)
+#endif
+#ifndef HAVE_SHMEM_LONG_GET
+#define shmem_long_get shmem_get
+#define shmem_long_put shmem_put
+#endif
 #endif
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
@@ -249,7 +264,7 @@ int *idat;
    shmem_int_max_to_all(idat, idat, 1, 0, 0, nthreads, (int*)pWrk[psi], pSync[psi]);
    psi = ! psi;
 #ifdef SHMEM_BARRIER
-   barrier();
+   shmem_barrier_all();
 #endif
 }
 #endif
@@ -350,7 +365,7 @@ int  n;
       buf += m;
       n -= m;
 #ifdef SHMEM_BARRIER
-      barrier();
+      shmem_barrier_all();
 #endif
    }
 }
@@ -521,7 +536,7 @@ int  n;
          buf += m;
          n -= m;
 #ifdef SHMEM_BARRIER
-	 barrier();
+	 shmem_barrier_all();
 #endif
       }
     }
@@ -538,7 +553,7 @@ int  n;
          buf += m;
          n -= m;
 #ifdef SHMEM_BARRIER
-	 barrier();
+	 shmem_barrier_all();
 #endif
       }
     }      
@@ -565,7 +580,7 @@ int  n;
       buf += m;
       n -= m;
 #ifdef SHMEM_BARRIER
-      barrier();
+      shmem_barrier_all();
 #endif
    }
 }
@@ -704,14 +719,14 @@ int	ifrom;
       m = MIN(nbyt, NBUFMAX);
       if( ithread == ifrom )
 	 memcp(tmpbuf, buf, m);
-      shmem_broadcast((long*)tmpbuf, (long*)tmpbuf, 
+      shmem_broadcast64((long*)tmpbuf, (long*)tmpbuf, 
 		      (m+sizeof(long)-1)/sizeof(long), 
 		      ifrom, 0, 0, nthreads, pSyncb);
       if( ithread != ifrom )
 	 memcp(buf, tmpbuf, m);
       buf = (char*)buf + m;
       nbyt -= m;
-      barrier();
+      shmem_barrier_all();
    }
 }
 #endif
@@ -844,7 +859,7 @@ int	n, nblk, stride;
 	 memcp(recv+ithread*n+iblk*stride, send+iblk*stride, n*sizeof(real));
    }
 
-   barrier();		/* Ensure all PEs ready to receive data */
+   shmem_barrier_all();		/* Ensure all PEs ready to receive data */
    shmem_set_cache_inv();
    
    /*
@@ -859,7 +874,8 @@ int	n, nblk, stride;
       /* 
        * Get Addr of receive buffer on remote PE 
        */
-      shmem_get((long*)&recvbuf, (long*)&recvs, 1, right);
+      shmem_long_get((long*)&recvbuf, (long*)&recvs, 1, right);
+#ifdef _T3D
       /*
        * The documentation warns that the REMOTE address must not
        * extend beyond allocated memory on the LOCAL PE. Therefore
@@ -873,21 +889,21 @@ int	n, nblk, stride;
 	    message(NULLI, NULLP, FATAL, 
 		    "Par_collect_all (%d): sbreak() failed\n");
       }
-
+#endif
       if( ibeg >= 0 )
 	 for(iblk = 0; iblk < nblk; iblk++)
-	    shmem_put(recvbuf+ibeg*n+iblk*stride, 
+	    shmem_long_put(recvbuf+ibeg*n+iblk*stride, 
 		      recvs+ibeg*n+iblk*stride, i*n, right);
       else
 	 for(iblk = 0; iblk < nblk; iblk++)
 	 {
-	    shmem_put(recvbuf+(ibeg+nthreads)*n+iblk*stride, 
+	    shmem_long_put(recvbuf+(ibeg+nthreads)*n+iblk*stride, 
 		      recvs+(ibeg+nthreads)*n+iblk*stride, -ibeg*n, right);
-	    shmem_put(recvbuf+iblk*stride, 
+	    shmem_long_put(recvbuf+iblk*stride, 
 		      recvs+iblk*stride, (ithread+1)*n, right);
 	 }
       shmem_quiet();	                   /* Wait for puts to complete  */
-      shmem_put((long*)&SyncB[iSync], &Sync0, 1, right); 
+      shmem_long_put((long*)&SyncB[iSync], &Sync0, 1, right); 
                                            /* Signal to "right" its done */
       while( SyncB[iSync] == _SHMEM_SYNC_VALUE )
 	 ;			/* Spin wait until data has arrived here */
@@ -991,6 +1007,7 @@ int	*ithread;
 int	*nthreads;
 {
    int i;
+   start_pes(0);
    *nthreads = _num_pes();
    *ithread  = _my_pe();
    
@@ -998,7 +1015,7 @@ int	*nthreads;
      pSyncb[i] = _SHMEM_SYNC_VALUE;
    for(i=0; i < _SHMEM_REDUCE_SYNC_SIZE; i++)
      pSync[0][i] = pSync[1][i] =  _SHMEM_SYNC_VALUE;
-   barrier();
+   shmem_barrier_all();
 }
 #endif
 #ifdef MPI
@@ -1042,7 +1059,7 @@ par_finish()
 void
 par_finish()
 {
-  barrier();
+  shmem_barrier_all();
 }
 #endif
 #ifdef MPI
@@ -1086,12 +1103,22 @@ int code;
 }
 #endif
 #ifdef SHMEM
+#  ifdef HAVE_GLOBALEXIT
 void
 par_abort(code)
 int code;
 {
    globalexit(code);
 }
+#  else
+void
+par_abort(code)
+int code;
+{
+   kill(getpid(),SIGKILL);
+}
+
+#  endif
 #endif
 #ifdef MPI
 void
