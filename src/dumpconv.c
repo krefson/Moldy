@@ -19,11 +19,16 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 1.5 93/03/09 15:59:51 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 2.0 93/03/15 14:49:44 keith Rel $";
 #endif
 
 /*
  * $Log:	dumpconvert.c,v $
+ * Revision 2.0  93/03/15  14:49:44  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.5  93/03/09  15:59:51  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
@@ -53,11 +58,14 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 1
 #include "string.h"
 #include <varargs.h>
 #include <stdio.h>
+#ifdef USE_XDR
+#include "xdr.h"
+XDR	 xdrsr;
+XDR	 xdrsw;
+#endif
+
+int av_convert;
 char	*calloc();
-void	print_header();
-int	read_header();
-void	binary_to_text();
-void	text_to_binary();
 
 #if defined(CRAY) && ! defined(unix)
 int     vfprintf (file, fmt, args)
@@ -83,107 +91,108 @@ va_dcl
    exit(3);
 }
 
-main(argc, argv)
-int	argc;
-char	*argv[];
+
+void read_text(buf,buflen)
+float  *buf;
+int    buflen;
 {
-   int	i = 1, detext = 0;
-   static char *ity[2] = {"rb","r"}, *oty[2] = {"w","wb"};
-   
+   int i;
 
-   if ( argc > 1 && ! strcmp(argv[1],"-d") )
-   {
-      i++;
-      detext++;
-   }
-
-   if( argc > i )
-   {
-      if( strcmp(argv[i],"-") && freopen(argv[i], ity[detext], stdin) == NULL )
-	 error("Failed to open file \"%s\" for input", argv[i]);
-   }
-   if( argc > ++i )
-   {
-      if( strcmp(argv[i],"-") && freopen(argv[i], oty[detext], stdout) == NULL )
-	 error("Failed to open file \"%s\" for writing", argv[i]);
-   }
-	    
-      
-   if( detext)
-      text_to_binary();
-   else
-      binary_to_text();
+   for( i = 0; i < buflen; i++ )
+      scanf("%g", &buf[i]);
+   if( ferror(stdin) )
+      error("Read error on input file (Error code %d).",ferror(stdin));
 }
 
-void binary_to_text()
+void write_text(buf,buflen)
+float  *buf;
+int    buflen;
 {
-   dump_mt header;
-   float  *buf;
-   int    buflen, idump, i;
+   int i;
 
-   if( fread((char*)&header, sizeof(dump_mt), 1, stdin) )
-      print_header(&header);
+   for( i = 0; i < buflen; i++ )
+      printf("%.7g%c",buf[i],(i+1) % 5 ? ' ' : '\n');
+   if( i % 5 ) fputc('\n', stdout);
+   if( ferror(stdout) )
+      error("Write error on output file (Error code %d).",ferror(stdout));
+}
+
+void read_binary(buf,buflen,xdr)
+float  *buf;
+int    buflen, xdr;
+{
+#ifdef USE_XDR
+   if( xdr )
+   {
+      xdr_vector(&xdrsr, (char*)buf, buflen, XDR_FLOAT_SIZE, xdr_float);
+   }
    else
-      error("Failed to read header record (Error code %d).",ferror(stdin));
-
-   buflen = header.dump_size;
-   if( ! (buf = (float *)calloc(buflen, sizeof(float))))
-      error("Failed to allocate memory (%d words requested)\n",buflen);
-
-   for( idump = 0; idump < header.ndumps; idump++ )
+#endif
    {
       fread(buf , sizeof(float), buflen, stdin);
-      if( ferror(stdin) )
-	 error("Read error on input file (Error code %d).",ferror(stdin));
-
-      for( i = 0; i < buflen; i++ )
-         printf("%.7g%c",buf[i],(i+1) % 5 ? ' ' : '\n');
-      if( i % 5 ) fputc('\n', stdout);
-      if( ferror(stdout) )
-	 error("Write error on output file (Error code %d).",ferror(stdout));
-
    }
+   if( ferror(stdin) )
+      error("Read error on input file (Error code %d).",ferror(stdin));
 }
 
-void	print_header(header)
-dump_mt	*header;
+void write_native(buf, buflen)
+float  *buf;
+int    buflen;
 {
-   printf("%s\n%s\n",header->title, header->vsn);
-   printf("%d %d %d %d %d\n", header->istep, header->dump_interval,
-	  header->dump_level, header->maxdumps, header->ndumps);
-   printf("%ld %ld %ld %ld\n",header->timestamp, header->restart_timestamp,
-	   header->dump_init, header->dump_size); 
-}
-
-
-void text_to_binary()
-{
-   dump_mt header;
-   float  *buf;
-   int    buflen, idump, i;
-
-   if( read_header(&header) )
-      error("Failed to read header record (Error code %d).",ferror(stdin));
-
-   buflen = header.dump_size;
-   if( ! (buf = (float *)calloc(buflen, sizeof(float))))
-      error("Failed to allocate memory (%d words requested)\n",buflen);
-
-   if( ! fwrite((char*)&header, sizeof(dump_mt), 1, stdout) )
+   fwrite(buf , sizeof(float), buflen, stdout);
+   if( ferror(stdout) )
       error("Write error on output file (Error code %d).",ferror(stdout));
+}
 
-   for( idump = 0; idump < header.ndumps; idump++ )
+#ifdef USE_XDR
+void write_xdr(buf, buflen)
+float  *buf;
+int    buflen;
+{
+   xdr_vector(&xdrsw, (char*)buf, buflen, XDR_FLOAT_SIZE, xdr_float);
+   if( ferror(stdout) )
+      error("Write error on output file (Error code %d).",ferror(stdout));
+}
+#endif
+
+void read_bin_hdr(header, xdrw)
+dump_mt *header;
+int     *xdrw;
+{
+   int    xdr = 0, errflg = 0;
+
+#ifdef USE_XDR
+   /*
+    * Attempt to read dump header in XDR format
+    */
+   xdrstdio_create(&xdrsr, stdin, XDR_DECODE);
+   if( xdr_dump(&xdrsr, header) )
    {
-      for( i = 0; i < buflen; i++ )
-        scanf("%g", &buf[i]);
-      if( ferror(stdin) )
-	 error("Read error on input file (Error code %d).",ferror(stdin));
-
-      fwrite(buf , sizeof(float), buflen, stdout);
-      if( ferror(stdout) )
-	 error("Write error on output file (Error code %d).",ferror(stdout));
-
+      header->vsn[sizeof header->vsn - 1] = '\0';
+      if( strstr(header->vsn,"(XDR)") )
+      {
+	 errflg = 0;
+	 xdr = 1;
+      }
    }
+   else
+      errflg = 1;
+#endif
+   /*
+    * If we failed, try to read header as native struct image.
+    */
+   if( ! xdr )
+   {
+      if( fseek(stdin, 0L, 0) == 0 &&
+	 fread((char*)header, sizeof(dump_mt), 1, stdin) == 1) 
+	 errflg = 0;
+   }
+   if( errflg || ferror(stdin) || feof(stdin) )
+   {
+      error("Failed to read header record (Error code %d).",ferror(stdin));
+      exit(2);
+   }
+   *xdrw = xdr;
 }
 
 int	read_header(header)
@@ -201,9 +210,132 @@ dump_mt	*header;
    num  = 2;
    num += scanf("%d %d %d %d %d", &header->istep, &header->dump_interval,
 	  &header->dump_level, &header->maxdumps, &header->ndumps);
-   num += scanf("%ld %ld %ld %ld",&header->timestamp,
+   num += scanf("%ld %ld %ld %d",&header->timestamp,
 		 &header->restart_timestamp,
 		 &header->dump_init, &header->dump_size);
    if( num == 11 ) return 0;
    else            return -1;
+}
+
+void write_native_hdr(header)
+dump_mt *header;
+{
+   char *s;
+   if( (s = strstr(header->vsn,"(XDR)") ) != 0 )
+      *s = 0;
+   if( ! fwrite((char*)header, sizeof(dump_mt), 1, stdout) )
+      error("Write error on output file (Error code %d).",ferror(stdout));
+}
+
+#ifdef USE_XDR
+void write_xdr_hdr(header)
+dump_mt *header;
+{
+   strncat(header->vsn,"(XDR)",sizeof header->vsn);
+   xdrstdio_create(&xdrsw, stdout, XDR_ENCODE);
+   if( ! xdr_dump(&xdrsw, header) )
+      error("Write error on output file (Error code %d).",ferror(stdout));
+}
+#endif
+
+void	print_header(header)
+dump_mt	*header;
+{
+   char *s;
+   if( (s = strstr(header->vsn,"(XDR)") ) != 0 )
+      *s = 0;
+   printf("%s\n%s\n",header->title, header->vsn);
+   printf("%d %d %d %d %d\n", header->istep, header->dump_interval,
+	  header->dump_level, header->maxdumps, header->ndumps);
+   printf("%ld %ld %ld %d\n",header->timestamp, header->restart_timestamp,
+	   header->dump_init, header->dump_size); 
+}
+
+main(argc, argv)
+int	argc;
+char	*argv[];
+{
+   static char *ity[2] = {"rb","r"}, *oty[2] = {"w","wb"};
+   dump_mt header;
+   float *buf;
+   int   idump;
+   int   textin = 0, xdrin, xdrout = 0;
+
+   while( argc > 0 && argv[1][0] == '-' )
+   {
+      switch( argv[1][1] ) {
+       case 'd':	
+	 textin++;
+	 break;
+       case 'x':
+	  xdrout++;
+	 break;
+       default:
+	 fprintf(stderr,"Usage: dumpconvert [-d] [-x] infile outfile\n");
+	 exit(2);
+      }
+      argc--; argv++;
+   }
+
+   if( argc > 0 )
+   {
+      if( strcmp(argv[1],"-") && freopen(argv[1], ity[textin], stdin) == NULL )
+	 error("Failed to open file \"%s\" for input", argv[1]);
+   }
+   if( argc > 1 )
+   {
+      if( strcmp(argv[2],"-") && freopen(argv[2], oty[textin], stdout) == NULL )
+	 error("Failed to open file \"%s\" for writing", argv[2]);
+   }
+	    
+      
+   if( textin )
+   {
+      read_header(&header);
+#ifdef USE_XDR
+      if( xdrout )
+	 write_xdr_hdr(&header);
+      else
+#endif
+	 write_native_hdr(&header);
+   }
+   else
+   {
+      read_bin_hdr(&header, &xdrin);
+#ifdef USE_XDR
+      if( xdrout )
+	 write_xdr_hdr(&header);
+      else
+#endif
+	 print_header(&header);
+   }
+
+   if( ! (buf = (float *)calloc(header.dump_size, sizeof(float))))
+      error("Failed to allocate memory (%d words requested)\n",
+	    header.dump_size);
+   
+   for( idump = 0; idump < header.ndumps; idump++)
+   {
+      if( textin )
+      {
+	 read_text(buf, header.dump_size);
+#ifdef USE_XDR
+	 if( xdrout )
+	    write_xdr(buf, header.dump_size);
+	 else
+#endif
+	    write_native(buf, header.dump_size);
+      }
+      else
+      {
+	 read_binary(buf, header.dump_size, xdrin);
+#ifdef USE_XDR
+	 if( xdrout )
+	    write_xdr(buf, header.dump_size);
+	 else
+#endif
+	    write_text(buf, header.dump_size);
+      }
+   }
+return 0;
 }

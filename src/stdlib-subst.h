@@ -35,6 +35,7 @@ what you give them.   Help stamp out software-hoarding!  */
    extern char * realloc ();
    extern void exit ();
    extern int abs ();
+   extern long strtol();
 #endif
 
 #endif /* _MOLDY_STDLIB_H_ */

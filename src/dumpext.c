@@ -24,7 +24,11 @@ what you give them.   Help stamp out software-hoarding!  */
 #include 	"string.h"
 #include 	<stdio.h>
 #include	"structs.h"
+#ifdef USE_XDR
+#include	"xdr.h"
+#endif
 
+int av_convert;
 #undef MIN
 #define MIN(x,y) ( (x) > (y) ? (y) : (x))
 
@@ -114,7 +118,6 @@ char	*str;
 int	*start, *finish, *inc;
 {
    char	*p, *pp;
-   long strtol();
    
    if( (p = strchr(str,':')) != NULL)
    {
@@ -193,13 +196,14 @@ int   bflg;
  * Extract.  Process one dump file, extracting and outputting data.	      *
  ******************************************************************************/
 void
-extract(dump_name, cpt_mask, molecules, cpt, ncpt, tslice, num, inc, bflg, nmols)
+extract(dump_name, cpt_mask, molecules, cpt, ncpt, tslice, num, inc, 
+	bflg, nmols, xdr)
 char	*dump_name;
 int	cpt_mask;
 list_mt	*molecules;
 cpt_mt	cpt[];
 int	ncpt, tslice, num, inc;
-int	bflg, nmols;
+int	bflg, nmols, xdr;
 {
    FILE		*dump_file;
    dump_mt	header;
@@ -207,6 +211,11 @@ int	bflg, nmols;
    long		dump_base;
    int		icpt;
    list_mt	*mol;
+   int		errflg = 0;
+#ifdef USE_XDR
+   XDR          xdrs;
+#endif
+
    
    if( (dump_file = fopen(dump_name, "rb")) == NULL)
    {
@@ -216,14 +225,34 @@ int	bflg, nmols;
 #ifdef DEBUG
    fprintf(stderr,"Working on file \"%s\" (%d-%d)\n", dump_name, tslice, num);
 #endif
-   fread((char*)&header, sizeof(dump_mt), 1, dump_file);
-   if( ferror(dump_file) || feof(dump_file) )
+#ifdef USE_XDR
+   /*
+    * Attempt to read dump header in XDR format
+    */
+   if( xdr )
+   {
+      xdrstdio_create(&xdrs, dump_file, XDR_DECODE);
+      errflg = ! xdr_dump(&xdrs, &header);
+   }
+   else
+#endif
+   {
+      if( fread((char*)&header, sizeof(dump_mt), 1, dump_file) == 0 )
+	 errflg = false;
+   }
+         
+   if( errflg || ferror(dump_file) || feof(dump_file) )
    {
       fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
       exit(2);
    }
 
-   dump_base = sizeof(dump_mt)+tslice*header.dump_size*sizeof(float);
+#ifdef USE_XDR
+   if( xdr )
+      dump_base = XDR_DUMP_SIZE+tslice*header.dump_size*XDR_FLOAT_SIZE;
+   else
+#endif
+      dump_base = sizeof(dump_mt)+tslice*header.dump_size*sizeof(float);
    while(tslice < num && tslice < header.ndumps)
    {
 #ifdef DEBUG
@@ -233,8 +262,19 @@ int	bflg, nmols;
       {
 	 if( cpt_mask & (1 << icpt) )
 	 {
-	    fseek(dump_file, dump_base+cpt[icpt].offset*sizeof(float), 0);
-	    fread((char*)buf, sizeof(float), cpt[icpt].size, dump_file);
+#ifdef USE_XDR
+	    if( xdr )
+	    {
+	       xdr_setpos(&xdrs, dump_base+cpt[icpt].offset*XDR_FLOAT_SIZE);
+	       xdr_vector(&xdrs, (char*)buf, (u_int)cpt[icpt].size, XDR_FLOAT_SIZE, 
+			  xdr_float);
+	    }
+	    else
+#endif
+	    {
+	       fseek(dump_file, dump_base+cpt[icpt].offset*sizeof(float), 0);
+	       fread((char*)buf, sizeof(float), cpt[icpt].size, dump_file);
+	    }
 	    if( cpt[icpt].mols )
 	       for(mol = molecules; mol != 0; mol = mol->next)
 		  put(buf+mol->i*cpt[icpt].ncpt, mol->num*cpt[icpt].ncpt, bflg);
@@ -245,8 +285,17 @@ int	bflg, nmols;
       if( ! bflg )
 	 putchar('\n');
       tslice += inc;
-      dump_base += inc*sizeof(float) * header.dump_size;
+#ifdef USE_XDR
+      if( xdr )
+	 dump_base += inc*XDR_FLOAT_SIZE * header.dump_size;
+      else
+#endif
+	 dump_base += inc*sizeof(float) * header.dump_size;
    }
+#ifdef USE_XDR
+   if( xdr )
+      xdr_destroy(&xdrs);
+#endif
    (void)fclose(dump_file);
    (void)free((char*)buf);
 }
@@ -269,6 +318,10 @@ char	*argv[];
    int		start,finish,inc;
    int		tslice, numslice, maxslice;
    int		find, offset, icpt;
+   int		xdr = 0;
+#ifdef USE_XDR
+   XDR          xdrs;
+#endif
    
    static cpt_mt cpt[] = {{3, 0, 3, 1, "C of M positions"},
 			 {4, 0, 4, 1, "quaternions"},
@@ -303,16 +356,16 @@ char	*argv[];
       switch(c)
       {
        case 'c':
-	 xcpt = strtol(optarg,(char*)NULL,0);
+	 xcpt = strtol(optarg,(char**)0,0);
 	 break;
        case 'b':
 	 bflg++;
 	 break;
        case 'R':
-	 nmols = strtol(optarg,(char*)NULL,0);
+	 nmols = strtol(optarg,(char**)0,0);
 	 break;
        case 'Q':
-	 nmols_r = strtol(optarg,(char*)NULL,0);
+	 nmols_r = strtol(optarg,(char**)0,0);
 	 break;
        case 'n':
 	 filerange = optarg;
@@ -406,16 +459,42 @@ char	*argv[];
 	 fprintf(stderr, "Failed to open dump file \"%s\"\n", dump_name);
 	 exit(2);
       }
-      fread((char*)&header, sizeof(dump_mt), 1, dump_file);
-      if( ferror(dump_file) || feof(dump_file) )
+#ifdef USE_XDR
+      /*
+       * Attempt to read dump header in XDR format
+       */
+      xdrstdio_create(&xdrs, dump_file, XDR_DECODE);
+      if( xdr_dump(&xdrs, &header) )
+      {
+	 header.vsn[sizeof header.vsn - 1] = '\0';
+	 if( strstr(header.vsn,"(XDR)") )
+	 {
+	    errflg = 0;
+	    xdr = 1;
+	 }
+      }
+      else
+	 errflg = 1;
+#endif
+      /*
+       * If we failed, try to read header as native struct image.
+       */
+      if( ! xdr )
+      {
+	 if( fseek(dump_file, 0L, 0) == 0 &&
+             fread((char*)&header, sizeof(dump_mt), 1, dump_file) == 1) 
+	    errflg = 0;
+      }
+      if( errflg || ferror(dump_file) || feof(dump_file) )
       {
 	 fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
-	   exit(2);
+	 exit(2);
       }
       
       if( nfiles++ == 0 )
 	 proto_header = header;
       else if( strncmp(header.title, proto_header.title, L_name) ||
+	      strncmp(header.vsn, proto_header.vsn, sizeof header.vsn) ||
 	    header.dump_interval != proto_header.dump_interval ||
 	    header.dump_level != proto_header.dump_level       ||
 	    header.dump_size != proto_header.dump_size         ||
@@ -425,6 +504,10 @@ char	*argv[];
 	 exit(2);
       };
 
+#ifdef USE_XDR
+      if( xdr )
+	 xdr_destroy(&xdrs);
+#endif
       (void)fclose(dump_file);
       cur = (list_mt *)calloc(1, sizeof(list_mt));
       cur->p = dump_name;
@@ -540,7 +623,7 @@ char	*argv[];
       if( cur->i <= tslice && tslice < MIN(cur->i + cur->num, numslice) )
       {
 	 extract(cur->p, 1<<xcpt-1, mol_head.next, cpt, NCPT, tslice-cur->i,
-		 MIN(cur->num,numslice-cur->i), inc, bflg, nmols);
+		 MIN(cur->num,numslice-cur->i), inc, bflg, nmols, xdr);
 	 tslice += (cur->i + cur->num - tslice - 1) / inc * inc + inc;
       }
    }

@@ -19,11 +19,16 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpanalyze.c,v 1.3 93/03/09 15:59:49 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpanalyze.c,v 2.0 93/03/15 14:49:43 keith Rel $";
 #endif
 
 /*
  * $Log:	dumpanalyze.c,v $
+ * Revision 2.0  93/03/15  14:49:43  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.3  93/03/09  15:59:49  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
@@ -38,6 +43,12 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpanalyze.c,v 1
 
 #include <stdio.h>
 #include "structs.h"
+#ifdef USE_XDR
+#include        "xdr.h"
+#endif
+
+int av_convert; /* Dummy for xdr. */
+
 char	*ctime();
 void	analyze();
 void	print_header();
@@ -55,14 +66,48 @@ char *file;
 {
    FILE *f;
    dump_mt header;
-
+   int          errflg = 0, xdr = 0;
+#ifdef USE_XDR
+   XDR          xdrs;
+#endif
+   
    if( f = fopen(file,"rb") )
    {
       printf("\n***** %s *****\n",file);
-      if( fread((char*)&header, sizeof(dump_mt), 1, f) )
+#ifdef USE_XDR
+      /*
+       * Attempt to read dump header in XDR format
+       */
+      xdrstdio_create(&xdrs, f, XDR_DECODE);
+      if( xdr_dump(&xdrs, &header) )
+      {
+         header.vsn[sizeof header.vsn - 1] = '\0';
+         if( strstr(header.vsn,"(XDR)") )
+         {
+            errflg = 0;
+            xdr = 1;
+         }
+      }
+      else
+         errflg = 1;
+#endif
+      /*
+       * If we failed, try to read header as native struct image.
+       */
+      if( ! xdr )
+      {
+         if( fseek(f, 0L, 0) == 0 &&
+             fread((char*)&header, sizeof(dump_mt), 1, f) == 1) 
+            errflg = 0;
+      }
+      if( errflg == 0)
 	 print_header(&header);
       else
          printf("Failed to read anything from %s",file);
+#ifdef USE_XDR
+      if( xdr )
+	 xdr_destroy(&xdrs);
+#endif
       (void)fclose(f);
    }
 }
@@ -77,7 +122,7 @@ dump_mt	*header;
    printf("Max dumps\t\t= %d\n", header->maxdumps);
    printf("Dump Size\t\t= %d\n", header->dump_size);
    printf("Number of dumps\t\t= %d\n", header->ndumps);
-   printf("Timestamp\t\t= %s", ctime(&header->timestamp));
-   printf("Restart Timestamp\t= %s", ctime(&header->restart_timestamp));
-   printf("Dump Start\t\t= %s", ctime(&header->dump_init));
+   printf("Timestamp\t\t= %s", ctime((time_t*)&header->timestamp));
+   printf("Restart Timestamp\t= %s", ctime((time_t*)&header->restart_timestamp));
+   printf("Dump Start\t\t= %s", ctime((time_t*)&header->dump_init));
 }

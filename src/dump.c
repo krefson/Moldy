@@ -43,6 +43,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 2.0  93/03/15  14:49:01  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.19  93/03/09  15:58:26  keith
  * Changed all *_t types to *_mt for portability.
  * Reordered header files for GNU CC compatibility.
@@ -118,7 +123,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.19 93/03/09 15:58:26 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 2.0 93/03/15 14:49:01 keith Rel $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -131,6 +136,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.19 93/
 /*========================== program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
+#include	"xdr.h"
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
@@ -167,16 +173,20 @@ double		pe;
    		        (control.dump_interval * control.maxdumps),
 		ndumps =(control.istep-control.begin_dump) /
    			 control.dump_interval % control.maxdumps; 
-   int		dump_size = DUMP_SIZE(control.dump_level);
+   unsigned     dump_size = DUMP_SIZE(control.dump_level);
                                         /* Size in floats of each dump record */
-   float	*dump_buf = aalloc(dump_size, float);	/* For converted data */
+   float	*dump_buf=aalloc(dump_size,float);      /* For converted data */
    long		file_pos=0,		/* Offset within file of current rec. */
    		file_len;		/* Length of file		      */
    		boolean errflg = false;
 #define		NMUTATES 10   		/* Max number of mutation attempts.   */
    int		nmutates = 0;   	/* Number of mutation attempts.	      */
+   boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
- 
+#ifdef USE_XDR
+   XDR		xdrs;
+#endif
+
    if( ! strchr(control.dump_file, '%') )
       	(void)strcat(control.dump_file, "%d");
    (void)sprintf(cur_file,  control.dump_file, filenum);
@@ -190,12 +200,41 @@ double		pe;
       errflg = true;					/* Provisionally !!   */
       if( (dumpf = fopen(fname, "r+b")) == NULL)	/* Open dump file     */
 	 message(NULLI, NULLP, WARNING, DOERRR, fname, strerror(errno));
-      else if( fread((gptr*)&dump_header, sizeof(dump_mt), 1, dumpf) == 0 )
-	 message(NULLI, NULLP, WARNING, DRERR, fname, strerror(errno));
-      else if( control.dump_level != dump_header.dump_level )
-         message(NULLI, NULLP, INFO, DMPALT);
-      else
-	 errflg = false;
+      else 
+      {
+#ifdef USE_XDR
+	 /*
+	  * Attempt to read dump header in XDR format
+	  */
+	 xdrstdio_create(&xdrs, dumpf, XDR_DECODE);
+	 if( xdr_dump(&xdrs, &dump_header) )
+	 {
+	    dump_header.vsn[sizeof dump_header.vsn - 1] = '\0';
+	    if( strstr(dump_header.vsn,"(XDR)") )
+	    {
+	       errflg = false;
+	       xdr_write = TRUE;
+	    }
+	 }
+#endif
+	 /*
+	  * If we failed, try to read header as native struct image.
+	  */
+	 if( ! xdr_write )
+	 {
+	    if( fseek(dumpf, 0L, 0) ) 
+	       message(NULLI, NULLP, WARNING, SEFAIL, fname, strerror(errno));
+	    else if( fread((gptr*)&dump_header, sizeof(dump_mt), 1, dumpf) == 0 )
+	       message(NULLI, NULLP, WARNING, DRERR, fname, strerror(errno));
+	    else
+	       errflg = false;
+	 }
+	 if( control.dump_level != dump_header.dump_level )
+	 {
+	    message(NULLI, NULLP, INFO, DMPALT);
+	    errflg = true;
+	 }
+      }
 
       if( !errflg )
       {
@@ -216,15 +255,27 @@ double		pe;
 	 if( fseek(dumpf, 0L, SEEK_END) )
 	    message(NULLI, NULLP, FATAL, SEFAIL, fname, strerror(errno));
 	 file_len = ftell(dumpf);		/* Get length of file	      */
-	 file_pos = sizeof(dump_mt)
-	            + ndumps*dump_size*sizeof(float);	/* Expected length    */
+#ifdef USE_XDR
+	 if( xdr_write )
+	    file_pos = XDR_DUMP_SIZE
+	       + ndumps*dump_size*XDR_FLOAT_SIZE;	/* Expected length    */
+	 else
+#endif
+	    file_pos = sizeof(dump_mt)
+	       + ndumps*dump_size*sizeof(float);	/* Expected length    */
 	 if( file_len < file_pos )
          	message(NULLI, NULLP, FATAL, CORUPT, fname, file_pos, file_len);
       }
       else
       {
-	 if( dumpf != NULL )
+	 if( dumpf )
+	 {
+#ifdef USE_XDR
+	    if( xdr_write )
+	       xdr_destroy(&xdrs);
+#endif
 	    (void)fclose(dumpf);
+	 }
 	 if( ndumps != 0 )
 	 {
 	    ndumps = 0; filenum = 0;
@@ -236,8 +287,16 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 1.19 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 2.0 $"+11,
 		                     sizeof dump_header.vsn-1);
+#ifdef USE_XDR
+      if( control.xdr_write )
+      {
+	 (void)strncat(dump_header.vsn, " (XDR)",
+		                     sizeof dump_header.vsn-1);
+	 xdr_write = TRUE;
+      }
+#endif
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;
       dump_header.maxdumps	= control.maxdumps;
@@ -249,7 +308,14 @@ double		pe;
       
    if( ndumps == 0)				/* Start of new dump file     */
    {
-      if( dumpf ) (void)fclose(dumpf);		/* Finished with old file     */
+      if( dumpf ) 		/* Finished with old file     */
+      {
+#ifdef USE_XDR
+	 if( xdr_write )
+	    xdr_destroy(&xdrs);
+#endif
+	 (void)fclose(dumpf);
+      }
       while( (dumpf = fopen(cur_file, "r")) != 0 )
       {
 	 (void)fclose(dumpf);
@@ -261,27 +327,76 @@ double		pe;
 
       dump_header.ndumps = 0;	dump_header.istep = control.istep;
       dump_header.timestamp = time((time_t *)0);
+      dump_header.restart_timestamp = 0;
 
       if( (dumpf = fopen(cur_file, "w+b")) == 0)
 	 message(NULLI, NULLP, FATAL, DOERRW, cur_file, strerror(errno));
-      if( fwrite((gptr*)&dump_header, sizeof(dump_mt), 1, dumpf) == 0)
-	 message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
-      file_pos = ftell(dumpf);
+#ifdef USE_XDR
+      if( xdr_write )
+      {
+	 xdrstdio_create(&xdrs, dumpf, XDR_ENCODE);
+	 if( ! xdr_dump(&xdrs, &dump_header) )
+	    message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+	 if( (file_pos = xdr_getpos(&xdrs)) == -1)
+	    message(NULLI, NULLP, FATAL, GPFAIL, cur_file, strerror(errno));
+      }
+      else
+#endif
+      {
+	 if( fwrite((gptr*)&dump_header, sizeof(dump_mt), 1, dumpf) == 0)
+	    message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+	 if( (file_pos = ftell(dumpf)) == -1)
+	    message(NULLI, NULLP, FATAL, GPFAIL, cur_file, strerror(errno));
+      }
    }
+#ifdef USE_XDR
+   else
+   {
+      if( xdr_write )
+      {
+	 xdr_destroy(&xdrs);
+	 xdrstdio_create(&xdrs, dumpf, XDR_ENCODE);
+      }
+   }
+#endif
 
    dump_convert(dump_buf, system, force, torque, stress, pe);
    dump_header.ndumps++;
    dump_header.restart_timestamp = restart_header.timestamp;
 
-   if( fseek(dumpf, file_pos, SEEK_SET) )		/* Write data at end */
-      message(NULLI, NULLP, FATAL, SEFAIL, cur_file, strerror(errno));
-   if( fwrite((gptr*)dump_buf, sizeof(float), dump_size, dumpf) < dump_size )
-      message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+#ifdef USE_XDR
+   if( xdr_write )
+   {
+      if( ! xdr_setpos(&xdrs, file_pos) )		/* Write data at end */
+	 message(NULLI, NULLP, FATAL, SEFAIL, cur_file, strerror(errno));
+      if( ! xdr_vector(&xdrs, (gptr*)dump_buf, dump_size, sizeof(float), 
+		     xdr_float) )
+	 message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+   }
+   else
+#endif
+   {
+      if( fseek(dumpf, file_pos, SEEK_SET) )		/* Write data at end */
+	 message(NULLI, NULLP, FATAL, SEFAIL, cur_file, strerror(errno));
+      if( fwrite((gptr*)dump_buf, sizeof(float), dump_size, dumpf) < dump_size )
+	 message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+   }
 
-   (void)fseek(dumpf, 0L, SEEK_SET);			/* Write header      */
-   if( fwrite((gptr*)&dump_header, sizeof(dump_mt), 1, dumpf) == 0)
-      message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
-
+#ifdef USE_XDR
+   if( xdr_write )
+   {
+      (void)xdr_setpos(&xdrs, 0);
+      if( ! xdr_dump(&xdrs, &dump_header) )
+	 message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+      xdr_destroy(&xdrs);
+   }
+   else
+#endif
+   {
+      (void)fseek(dumpf, 0L, SEEK_SET);			/* Write header      */
+      if( fwrite((gptr*)&dump_header, sizeof(dump_mt), 1, dumpf) == 0)
+	 message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+   }
    if( ferror(dumpf) || fclose(dumpf) )
       message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
 

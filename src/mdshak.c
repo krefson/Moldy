@@ -32,6 +32,9 @@ what you give them.   Help stamp out software-hoarding!  */
 #define error(str, args) message(NULLI, NULLP, FATAL, str, args)
 #include "structs.h"
 #include "messages.h"
+#ifdef USE_XDR
+#include	"xdr.h"
+#endif
 
 void	invert();
 void	mat_vec_mul();
@@ -67,6 +70,7 @@ void	conv_control()
 {}
 void	convert_averages()
 {}
+int	av_convert;
 /******************************************************************************
  *  message.   Deliver error message to possibly exiting. 		      *
  ******************************************************************************/
@@ -467,8 +471,13 @@ char	*argv[];
    pot_mt	*potpar;
    quat_mt	*qpf;
    contr_mt	control_junk;
-   control.page_length=1000000;
+   int		xdr = 0;
+#ifdef USE_XDR
+   XDR          xdrs;
+#endif
+   
 #define MAXTRY 100
+   control.page_length=1000000;
 
    while( (c = getopt(argc, argv, "o:cr:s:d:n:i:") ) != EOF )
       switch(c)
@@ -645,9 +654,38 @@ char	*argv[];
 	 * At this stage we should have the first dump file open.
 	 * Read the header.
 	 */
-        fread(&header, sizeof header, 1, Dp);
-	if( ferror(Dp) )
-	   error("Couldn't read dump header","");
+#ifdef USE_XDR
+	/*
+	 * Attempt to read dump header in XDR format
+	 */
+	xdrstdio_create(&xdrs, Dp, XDR_DECODE);
+	if( xdr_dump(&xdrs, &header) )
+	{
+	   header.vsn[sizeof header.vsn - 1] = '\0';
+	   if( strstr(header.vsn,"(XDR)") )
+	   {
+	      errflg = 0;
+	      xdr = 1;
+	   }
+	}
+	else
+	   errflg = 1;
+#endif
+	/*
+	 * If we failed, try to read header as native struct image.
+	 */
+	if( ! xdr )
+	{
+	   if( fseek(Dp, 0L, 0) == 0 &&
+             fread((char*)&header, sizeof(dump_mt), 1, Dp) == 1) 
+	      errflg = 0;
+	}
+	if( errflg || ferror(Dp) || feof(Dp) )
+	{
+	   fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
+	   exit(2);
+	}
+
 	if( (header.dump_level & 1) == 0 )
 	   error("Dump at level %d doesn't contain co-ordinate information",
 		 header.dump_level);
@@ -675,8 +713,20 @@ char	*argv[];
 	   /*
 	    *  Now go and get the data
 	    */
-	   fseek(Dp, sizeof header + irec%header.maxdumps*dump_size, 0);
-	   fread(dump_buf, dump_size, 1, Dp);
+#ifdef USE_XDR
+	    if( xdr )
+	    {
+	       xdr_setpos(&xdrs, XDR_DUMP_SIZE + irec%header.maxdumps
+			  *header.dump_size*XDR_FLOAT_SIZE);
+	       xdr_vector(&xdrs, (char*)dump_buf, header.dump_size, 
+			  XDR_FLOAT_SIZE, xdr_float);
+	    }
+	    else
+#endif
+	    {
+	       fseek(Dp, sizeof header + irec%header.maxdumps*dump_size, 0);
+	       fread(dump_buf, dump_size, 1, Dp);
+	    }
 	   if(ferror(Dp))
 	      error("Error reading record %d in dump file",
 		    irec%header.maxdumps);
