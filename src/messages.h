@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/moldy/src/RCS/messages.h,v 2.17 1999/10/08 10:51:08 keith Exp $
+ * $Header: /home/eeyore_data/keith/moldy/src/RCS/messages.h,v 2.18 1999/10/08 15:49:15 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -168,5 +168,5 @@ Gaussian thermostat would interfere with each other."
 #define BODGUP  "Reading bad 2.10 restart file - thermostat parameters invalid.\
 \n     Setting ttmass and rtmass to %f and const-temp=0"
 #define DESYNC  "Trajectories on parallel threads are diverging.\n     Thread %d: %20.17g != %20.17g"
-#define RDFALT  "Sampling interval for RDF changed on restart\n     stored RDF data has been discarded"
+#define RDFALT  "One of the RDF sampling parameters changed on restart\n     stored RDF data has been discarded"
 #define RDFDIS  "RDF output frequency parameters changed on restart\n     Excess stored RDF data may be discarded"
