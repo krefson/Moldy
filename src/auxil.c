@@ -26,6 +26,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.21  2001/02/05 11:47:33  keith
+ *       Improved test of close site-site approaches to catch all intermolecular
+ *       ones.  The avoidance test for intramolecular approaches invalidated the
+ *       previous approach of only catching the first such close contact in a list.
+ *
  *       Revision 2.20  2000/12/06 17:45:28  keith
  *       Tidied up all ANSI function prototypes.
  *       Added LINT comments and minor changes to reduce noise from lint.
@@ -298,7 +303,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.20 2000/12/06 17:45:28 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.21 2001/02/05 11:47:33 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -762,7 +767,7 @@ int	replace(char *file1, char *file2)
 {
    int f;
    int rename(const char *, const char *);
-   f = rename(const char *, const char *);
+   f = rename(file1, file2);
    if(f != 0 && remove(file2) == 0)	/* If already exists try remove target*/
       f = rename(file1, file2);
    return(f);

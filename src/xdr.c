@@ -26,6 +26,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.22  2001/05/24 16:26:44  keith
+ *       Updated program to store and use angular momenta, not velocities.
+ *        - added conversion routines for old restart files and dump files.
+ *       Got rid of legacy 2.0 and lower restart file reading code.
+ *
  *       Revision 2.21  2001/05/22 14:52:45  keith
  *       Added control param "dont-use-symm-rot" to switch between rotational
  *       leapfrog versions at runtime.
@@ -137,7 +142,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.21 2001/05/22 14:52:45 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.22 2001/05/24 16:26:44 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -396,9 +401,9 @@ bool_t xdr_system(XDR *xdrs, system_mt *sp){return 0;}
 /*ARGSUSED*/
 bool_t xdr_system_2(XDR *xdrs, system_mt *sp){return 0;}
 /*ARGSUSED*/
-void   xdr_set_av_size_conv(size_mt size, int av_conv);
+void   xdr_set_av_size_conv(size_mt size, int av_conv){return 0;}
 /*ARGSUSED*/
-void   xdr_set_npotpar(int npotpar);
+void   xdr_set_npotpar(int npotpar){return 0;}
 
 /*ARGSUSED*/
 bool_t	xdr_bool (void) {return 0;}
