@@ -43,6 +43,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.24  2001/08/01 11:56:36  keith
+ *       Incorporated all info from "species" struct into dump file headers.
+ *       - fixed utilities and a few bugs.
+ *
  *       Revision 2.23  2001/07/31 17:58:18  keith
  *       Incorporated all info from "species" struct into dump file headers.
  *
@@ -233,7 +237,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.23 2001/07/31 17:58:18 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/dump.c,v 2.24 2001/08/01 11:56:36 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -503,7 +507,7 @@ void	dump(system_mp system, spec_mt *species,
    boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.23 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.24 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    if( ! strchr(control.dump_file, '%') )
@@ -821,17 +825,17 @@ static void	amom_to_float(spec_mt *species, float *a,
    
    for (spec = species; spec < &species[nspecies]; spec++)
    {
-     for(i=0; i<3; i++)
-     {
-       if( spec->inertia[i]/(spec->inertia[(i+1)%3]+spec->inertia[(i+2)%3]) 
-	   < INERTIA_MIN )
-	 rinertia[i] = 0.0;
-       else
-	 rinertia[i] = 1.0/spec->inertia[i];
-     }
-
      if( spec-> rdof > 0 )
      {
+	for(i=0; i<3; i++)
+	{
+	   if( spec->inertia[i]/(spec->inertia[(i+1)%3]+spec->inertia[(i+2)%3]) 
+	       < INERTIA_MIN )
+	      rinertia[i] = 0.0;
+	   else
+	      rinertia[i] = 1.0/spec->inertia[i];
+	}
+
         for( im=0; im < spec->nmols; im++, imol++)
         {
 	  for(i=0; i<3; i++)
