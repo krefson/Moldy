@@ -19,9 +19,19 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.17 2000/11/13 16:01:22 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.18 2000/11/15 17:51:58 keith Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.18  2000/11/15 17:51:58  keith
+ * Changed format of dump files.
+ * Added second struct with sufficient information
+ * about the simulation that most utility programs
+ * (namely those which do not need site co-ordinates)
+ * should not need to read sys-spec or restart files.
+ *
+ * New options "-c -1" to dumpext prints header info.
+ * -- dumpanal removed.
+ *
  * Revision 2.17  2000/11/13 16:01:22  keith
  * Changed dump format to contain principle-frame angular velocities.
  * Adapted mdvaf.c to calculate angular acf's too - added "-a" flag.
@@ -290,7 +300,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * Version ID strings
  */
 #define          REVISION         "$Name:  $"
-#define		 REVISION_DATE    "$Date: 2000/11/13 16:01:22 $"
+#define		 REVISION_DATE    "$Date: 2000/11/15 17:51:58 $"
 #define		 REVISION_STATE   "$State: Exp $"
 
 #ifdef HAVE_CONFIG_H
@@ -353,7 +363,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *  End of machine/OS configuration.					      *
  ******************************************************************************/
 #ifndef NPOTP
-#define NPOTP 7                 /* Must be number of doubles in pot_mt       */
+#define NPOTP 8                 /* Must be number of doubles in pot_mt       */
 #endif
 
 #ifndef SEEK_END
