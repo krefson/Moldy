@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.9  1995/12/04 11:45:49  keith
+ *       Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
+ *       Thanks to V. Murashov.
+ *
  * Revision 2.8  1994/07/07  17:04:29  keith
  * Updated for parallel execution on SPMD machines.
  * Interface to MP library routines hidden by par_*() calls.
@@ -164,7 +168,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/output.c,v 2.8 1994/07/07 17:04:29 keith stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/output.c,v 2.9 1995/12/04 11:45:49 keith Exp keith $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -559,10 +563,10 @@ restrt_mt	*restart_header;
       }
       if(control.const_temp == 1)
       {
-         format_dbl("Translational temperature mass parameter ",control.ttmass,
-                     TMUNIT_N);
-         format_dbl("Rotational temperature mass parameter    ",control.rtmass,
-                     TMUNIT_N);
+         format_dbl("Translational temperature mass parameter ",
+		    control.ttmass*CONV_TM, CONV_TM_N);
+         format_dbl("Rotational temperature mass parameter    ",
+		    control.rtmass*CONV_TM, CONV_TM_N);
       }
    }
 
