@@ -390,3 +390,7 @@ B.  Shared memory.
     the system supplied version of "malloc" can not be safely called
     from a parallel program.  Contact the author for a "thread-safe"
     version which can.
+
+BUILDING FROM CVS
+
+   See separate file README.CVS
