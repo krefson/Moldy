@@ -3,6 +3,12 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.16  91/11/27  15:15:56  keith
+ * Corrected calculation of sheet energy term for charged framework.
+ * Split force loop so as to omit frame-frame force (and stress) terms.
+ * Added spaces so that Stellix compiler doesn't choke on "=*"
+ * Replaced main loop variable with pointer to work round Stellix 2.3 bug
+ * 
  * Revision 1.16  91/11/26  12:48:43  keith
  * Put #ifdefs around machine-specific pragmas for portability.  Now
  * supports Stardent 1000,2000 & 3000 (titan) series and convex.
@@ -85,7 +91,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.16 91/11/26 12:48:43 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.16 91/11/27 15:15:56 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -307,11 +313,7 @@ mat_t		stress;			/* Stress virial		(out) */
 #endif
 VECTORIZE
    for(is = 0; is < nsites; is++)
-   {
-      coshx[is] = 1.0;
-      cosky[is] = 1.0;
-      coslz[is] = 1.0;
-   }
+      coshx[is] = cosky[is] = coslz[is] = 1.0;
 
    coshx = chx[1]; cosky = cky[1]; coslz = clz[1];
    sinhx = shx[1]; sinky = sky[1]; sinlz = slz[1];
@@ -396,7 +398,6 @@ VECTORIZE
 #pragma pproc ewald_inner
 #endif
 #ifdef __convexc__
-#pragma _CNX pstrip (1)
 #pragma _CNX force_parallel
 #endif
    for(ithread = 0; ithread < nthreads; ithread++)

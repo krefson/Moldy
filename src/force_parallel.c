@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.19 91/11/26 10:29:10 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.20 91/11/26 12:47:25 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -589,7 +589,6 @@ NOVECTOR
 #pragma ipdep
 #endif
 #ifdef __convexc__
-#pragma _CNX pstrip (1)
 #pragma _CNX force_parallel
 #endif
    for(ithread = 0; ithread < nthreads; ithread++)
