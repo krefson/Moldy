@@ -17,6 +17,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	startup.c,v $
+ * Revision 1.6  89/08/31  10:13:29  keith
+ * Modified start_up to fix bug which only considered rotations
+ * of one species.  In conjunction with change in lattice_start().
+ * 
  * Revision 1.5  89/07/06  16:23:56  keith
  * Eliminated 'dump-offset' - renumbering starts at 1 for new dump run.
  * 
@@ -35,7 +39,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/startup.c,v 1.6 89/08/30 12:36:26 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/startup.c,v 1.7 89/09/04 17:29:23 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -365,6 +369,9 @@ quat_t		qpf[];			/* Quaternion rotation to princ.frame*/
 	       dipole[i] += spec->p_f_sites[isite][i] * 
 	       		    site_info[spec->site_id[isite]].charge;
 	 spec->dipole = sqrt(SUMSQ(dipole));
+	 spec->charge = 0.0;
+	 for(isite = 0; isite < spec->nsites; isite++)
+	    spec->charge += site_info[spec->site_id[isite]].charge;
       }
    }
 #ifdef	DEBUG
@@ -374,7 +381,7 @@ quat_t		qpf[];			/* Quaternion rotation to princ.frame*/
    
    flag = false;			/* Test to see if any charges present */
    for(id = 1; id < system->max_id; id++)
-      flag = site_info[id].charge != 0.0;
+      flag |= site_info[id].charge != 0.0;
    if(!flag) control.alpha = -1.0;	/* Don't call Ewald sum if not	      */
 }
 /******************************************************************************
