@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.4  90/05/02  15:37:31  keith
+ * Removed references to size_t and time_t typedefs, no longer in "defs.h"
+ * 
  * Revision 1.3  90/04/26  15:29:48  keith
  * Changed declaration of arralloc back to char*
  * 
@@ -42,7 +45,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.4 90/05/02 15:27:36 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.4 90/05/02 15:37:31 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -56,7 +59,6 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,
 /*========================== Library declarations ============================*/
 int	abs();
 void	cfree();
-char	*realloc();
 /*========================== External function declarations ==================*/
 double	err_fn();			/* Error function		      */
 double	det();				/* Determinant of 3x3 matrix	      */
@@ -72,6 +74,7 @@ char	*arralloc();			/* Allocates a dope vector array      */
 void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 void	ewald_inner();			/* Inner loop forward reference       */
+int	nprocessors();			/* Return no. of procs to execute on. */
 /*========================== External data references ========================*/
 extern	contr_t	control;		/* Main simulation control record     */
 /*========================== Macros ==========================================*/

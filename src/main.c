@@ -7,6 +7,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.12  90/04/14  17:53:41  keith
+ * Added signal handler to catch CPU exceeded and TERM signal.
+ * 
  * Revision 1.11  89/12/15  12:57:00  keith
  * Now prints elapsed as well as cpu time.
  * 
@@ -48,7 +51,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/main.c,v 1.11 89/12/15 12:57:00 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.12 90/04/14 17:53:41 keith Exp $";
 #endif
 /*========================== System include files ============================*/
 #include	<signal.h>
@@ -83,13 +86,14 @@ unit_t		input_unit;
  ******************************************************************************/
 static int	sig_flag = 0;
 void	trap(sig)
+int sig;
 {
    sig_flag = sig;
 }
 /******************************************************************************
  *  Main program.							      *
  ******************************************************************************/
-main(argc, argv)
+int main(argc, argv)
 int	argc;
 char	*argv[];
 {

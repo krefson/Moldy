@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.4 90/05/02 15:28:39 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.4 90/05/02 15:36:18 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -103,6 +103,7 @@ void	spaxpy();			/* Scattered vector add		      */
 void	transpose();			/* Generate 3x3 matrix transpose      */
 void    zero_real();                    /* Initialiser                        */
 void	force_inner();			/* Inner loop forward reference       */
+int	nprocessors();			/* Return no. of procs to execute on. */
 /*========================== External data references ========================*/
 extern  contr_t control;
 /*========================== Structs local to module =========================*/
@@ -617,6 +618,8 @@ real	chg[];
 real	***potp;
 int	id[];
 int	n_nab_sites;
+int	n_nabors;
+int	n_frame_types;
 system_t *system;
 cell_t	**cell;
 reloc_t	***reloc;

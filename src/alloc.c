@@ -18,6 +18,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.7  90/05/02  17:51:09  keith
+ * Include of stddef.h added to get size_t (removed from defs.h)
+ * 
  * Revision 1.6  90/04/25  14:20:16  keith
  * Modified to allow for machines with word ptr != char ptr.
  * 
@@ -39,7 +42,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.6 90/04/25 14:20:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.7 90/05/02 17:51:09 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
@@ -53,6 +56,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.6 90/
 #include "messages.h"
 /*========================== Library declarations ============================*/
 char	*calloc();
+int	free();
 /*========================== External function declarations ==================*/
 void	message();				/* Error handling routine     */
 #ifdef	DEBUG
