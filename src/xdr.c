@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ * Revision 2.8  1994/07/07  17:03:39  keith
+ * Fixed up missing xdr_vector to be compiled in only if NEED_XDR_VECTOR defined.
+ *
  * Revision 2.7  1994/06/08  13:17:38  keith
  * Changed all timestep-related parameters to type "long". This means
  * that 16-bit DOS compilers can do more than 32767 timesteps.
@@ -71,7 +74,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/xdr.c,v 2.7 1994/06/08 13:17:38 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/xdr.c,v 2.8 1994/07/07 17:03:39 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -304,13 +307,6 @@ xdr_vector(xdrs, basep, nelem, elemsize, xdr_elem)
 	}
 	return(TRUE);	
 }
-bool_t
-xdr_array(xdrs, addrp, sizep, maxsize, elsize, elproc) 
-XDR *xdrs; 
-caddr_t *addrp; 
-u_int *sizep, maxsize, elsize; 
-xdrproc_t elproc; 
-{ return (0); }
 #endif
 #else
 void	xdr_set_npotpar (npotpar) int npotpar; {}
