@@ -5,12 +5,15 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.2  89/05/24  13:54:26  keith
+ * Changed ifdef's to select on __STDC__ macro
+ * 
  * Revision 1.1  89/04/27  16:52:17  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: alloc.c,v 1.1 89/04/27 16:52:17 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/alloc.c,v 1.2 89/05/24 13:54:26 keith Stab $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
@@ -40,7 +43,7 @@ int	line;
 char	*file;
 {
    char *p = calloc((unsigned) n, (unsigned) size);
-   if(p == NULL)
+   if(p == NULL && (n*size != 0))
       message(NULLI, NULLP, FATAL, MEMORY, line, file,
 	      (int)n, (unsigned long)size);
    return(p);
