@@ -8,6 +8,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.3  89/06/22  15:45:10  keith
+ * Tidied up loops over species to use one pointer as counter.
+ * 
  * Revision 1.2  89/06/01  21:25:16  keith
  * Control.out eliminated, use printf and freopen instead to direct output.
  * 
@@ -16,7 +19,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: rdf.c,v 1.2 89/06/01 21:25:16 keith Exp $";
+static char *RCSid = "$Header: rdf.c,v 1.3 89/06/22 15:45:10 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<math.h>
@@ -144,7 +147,10 @@ site_t		site_info[];
          sum = 0; col = 0;
          for(ibin = 0; ibin < control.nbins; ibin++)
             sum += rdf[idi][idj][ibin];
-         norm = (system->nsites - 1) / (4.0 * PI * rho * bincb * sum);
+	 if( sum > 0 )
+	    norm = (system->nsites - 1) / (4.0 * PI * rho * bincb * sum);
+	 else				/* Safeguard against zero RDF	      */
+	    norm = 1.0;
          for(ibin = 0; ibin < control.nbins; ibin++)
          {
             col += printf(" %7f",rdf[idi][idj][ibin]*norm/SQR(0.5+ibin));
