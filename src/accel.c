@@ -25,6 +25,19 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
+ * Got rid of all global (external) data items except for
+ * "control" struct and constant data objects.  The latter
+ * (pot_dim, potspec, prog_unit) are declared with CONST
+ * qualifier macro which evaluates to "const" or nil
+ * depending on ANSI/K&R environment.
+ * Also moved as many "write" instantiations of "control"
+ * members as possible to "startup", "main" leaving just
+ * "dump".Changed size_t to own typedef size_mt == ulong.
+ *
  * Revision 2.5  94/01/18  13:31:46  keith
  * Null update for XDR portability release
  * 
@@ -165,7 +178,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -182,6 +195,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.5.1.1
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
+void            afree();	       /* Free allocated array	      	      */
 void            step_1();	       /* Step co-ordinates by Beeman algrthm */
 void            step_2();	       /* Step velocities at above            */
 void            beeman_2();	       /* As above for individual components  */
@@ -444,19 +458,19 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
  */
    vec_mp	*force = palloc(sys->nspecies),
 		*torque = palloc(sys->nspecies);
-   real		***site_sp = (real***)arralloc(sizeof(real*), 2,
+   real		***site_sp = (real***)arralloc((size_mt)sizeof(real*), 2,
 					       0, sys->nspecies-1, 0, 2),
-  		***force_sp = (real***)arralloc(sizeof(real*), 2,
+  		***force_sp = (real***)arralloc((size_mt)sizeof(real*), 2,
 					       0, sys->nspecies-1, 0, 2); 
 /*
  * The following declarations are pointers to the force etc for the whole
  * system, and are set equal to (eg) force[0]
  */
    vec_mp          force_base = ralloc(sys->nmols),
-		   torque_base = ralloc(sys->nmols_r);
-   real		**site = (real**)arralloc(sizeof(real), 2,
+		   torque_base = sys->nmols_r?ralloc(sys->nmols_r):0;
+   real		**site = (real**)arralloc((size_mt)sizeof(real), 2,
 					  0, 2, 0, sys->nsites-1),
-   		**site_force = (real**)arralloc(sizeof(real), 2,
+   		**site_force = (real**)arralloc((size_mt)sizeof(real), 2,
 						0, 2, 0, sys->nsites-1);
 /*
  * Other local variables
@@ -541,7 +555,9 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
  */
    zero_real(stress[0], 9);	       /* Initialise stress tensor   */
    zero_real(meansq_f_t[0][0], 6 * sys->nspecies);
-   zero_real(site_force[0], 3*sys->nsites);
+   zero_real(site_force[0], sys->nsites);
+   zero_real(site_force[1], sys->nsites);
+   zero_real(site_force[2], sys->nsites);
    zero_double(pe, NPE);
 /*
  * Initial co-ordinate step of Beeman algorithm.
@@ -769,13 +785,13 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
  */
    xfree(force);
    xfree(torque);
-   xfree(site);
-   xfree(site_force);
+   afree((gptr*)site);
+   afree((gptr*)site_force);
    xfree(force_base);
    if (torque_base != NULL)
       xfree(torque_base);
-   xfree(site_sp);
-   xfree(force_sp);
+   afree((gptr*)site_sp);
+   afree((gptr*)force_sp);
    xfree(chg);
    xfree(c_of_m);
 }
