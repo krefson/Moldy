@@ -14,6 +14,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 1.11  91/02/19  14:51:26  keith
+ * Minor changes to get rid of misleading compiler warnings.
+ * 
  * Revision 1.10  90/09/28  13:29:39  keith
  * Inserted braces around VECTORIZE directives and changed include files
  * for STARDtardent 3000 series (via cond. comp symbol "ardent").
@@ -51,8 +54,10 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.10 90/09/28 13:29:39 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.13 91/08/14 14:23:35 keith Exp $";
 #endif
+/*========================== Program include files ===========================*/
+#include	"defs.h"
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
 #   include <fastmath.h>
@@ -127,9 +132,9 @@ int	ptype;				/* Potential type selector	      */
  *  atomic distances (r_sqr), charges (chg) , pot'l parameters (pot[which]),  *
  *  and returns a vector of forces (forceij) and the potential energy (pe)    *
  ******************************************************************************/
-void	kernel(j0, nnab, forceij, pe, r_sqr, nab_chg, chg, norm,
+void	kernel(jmin, nnab, forceij, pe, r_sqr, nab_chg, chg, norm,
 	       alpha, ptype, pot)
-int	j0, nnab;		/* Lower and upper limits for vectors.   (in) */
+int	jmin, nnab;		/* Lower and upper limits for vectors.   (in) */
 int	ptype;			/* Index of potential type in potspec[]. (in) */
 double	*pe;			/* Potential energy accumulator.     (in/out) */
 double	alpha, norm;		/* Ewald parameter and 2*alpha/sqrt(pi). (in) */
@@ -156,7 +161,7 @@ real	*pot[];			/* Vectors of potential parameters.	 (in) */
 	 message(NULLI, NULLP, FATAL, UNKPTY, ptype);
        case LJPOT:
 VECTORIZE
-         for(jsite=j0; jsite < nnab; jsite++)
+         for(jsite=jmin; jsite < nnab; jsite++)
 	 {
 	    /*
 	     * Calculate r and coulombic part
@@ -181,7 +186,7 @@ VECTORIZE
 	 break;
        case E6POT:
 VECTORIZE
-         for(jsite=j0; jsite < nnab; jsite++)
+         for(jsite=jmin; jsite < nnab; jsite++)
 	 {
 	    /*
 	     * Calculate r and coulombic part
@@ -205,7 +210,7 @@ VECTORIZE
 	 break;
        case MCYPOT:
 VECTORIZE
-         for(jsite=j0; jsite < nnab; jsite++)
+         for(jsite=jmin; jsite < nnab; jsite++)
 	 {
 	    /*
 	     * Calculate r and coulombic part
@@ -235,7 +240,7 @@ VECTORIZE
 	 message(NULLI, NULLP, FATAL, UNKPTY, ptype);
        case LJPOT:
 VECTORIZE
-         for(jsite=j0; jsite < nnab; jsite++)
+         for(jsite=jmin; jsite < nnab; jsite++)
 	 {
 	    r_sqr_r = 1.0 / r_sqr[jsite];
 	    r_6_r = SQR(p1[jsite])* r_sqr_r;
@@ -247,7 +252,7 @@ VECTORIZE
 	 break;
        case E6POT:
 VECTORIZE
-         for(jsite=j0; jsite < nnab; jsite++)
+         for(jsite=jmin; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    r_r	 = 1.0 / r;
@@ -261,7 +266,7 @@ VECTORIZE
 	 break;
        case MCYPOT:
 VECTORIZE
-         for(jsite=j0; jsite < nnab; jsite++)
+         for(jsite=jmin; jsite < nnab; jsite++)
 	 {
 	    r       = sqrt(r_sqr[jsite]);
 	    exp_f1 =  p0[jsite] * exp(-p1[jsite]*r);

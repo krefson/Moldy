@@ -23,6 +23,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.13  91/03/12  15:42:24  keith
+ * Tidied up typedefs size_t and include file <sys/types.h>
+ * Added explicit function declarations.
+ * 
  * Revision 1.12  91/02/19  14:51:05  keith
  * Minor changes to get rid of misleading compiler warnings.
  * 
@@ -64,18 +68,21 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.12 91/02/19 14:51:05 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.15 91/08/14 14:23:26 keith Exp $";
 #endif
+/*========================== program include files ===========================*/
+#include	"defs.h"
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
 #include	<ctype.h>
+#include	"stddef.h"
 #include 	"string.h"
 #include	"time.h"
 /*========================== program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
 /*========================== External function declarations ==================*/
-char            *talloc();	       /* Interface to memory allocator       */
+gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
 static char	*mutate();
 double		mdrand();
@@ -133,7 +140,7 @@ double		pe;
          	errflg = true;
 
       if( !errflg &&
-	   fread((char*)&dump_header, sizeof(dump_t), 1, dumpf) == 0 ) 
+	   fread((gptr*)&dump_header, sizeof(dump_t), 1, dumpf) == 0 ) 
         	errflg = true;
 
       if( errflg )
@@ -181,7 +188,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 1.12 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 1.15 $"+11,
 		                     sizeof dump_header.vsn-1);
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;
@@ -209,7 +216,7 @@ double		pe;
 
       if( (dumpf = fopen(cur_file, "w+b")) == 0)
          	message(NULLI, NULLP, FATAL, DOFAIL, cur_file);
-      if( fwrite((char*)&dump_header, sizeof(dump_t), 1, dumpf) == 0)
+      if( fwrite((gptr*)&dump_header, sizeof(dump_t), 1, dumpf) == 0)
          	message(NULLI, NULLP, FATAL, DWFAIL, cur_file);
       file_pos = ftell(dumpf);
    }
@@ -219,15 +226,15 @@ double		pe;
    dump_header.restart_timestamp = restart_header.timestamp;
 
    (void)fseek(dumpf, file_pos, SEEK_SET);		/* Write data at end */
-   if( fwrite((char*)dump_buf, sizeof(float), dump_size, dumpf) == 0 )
+   if( fwrite((gptr*)dump_buf, sizeof(float), dump_size, dumpf) == 0 )
       	message(NULLI, NULLP, FATAL, DWFAIL, cur_file);
 
    (void)fseek(dumpf, 0L, SEEK_SET);			/* Write header      */
-   if( fwrite((char*)&dump_header, sizeof(dump_t), 1, dumpf) == 0)
+   if( fwrite((gptr*)&dump_header, sizeof(dump_t), 1, dumpf) == 0)
       	message(NULLI, NULLP, FATAL, DWFAIL, cur_file);
 
    (void)fclose(dumpf);
-   tfree((char*)dump_buf);
+   xfree(dump_buf);
 }
 /******************************************************************************
  *  mutate  Take a string defining a file name and randomly alter characters  *
@@ -304,7 +311,7 @@ double		pe;
       real_to_float(torque[0], buf, 3*nmols_r);	buf += 3*nmols_r;
       real_to_float(stress[0], buf, 9);		buf += 9;
    }
-   tfree((char*)scale_buf);
+   xfree(scale_buf);
 }
 /******************************************************************************
  *  real_to_float  Copy data from one array to another, converting from       *

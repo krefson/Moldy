@@ -3,20 +3,25 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	convert.c,v $
+ * Revision 1.2  90/05/21  15:29:28  keith
+ * Moved definition of struct pot_dim[][] from convert.c to kernel.c.
+ * 
  * Revision 1.1  89/04/20  16:00:36  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/convert.c,v 1.1 89/04/20 16:00:36 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/convert.c,v 1.3 91/08/14 14:23:25 keith Exp $";
 #endif
+/*========================== Program include files ===========================*/
+#include	"defs.h"
+/*========================== Library include files ===========================*/
+#include	<math.h>
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
 /*========================== External data references ========================*/
 extern	contr_t	control;
-/*========================== Library include files ===========================*/
-#include	<math.h>
 /*========================== External function declarations ==================*/
 void		message();
 /*========================== Structs local to module =========================*/

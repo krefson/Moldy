@@ -11,6 +11,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	matrix.c,v $
+ * Revision 1.5  90/09/28  13:29:43  keith
+ * Inserted braces around VECTORIZE directives and changed include files
+ * for STARDtardent 3000 series (via cond. comp symbol "ardent").
+ * 
  * Revision 1.4  89/12/18  17:54:23  keith
  * Rewrote transpose() to compile correctly under -va option (for Stellar).
  * 
@@ -25,13 +29,13 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/matrix.c,v 1.4 89/12/18 17:54:23 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/matrix.c,v 1.6 91/08/14 14:23:42 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
-#include "defs.h"
-#include "messages.h"
+#include 	"defs.h"
+#include 	"messages.h"
 /*========================== Library include files ===========================*/
-char	*memcpy();
+#include	"string.h"
 /*========================== External function declarations ==================*/
 void	message();		/* Error message and exit handler	      */
 /*============================================================================*/
@@ -135,7 +139,7 @@ mat_t	a,					/* Input matrix          (in) */
 {
    mat_t tmp;
 
-   (void)memcpy((char*)tmp,(char*)a,sizeof tmp);
+   memcp(tmp, a, sizeof tmp);
 
    b[0][0] = tmp[0][0];	b[1][1] = tmp[1][1];	b[2][2] = tmp[2][2];
    b[0][1] = tmp[1][0];	b[1][0] = tmp[0][1];

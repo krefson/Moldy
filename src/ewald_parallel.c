@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.11  91/05/29  17:02:00  keith
+ * Modified for minor speed improvement on Stardent titan
+ * 
  * Revision 1.10  91/03/12  16:30:08  keith
  * Stardent Titan (ST3000) version.
  * 
@@ -65,24 +68,27 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.10 91/03/12 16:30:08 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.13 91/08/14 14:24:16 keith Exp $";
 #endif
+/*========================== Program include files ===========================*/
+#include 	"defs.h"
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
-#   include <fastmath.h>
+#   include 	<fastmath.h>
 #else
 #ifdef ardent
-#   include <vmath.h>
+#   include 	<vmath.h>
 #else
-#   include <math.h>
+#   include 	<math.h>
 #endif
 #endif
-#include "stdlib.h"
+#include	"stddef.h"
+#include 	"stdlib.h"
 /*========================== Program include files ===========================*/
-#include "structs.h"
-#include "messages.h"
+#include 	"structs.h"
+#include 	"messages.h"
 /*========================== External function declarations ==================*/
-char            *talloc();	       /* Interface to memory allocator       */
+gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
 double	err_fn();			/* Error function		      */
 double	det();				/* Determinant of 3x3 matrix	      */
@@ -91,7 +97,7 @@ void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
 void	mat_sca_mul();			/* Multiplies a 3x3 matrix by scalar  */
 void	transpose();			/* Transposes a 3x3 matrix	      */
 double	sum();				/* Sum of elements of 'real' vector   */
-char	*arralloc();			/* Allocates a dope vector array      */
+gptr	*arralloc();			/* Allocates a dope vector array      */
 void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 void	ewald_inner();			/* Inner loop forward reference       */
@@ -167,9 +173,11 @@ mat_t		stress;			/* Stress virial		(out) */
 
    invert(system->h, hinvp);		/* Inverse of h is matrix of r.l.v.'s */
    mat_sca_mul(2*PI, hinvp, hinvp);
-   if (nthreads > 1)
-       s_f_n = (real***)arralloc(sizeof(real), 3,
-				 0, nthreads-2, 0, 2, 0, nsites-1);
+   s_f_n = aalloc(nthreads, real**);
+   s_f_n[0] = site_force;
+   for(ithread = 1; ithread < nthreads; ithread++)
+      s_f_n[ithread] = (real**)arralloc(sizeof(real), 2, 0, 2, 0, nsites-1);
+
 /*
  * First call only - evaluate self energy term and store for subsequent calls
  * Self energy includes terms for non-framework sites only.
@@ -352,8 +360,7 @@ VECTORIZE
    for(ithread = 0; ithread < nthreads; ithread++)
       ewald_inner(ithread, nthreads, nhkl, hkl, nsites, nsitesxf, 
 		  chx, cky, clz, shx, sky, slz, chg, &vol, &r_4_alpha,
-		  stress_n[ithread], pe_n+ithread,
-		  ithread ? s_f_n[ithread-1] : site_force);
+		  stress_n[ithread], pe_n+ithread, s_f_n[ithread]);
 /*
  *  Sum Pot, energies, forces and stress from each parallel invocation
  */
@@ -366,7 +373,7 @@ VECTORIZE
 	    stress[i][j] += stress_n[ithread][i][j];
    }
    sf0 = site_force[0]; sf1 = site_force[1]; sf2 = site_force[2];
-   for(ithread = 0; ithread < nthreads-1; ithread++)
+   for(ithread = 1; ithread < nthreads; ithread++)
    {
       ssf0 = s_f_n[ithread][0];
       ssf1 = s_f_n[ithread][1];
@@ -381,12 +388,12 @@ VECTORIZE
       }
    }
    
-   tfree((char*)chx); tfree((char*)cky); tfree((char*)clz); 
-   tfree((char*)shx); tfree((char*)sky); tfree((char*)slz);
-   tfree((char*)pe_n);   tfree((char*)stress_n);
-   tfree((char*)hkl);
+   xfree(chx); xfree(cky); xfree(clz); 
+   xfree(shx); xfree(sky); xfree(slz);
+   xfree(pe_n);   xfree(stress_n);
+   xfree(hkl);
    if( nthreads > 1)
-      tfree((char*)s_f_n);
+      xfree(s_f_n);
 }
 #ifdef PARALLEL
 #pragma opt_level 2
@@ -564,7 +571,7 @@ VECTORIZE
  * End of loop over K vectors.
  */
     }
-tfree((char*)qcoskr); tfree((char*)qsinkr);
+xfree(qcoskr); xfree(qsinkr);
 }
 
 char *getenv();

@@ -18,13 +18,19 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	beeman.c,v $
+ * Revision 1.2  89/10/24  17:18:37  keith
+ * Modified pbc algorithm to use floor() library function.
+ * Now works with non-orthorhombic cell.
+ * 
  * Revision 1.1  89/04/20  16:00:35  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/beeman.c,v 1.1 89/04/20 16:00:35 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/beeman.c,v 1.3 91/08/14 14:23:23 keith Exp $";
 #endif
+/*========================== Program include files ===========================*/
+#include	"defs.h"
 /*========================== Library include files ===========================*/
 #include <stdio.h>
 #include <math.h>

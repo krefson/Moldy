@@ -1,7 +1,11 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.13 90/09/28 13:29:45 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.16 91/08/14 14:23:58 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.14  91/03/12  15:43:31  keith
+ * Tidied up typedefs size_t and include file <sys/types.h>
+ * Added explicit function declarations.
+ * 
  * Revision 1.13  90/09/28  13:29:45  keith
  * Inserted braces around VECTORIZE directives and changed include files
  * for STARDtardent 3000 series (via cond. comp symbol "ardent").
@@ -55,8 +59,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.13 $"
-#define		 REVISION_DATE    "$Date: 90/09/28 13:29:45 $"
+#define          REVISION         "$Revision: 1.16 $"
+#define		 REVISION_DATE    "$Date: 91/08/14 14:23:58 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -94,12 +98,29 @@
 #   define ANSI_LIBS
 #endif
 /*
+ * New convex compiler is ANSI, but doesn't define __STDC__ or  convexvc.
+ * It has a silly macro __stdc__ which we will use instead.  convexvc
+ * may not be necessary as <fastmath.h> is no longer required.  But there
+ * is still veclib.
+ */
+#if defined(__convexc__)
+#   if defined(__stdc__)
+#      define ANSI
+#   endif
+#   define ANSI_LIBS
+#   define convexvc
+#endif
+#if defined(vms)
+#   define ANSI
+#   define ANSI_LIBS
+#endif
+/*
  * Set HAVE_VPRINTF if this function is in target machine's library.
  */
 #ifdef ANSI_LIBS			/* ANSI has it			*/
 #define HAVE_VPRINTF
 #endif
-#if defined(sun) || defined(vms) || defined(stellar) /* So do these     */
+#if defined(sun) || defined(stellar) || defined(titan) /* So do these     */
 #define HAVE_VPRINTF
 #endif
 #if defined(cray) && defined(unix)	/* ie UNICOS			*/
@@ -155,8 +176,6 @@
 
 #define	L_name		128			/* Max Length of file names  */
 #define	NPE		2			/* real & Ewald PE's	     */
-#undef	NULL
-#define NULL		0
 #define ABS(x)		((x) > 0 ? (x) : -(x))
 #define MAX(x,y)	((x) > (y) ? (x) : (y))
 #define MAX3(x,y,z)	MAX(x, MAX(y,z))
@@ -227,12 +246,24 @@ typedef quat_t	*quat_p;
 typedef real    mat_t[3][3];
 typedef vec_t	*mat_p;
 
-#include "stddef.h"
-#define aalloc(n, type) (type *)talloc((long)n,sizeof(type),__LINE__, __FILE__)
+#if defined(ANSI) || defined(__STDC__)
+typedef void	gptr;
+#else
+typedef char	gptr;
+#endif
+
+#define aalloc(n, type) (type *)talloc((int)(n),sizeof(type),__LINE__, __FILE__)
 #define ialloc(n) aalloc(n, int)
 #define dalloc(n) aalloc(n, real)
 #define ralloc(n) aalloc(n, vec_t)
 #define palloc(n) aalloc(n, vec_t *)
 #define qalloc(n) aalloc(n, quat_t)
 
+#define	xfree( ptr )	tfree( (gptr *) ptr )
+
+#ifdef ANSI_LIBS
+#   define memcp(s1,s2,n) (void)memcpy( (gptr*)(s1), (gptr*)(s2), (size_t)(n))
+#else
+#   define memcp(s1,s2,n) (void)memcpy( (gptr*)(s1), (gptr*)(s2), (int)(n))
+#endif
 #endif

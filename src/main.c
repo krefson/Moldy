@@ -7,6 +7,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.15  91/03/12  15:43:04  keith
+ * Tidied up typedefs size_t and include file <sys/types.h>
+ * Added explicit function declarations.
+ * 
  * Revision 1.14  91/02/21  15:27:19  keith
  * Mods for parallel version for titan added
  * 
@@ -57,8 +61,10 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.14 91/02/21 15:27:19 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 1.17 91/08/14 14:23:36 keith Exp $";
 #endif
+/*========================== Program include files ===========================*/
+#include	"defs.h"
 /*========================== System include files ============================*/
 #include	<stdio.h>
 #include	<signal.h>
@@ -84,7 +90,7 @@ double	cpu();
 void	write_restart();
 void	purge();
 double  rt_clock();
-char            *talloc();	       /* Interface to memory allocator       */
+gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
 /*========================== External data definition ========================*/
 contr_t		control;
@@ -120,10 +126,7 @@ char	*argv[];
 #ifdef PARALLEL
 # ifdef ardent
    int nthreads = nprocessors();
-   int stacksize = 16384;
-
-   MT_SET_THREAD_NUMBER(&nthreads);
-   MT_INIT(&stacksize);
+   int stacksize = 65536;
 # endif
 #endif
 
@@ -137,6 +140,12 @@ char	*argv[];
    (void)signal(SIGTERM, trap);
 #ifdef SIGXCPU
    (void)signal(SIGXCPU, trap);
+#endif
+#ifdef PARALLEL
+# ifdef ardent
+   MT_SET_THREAD_NUMBER(&nthreads);
+   MT_INIT(&stacksize);
+# endif
 #endif
    /*
     *  Main MD timestep loop

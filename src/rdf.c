@@ -8,6 +8,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.12  91/03/12  15:43:14  keith
+ * Tidied up typedefs size_t and include file <sys/types.h>
+ * Added explicit function declarations.
+ * 
  * Revision 1.11  90/10/23  20:13:18  keith
  * Added dummy function call to inhibit vectorization.
  * This allows use of 'ivdep' compiler options and also
@@ -48,8 +52,10 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.11 90/10/23 20:13:18 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.14 91/08/14 14:23:46 keith Exp $";
 #endif
+/*========================== program include files ===========================*/
+#include	"defs.h"
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
 #include <fastmath.h>
@@ -61,7 +67,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.11 90/1
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 /*========================== External function declarations ==================*/
-char            *talloc();	       /* Interface to memory allocator       */
+gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
 double	det();
 void	invert();
@@ -132,8 +138,7 @@ spec_t	species[];			/* Species info struct array  */
    for (spec = species; spec < &species[system->nspecies]; spec++)
       for(imol = 0; imol < spec->nmols; imol++)
       {
-         (void)memcpy((char*)id_ptr, (char*)spec->site_id, 
-		      spec->nsites*sizeof(int));
+         memcp(id_ptr, spec->site_id, spec->nsites*sizeof(int));
          id_ptr += spec->nsites;
       }
 
@@ -163,7 +168,7 @@ VECTORIZE
              rdf[id[isite]][id[jsite]][bind[jsite]]++;
        }
     }
-    tfree((char*)id);    tfree((char*)bind);
+    xfree(id);    xfree(bind);
 }
 /******************************************************************************
  * print_rdf.  Calculate the radial distribution function from the binned pair*
@@ -220,5 +225,5 @@ site_t		site_info[];
 	 new_line();
       }
    put_line('_');
-   tfree((char*)nfrac);
+   xfree(nfrac);
 }

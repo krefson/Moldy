@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.18  91/05/29  16:33:01  keith
+ * Modified code for speed improvement in TITAN
+ * 
  * Revision 1.17  91/03/12  15:42:31  keith
  * Tidied up typedefs size_t and include file <sys/types.h>
  * Added explicit function declarations.
@@ -72,24 +75,26 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.17 91/03/12 15:42:31 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.20 91/08/14 14:23:27 keith Exp $";
 #endif
+/*========================== Program include files ===========================*/
+#include "defs.h"
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
-#   include <fastmath.h>
+#   include 	<fastmath.h>
 #else
 #ifdef ardent
-#   include <vmath.h>
+#   include 	<vmath.h>
 #else
-#   include <math.h>
+#   include 	<math.h>
 #endif
 #endif
-#include "stdlib.h"
+#include 	"stdlib.h"
 /*========================== Program include files ===========================*/
-#include "structs.h"
-#include "messages.h"
+#include 	"structs.h"
+#include 	"messages.h"
 /*========================== External function declarations ==================*/
-char            *talloc();	       /* Interface to memory allocator       */
+gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
 double	err_fn();			/* Error function		      */
 double	det();				/* Determinant of 3x3 matrix	      */
@@ -97,7 +102,7 @@ void	invert();			/* Inverts a 3x3 matrix		      */
 void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
 void	mat_sca_mul();			/* Multiplies a 3x3 matrix by scalar  */
 double	sum();				/* Sum of elements of 'real' vector   */
-char	*arralloc();			/* Allocates a dope vector array      */
+gptr	*arralloc();			/* Allocates a dope vector array      */
 void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 /*========================== External data references ========================*/
@@ -464,7 +469,7 @@ VECTORIZE
 /*
  * End of loop over K vectors.
  */
-   tfree((char*)chx); tfree((char*)cky); tfree((char*)clz); 
-   tfree((char*)shx); tfree((char*)sky); tfree((char*)slz);
-   tfree((char*)qcoskr); tfree((char*)qsinkr);
+   xfree(chx); xfree(cky); xfree(clz); 
+   xfree(shx); xfree(sky); xfree(slz);
+   xfree(qcoskr); xfree(qsinkr);
 }

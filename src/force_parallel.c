@@ -72,23 +72,26 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.12 91/05/29 17:01:33 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.14 91/08/14 14:24:20 keith Exp $";
 #endif
+/*========================== Program include files ===========================*/
+#include	"defs.h"
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
 #include 	<fastmath.h>
 #else
 #include 	<math.h>
 #endif
+#include	"stddef.h"
 #include 	"string.h"
 /*========================== Program include files ===========================*/
-#include "structs.h"
-#include "messages.h"
+#include 	"structs.h"
+#include 	"messages.h"
 /*========================== External function declarations ==================*/
-char            *talloc();	       /* Interface to memory allocator       */
+gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
 void    	note();                 /* Make a note in output file         */
-char    	*arralloc();            /* General purpose array allocator    */
+gptr    	*arralloc();            /* General purpose array allocator    */
 int     	search_lt();            /* Search a vector for el. < scalar   */
 double  	vdot();                 /* Vector dot product                 */
 double  	sum();                  /* Sum a vector                       */
@@ -455,9 +458,10 @@ mat_t           stress;                 /* Stress virial                (out) */
    mat_p h = system->h;
 #endif
   
-   if (nthreads > 1)
-       s_f_n = (real***)arralloc(sizeof(real), 3,
-				 0, nthreads-2, 0, 2, 0, nsites-1);
+   s_f_n = aalloc(nthreads, real**);
+   s_f_n[0] = site_force;
+   for(ithread = 1; ithread < nthreads; ithread++)
+      s_f_n[ithread] = (real**)arralloc(sizeof(real), 2, 0, 2, 0, nsites-1);
 
    if(init)
    {
@@ -492,7 +496,7 @@ mat_t           stress;                 /* Stress virial                (out) */
 	    n_cell_list += spec->nmols*spec->nsites;
 	 else 
 	    n_cell_list += spec->nmols;
-      tfree((char*)c_ptr);
+      xfree(c_ptr);
       c_ptr = aalloc(n_cell_list, cell_t);
       init = false;
    }
@@ -504,8 +508,7 @@ mat_t           stress;                 /* Stress virial                (out) */
    for (spec = species; spec < species+system->nspecies; spec++)
       for(imol = 0; imol < spec->nmols; imol++)
       {
-         (void)memcpy((char*)id_ptr, (char*)spec->site_id, 
-                      (int)spec->nsites*sizeof(int));
+         memcp(id_ptr, spec->site_id, spec->nsites*sizeof(int));
          id_ptr += spec->nsites;
       }
 /*   Build arrays of pot. pars [max_id][nsites] for access in vector loops    */
@@ -564,8 +567,7 @@ NOVECTOR
       force_inner(ithread, nthreads, site, chg, potp, id,
 		  n_nab_sites, n_nabors, nabor, cell, reloc, n_frame_types, 
 		  system,
-		  stress_n[ithread], pe_n+ithread,
-		  ithread ? s_f_n[ithread-1] : site_force);
+		  stress_n[ithread], pe_n+ithread, s_f_n[ithread]);
 /*
  *  Sum Pot, energies, forces and stress from each parallel invocation
  */
@@ -577,9 +579,13 @@ NOVECTOR
 	 for(j = 0; j < 3; j++)
 	    stress[i][j] += stress_n[ithread][i][j];
    }
-
+   /*
+    * Sum thread's copies of the site forces.  s_f_n[ithread] points
+    * to the force arrays for each thread.  s_f_n[0] is just
+    * site_force and the others are independant arrays.
+    */
    sf0 = site_force[0]; sf1 = site_force[1]; sf2 = site_force[2];
-   for(ithread = 0; ithread < nthreads-1; ithread++)
+   for(ithread = 1; ithread < nthreads; ithread++)
    {
       ssf0 = s_f_n[ithread][0];
       ssf1 = s_f_n[ithread][1];
@@ -597,11 +603,11 @@ VECTORIZE
 #ifdef DEBUG2
    histout();
 #endif
-   tfree((char*)(potp+1));  tfree((char*)c_ptr); 
-   tfree((char*)cell);        tfree((char*)id); 
-   tfree((char*)pe_n);   tfree((char*)stress_n);
+   xfree((potp+1));  xfree(c_ptr); 
+   xfree(cell);        xfree(id); 
+   xfree(pe_n);   xfree(stress_n);
    if( nthreads > 1)
-      tfree((char*)s_f_n);
+      xfree(s_f_n);
 }
 #ifdef PARALLEL
 #pragma opt_level 2
@@ -654,7 +660,7 @@ mat_t	stress;
    real 	**pp, **ppp;
    int          ix, iy, iz;		/* 3-d cell indices for ref and neig. */
    int          icell,			/* Index for cells of molecule pair   */
-                nnab,	j0, jmin, jmax,	/* Number of sites in neighbour list  */
+                nnab, jbeg, jmin, jmax,	/* Number of sites in neighbour list  */
    		isite, jsite, ipot, lim;
    int		nsites = system -> nsites;
    int		nfnab[2];
@@ -722,7 +728,7 @@ VECTORIZE
       zero_real(forcejy,nnab);
       zero_real(forcejz,nnab);
 
-      j0 = 0;			/* Extra element alllocated makes [1] safe*/
+      jbeg = 0;			/* Extra element alllocated makes [1] safe*/
             			/* Loop over all molecules in cell icell. */
       for(cmol = cell[icell]; cmol != NULL; cmol = cmol->next)
       {
@@ -733,7 +739,7 @@ VECTORIZE
 	 }
 	 else
 	 {
-	    jmin = j0 += cmol->num;
+	    jmin = jbeg += cmol->num;
 	    jmax = nnab;
 	 }
          lim = cmol->isite + cmol->num;
@@ -822,10 +828,10 @@ VECTORIZE
    stress[1][2]  += s12;
    stress[2][2]  += s22;
 
-   tfree((char*)nab_pot); tfree((char*)work);  
-   tfree((char*)nab);     tfree((char*)reloc_i);  tfree((char*)nab_chg);
-   tfree((char*)r_sqr);   tfree((char*)R);       tfree((char*)forceij);
-   tfree((char*)rx);      tfree((char*)ry);      tfree((char*)rz);
-   tfree((char*)forcejx); tfree((char*)forcejy); tfree((char*)forcejz);
-   tfree((char*)nab_sx);  tfree((char*)nab_sy);  tfree((char*)nab_sz);
+   xfree(nab_pot); xfree(work);  
+   xfree(nab);     xfree(reloc_i);  xfree(nab_chg);
+   xfree(r_sqr);   xfree(R);       xfree(forceij);
+   xfree(rx);      xfree(ry);      xfree(rz);
+   xfree(forcejx); xfree(forcejy); xfree(forcejz);
+   xfree(nab_sx);  xfree(nab_sy);  xfree(nab_sz);
 }
