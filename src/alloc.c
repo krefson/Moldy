@@ -33,7 +33,14 @@ what you give them.   Help stamp out software-hoarding!  */
  * 	machines for which this is false. 				      *
  ******************************************************************************
  *      Revision Log
- *       $Log: alloc.c,v $
+ *       $Log$
+ *       Revision 2.16.4.1  2003/08/15 09:13:10  moldydv
+ *       Modified NOMEM error message to handle both singular and plural.
+ *
+ *       Revision 2.16  2002/09/19 09:26:27  kr
+ *       Tidied up header declarations.
+ *       Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *       Revision 2.15  2001/02/14 15:19:28  keith
  *       Rejigged definition of word_mt in alloc.c for machines where
  *       sizeof(float) < sizeof(int). (ie Cray T3E)
@@ -179,7 +186,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/alloc.c,v 2.15 2001/02/14 15:19:28 keith Exp $";
+static char *RCSid = "$Header$";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
@@ -235,6 +242,7 @@ typedef double wide_mt;
 gptr	*talloc(int n, size_mt size, int line, char *file)
 {
    gptr *p;
+
 #ifdef STDC_HEADERS
    /*
     * Test for malloc arg which would overflow.  Since size_mt is long
@@ -244,7 +252,7 @@ gptr	*talloc(int n, size_mt size, int line, char *file)
     */
    if( (size_mt)(size_t)(n*size) != n*size )
       message(NULLI, NULLP, FATAL, NOMEM, line, file,
-	       (int)n, (unsigned long)size);
+	       (int)n, (n==1)?' ':'s', (unsigned long)size);
 #endif
    p = malloc(n*size);
 #ifdef DEBUGX
@@ -253,7 +261,7 @@ gptr	*talloc(int n, size_mt size, int line, char *file)
 #endif
    if(p == 0 && (n*size != 0))
      message(NULLI, NULLP, FATAL, NOMEM, line, file,
-	     (int)n, (unsigned long)size);
+	     (int)n, (n==1)?" ":"s ", (unsigned long)size);
 #ifdef DEBUGZ
    (void)memset((gptr*)p,0x10,n*size);
 #endif
