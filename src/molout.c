@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /earth/users/jfcc/fisher/moldy-2.16/source/RCS/molout.c,v 1.5 2000/06/15 07:51:54 fisher Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/molout.c,v 1.4.2.2 2001/03/27 17:40:20 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -37,6 +37,7 @@ extern contr_mt		control;
 #define PDB 4
 #define CSSR 5
 #define ARC 6
+#define XTL 7
 /******************************************************************************
  ******************************************************************************/
 void 
@@ -164,6 +165,76 @@ char		*insert;
       (void)printf("%s\n", insert);
 
    (void)printf("END %d\n",n);
+
+   if( ferror(stdout) )
+      error("Error writing output - \n%s\n", strerror(errno));
+   afree((gptr*) site);
+}
+/******************************************************************************
+ * xtl_out().  Write a system configuration to stdout in the form of an       *
+ * BIOSYM XTL file.							      *
+ ******************************************************************************/
+static void xtl_out(system, h, species, site_info, insert, intyp)
+system_mt	*system;
+mat_mp          h;
+spec_mt		species[];
+site_mt		site_info[];
+char		*insert;
+int		intyp;
+{
+   double	**site = (double**)arralloc(sizeof(double),2,
+					    0,2,0,system->nsites-1);
+   double	qconv;	/* Variable for converting charge from program units */
+   spec_mt	*spec;
+   double	a, b, c, alpha, beta, gamma;
+   mat_mt	hinv;
+   int		imol, isite, is;
+
+   if( intyp == 'r' )
+      qconv = CONV_Q;
+   else
+      qconv = 1.0;
+
+   invert(h,hinv);
+
+   a = sqrt(SQR(h[0][0]) + SQR(h[1][0]) + SQR(h[2][0]));
+   b = sqrt(SQR(h[0][1]) + SQR(h[1][1]) + SQR(h[2][1]));
+   c = sqrt(SQR(h[0][2]) + SQR(h[1][2]) + SQR(h[2][2]));
+   alpha = 180/PI*acos((h[0][1]*h[0][2]+h[1][1]*h[1][2]+h[2][1]*h[2][2])/b/c);
+   beta  = 180/PI*acos((h[0][0]*h[0][2]+h[1][0]*h[1][2]+h[2][0]*h[2][2])/a/c);
+   gamma = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/a/b);
+
+   printf("TITLE %s\n",control.title);
+   printf("CELL \n%f %f %f %f %f %f\n", a, b, c, alpha, beta, gamma);
+   printf("SYMMETRY  NUMBER 1  LABEL P1\n");
+   printf("SYM MAT  1.0  0.0  0.0  0.0  1.0  0.0  0.0  0.0  1.0 0.0000 0.0000 0.0000\n");
+   printf("ATOMS\nNAME            X            Y           Z         CHARGE\n");
+   for(spec = species; spec < species+system->nspecies; spec++)
+   {
+      make_sites(system->h, spec->c_of_m, spec->quat, spec->p_f_sites,
+                 site, spec->nmols, spec->nsites, MOLPBC);
+
+      mat_vec_mul3(hinv, site, spec->nsites*spec->nmols);
+
+      isite = 0;
+      for(imol = 0; imol < spec->nmols; imol++)
+      {
+	 for(is = 0; is < spec->nsites; is++)
+	 {
+	    if(fabs(site_info[spec->site_id[is]].mass) != 0)
+	       (void)printf("%8-s %12.8f %12.8f %12.8f %12.8f\n",
+			    site_info[spec->site_id[is]].name,
+			    site[0][isite], site[1][isite], site[2][isite],
+			    site_info[spec->site_id[is]].charge*qconv);
+	    isite++;
+	 }
+      }
+   }
+
+   if( insert != NULL)
+      (void)printf("%s\n", insert);
+
+   (void)printf("EOF\n");
 
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
@@ -625,6 +696,9 @@ char		*insert;
       break;
     case ARC:
       arc_out(system, h, species, site_info, intyp, n);
+      break;
+    case XTL:
+      xtl_out(system, h, species, site_info, insert, intyp);
       break;
     case OUTBIN:
       atoms_out(system, h, species);
