@@ -23,6 +23,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald_parallel.c,v $
+ * Revision 2.7  1994/06/08  13:13:59  keith
+ * New version of array allocator which breaks up requests for DOS.
+ * Now must use specific "afree()" paired with arralloc().
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -170,7 +174,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 2.8 1994/06/22 09:49:04 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -224,10 +228,95 @@ extern	contr_mt	control;       	/* Main simulation control record     */
 #define modc(hmat) sqrt(SQR(hmat[0][2]) + SQR(hmat[1][2]) + SQR(hmat[2][2]))
 /*============================================================================*/
    struct _hkl {double kx, ky, kz; int h,k,l;};
+/*****************************************************************************
+ * qsincos().  Evaluate q sin(k.r) and q cos(k.r).  This is in a separate    *
+ * function because some compilers (notably Stellar's) generate MUCH better  *
+ * vector code this way. 						     *
+ *****************************************************************************/
+static
+void      qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,chg,
+		  qcoskr,qsinkr,k,l,nsites)
+real coshx[], sinhx[], cosky[], sinky[], coslz[], sinlz[],
+     chg[], qcoskr[], qsinkr[];
+int  k,l,nsites;
+{
+   int is;
+   real qckr;
+   
+   if( k >= 0 )
+      if( l >= 0 )
+      {
+#ifdef __convexc__
+#pragma _CNX no_parallel
+#endif
+VECTORIZE
+	 for(is = 0; is < nsites; is++)
+	 {
+	    qckr = chg[is]*(
+		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
+                - (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
+	    qsinkr[is] = chg[is]*(
+                  (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
+		+ (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
+	    qcoskr[is] = qckr;
+	 }
+      }
+      else
+      {
+#ifdef __convexc__
+#pragma _CNX no_parallel
+#endif
+VECTORIZE
+	 for(is = 0; is < nsites; is++)
+	 {
+	    qckr = chg[is]*(
+		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
+                + (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
+	    qsinkr[is] = chg[is]*(
+                  (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
+		- (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
+	    qcoskr[is] = qckr;
+	 }
+      }
+   else
+      if( l >= 0 )
+      {
+#ifdef __convexc__
+#pragma _CNX no_parallel
+#endif
+VECTORIZE
+	 for(is = 0; is < nsites; is++)
+	 {
+	    qckr = chg[is]*(
+		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
+                - (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
+	    qsinkr[is] = chg[is]*(
+                  (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
+		+ (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
+	    qcoskr[is] = qckr;
+	 }
+      }
+      else
+      {
+#ifdef __convexc__
+#pragma _CNX no_parallel
+#endif
+VECTORIZE
+	 for(is = 0; is < nsites; is++)
+	 {
+	    qckr = chg[is]*(
+		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
+                + (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
+	    qsinkr[is] = chg[is]*(
+                  (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
+		- (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
+	    qcoskr[is] = qckr;
+	 }
+     }
+}
 /******************************************************************************
  *  Ewald  Calculate reciprocal-space part of coulombic forces		      *
  ******************************************************************************/
-void ewald_inner();
 #ifdef titan
 #ifdef PARALLEL
 #pragma opt_level 3
@@ -252,6 +341,7 @@ mat_mt		stress;			/* Stress virial		(out) */
    		vec_mt	kv;		/* (Kx,Ky,Kz)  			     */
    	 	struct _hkl *hkl;
    		int	nhkl = 0;
+   register	real	coss;
 /*
  * Maximum values of h, k, l  s.t. |k| < k_cutoff
  */
@@ -453,8 +543,9 @@ VECTORIZE
 VECTORIZE
       for(is = 0; is < nsites; is++)
       {
-	 coshx[is] = cm1[is]*c1[is] - sm1[is]*s1[is];
+	 coss      = cm1[is]*c1[is] - sm1[is]*s1[is];
 	 sinhx[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
+	 coshx[is] = coss;
       }
    }
    for(k = 2; k <= kmax; k++)
@@ -469,8 +560,9 @@ VECTORIZE
 VECTORIZE
       for(is = 0; is < nsites; is++)
       {
-	 cosky[is] = cm1[is]*c1[is] - sm1[is]*s1[is];
+	 coss      = cm1[is]*c1[is] - sm1[is]*s1[is];
 	 sinky[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
+	 cosky[is] = coss;
       }
    }
    for(l = 2; l <= lmax; l++)
@@ -485,8 +577,9 @@ VECTORIZE
 VECTORIZE
       for(is = 0; is < nsites; is++)
       {
-	 coslz[is] = cm1[is]*c1[is] - sm1[is]*s1[is];
+	 coss      = cm1[is]*c1[is] - sm1[is]*s1[is];
 	 sinlz[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
+	 coslz[is] = coss;
       }
    }
 /*
@@ -566,92 +659,6 @@ VECTORIZE
 #pragma opt_level 2
 #endif
 #endif
-/*****************************************************************************
- * qsincos().  Evaluate q sin(k.r) and q cos(k.r).  This is in a separate    *
- * function because some compilers (notably Stellar's) generate MUCH better  *
- * vector code this way. 						     *
- *****************************************************************************/
-static
-void      qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,chg,
-		  qcoskr,qsinkr,k,l,nsites)
-real coshx[], sinhx[], cosky[], sinky[], coslz[], sinlz[],
-     chg[], qcoskr[], qsinkr[];
-int  k,l,nsites;
-{
-   int is;
-   real qckr;
-   
-   if( k >= 0 )
-      if( l >= 0 )
-      {
-#ifdef __convexc__
-#pragma _CNX no_parallel
-#endif
-VECTORIZE
-	 for(is = 0; is < nsites; is++)
-	 {
-	    qckr = chg[is]*(
-		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
-                - (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
-	    qsinkr[is] = chg[is]*(
-                  (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
-		+ (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
-	    qcoskr[is] = qckr;
-	 }
-      }
-      else
-      {
-#ifdef __convexc__
-#pragma _CNX no_parallel
-#endif
-VECTORIZE
-	 for(is = 0; is < nsites; is++)
-	 {
-	    qckr = chg[is]*(
-		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
-                + (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
-	    qsinkr[is] = chg[is]*(
-                  (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
-		- (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
-	    qcoskr[is] = qckr;
-	 }
-      }
-   else
-      if( l >= 0 )
-      {
-#ifdef __convexc__
-#pragma _CNX no_parallel
-#endif
-VECTORIZE
-	 for(is = 0; is < nsites; is++)
-	 {
-	    qckr = chg[is]*(
-		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
-                - (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
-	    qsinkr[is] = chg[is]*(
-                  (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
-		+ (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
-	    qcoskr[is] = qckr;
-	 }
-      }
-      else
-      {
-#ifdef __convexc__
-#pragma _CNX no_parallel
-#endif
-VECTORIZE
-	 for(is = 0; is < nsites; is++)
-	 {
-	    qckr = chg[is]*(
-		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
-                + (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
-	    qsinkr[is] = chg[is]*(
-                  (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
-		- (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
-	    qcoskr[is] = qckr;
-	 }
-     }
-}
 /*****************************************************************************
  *  Ewald_inner().  Part of Ewald sum to run in parallel on multi-stream or  *
  *  multi-processor computers.  It splits up the loop over k-vectors by using*
