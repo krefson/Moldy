@@ -182,7 +182,7 @@ protoize:	$(CFILES) $(HFILES)
 proto-mdshak:	mdshak.c $(SHAKC)
 		protoize mdshak.c $(SHAKC)
 
-install:	moldy $(UTILS) $(UTILS2)
+install:	moldy $(UTILS) $(UTILS2) plotrdf
 		for file in $?; do $(INSTALL) $$file $(bindir); done
 
 Makefile.in:	xmakefile

@@ -1,9 +1,4 @@
-#!/bin/sh -- # perl
-eval 'exec perl -S $0 ${1+"$@"}'
-    if $running_under_some_shell;
-                        # this emulates #! processing on NIH machines.
-                        # (remove #! line above if indigestible)
-#!/usr/bin/perl#
+#!/usr/bin/env perl
 # Plotrdf.  This script reads "Moldy" output files and extracts RDF information
 # skipping page breaks.
 #
@@ -34,7 +29,7 @@ sub rdfout  {
     my ($rdflist, $binw, $plotfd, $scale) = @_;
     my ($nrdf, $r);
     $r = 0.5*$binw;
-    
+
     select((select($plotfd), $| = 1)[0]);
 
     printf $plotfd ("#%7s","r");
@@ -43,7 +38,7 @@ sub rdfout  {
 	$hdrx = $hdr;
     }
     $nrdf=$#{$$rdflist{(keys %$rdflist)[0]}}+1;
-    
+
     printf $plotfd ("\n");
     for( $j=0; $j < $nrdf ; $j++) {
 	printf $plotfd ("%8.3f", $r);
@@ -56,7 +51,7 @@ sub rdfout  {
 }
 
 sub usage {
-   printf STDERR "Usage: [-a] [-a] [-gp|-xg] [-ps|-eps] [-np] [-m REGEXP] moldy-output-file ...\n";
+   printf STDERR "Usage: [-a] [-gp|-xg] [-ps|-eps] [-np] [-m REGEXP] moldy-output-file ...\n";
    printf STDERR "    -a         Take average of multiple RDF blocks\n";
    printf STDERR "    -gp        Write a script and invoke GNUPLOT to plot data\n";
    printf STDERR "    -xg        Write a script and invoke GRACE to plot data\n";
@@ -64,6 +59,7 @@ sub usage {
    printf STDERR "    -eps       Invoke GNUPLOT or GRACE to plot data and write as an encapsulated PostScript (EPS) file\n";
    printf STDERR "    -np        Do not plot data, write a GNUPLOT or GRACE script\n";
    printf STDERR "    -m REGEXP  output/plot only columns which match the (perl) regular expression REGEXP. (no '//' needed)\n";
+die;
 }
 
 sub pfout {
@@ -75,8 +71,12 @@ sub pfout {
 
 sub gpout {
     my($hdrlist, $plotfile, $psflag, $title) = @_;
-    my($i);
-    
+    my($i, $ncols);
+    $ncols = $#$hdrlist;
+    $filenum  = 0 if( $filenum == "") ;
+    $onefile = !( $plotfile =~ /\.data(\d+)$/);
+    $filenum = $1 if (! $onefile);
+
     $| = 1;
 
     if( $psflag == 1){
@@ -91,18 +91,25 @@ sub gpout {
     print   "set title \"",$title,"\"\n";
     print   "set xlabel \"r(A)\"\n";
     print   "set ylabel \"g(r)\"\n";
-    print   "set yrange  [0:5]\n";
-    print   "plot \"$plotfile\" using 1:2 title \"$$hdrlist[0]\"";
-    foreach $i (2..@$hdrlist ) {
-	print   ", \"$plotfile\" using 1:",$i+1," title \"$$hdrlist[$i-1]\"" ;
+#    print   "set yrange  [0:5]\n";
+    print   "re" if( $nofirst );
+    print   "plot ";
+    foreach $i (0..$ncols) {
+      if( $onefile ) {
+	print   "\"$plotfile\" using 1:",$i+2," title \"$$hdrlist[$i]\"" ;
+      } else {
+	print   "\"$plotfile\" using 1:",$i+2," title \"$$hdrlist[$i] (set $filenum)\"" ;
+      }
+      print   ", " if ($i < $ncols);
     }
     print   "\npause -1\n";
+    if ( ! $nofirst ) {$nofirst=1};
 }
 
 sub graceout {
     my($hdrlist, $plotfile, $psflag, $title) = @_;
-    my($i);
-    
+    my($i, $ncols, $onefile, $filenum);
+
     $| = 1;
 
     print   "\@timestamp def \"",scalar(localtime),"\"\n";
@@ -112,12 +119,23 @@ sub graceout {
     print   "\@yaxis label \"g(r)\"\n";
 
     $ncols = $#$hdrlist;
+    $setnum = 0 if( $setnum == "") ;
+    $filenum  = 0 if( $filenum == "") ;
 
     print   "\@read block \"$plotfile\"\n";
+
+    $onefile = !( $plotfile =~ /\.data(\d+)$/);
+    $filenum = $1 if (! $onefile);
+
     foreach $i (0..$ncols ) {
-        print "\@with s",$i,"\n";
-	print "\@block xy \"1:",$i+2,"\"\n";
-	print "\@s",$i," legend \"$$hdrlist[$i]\"\n" ;
+      print "\@with s",$setnum,"\n";
+      print "\@block xy \"1:",$i+2,"\"\n";
+      if( $onefile ) {
+        print "\@s",$setnum," legend \"$$hdrlist[$i]\"\n" ;
+      } else {
+        print "\@s",$setnum," legend \"$$hdrlist[$i] (set $filenum)\"\n" ;
+      }
+      $setnum++;
     }
     if( $psflag == 1){
       print   "\@hardcopy device \"PS\"\n";
@@ -132,55 +150,29 @@ sub graceout {
 
 $gpflag = 0;
 $grflag = 0;
-$plotflag = 0;
+$plotflag = 1;
 $psflag = 0;
 $aflag = 0;
 $plotfd=*STDOUT;
 $match = ".";
-while ($#ARGV >= 0 && $ARGV[0] =~ /^-\w+/ ) {
-    $flag=shift @ARGV;
-    if ($flag eq "-gp" ) {
-	$plotflag=1;
-        $grflag = 0;
-	$gpflag=1 ;
-	$flag = "";
-    }
-    if ($flag eq "-xg" ) {
-	$plotflag=1;
-        $gpflag = 0;
-	$grflag=1 ;
-	$flag = "";
-    }
-    if ($flag eq "-np" ) {
-	$plotflag=0;
-	$flag = "";
-    }
-    if ($flag eq "-ps" ) {
-	$psflag=1 ;
-	$plotflag=1;
-	$flag = "";
-    }
-     if ($flag eq "-eps" ) {
-	$psflag=2 ;
-	$plotflag=1;
-	$flag = "";
-    }
-   if( $flag eq "-a") {
-	$aflag++;
-	$flag = "";
-    }
-    if( $flag eq "-m") {
-	$match = shift @ARGV;
-	$flag = "";
-    }
-    if( $flag ne "" ) {
-	usage;
-	exit 1;
-    }
-}
-$title=$ARGV[0];
-if ($gpflag || $grflag) {
-    $plotfile = $title.".data";
+
+use Getopt::Long;
+&GetOptions("gp", "xg", "np", "ps", "eps", "a", "m=s")|| &usage();
+
+if ($opt_gp && $opt_xg) {&usage()};
+if ($opt_ps && $opt_eps) {&usage()};
+
+$match = $opt_m if $opt_m;
+$gpflag= $opt_gp if $opt_gp;
+$grflag= $opt_xg if $opt_xg;
+$plotflag= 0 if $opt_np;
+$psflag= 1 if $opt_ps;
+$psflag= 2 if $opt_eps;
+$aflag = $opt_a if $opt_a;
+
+$filebody=$ARGV[0];
+if ( ($gpflag || $grflag) && $aflag ) {
+    $plotfile = $filebody.".data";
     open PLOTFILE, ">$plotfile" || die "Failed to open plot file $plotfile for writing\n";
     $plotfd=*PLOTFILE;
     $| = 1;
@@ -265,8 +257,16 @@ while ( <> ) {
 		$be = 0;
 		$firstblock = 0;
 		if( ! $aflag ) {
+                   if ( $gpflag || $grflag ) {
+                       $fnum++;
+                       $plotfile = $filebody.".data".$fnum;
+                       open PLOTFILE, ">$plotfile" || die "Failed to open plot file $plotfile for writing\n";
+                       $plotfd=*PLOTFILE;
+                       $| = 1;
+                   }
 		    rdfout(\%rdflist, $binw, $plotfd, 1.0);
 		    pfout([keys %rdflist], $plotfile, $psflag, $title) if ($gpflag || $grflag);
+                    close PLOTFILE
 		}
 		
 	    }
