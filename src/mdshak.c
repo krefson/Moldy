@@ -1,5 +1,5 @@
 #include "defs.h"
-#if ANSI || __STDC__
+#if defined(ANSI) || defined(__STDC__)
 #include <stdarg.h>
 #else
 #include <varargs.h>
@@ -48,7 +48,7 @@ void	conv_control()
 /******************************************************************************
  *  message.   Deliver error message to possibly exiting. 		      *
  ******************************************************************************/
-#if ANSI || __STDC__
+#if defined(ANSI) || defined(__STDC__)
 #undef  va_alist
 #define	va_alist int *nerrs, ...
 #define va_dcl /* */
@@ -61,7 +61,7 @@ va_dcl
    char		*buff;
    int		sev;
    char		*format;
-#if ANSI || __STDC__
+#if defined(ANSI) || defined(__STDC__)
    va_start(ap, nerrs);
 #else
    int		*nerrs;
