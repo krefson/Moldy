@@ -171,14 +171,17 @@ Makefile:	xmakefile
 
 Makefile.mak:	Makefile
 		@PATH=/usr/5bin:${PATH};\
-		echo		's/^\([ 	].*\)$$(OFILES)/\1@OFILES.RSP/g\n'\
-				's/^\([ 	].*\)$$(SHAKOBJS)/\1@SHAKOBJS.RSP/g\n'\
-				's/\.\<o\>/.obj/g\n'\
-				's/\.o$$/.obj/g\n'\
-				's/ -\<o\> *\(\<[a-z]*\>\)/ -e\1 /\n'\
-				's/ -\<lm\>//\n'\
-				'/$$(CFILES).*:/,/	co/d\n'\
-				'/^.SUFFIXES/d' > makedos.sed
+		echo	's/^\([ 	].*\)$$(OFILES)/\1@OFILES.RSP/g\n'\
+			's/^\([ 	].*\)$$(SHAKOBJS)/\1@SHAKOBJS.RSP/g\n'\
+			's/\.\<o\>/.obj/g\n'\
+			's/\.o$$/.obj/g\n'\
+			's/ -\<o\> *\(\<[a-z]*\>\)/ -e\1 /\n'\
+			's/ -\<lm\>//\n'\
+			'/^#  \*\*\*\* MSDOS/,/^#  \*/ s/^#\([A-Z]\)/\1/\n'\
+			's/XDR=/#XDR=/\n'\
+			's/^\(CFLAGS=.*$$(XDR)\)/#\1/\n'\
+			'/$$(CFILES).*:/,/	co/d\n'\
+			'/^.SUFFIXES/d' > makedos.sed
 		sed -f makedos.sed ./Makefile > Makefile.mak
 
 OFILES.RSP:	xmakefile
