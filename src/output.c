@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.22  2001/02/20 12:29:52  keith
+ *       Fixed banner page test for printing of "scaling" message.
+ *
  *       Revision 2.21  2000/12/08 12:26:46  keith
  *       Made banner_page more accurate and selective when announcing
  *       that scaling and RFD calculations will be performed.
@@ -229,7 +232,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.21 2000/12/08 12:26:46 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.22 2001/02/20 12:29:52 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -555,8 +558,6 @@ void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
       format_long("No. steps between scalings",control.scale_interval);
       format_long("End scaling at step",control.scale_end);
    }
-   if((control.scale_interval > 0) || (control.const_temp != 0))
-      format_dbl("Applied Temperature",control.temp,"K");
    if(control.const_temp)
    {
       (void)printf(" Nose-Poincare thermostat will be used");
@@ -564,6 +565,8 @@ void	banner_page(system_mp system, spec_mt *species, restrt_mt *restart_header)
       format_dbl("Temperature mass parameter ",
 		 control.ttmass*CONV_TM, CONV_TM_N);
    }
+   if((control.scale_interval > 0) || (control.const_temp != 0))
+      format_dbl("Applied Temperature",control.temp,"K");
 
    if(control.const_pressure)
    {
