@@ -1,9 +1,12 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 1.1 90/02/22 17:46:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 1.2 90/04/25 14:47:28 keith Exp $";
 #endif
 
 /*
  * $Log:	moldyanalyze.c,v $
+ * Revision 1.2  90/04/25  14:47:28  keith
+ * Declared malloc().
+ * 
  * Revision 1.1  90/02/22  17:46:11  keith
  * Initial revision
  * 
@@ -38,7 +41,7 @@ char	*argv[];
    size = getw(f);
    if(size != sizeof restart_header)
    {
-   	fprintf(stderr,"This isn't a MDKEITH restart file\n");
+   	fprintf(stderr,"This isn't a Moldy restart file\n");
    	exit(1);
    }
    fread(&restart_header, size, 1,f);
