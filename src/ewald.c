@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.19.2.2  2001/02/14 14:44:07  keith
+ *       Fixed rare bug where invalid coshxky cache was being read.
+ *
  *       Revision 2.19.2.1  2000/12/11 12:33:25  keith
  *       Incorporated site-pbc branch "bekker" into main "Beeman" branch.
  *
@@ -241,7 +244,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.19.2.1 2000/12/11 12:33:25 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.19.2.2 2001/02/14 14:44:07 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -363,8 +366,6 @@ int  h, k,l,hlast,klast,nsites;
 	 qcoskr[is] = qckr;
       }
    }
-   hlast = h;
-   klast = k;
 }
 
 /******************************************************************************
@@ -750,6 +751,7 @@ mat_mt		stress;			/* Stress virial		(out) */
        */
       qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,
 	      qcoskr,qsinkr,sinhxky, coshxky, h, k, l, hlast, klast, nsites);
+      hlast = h; klast = k;
       sqcoskrn = sum(nsitesxf, qcoskr, 1);
       sqsinkrn = sum(nsitesxf, qsinkr, 1);
       sqcoskrf = sum(nsites-nsitesxf, qcoskr+nsitesxf, 1);
