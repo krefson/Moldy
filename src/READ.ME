@@ -313,3 +313,13 @@ B.  Distributed Memory
     The parallel interface is contained within a single file
     "parallel.c" and versions for other MP libraries should be
     relatively easy to add with a few hours of programming effort.
+
+    Alternative Ewald:
+    ------------------
+
+    There is an alternative version of Ewald.c which uses W. Smith's
+    RIL paralellization strategy in ewald-RIL.c.  This uses far less
+    memory but at the cost of doing parallel communication in the
+    inner loops.  This may work reasonably on parallel machines
+    with very short latencies, but on many it serializes the whole
+    code!
