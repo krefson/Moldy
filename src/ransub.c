@@ -27,6 +27,9 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.17.10.6  2004/04/09 05:43:02  moldydv
+ *  Rationalized options, altered defaults and corrected bugs.
+ *
  *  Revision 1.17.10.5  2004/03/01 04:53:57  moldydv
  *  Syswrite now treats non-periodic data (from XYZ and some CSSR files) as single species with initial configuration to be set using skew start.
  *  Options -n and -l added for no of particles and species label, respectively, for such systems.
@@ -157,7 +160,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/ransub.c,v 1.17.10.4 2004/01/29 07:56:55 moldydv Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/ransub.c,v 1.17.10.6 2004/04/09 05:43:02 moldydv Exp $";
 #endif  
 
 #include "defs.h"
@@ -689,7 +692,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
       }
       /* Rotate coordinates to principal frame */
       eigens(inertia, rot_mat[0], dopant->inertia, 3);
-      eigensort(rot_mat[0], dopant->inertia, 3);
+      /* eigensort(rot_mat[0], dopant->inertia, 3); */
       mat_vec_mul(rot_mat, dopant->p_f_sites, p_f_sites, dopant->nsites);
    }
 
