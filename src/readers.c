@@ -52,6 +52,7 @@ what you give them.   Help stamp out software-hoarding! */
 
 #define TITLE_SIZE  80
 #define DATAREC "%d record%ssuccessfully read from %s"
+#define MAX_CSSR 9999
 
 /*========================== External data references ========================*/
 extern  const pots_mt   potspec[];           /* Potential type specification  */
@@ -206,6 +207,9 @@ int	 sgno=0, sgopt=0; /* Space group number and associated option */
 
    if( sscanf(get_line(line,LLEN,Fp,0),"%4d%4d %60c", &natoms, &coord_sys, title) < 2)
             error("EOF or unexpected format on line 3 in \"%s\"", filename);
+
+   if( natoms > MAX_CSSR )
+      error("\"%s\" contains too many atoms! (max: %d)\n", filename, MAX_CSSR);
 
    if( !coord_sys )
    {
@@ -366,7 +370,7 @@ FILE     *Fp;
        if(strcmp(strlower(keyword),"hetatm") == 0 || strcmp(strlower(keyword),"atom") == 0)
        {
           if( natoms > MAX_ATOMS )
-              fprintf(stderr,"Warning: \"%s\" contains too many atoms! (%d)\n", filename, natoms);
+              error("\"%s\" contains too many atoms! (max: %d)\n", filename, MAX_ATOMS);
 
           sscanf(line+12,"%4s%*1c%*3s%*2c%*4d%*4c%8lf%8lf%8lf", dummy,
                &x[natoms][0], &x[natoms][1], &x[natoms][2]);
@@ -502,6 +506,9 @@ FILE     *Fp;
              cell_to_prim(cell,h);
              break;
           case 'at':    /* Atom - add atom to list              */
+             if( natoms > MAX_ATOMS )
+                error("\"%s\" contains too many atoms! (max: %d)\n", filename, MAX_ATOMS);
+
              if( linec < 4 + blankflg)
              {
                 error("Insufficient items on ATOM card in %s - %s", filename, buf);
@@ -731,6 +738,9 @@ FILE     *Fp;
 
               if( strcmp(strlower(line),"eof") !=0 )
               {
+                 if( natoms > MAX_ATOMS )
+                    error("\"%s\" contains too many atoms! (max: %d)\n", filename, MAX_ATOMS);
+
 		 /* Read atom type from scattering element, as label not always element symbol */
                  if( sscanf(line,"%s %lf %lf %lf %lf %*lf %*lf   %s",
                      dummy, &x[natoms][0], &x[natoms][1], &x[natoms][2], &charge[natoms], temp_name) < 6)
@@ -787,6 +797,9 @@ FILE     *Fp;
 
    if( sscanf(get_line(line,LLEN,Fp,0),"%d", &natoms) < 1)
       error("EOF or unexpected format on line 1 in \"%s\"", filename);
+
+   if( natoms > MAX_ATOMS )
+      error("\"%s\" contains too many atoms! (max: %d)\n", filename, MAX_ATOMS);
 
    if( sscanf(get_line(line,LLEN,Fp,0),"%s", title) < 1)
       error("EOF or unexpected format on line 2 in \"%s\"", filename);
