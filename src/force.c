@@ -29,7 +29,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *		module (kernel.c) for ease of modification.		      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	force.c,v $
+ *       $Log: force.c,v $
+ * Revision 2.3  1993/10/28  15:23:38  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ *
  * Revision 2.3  93/10/28  15:22:53  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -216,7 +219,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force.c,v 2.3 93/10/28 15:22:53 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force.c,v 2.3 1993/10/28 15:23:38 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -841,6 +844,7 @@ mat_mt          stress;                 /* Stress virial                (out) */
                 *nab_chg = dalloc(n_nab_sites),	/* Gathered neig. site charges*/
                 *forceij = dalloc(n_nab_sites);	/* -V'(r) / r		      */
    real         force_cpt, site0, site1, site2, s00, s01, s02, s11, s12, s22;
+   register	real rrx,rry,rrz;
    real         reloc_v[3][CUBE(NSHELL)];	/* PBC relocation vectors     */
    real         **nab_pot			/* Gathere'd pot par array    */
    		= (real**)arralloc(sizeof(real), 2,
@@ -1073,13 +1077,16 @@ VECTORIZE
 #endif
 	    site0=site[0][isite]; site1=site[1][isite]; site2=site[2][isite];
 VECTORIZE
+   
             for(jsite=jmin; jsite < jmax; jsite++)
             {
-               rx[jsite] = nab_sx[jsite] - site0;
-               ry[jsite] = nab_sy[jsite] - site1;
-               rz[jsite] = nab_sz[jsite] - site2;
-               r_sqr[jsite] = rx[jsite]*rx[jsite] + ry[jsite]*ry[jsite]
-                                                  + rz[jsite]*rz[jsite];
+	       rrx = nab_sx[jsite] - site0;
+	       rry = nab_sy[jsite] - site1;
+	       rrz = nab_sz[jsite] - site2;
+               r_sqr[jsite] = rrx*rrx+rry*rry+rrz*rrz;
+               rx[jsite] = rrx;
+               ry[jsite] = rry;
+               rz[jsite] = rrz;
             }
             if( (jsite = jmin+search_lt(jmax-jmin, r_sqr+jmin, 1, TOO_CLOSE))
 	       < jmax )
