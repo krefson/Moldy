@@ -6,6 +6,13 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	aux.c,v $
+ * Revision 1.4  89/06/09  17:01:53  keith
+ * Made zero_real() call memset/bzero
+ * Fixed vprintf() for machines which use _doprnt()
+ * Added alliant vector functions
+ * Modified cpu() to avoid typedef clash on Stellar GS 1000
+ * Rewrote 'scalar' versions of vector functions to allow vectorisation.
+ * 
  * Revision 1.3  89/06/01  21:23:04  keith
  * Control.out eliminated, use printf and freopen instead to direct output.
  * 
@@ -19,7 +26,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: aux.c,v 1.7 89/06/09 15:45:11 keith Exp $";
+static char *RCSid = "$Header: aux.c,v 1.5 89/06/14 10:42:02 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -38,7 +45,7 @@ time_t	time();
  *  library versions.  Other machines do it the hard way.		      *
  *  CRAY versions.							      *
  ******************************************************************************/
-#if defined(CRAY)
+#if defined(CRAY) && ! defined(unix)
 double vdot(n,x,ix,y,iy)
 int	n;
 real	*x, *y;
@@ -254,7 +261,8 @@ int	ix[];
 /******************************************************************************
  *  Vector handling functions - versions for scalar machines.		      *
  ******************************************************************************/
-#if ! defined(CRAY) && ! defined(convexvc) && ! defined(alliant)
+#if ! (defined(CRAY) && ! defined(unix) ) \
+       && ! defined(convexvc) && ! defined(alliant)
 double vdot(n,x,ix,y,iy)
 int	n;
 real	x[], y[];
@@ -391,7 +399,7 @@ char	*atime()
 
 #define TICK 60.0
 #define size_t NOTHING
-#define time_t NOTHING
+#define time_t NOTHING2
 #include <sys/types.h>
 #include <sys/times.h>
 #undef size_t
@@ -405,7 +413,7 @@ double        cpu()
 
    return((buf.tms_utime + buf.tms_stime)/TICK);
 }
-#else
+#else			/* Not USG ie BSD varitety of unix		      */
 
 #define KERNEL          /* This stops sys/time.h from including time.h again  */
 #define time_t NOTHING
@@ -422,8 +430,8 @@ double	cpu()	/* The standard unix 'clock' wraps after 36 mins.	      */
    return(ru.ru_utime.tv_sec  + ru.ru_stime.tv_sec
 	  + 1.0e-6 * (ru.ru_utime.tv_usec + ru.ru_stime.tv_usec));
 }
-#endif
-#else
+#endif			/* USG or BSG					      */
+#else			/* Not Unix					      */
 #ifdef CRAY
 #define CLK_TCK 1000000
 #endif
@@ -574,13 +582,14 @@ double	x;
 
 #include <varargs.h>
 
-#ifdef CRAY
+#if defined(CRAY) && ! defined(unix)
 
 int	vprintf (fmt, args)
 char   	*fmt;
 va_list args;
 {
-    return(XPRINTF(&fmt, &args, &stdout));
+   FILE *out = stdout;
+   return(XPRINTF(&fmt, &args, &out));
 }
 
 #else
