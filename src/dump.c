@@ -43,6 +43,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.12  2000/04/27 17:57:06  keith
+ *       Converted to use full ANSI function prototypes
+ *
  *       Revision 2.11  2000/04/26 16:01:01  keith
  *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
  *
@@ -175,7 +178,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/dump.c,v 2.11 2000/04/26 16:01:01 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/dump.c,v 2.12 2000/04/27 17:57:06 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -366,7 +369,7 @@ void	dump(system_mp system, vec_mt (*force), vec_mt (*torque), real (*stress)[3]
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 2.11 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 2.12 $"+11,
 		                     sizeof dump_header.vsn-1);
 #ifdef USE_XDR
       if( control.xdr_write )
@@ -553,6 +556,7 @@ static void	dump_convert(float *buf, system_mp system, vec_mt (*force), vec_mt (
    if( control.dump_level & 2)
    {
       mat_vec_mul(system->h, system->vel, scale_buf, nmols);
+      vscale(3 * nmols,   1.0/system->ts, buf, 1);
       real_to_float(scale_buf[0],    buf, 3*nmols);	buf += 3*nmols;
       if( system->nmols_r > 0 )
       {

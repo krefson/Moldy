@@ -31,6 +31,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.14  2000/04/27 17:57:11  keith
+ *       Converted to use full ANSI function prototypes
+ *
  *       Revision 2.13  2000/04/26 16:01:02  keith
  *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
  *
@@ -169,7 +172,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/restart.c,v 2.13 2000/04/26 16:01:02 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/restart.c,v 2.14 2000/04/27 17:57:11 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -545,11 +548,11 @@ void	read_restart(FILE *restart, char *vsn, system_mp system, int av_convert)
 
    if( vmajor > 2 || (vmajor == 2 && vminor > 7) )
    {
-      cread(xfp,  (gptr*)system->ta,      lsizeof(real), system->nspecies, xdr_real);
-      cread(xfp,  (gptr*)system->tap,     lsizeof(real), system->nspecies, xdr_real);
+      cread(xfp,  (gptr*)&system->ts,      lsizeof(real), 1, xdr_real);
+      cread(xfp,  (gptr*)&system->tsmom,   lsizeof(real), 1, xdr_real);
 
-      cread(xfp,  (gptr*)system->ra,      lsizeof(real), system->nspecies, xdr_real);
-      cread(xfp,  (gptr*)system->rap,     lsizeof(real), system->nspecies, xdr_real);
+      cread(xfp,  (gptr*)&system->rs,      lsizeof(real), 1, xdr_real);
+      cread(xfp,  (gptr*)&system->rsmom,   lsizeof(real), 1, xdr_real);
    }
 
    ap = av_ptr(&asize,av_convert);	      /* get addr, size of database   */
@@ -593,7 +596,7 @@ void	write_restart(char *save_name, restrt_mt *header, system_mp system, spec_mp
    FILE		*save;
    XDR		xdrsw;
    xfp_mt	xfp;
-   char		*vsn = "$Revision: 2.13 $"+11;
+   char		*vsn = "$Revision: 2.14 $"+11;
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)
@@ -645,11 +648,11 @@ void	write_restart(char *save_name, restrt_mt *header, system_mp system, spec_mp
    cwrite(xfp,  (gptr*)system->hdot,    lsizeof(real), 9, xdr_real);
    cwrite(xfp,  (gptr*)system->hdotp,   lsizeof(real), 9, xdr_real);
 
-   cwrite(xfp,  (gptr*)system->ta,      lsizeof(real), system->nspecies, xdr_real);
-   cwrite(xfp,  (gptr*)system->tap,     lsizeof(real), system->nspecies, xdr_real);
+   cwrite(xfp,  (gptr*)&system->ts,      lsizeof(real), 1, xdr_real);
+   cwrite(xfp,  (gptr*)&system->tsmom,   lsizeof(real), 1, xdr_real);
 
-      cwrite(xfp,  (gptr*)system->ra,      lsizeof(real), system->nspecies, xdr_real);
-      cwrite(xfp,  (gptr*)system->rap,     lsizeof(real), system->nspecies, xdr_real);
+   cwrite(xfp,  (gptr*)&system->rs,      lsizeof(real), 1, xdr_real);
+   cwrite(xfp,  (gptr*)&system->rsmom,   lsizeof(real), 1, xdr_real);
 
    ap = av_ptr(&asize,0);			/* get addr, size of database */
    xdr_set_av_size_conv(asize,0);	 /* Pass asize to xdr_averages.  Ugh! */

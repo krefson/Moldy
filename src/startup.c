@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.18  2000/04/27 17:57:11  keith
+ *      Converted to use full ANSI function prototypes
+ *
  *      Revision 2.17  2000/04/26 16:01:02  keith
  *      Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
  *
@@ -259,7 +262,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/startup.c,v 2.17 2000/04/26 16:01:02 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/startup.c,v 2.18 2000/04/27 17:57:11 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -570,12 +573,17 @@ void	thermalise(system_mp system, spec_mt *species)
     *  Set accelerations to zero.
     */
    zero_real(system->vel[0],   3*system->nmols);
-
+#if BEEMAN
    zero_real(system->ta,      system->nspecies);
    zero_real(system->tap,     system->nspecies);
     
    zero_real(system->ra,      system->nspecies);
    zero_real(system->rap,     system->nspecies);
+#endif
+   system->ts = 1.0;
+   system->rs = 1.0;
+   system->tsmom = 0.0;
+   system->rsmom = 0.0;
    
    for (spec = species; spec < species+system->nspecies; spec++)
    {
@@ -586,7 +594,7 @@ void	thermalise(system_mp system, spec_mt *species)
 	 for(imol = 0; imol < spec->nmols; imol++)
 	    for(i = 0; i < 3; i++)	/* Centre of mass co-ords -1 < x < 1  */
 	    {
-	       spec->vel[imol][i]    = root_ktm * gauss_rand();
+	       spec->vel[imol][i]    = system->ts* root_ktm * gauss_rand();
 	       momentum[i] += spec->mass*spec->vel[imol][i];
 	    }
 	 
@@ -613,7 +621,7 @@ void	thermalise(system_mp system, spec_mt *species)
 	 for(i = 0; i < 3; i++)
 	    
 	    for(imol = 0; imol < spec->nmols; imol++)
-	       spec->vel[imol][i] -= momentum[i] / total_mass;
+	       spec->vel[imol][i] -= momentum[i] / (system->ts * total_mass);
       }
 }
 /******************************************************************************
@@ -766,11 +774,13 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
           "acc",system->acc,"acco",system->acco,"accvo",system->accvo);
 #endif
 
+#if BEEMAN
    system->ta      = dalloc(system->nspecies);
    system->tap     = dalloc(system->nspecies);
 
    system->ra      = dalloc(system->nspecies);
    system->rap     = dalloc(system->nspecies);
+#endif
 
    if(system->nmols_r > 0)
    {
@@ -827,11 +837,17 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
     * These may not be initialised if reading an old restart file,
     * so zero them here for safety.
     */
+   system->ts = 1.0;
+   system->rs = 1.0;
+   system->tsmom = 0.0;
+   system->rsmom = 0.0;
+#if BEEMAN
    zero_real(system->ta,      system->nspecies);
    zero_real(system->tap,     system->nspecies);
     
    zero_real(system->ra,      system->nspecies);
    zero_real(system->rap,     system->nspecies);
+#endif
 }
 /******************************************************************************
  *  Interpolate_derivatives & interp.    Interp is a quadratic interpolation  *

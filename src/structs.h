@@ -19,9 +19,15 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/moldy/src/RCS/structs.h,v 2.9 1996/10/19 11:55:24 keith Exp $
+ * $Header: /home/eeyore_data/keith/CVS/moldy/src/structs.h,v 2.9.2.1 2000/04/24 17:05:45 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.9.2.1  2000/04/24 17:05:45  keith
+ * Dullweber et al Leapfrog version
+ *
+ * Revision 3.1  2000/04/14 15:00:49  keith
+ * Dullweber et al Leapfrog version
+ *
  * Revision 2.9  1996/10/19 11:55:24  keith
  * Corrected bug in control struct and xdr write of thermostat vars.
  *
@@ -224,10 +230,10 @@ typedef struct                  /* Whole system information                   */
                  *  Following variables ta..., ra.. have been introduced
                  *  by VVM and have dimensions of [nspecies]
                  */
-   real        *ta,             /* N-H alpha for trans temp                   */
-               *tap;            /* Predicted N-H alpha for trans temp         */
-   real        *ra,             /* N-H alpha for trans temp                   */
-               *rap;            /* Predicted N-H alpha for trans temp         */
+   real        ts,             /* Nose-Poincare trans temp co-ordinate       */
+               tsmom;          /* Nose-Poincare trans temp momentum          */
+   real        rs,             /* Nose-Poincare rot. temp co-ordinate        */
+               rsmom;          /* Nose-Poincare rot. temp momentum           */
 } system_mt, *system_mp;
 
 

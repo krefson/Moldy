@@ -42,6 +42,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: algorith.c,v $
+ *       Revision 2.13  2000/04/27 17:57:05  keith
+ *       Converted to use full ANSI function prototypes
+ *
  *       Revision 2.12  2000/04/26 16:01:01  keith
  *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
  *
@@ -141,7 +144,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/algorith.c,v 2.12 2000/04/26 16:01:01 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/algorith.c,v 2.13 2000/04/27 17:57:05 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -410,7 +413,7 @@ void parinello(real (*h)[3], real (*h_dot)[3], vec_mp vel, vec_mp acc, vec_mp ac
 /******************************************************************************
  *  Trans_ke  calculate and return the translational kinetic energy           *
  ******************************************************************************/
-double	trans_ke(real (*h)[3], vec_mt (*vel_s), double mass, int nmols)
+double	trans_ke(real (*h)[3], vec_mt (*vel_s), real s, double mass, int nmols)
       	  			/* Unit cell matrix			 (in) */
       	        		/* Scaled c of m velocities		 (in) */
       	     			/* Mass of a molecule of this species	 (in) */
@@ -424,7 +427,7 @@ double	trans_ke(real (*h)[3], vec_mt (*vel_s), double mass, int nmols)
    ke = vdot(3*nmols, vel[0], 1, vel[0], 1);
 
    xfree(vel);
-   return(0.5 * mass * ke);
+   return(0.5 * mass * ke / SQR(s));
 }
    
 /******************************************************************************
@@ -446,7 +449,7 @@ double	rot_ke(quat_mt (*omega_p), real *inertia, int nmols)
 /******************************************************************************
  * energy_dyad.  Calculate the dyadic sum m V V (dyad over V) for zero stress *
  ******************************************************************************/
-void energy_dyad(real (*ke_dyad)[3], real (*h)[3], vec_mp vels, double mass, int nmols)
+void energy_dyad(real (*ke_dyad)[3], real (*h)[3], real s, vec_mp vels, double mass, int nmols)
       	        			/* Dyad is accumulated here  (in/out) */
 	  				/* Unit cell matrix		(in)  */
       	     				/* Scaled velocities		(in)  */
@@ -461,7 +464,7 @@ void energy_dyad(real (*ke_dyad)[3], real (*h)[3], vec_mp vels, double mass, int
    for(i = 0; i < 3; i++)
       for(j = 0; j < 3; j++)
       {
-         ke_dyad[i][j] += mass * vdot(nmols, vel[0]+i, 3, vel[0]+j, 3);
+         ke_dyad[i][j] += mass * vdot(nmols, vel[0]+i, 3, vel[0]+j, 3)/SQR(s);
       }     
 
    xfree(vel);

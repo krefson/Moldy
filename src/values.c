@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ *       Revision 2.10  2000/04/27 17:57:12  keith
+ *       Converted to use full ANSI function prototypes
+ *
  *       Revision 2.9  2000/04/26 16:01:03  keith
  *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
  *
@@ -143,7 +146,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/values.c,v 2.9 2000/04/26 16:01:03 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/values.c,v 2.10 2000/04/27 17:57:12 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -163,8 +166,8 @@ double	sum(register int n, register double *x, register int ix);				/* Vector su
 void	zero_real(real *r, int n);
 void	zero_double(double *r, int n);
 void	zero_dbls(double *r, size_mt n);
-void	energy_dyad(real (*ke_dyad)[3], real (*h)[3], vec_mp vels, double mass, int nmols);
-double	trans_ke(real (*h)[3], vec_mt (*vel_s), double mass, int nmols);
+void	energy_dyad(real (*ke_dyad)[3], real (*h)[3], real s, vec_mp vels, double mass, int nmols);
+double	trans_ke(real (*h)[3], vec_mt (*vel_s), real s, double mass, int nmols);
 double	rot_ke(quat_mt (*omega_p), real *inertia, int nmols);
 double	precision(void);			/* Machine precision constant	      */
 char	*atime(void);
@@ -446,13 +449,16 @@ void	values(system_mp system, spec_mt *species, vec_mt (*meansq_f_t)[2], double 
    spec_mp	spec;
    int		ispec, ipe;
    double	e, tot_ke = 0.0, tot_pe = 0.0;
+   double	ske, gktls;
    int		i, j, k;
    mat_mt	ke_dyad,
                 stress;
    double	vol = det(system->h);
    static	double *tkep1, *tkem1, *tkem3, *tkem5;
    static	double *rkep1, *rkem1, *rkem3, *rkem5;
+   static	double skep1, skem1,skem3, skem5;
    static	boolean firstcall = true;
+   static	double tsold;
 
    if( firstcall )
    {
@@ -472,6 +478,8 @@ void	values(system_mp system, spec_mt *species, vec_mt (*meansq_f_t)[2], double 
 	 tkem3[ispec] = rkem3[ispec] = 
 	 tkem5[ispec] = rkem5[ispec] = -1.0;
       }
+      skep1 = skem1 = skem3 = skem5 = -1.0;
+      tsold = system->ts;
    }
 
    /*
@@ -495,7 +503,7 @@ void	values(system_mp system, spec_mt *species, vec_mt (*meansq_f_t)[2], double 
       tkem5[ispec] = tkem3[ispec]; 
       tkem3[ispec] = tkem1[ispec]; 
       tkem1[ispec] = tkep1[ispec];
-      tkep1[ispec] = trans_ke(system->h, spec->vel, spec->mass, spec->nmols);
+      tkep1[ispec] = trans_ke(system->h, spec->vel, 0.5*(tsold+system->ts),  spec->mass, spec->nmols);
       if(tkem1[ispec] < 0.0)
 	 tkem1[ispec] = tkem3[ispec] = tkem5[ispec] = tkep1[ispec];
       e = KEINT(tkep1[ispec], tkem1[ispec], tkem3[ispec], tkem5[ispec]);
@@ -518,7 +526,18 @@ void	values(system_mp system, spec_mt *species, vec_mt (*meansq_f_t)[2], double 
          add_average(e/(0.5*kB*spec->rdof*spec->nmols), rt_n, ispec);
       }						/* and temperature            */
    }   						/* Overall temperature        */
-   add_average(CONV_E*(tot_ke+tot_pe), e_n, 0);	/* Total energy               */
+
+   tsold = system->ts;
+   skem5 = skem3;
+   skem3 = skem1;
+   skem1 = skep1;
+   skep1 = SQR(system->tsmom)/(2.0*control.ttmass);
+   if( skem1 < 0.0 )
+      skem1 = skem3 = skem5 = skep1;
+   ske = KEINT(skep1, skem1, skem3, skem5);
+
+   gktls = system->d_of_f*kB*control.temp*log(system->ts);
+   add_average(CONV_E*(tot_ke+tot_pe+ske+gktls), e_n, 0);	/* Total energy               */
    add_average(tot_ke/(0.5*kB*system->d_of_f), t_n, 0);
    for(i = 0; i < 3; i++)			/* Non-zero (upper triangle)  */
    {
@@ -529,7 +548,7 @@ void	values(system_mp system, spec_mt *species, vec_mt (*meansq_f_t)[2], double 
 
    zero_real(ke_dyad[0],9);
    for (spec = species; spec < &species[system->nspecies]; spec++)
-      energy_dyad(ke_dyad, system->h, spec->vel, spec->mass, spec->nmols);
+      energy_dyad(ke_dyad, system->h, system->ts, spec->vel, spec->mass, spec->nmols);
 
    k = 0;
    for(i = 0; i < 3; i++)
