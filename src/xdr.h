@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	xdr.h,v $
+ * Revision 2.3  93/10/14  18:18:16  keith
+ * Fixed prortability problems to IBM RS6000
+ * 
  * Revision 2.2  93/09/06  14:42:47  keith
  * Fixed portability problems/bugs in XDR code.
  * 
@@ -36,12 +39,15 @@ what you give them.   Help stamp out software-hoarding!  */
 /*========================== Library include files ===========================*/
 #ifdef USE_XDR
 
-#ifdef sun
-#   define free xxfree
-#endif
-#ifdef RS6000
-#   define malloc xxmalloc
-#endif
+/*
+ * Some <rpc/types.h> descended from Sun's original include a declaration
+ * of "malloc" in an unprotected fashion.  Try to define it out of the
+ * way -- include "stdlib.h" if necessary to put it back.
+ * In case an implementation (eg SGI) does it right by including <stdlib.h>
+ * ensure that and Moldy module includes "stdlib.h" *before* "xdr.h".
+*/
+#define free xxfree
+#define malloc xxmalloc
 
 #ifdef vms
 #include	"rpc_types.h"
@@ -51,12 +57,9 @@ what you give them.   Help stamp out software-hoarding!  */
 #include	<rpc/types.h>
 #include	<rpc/xdr.h>
 #endif
-#ifdef sun
-#   undef free
-#endif
-#ifdef RS6000
-#   undef  malloc
-#endif
+
+#undef free
+#undef malloc
 
 #else
 typedef	char XDR;

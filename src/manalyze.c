@@ -19,11 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 2.0 93/03/15 14:49:46 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 2.3 93/10/28 10:28:54 keith Stab $";
 #endif
 
 /*
  * $Log:	moldyanalyze.c,v $
+ * Revision 2.3  93/10/28  10:28:54  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.0  93/03/15  14:49:46  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
@@ -49,11 +52,9 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 
 
 #include	"stddef.h"
 #include	"structs.h"
+#include	"stdlib.h"
 #include	<stdio.h>
 
-char	*malloc();
-
-#undef cfree
 
 char	*ctime();
 main(argc, argv)
@@ -74,7 +75,7 @@ char	*argv[];
          exit(1);
       }
    }
-   size = getw(f);
+   (void)fread((gptr*)&size, sizeof size, 1, f);
    if(size != sizeof restart_header)
    {
    	fprintf(stderr,"This isn't a Moldy restart file\n");
@@ -88,10 +89,10 @@ char	*argv[];
    printf("\n\tHeader record\t%d\tbytes\n",size);
    while(!feof(f))
    {
-      size = getw(f);
+      (void)fread((gptr*)&size, sizeof size, 1, f);
       printf("\tRecord %d \t%d\tbytes\n",rec++,size);
       ptr = malloc(size);
       fread(ptr,size,1,f);
-      cfree(ptr);
+      free(ptr);
    }
 }

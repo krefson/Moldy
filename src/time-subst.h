@@ -21,8 +21,15 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  *  Time.h   replacement for ANSI one
  */
-#ifndef MOLDY_TIME_H_INCLUDED
-#define MOLDY_TIME_H_INCLUDED
+#ifndef __time_h
+#ifndef _TIME_H
+#ifndef _TIME_H_
+#ifndef __TIME_H
+#ifndef __TIME_H__
+#ifndef _TIME_INCLUDED
+
+#include <time.h>
+
 #ifndef ANSI_LIBS
 #   if defined(unix) || defined(__unix__)
 /*
@@ -46,5 +53,11 @@ what you give them.   Help stamp out software-hoarding!  */
 #      endif
 #   endif
 #endif
-#include <time.h>
+#define __time_h
+
+#endif
+#endif
+#endif
+#endif
+#endif
 #endif

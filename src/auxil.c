@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	aux.c,v $
+ * Revision 2.3  93/10/28  10:27:38  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.2  93/09/06  14:43:28  keith
  * Fixed portability problems/bugs in XDR code.
  * 
@@ -187,7 +190,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/aux.c,v 2.2 93/09/06 14:43:28 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/aux.c,v 2.3 93/10/28 10:27:38 keith Stab $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -871,9 +874,10 @@ int sig;
 #endif
 #endif
 /******************************************************************************
- * raise for VMS.  Why doesn't it have it?
+ * raise for VMS.  Earlier VAX/VMS libs don't it have it.  Assume that any vsn*
+ * late enough to have __DECC is OK. Don't believe ANSI_LIBS -- kludge.       *
  ******************************************************************************/
-#ifdef VMS
+#if defined(vms) && ! defined(__DECC)
 int 	raise(sig)
 int sig;
 {
@@ -1031,7 +1035,7 @@ char	*file;
 /******************************************************************************
  *  Purge Remove 1 old version of a file.  (Do nothing if O/S has no versions)*
  ******************************************************************************/
-#ifdef VMS 
+#ifdef vms 
 void	purge(file)
 char	*file;
 {

@@ -19,11 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpanalyze.c,v 2.2 93/09/06 14:42:41 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpanalyze.c,v 2.3 93/10/14 18:18:36 keith Exp $";
 #endif
 
 /*
  * $Log:	dumpanalyze.c,v $
+ * Revision 2.3  93/10/14  18:18:36  keith
+ * Fixed prortability problems to IBM RS6000
+ * 
  * Revision 2.2  93/09/06  14:42:41  keith
  * Fixed portability problems/bugs in XDR code.
  * 
@@ -49,6 +52,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpanalyze.c,v 2
 
 #include "defs.h"
 #include <stdio.h>
+#include "string.h"
 #include "structs.h"
 #include "time.h"
 #ifdef USE_XDR

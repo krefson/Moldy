@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 2.1 93/07/19 13:28:19 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 2.3 93/10/28 10:28:31 keith Stab $
  *
  * $Log:	string.h,v $
+ * Revision 2.3  93/10/28  10:28:31  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.1  93/07/19  13:28:19  keith
  * Added XDR capability for backup and dump files.
  * 
@@ -57,8 +60,12 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  * 
  */
-#ifndef STRING_ALREADY
-#define STRING_ALREADY
+#ifndef __string_h
+#ifndef _STRING_H
+#ifndef _STRING_H_
+#ifndef __STRING_H
+#ifndef __STRING_H__
+#ifndef _STRING_INCLUDED
 
 #ifdef ANSI_LIBS
 #   include <string.h>
@@ -91,4 +98,16 @@ extern gptr
 
 #endif
 
+#define __string_h
+#define _STRING_H
+#define _STRING_H_
+#define __STRING_H
+#define __STRING_H__
+#define _STRING_INCLUDED
+
+#endif
+#endif
+#endif
+#endif
+#endif
 #endif

@@ -18,28 +18,41 @@ Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
+#ifndef __stdlib_h
+#ifndef _STDLIB_H
 #ifndef _STDLIB_H_
-#ifndef _MOLDY_STDLIB_H_
-#define _MOLDY_STDLIB_H_
-
+#ifndef __STDLIB_H
+#ifndef __STDLIB_H__
+#ifndef _STDLIB_INCLUDED
 #ifdef ANSI_LIBS
 #   include <stdlib.h>
 #else
 
 #  include "stddef.h"
 
-   extern int atoi ();
-   extern char * calloc ();
+   extern char * calloc();
+   extern char * malloc();
+   extern char * realloc();
+
    extern void free ();
-   extern char * malloc ();
-   extern char * realloc ();
    extern void exit ();
    extern int abs ();
+   extern int atoi ();
    extern long strtol();
 #endif
 
-#endif /* _MOLDY_STDLIB_H_ */
-#endif /* __STDLIB_H_ */
+#define __stdlib_h
+#define __STDLIB_H__
+#define _STDLIB_H_
+#define _STDLIB_H
+#define _STDLIB_INCLUDED
+
+#endif /* __STDLIB_H__ */
+#endif /* __STDLIB_H__ */
+#endif /* _STDLIB_H_ */
+#endif /* _STDLIB_H_ */
+#endif /* _STDLIB_H_ */
+#endif /* _STDLIB_H_ */
 
 
 
