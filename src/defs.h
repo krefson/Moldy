@@ -1,7 +1,10 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.8 90/04/06 11:09:22 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.9 90/04/12 16:23:44 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.9  90/04/12  16:23:44  keith
+ * Used <errno.h> to check for Berkeley unix and define symbol BSD
+ * 
  * Revision 1.8  90/04/06  11:09:22  keith
  * Aquired definition of NPOTP from structs.
  * 
@@ -37,8 +40,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.8 $"
-#define		 REVISION_DATE    "$Date: 90/04/06 11:09:22 $"
+#define          REVISION         "$Revision: 1.9 $"
+#define		 REVISION_DATE    "$Date: 90/04/12 16:23:44 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -68,17 +71,6 @@
 #ifdef CMS
 #define BACKUP_FILE	"MDBACKUP MOLDY A1"
 #define TEMP_FILE	"MDTEMP XXXXXXXX A1"
-#endif
-/*
- *  Define types time_t and size_t
- */
-#if unix || CRAY
-typedef long		time_t;
-typedef	unsigned	size_t;
-#include		<time.h>
-#else
-#include		<stddef.h>
-#include		<time.h>
 #endif
 /*
  * Set HAVE_VPRINTF if this function is in target machine's library.
@@ -191,6 +183,7 @@ typedef	double			real;
 typedef	int			boolean;
 #define	false			0
 #define	true			1
+typedef	unsigned long int mytime_t;	/* Larger than any possible time_t */
 typedef enum {inv, noinv} 	invrot;
 typedef enum {tke_n, rke_n, pe_n, e_n, tt_n, rt_n, t_n, 
               h0_n, h1_n, h2_n, stress0_n, stress1_n,  stress2_n, press_n, 
