@@ -6,6 +6,10 @@ Copyright (C) 1999, 2003 Craig Fisher */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: bdist.c,v $
+ *  Revision 1.7.10.1  2003/07/29 09:32:04  moldydv
+ *  Able to handle multiple time slice output from mdbond.
+ *  Added option -p to output coordination spheres of each molecule.
+ *
  *  Revision 1.7  2002/09/19 09:26:27  kr
  *  Tidied up header declarations.
  *  Changed old includes of string,stdlib,stddef and time to <> form
@@ -336,7 +340,7 @@ void bond_dist(ROOT **bond_root, ROOT **bct_root, int *blim)
       do
       {
          bd = bd_node->data;
-         if(( bd->length >= blim[0] ) && (bd->length <= blim[1]))
+         if(( bd->length >= blim[0]/10.0 ) && (bd->length <= blim[1]/10.0))
          {
             bct_node = search_bond(bct_root, bd->atom1, bd->atom2);
             if( bct_node == NULL )
@@ -349,7 +353,7 @@ void bond_dist(ROOT **bond_root, ROOT **bct_root, int *blim)
             else
                bct = bct_node->data; 
 
-            u = floor((10.0*bd->length - blim[0])/blim[2]+5.0);
+            u = floor((10.0*bd->length - blim[0])/blim[2]+0.5);
 	    node_count = search_count(&(bct->root_count),u);
             if( node_count == NULL )
             {
@@ -389,7 +393,7 @@ void angle_dist(ROOT **angle_root, ROOT **act_root, int *alim)
       do
       {
          ang = ang_node->data;
-         if(( ang->value >= alim[0] ) && ( ang->value <= alim[1]))
+         if(( ang->value >= alim[0]) && ( ang->value <= alim[1]))
          { 
             act_node = search_angle(act_root, ang->atom1, ang->atom2, ang->atom3);
             if( act_node == NULL )
