@@ -37,6 +37,26 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
+ * Got rid of all global (external) data items except for
+ * "control" struct and constant data objects.  The latter
+ * (pot_dim, potspec, prog_unit) are declared with CONST
+ * qualifier macro which evaluates to "const" or nil
+ * depending on ANSI/K&R environment.
+ * Also moved as many "write" instantiations of "control"
+ * members as possible to "startup", "main" leaving just
+ * "dump".
+ *
+ * Declared as "static"  all functions which should be.
+ *
+ * Added CONST qualifier to (re-)declarations of ANSI library
+ * emulation routines to give reliable compilation even
+ * without ANSI_LIBS macro. (#define's away for K&R
+ * compilers)
+ *
  * Revision 2.5  94/01/21  12:21:22  keith
  * Corrected trivial and latent bug in print_config()
  * 
@@ -135,7 +155,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/output.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/output.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -331,6 +351,16 @@ int	value;
    new_line();
 }
 /******************************************************************************
+ *   Format_long     Print the name and value of some parameter in same format *
+ ******************************************************************************/
+static void	format_long(text,value)
+char	*text;
+long	value;
+{
+   (void)printf("\t%-32s = %ld",text,value);
+   new_line();
+}
+/******************************************************************************
  *   Format_dbl     Print the name and value of some parameter in same format *
  ******************************************************************************/
 static void	format_dbl(text,value,units)
@@ -446,8 +476,8 @@ restrt_mt	*restart_header;
    format_vec("c",h[0][2],h[1][2],h[2][2],LUNIT_N);
    (void)printf(" Run parameters"); new_line();
    if(control.istep > 0)
-      format_int("Initial step",control.istep); 
-   format_int("Final step",control.nsteps);
+      format_long("Initial step",control.istep); 
+   format_long("Final step",control.nsteps);
    format_dbl("Size of step",control.step,TUNIT_N);
    format_dbl("CPU limit",control.cpu_limit,"s");
    if(control.scale_interval > 0)
@@ -480,8 +510,8 @@ restrt_mt	*restart_header;
 	 }
       }
       format_dbl("Applied Temperature",control.temp,"K");
-      format_int("No. steps between scalings",control.scale_interval);
-      format_int("End scaling at step",control.scale_end);
+      format_long("No. steps between scalings",control.scale_interval);
+      format_long("End scaling at step",control.scale_end);
    }
    if(control.const_pressure)
    {
@@ -501,9 +531,9 @@ restrt_mt	*restart_header;
    {
       (void)printf(" Radial distribution functions will be calculated");
       new_line();
-      format_int("Starting at timestep", control.begin_rdf);
-      format_int("No. steps between binnings", control.rdf_interval);
-      format_int("Calculate and print after", control.rdf_out);
+      format_long("Starting at timestep", control.begin_rdf);
+      format_long("No. steps between binnings", control.rdf_interval);
+      format_long("Calculate and print after", control.rdf_out);
    }
 
    if( control.dump_level > 0 && control.dump_interval > 0 )
@@ -511,8 +541,8 @@ restrt_mt	*restart_header;
       (void)printf(" Configurational data will be dumped to file(s) %s",
 		   control.dump_file);
       new_line();
-      format_int("Starting at timestep", control.begin_dump);
-      format_int("No. steps between dumps", control.dump_interval);
+      format_long("Starting at timestep", control.begin_dump);
+      format_long("No. steps between dumps", control.dump_interval);
       format_int("Dump level", control.dump_level);
    }
    

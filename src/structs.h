@@ -19,9 +19,15 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/structs.h,v 2.3 93/10/28 10:28:19 keith Stab $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/structs.h,v 2.5 1994/01/18 13:33:02 keith Stab $
  *
- * $Log:	structs.h,v $
+ * $Log: structs.h,v $
+ * Revision 2.5  1994/01/18  13:33:02  keith
+ * Null update for XDR portability release
+ *
+ * Revision 2.5  1994/01/18  13:33:02  keith
+ * Null update for XDR portability release
+ *
  * Revision 2.3  93/10/28  10:28:19  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -123,7 +129,7 @@ what you give them.   Help stamp out software-hoarding!  */
 typedef struct			/* Control parameters for simulation	      */
 {
    char		title[L_name];	/* Job title				      */
-   int		istep,		/* Current timestep - used as loop counter    */
+   long		istep,		/* Current timestep - used as loop counter    */
 		nsteps; 	/* Number of timesteps to execute	      */
    double 	step;		/* Value of timestep in program units	      */
    boolean	print_sysdef,	/* Flag to print out system specification file*/
@@ -146,17 +152,17 @@ typedef struct			/* Control parameters for simulation	      */
    int		nbins;		/* Number of bins for rdf calculation         */
    unsigned long seed; 		/* Seed for random number generator	      */
    int		page_width,	/* Line width for output file		      */
-		page_length,	/* Length of page on output file	      */
-		scale_interval, /* Number of timesteps between scales	      */
+		page_length;	/* Length of page on output file	      */
+   long		scale_interval, /* Number of timesteps between scales	      */
 		scale_end,	/* Stop scaling after n timesteps	      */
 		begin_average,	/* Number of 'equilibration' steps	      */
 		average_interval,/* Frequency of averages calculation	      */
    		begin_dump,	/* When to start storing dumps for analysis   */
    		dump_offset,	/* Used in for dump file names - internal only*/
-		dump_interval,	/* Frequency of configuration dumps	      */
-   		dump_level,	/* What to dump to file			      */
-   		maxdumps,	/* How many dump records in a dump file	      */
-   		backup_interval,/* Frequency to save state to backup file     */
+		dump_interval;	/* Frequency of configuration dumps	      */
+   int		dump_level,	/* What to dump to file			      */
+   		maxdumps;	/* How many dump records in a dump file	      */
+   long		backup_interval,/* Frequency to save state to backup file     */
 		roll_interval,	/* Number of timesteps for rolling avgs       */
 		print_interval,	/* Number of timesteps between printouts      */
 		begin_rdf,	/* When to start RDF calculation              */
@@ -304,9 +310,9 @@ typedef struct			/* Dump file header format		      */
 {
    char		title[L_name],	/* Run title at beginning of dump run	      */
    		vsn[16];	/* RCS Revision number			      */
-   int		istep,		/* Timestep at beginning of this file	      */
-   		dump_interval,	/* How many steps between dumps		      */
-   		dump_level,	/* Parameter determining contents of record   */
+   long		istep,		/* Timestep at beginning of this file	      */
+   		dump_interval;	/* How many steps between dumps		      */
+   int		dump_level,	/* Parameter determining contents of record   */
    		maxdumps,	/* Maximum number of dump records in file     */
    		ndumps,		/* How many dump records in file	      */
    		dump_size;	/* Size of a dump record		      */

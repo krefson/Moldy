@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/messages.h,v 2.5 1994/02/01 17:16:39 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/messages.h,v 2.6 1994/02/17 16:38:16 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -121,9 +121,9 @@ rotational degrees of freedom (%d vs %d)"
 #define NEGVAR  "%s - variance < 0 (%f) for type %s"
 #define NOMEM   "Memory allocation fails at line %d in \"%s\"\
 (%d items of %lu bytes)"
-#define	DUMPST	"Started dumping data to file \"%s\" at timestep %d"
+#define	DUMPST	"Started dumping data to file \"%s\" at timestep %ld"
 #define CONTIG	"Dump file \"%s\" and restart file do not match"
-#define DUMPTS  "Dump file(\"%s\")'s timestep (%d) does not match current timestep (%d)."
+#define DUMPTS  "Dump file(\"%s\")'s timestep (%ld) does not match current timestep (%ld)."
 #define DRESET  "Problems prevent continuing existing dump.  Starting new sequence."
 #define	SHTDMP	"Records missing from dump file \"%s\" - found %d, expected %d"
 #define LNGDMP	"Extra records in dump file \"%s\" - found %d, expected %d"
@@ -140,7 +140,7 @@ rotational degrees of freedom (%d vs %d)"
 correction of %g kJmol(-1) added to self energy"
 #define	FRACHG	"Framework has net electric charge of %.2g - \
 correction of %g kJmol(-1) added to self energy"
-#define WDPTR	"Arralloc called for object with size (%d) not an integral\
+#define WDPTR	"Arralloc called for object with size (%ul) not an integral\
 number of words"
 #define NCNVRG  "Do_step: velocities failed to converge after %d iterations \
 - dist = %f"

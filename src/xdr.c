@@ -26,6 +26,26 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
+ * Got rid of all global (external) data items except for
+ * "control" struct and constant data objects.  The latter
+ * (pot_dim, potspec, prog_unit) are declared with CONST
+ * qualifier macro which evaluates to "const" or nil
+ * depending on ANSI/K&R environment.
+ * Also moved as many "write" instantiations of "control"
+ * members as possible to "startup", "main" leaving just
+ * "dump".
+ *
+ * Declared as "static"  all functions which should be.
+ *
+ * Added CONST qualifier to (re-)declarations of ANSI library
+ * emulation routines to give reliable compilation even
+ * without ANSI_LIBS macro. (#define's away for K&R
+ * compilers)
+ *
  * Revision 2.5  94/01/18  13:33:07  keith
  * Null update for XDR portability release
  * 
@@ -47,7 +67,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/xdr.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/xdr.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -76,8 +96,8 @@ contr_mt *cp;
 {
    return
       xdr_opaque(xdrs, cp->title, L_name) &&
-      xdr_int(xdrs, &cp->istep) &&
-      xdr_int(xdrs, &cp->nsteps) &&
+      xdr_long(xdrs, &cp->istep) &&
+      xdr_long(xdrs, &cp->nsteps) &&
       xdr_double(xdrs, &cp->step) &&
       xdr_vector(xdrs, (gptr*)&cp->print_sysdef, 7, sizeof(boolean), xdr_bool) &&
       xdr_opaque(xdrs, cp->sysdef, 6*L_name) &&
@@ -87,7 +107,10 @@ contr_mt *cp;
       xdr_int(xdrs, &cp->strain_mask) &&
       xdr_int(xdrs, &cp->nbins) &&
       xdr_u_long(xdrs, &cp->seed) &&
-      xdr_vector(xdrs, (gptr*)&cp->page_width, 17, sizeof(int), xdr_int) &&
+      xdr_vector(xdrs, (gptr*)&cp->page_width, 2, sizeof(int), xdr_int) &&
+      xdr_vector(xdrs, (gptr*)&cp->scale_interval, 7, sizeof(long), xdr_long) &&
+      xdr_vector(xdrs, (gptr*)&cp->dump_level, 2, sizeof(int), xdr_int) &&
+      xdr_vector(xdrs, (gptr*)&cp->backup_interval, 6, sizeof(long), xdr_long) &&
       xdr_vector(xdrs, (gptr*)&cp->temp, 10, sizeof(double), xdr_double);
 }
 
@@ -177,7 +200,8 @@ dump_mt   *sp;
 {
    return
       xdr_opaque(xdrs, sp->title, L_name+16) &&
-      xdr_vector(xdrs, (gptr*)&sp->istep, 6, sizeof(int), xdr_int) &&
+      xdr_vector(xdrs, (gptr*)&sp->istep, 2, sizeof(long), xdr_long) &&
+      xdr_vector(xdrs, (gptr*)&sp->dump_level, 4, sizeof(int), xdr_int) &&
       xdr_vector(xdrs, (gptr*)&sp->timestamp, 3, sizeof(unsigned long), xdr_u_long);
 }
 

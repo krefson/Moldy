@@ -37,6 +37,31 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: startup.c,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
+ * Got rid of all global (external) data items except for
+ * "control" struct and constant data objects.  The latter
+ * (pot_dim, potspec, prog_unit) are declared with CONST
+ * qualifier macro which evaluates to "const" or nil
+ * depending on ANSI/K&R environment.
+ * Also moved as many "write" instantiations of "control"
+ * members as possible to "startup", "main" leaving just
+ * "dump".
+ *
+ * Declared as "static"  all functions which should be.
+ *
+ * Added CONST qualifier to (re-)declarations of ANSI library
+ * emulation routines to give reliable compilation even
+ * without ANSI_LIBS macro. (#define's away for K&R
+ * compilers)
+ *
+ *
+ * Moved declaration of "match" structure from input.c
+ * Moved a few sanity tests & modifications of "control"
+ * members to here from other modules.
+ *
  * Revision 2.5  94/01/24  18:20:11  keith
  * Null checkin for release compatibility.
  * 
@@ -185,7 +210,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -258,7 +283,7 @@ static	char	afmt[] = "    %8s = %8X %8s = %8X %8s = %8X %8s = %8X\
  */
 CONST match_mt	match[] = {
 {"title",            SFORM,  "Test Simulation",(gptr*) control.title},
-{"nsteps",           "%d",   "0",            (gptr*)&control.nsteps},
+{"nsteps",           "%ld",  "0",            (gptr*)&control.nsteps},
 {"step",             "%lf",  "0.005",        (gptr*)&control.step},
 {"text-mode-save",   "%d",   "0",            (gptr*)&control.print_sysdef},
 {"new-sys-spec",     "%d",   "0",            (gptr*)&control.new_sysdef},
@@ -278,22 +303,22 @@ CONST match_mt	match[] = {
 {"seed",             "%ld",  "1234567",      (gptr*)&control.seed},
 {"page-width",       "%d",   "132",          (gptr*)&control.page_width},
 {"page-length",      "%d",   "44",           (gptr*)&control.page_length},
-{"scale-interval",   "%d",   "10",           (gptr*)&control.scale_interval},
+{"scale-interval",   "%ld",  "10",           (gptr*)&control.scale_interval},
 {"const-pressure",   "%d",   "0",            (gptr*)&control.const_pressure},
 {"reset-averages",   "%d",   "0",            (gptr*)&control.reset_averages},
-{"scale-end",        "%d",   "1000000",      (gptr*)&control.scale_end},
-{"begin-average",    "%d",   "1001",         (gptr*)&control.begin_average},
-{"average-interval", "%d",   "5000",         (gptr*)&control.average_interval},
-{"begin-dump",       "%d",   "1",            (gptr*)&control.begin_dump},
-{"dump-interval",    "%d",   "20",           (gptr*)&control.dump_interval},
+{"scale-end",        "%ld",  "1000000",      (gptr*)&control.scale_end},
+{"begin-average",    "%ld",  "1001",         (gptr*)&control.begin_average},
+{"average-interval", "%ld",  "5000",         (gptr*)&control.average_interval},
+{"begin-dump",       "%ld",  "1",            (gptr*)&control.begin_dump},
+{"dump-interval",    "%ld",  "20",           (gptr*)&control.dump_interval},
 {"dump-level",       "%d",   "0",            (gptr*)&control.dump_level},
 {"ndumps",           "%d",   "250",          (gptr*)&control.maxdumps},
-{"backup-interval",  "%d",   "500",          (gptr*)&control.backup_interval},
-{"roll-interval",    "%d",   "10",           (gptr*)&control.roll_interval},
-{"print-interval",   "%d",   "10",           (gptr*)&control.print_interval},
-{"begin-rdf",        "%d",   "1000000",      (gptr*)&control.begin_rdf},
-{"rdf-interval",     "%d",   "20",           (gptr*)&control.rdf_interval},
-{"rdf-out",          "%d",   "5000",         (gptr*)&control.rdf_out},
+{"backup-interval",  "%ld",  "500",          (gptr*)&control.backup_interval},
+{"roll-interval",    "%ld",  "10",           (gptr*)&control.roll_interval},
+{"print-interval",   "%ld",  "10",           (gptr*)&control.print_interval},
+{"begin-rdf",        "%ld",  "1000000",      (gptr*)&control.begin_rdf},
+{"rdf-interval",     "%ld",  "20",           (gptr*)&control.rdf_interval},
+{"rdf-out",          "%ld",  "5000",         (gptr*)&control.rdf_out},
 {"temperature",      "%lf",  "0.0",          (gptr*)&control.temp},
 {"pressure",         "%lf",  "0.0",          (gptr*)&control.pressure},
 {"w",                "%lf",  "100.0",        (gptr*)&control.pmass},
@@ -717,6 +742,9 @@ spec_mt	species[];
        "qddot",system->qddot,"qddoto",system->qddoto,"qddotvo",system->qddotvo);
 #endif
    }
+   else
+      system->quat = system->qdot = system->qdotp = 
+	             system->qddot = system->qddoto = system->qddotvo= 0;
    system->h       = ralloc(3);
    system->hdot    = ralloc(3);
    system->hdotp   = ralloc(3);
@@ -765,6 +793,9 @@ spec_mt	species[];
              "qddot",spec->qddot,"qddoto",spec->qddoto,"qddotvo",spec->qddotvo);
 #endif
       }
+      else
+	 spec->quat = spec->qdot = spec->qdotp = 
+	              spec->qddot = spec->qddoto = spec->qddotvo= 0;
       nmol_cum += spec->nmols;
    }
 }
@@ -809,7 +840,9 @@ double		step, step1;
    ratio = step1/step;
    message(NULLI, NULLP, INFO, NEWTS, step, step1);
    interp(ratio, sys->acc[0],   sys->acco[0],  sys->accvo[0],   3*sys->nmols);
-   interp(ratio, sys->qddot[0], sys->qddoto[0],sys->qddotvo[0], 4*sys->nmols_r);
+   if( sys->nmols_r > 0 )
+      interp(ratio, sys->qddot[0], sys->qddoto[0],sys->qddotvo[0], 
+	     4*sys->nmols_r);
    interp(ratio, sys->hddot[0], sys->hddoto[0],sys->hddotvo[0], 9);
 }
 /******************************************************************************
@@ -876,9 +909,9 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
    		*restart = NULL,	/* File pointer for restart file read */
    		*lock;			/* File pointer for lockfile	      */
    double	old_step;		/* Timestep read from restart file    */
-   int		old_dump_interval;	/* To check if altered on restart     */
+   long		old_dump_interval;	/* To check if altered on restart     */
    int		old_max_dumps;		/* To check if altered on restart     */
-   int		old_roll_interval;	/* To check if altered on restart     */
+   long		old_roll_interval;	/* To check if altered on restart     */
    boolean	flag;			/* Used to test 'fseek'		      */
    long		pos;			/* Where control info starts on input */
    restrt_mt	backup_header;		/* To read backup file header into    */
@@ -887,7 +920,7 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
    int		av_convert;		/* Flag for old-fmt averages in restrt*/
    int		i;
    *backup_restart = 0;
-   (void)memset((char*)restart_header,0,sizeof(*restart_header));
+   (void)memst(restart_header,0,sizeof(*restart_header));
 
    if(contr_name[0] == '\0')		/* Null name - read control from      */
       contr_file = stdin;		/* standard input.		      */

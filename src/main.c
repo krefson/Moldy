@@ -27,6 +27,26 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: main.c,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
+ * Got rid of all global (external) data items except for
+ * "control" struct and constant data objects.  The latter
+ * (pot_dim, potspec, prog_unit) are declared with CONST
+ * qualifier macro which evaluates to "const" or nil
+ * depending on ANSI/K&R environment.
+ * Also moved as many "write" instantiations of "control"
+ * members as possible to "startup", "main" leaving just
+ * "dump".
+ *
+ * Declared as "static"  all functions which should be.
+ *
+ * Added CONST qualifier to (re-)declarations of ANSI library
+ * emulation routines to give reliable compilation even
+ * without ANSI_LIBS macro. (#define's away for K&R
+ * compilers)
+ *
  * Revision 2.5  94/01/18  13:32:42  keith
  * Null update for XDR portability release
  * 
@@ -115,7 +135,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -255,13 +275,13 @@ char	*argv[];
             control.istep % control.scale_interval == 0)
             rescale(&system, species);
          if(control.istep == control.scale_end)
-            note("Temperature scaling turned off after step %d", control.istep);
+            note("Temperature scaling turned off after step %ld", control.istep);
       }
 
       if(control.average_interval > 0 && control.istep >= control.begin_average)
       {
          if( control.istep == control.begin_average )
-            note("started accumulating thermodynamic averages on timestep %d", 
+            note("started accumulating thermodynamic averages on timestep %ld", 
 		 control.istep);
          else if ( (control.istep-control.begin_average + 1) %
 		    control.average_interval == 0)
@@ -287,9 +307,9 @@ char	*argv[];
    if(control.istep < control.nsteps)	/* Run ended prematurely	      */
    {
       if(sig_flag == SIGTERM)
-	 note("Run ended after step %d - SIGTERM received", control.istep);
+	 note("Run ended after step %ld - SIGTERM received", control.istep);
       else
-	 note("Run ended after step %d - cpu limit exceeded", control.istep);
+	 note("Run ended after step %ld - cpu limit exceeded", control.istep);
       write_restart(control.backup_file, &restart_header, 
 		    &system, species, site_info, potpar);
    }
