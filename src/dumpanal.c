@@ -19,11 +19,15 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpanalyze.c,v 2.3 93/10/14 18:18:36 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpanalyze.c,v 2.5 1994/01/21 12:33:06 keith Stab $";
 #endif
 
 /*
- * $Log:	dumpanalyze.c,v $
+ * $Log: dumpanalyze.c,v $
+ * Revision 2.4  94/01/18  13:23:12  keith
+ * Incorporated all portability experience to multiple platforms since 2.2.
+ * Including ports to VAX/VMS and Open VMS on Alpha AXP and Solaris.
+ * 
  * Revision 2.3  93/10/14  18:18:36  keith
  * Fixed prortability problems to IBM RS6000
  * 
@@ -79,6 +83,7 @@ int av_convert; /* Dummy for xdr. */
 char	*ctime();
 void	analyze();
 void	print_header();
+int
 main(argc, argv)
 int	argc;
 char	*argv[];
@@ -86,6 +91,7 @@ char	*argv[];
    int	i;
    for(i = 1; i < argc; i++)
       analyze(argv[i]);
+   return 0;
 }
 
 void analyze(file)
@@ -98,7 +104,7 @@ char *file;
    XDR          xdrs;
 #endif
    
-   if( f = fopen(file,"rb") )
+   if( (f = fopen(file,"rb")) != NULL )
    {
       printf("\n***** %s *****\n",file);
 #ifdef USE_XDR
@@ -142,7 +148,7 @@ void	print_header(header)
 dump_mt	*header;
 {
    printf("Title\t\t\t= \"%s\"\n",header->title);
-   printf("RCS Revision\t\t= %.*s\n", strlen(header->vsn)-1, header->vsn);
+   printf("RCS Revision\t\t= %.*s\n", (int)strlen(header->vsn)-1, header->vsn);
    printf("Istep\t\t\t= %d\n",header->istep);
    printf("Dump_interval\t\t= %d\n", header->dump_interval);
    printf("Dump_level\t\t= %d\n", header->dump_level);

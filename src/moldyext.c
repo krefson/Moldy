@@ -20,11 +20,16 @@ You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #include "defs.h"
 #include "string.h"
+#if defined(ANSI) || defined(__STDC__)
+#include <stdarg.h>
+#else
 #include <varargs.h>
+#endif
+#include "stdlib.h"
 #include "stddef.h"
 #include <stdio.h>
-char	*malloc(), *realloc();
-char	*strtok();
+
+int	getopt();
 
 #define NSIGNAL 8
 #define buf_inc 128
@@ -39,18 +44,37 @@ va_list args;
 }
 #endif
 
+#if defined(ANSI) || defined(__STDC__)
+#undef  va_alist
+#define	va_alist char *format, ...
+#ifdef  va_dcl
+#   undef  va_dcl
+#endif
+#define va_dcl /* */
+#endif
 /*VARARGS*/
 void error(va_alist)
 va_dcl
 {
-   char	*format;
    va_list p;
+#if defined(ANSI) || defined(__STDC__)
+   va_start(p, format);
+#else
+   char	*format;
+
    va_start(p);
    format = va_arg(p, char *);
+#endif
    vfprintf(stderr,format,p);
    fputc('\n',stderr);
    va_end(p);
    exit(3);
+}
+static char * mystrdup(s)
+char *s;
+{
+   char * t=malloc(strlen(s)+1);
+   return t?strcpy(t,s):0;
 }
 /******************************************************************************
  *  Tokenise().  Parse the string of fields to be returned and return a mask  *
@@ -147,6 +171,7 @@ char	*read_record()
  * main program								      *
  ******************************************************************************/
 #define MAX_FIELDS 256
+int
 main(argc, argv)
 int	argc;
 char	*argv[];
@@ -157,14 +182,14 @@ char	*argv[];
    int field, cnt, end, inc;
 
    extern char *optarg;
-   extern int optind, opterr;
+   extern int optind;
  
    if( getopt(argc, argv, "f:") == -1)
       fields = "1-256";
    else
       fields = optarg;
       
-   if( tokenise(strdup(fields), mask, MAX_FIELDS) == 0 )
+   if( tokenise(mystrdup(fields), mask, MAX_FIELDS) == 0 )
       error("Invalid field specification \"%s\": usage eg 1,3,5-9,4",fields);
 
 #ifdef DEBUG
@@ -209,6 +234,7 @@ char	*argv[];
 	     putchar('\n');
 	 }
      }
+   return 0;
 }
 
 
