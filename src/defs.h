@@ -19,9 +19,17 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/md/moldy/RCS/defs.h,v 2.11 1996/10/19 11:59:08 keith Exp $
+ * $Header: /home/eeyore_data/keith/md/moldy/RCS/defs.h,v 2.11 1996/11/05 16:50:29 keith Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.11  1996/11/05 16:50:29  keith
+ * Release for 2.11.
+ * Added ANSI_LIBS for Sun Solaris2
+ * Defs modified for Convex/HP SPP.
+ * Vector selection macro VECTOR added for site_neighbour_list() and
+ *   cray PVP tested for by _CRAY1 macro.
+ * Added cache-tuning parameters NLINE and NCACHE.
+ *
  * Revision 2.10  1996/03/06 18:16:21  keith
  * Minor mods assuming ANSI behaviour on MS_DOS
  * Removed all COS functionality.
@@ -213,7 +221,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * Version ID strings
  */
 #define          REVISION         "$Revision: 2.11 $"
-#define		 REVISION_DATE    "$Date: 1996/10/19 11:59:08 $"
+#define		 REVISION_DATE    "$Date: 1996/11/05 16:50:29 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
