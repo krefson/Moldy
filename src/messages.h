@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/messages.h,v 2.6 1994/02/17 16:38:16 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/messages.h,v 2.7 1994/06/08 13:15:01 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -154,3 +154,5 @@ number of words"
 #define GPFAIL  "Get file position failed on file  \"%s\"\n    -  %s"
 #endif
 #define SYSEOF	"Unexpected end of file encountered while reading %s"
+#define MAXCUT  "Optimum cutoff of %2.2f A is larger than allowed maximum \
+of %2.2f.\n Maximum will be used but accuracy of Ewald sum is compromised."
