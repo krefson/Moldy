@@ -18,8 +18,6 @@ mdshak_SOURCES = mdshak.c  $(UTILC)
 
 mdavpos_SOURCES = mdavpos.c  $(UTILC) 
 
-ransub_SOURCES = ransub.c  $(UTILC) 
-
 mdbond_SOURCES = mdbond.c  $(UTILC) 
 
 mdvaf_SOURCES = mdvaf.c  $(UTILC) 
@@ -34,7 +32,9 @@ manalyze_SOURCES = manalyze.c
 
 bdist_SOURCES = bdist.c
 
-syswrite_SOURCES = syswrite.c sgclib.c sginfo.h sgio.c spgrexp.c transparse.c $(UTILC)
+ransub_SOURCES = ransub.c sgclib.c sginfo.h sgio.c spgrexp.c transparse.c readers.c $(UTILC) 
+
+syswrite_SOURCES = syswrite.c sgclib.c sginfo.h sgio.c spgrexp.c transparse.c readers.c $(UTILC)
 
 EXTRA_msd_SOURCES = getopt.c
 
@@ -159,14 +159,14 @@ msd.o: msd.c defs.h config.h structs.h messages.h utlsup.h
 output.o: output.c defs.h config.h structs.h messages.h
 parallel.o: parallel.c defs.h config.h structs.h messages.h
 quaterns.o: quaterns.c defs.h config.h
-ransub.o: ransub.c defs.h config.h structs.h messages.h utlsup.h \
+ransub.o: ransub.c readers.c defs.h config.h structs.h messages.h utlsup.h \
         specdata.h
 restart.o: restart.c defs.h config.h structs.h messages.h xdr.h
 sgclib.o: sgclib.c sginfo.h
 sgio.o: sgio.c sginfo.h
 spgrexp.o: spgrexp.c sginfo.h specdata.h messages.h defs.h config.h
 startup.o: startup.c defs.h config.h structs.h messages.h
-syswrite.o: syswrite.c defs.h config.h structs.h messages.h utlsup.h \
+syswrite.o: syswrite.c readers.c defs.h config.h structs.h messages.h utlsup.h \
         sginfo.h specdata.h
 transparse.o: transparse.c sginfo.h
 utlsup.o: utlsup.c defs.h config.h structs.h messages.h specdata.h
