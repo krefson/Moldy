@@ -127,11 +127,11 @@
 %
 % Uncomment this for LaTeX2html translation
 %
-\usepackage{html}
+%\usepackage{html}
 %
 % Comment this out for LaTeX2html translation
 %
-%\usepackage[breaklinks]{hyperref}
+\usepackage[breaklinks]{hyperref}
 %begin{latexonly}
 \providecommand{\htmladdnormallink}[2]{#1}
 %end{latexonly}
@@ -156,7 +156,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.20 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.21 $ $}
 \newcommand{\moldyversion}{2.14}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -2816,15 +2816,27 @@ simulation including ions - 1.1 Molal Magnesium Chloride solution -
 the same accuracy is attained with $\alpha = 0.45$\AA$^{-1}$, $r_{c} =
 9$\AA\ and $k_{c} = 3$\AA$^{-1}$.
 
-Setting a negative value for \Lit{control.alpha} has the effect of
-disabling the Ewald sum entirely.  Any Coulombic interactions are
-evaluated in real-space up to the limit set by the cutoff.  (This
-happens automatically if all charges are zero).
+The Ewald sum may be disabled by setting specific values for
+\Lit{control.alpha}.  The exact behaviour is
+\begin{itemize}
+\item If \Lit{control.alpha} $ > 10^{-7}$, $\alpha$ is set to that
+  value and used in the Ewald sum.
+\item If \Lit{control.alpha} $ = 0$ then the value of $\alpha$ is
+  chosen automatically as above.
+\item If \Lit{control.alpha} $ < 0$ the reciprocal space part of the
+  Ewald sum is not invoked, and the computation of coulombic forces in
+  the real-space sum is turned off.  This happens automatically if all 
+  charges in the system specification file are zero.
+\item If $0 < $ \Lit{control.alpha} $ < 10^{-7}$ then the reciprocal
+  space part of the Ewald sum is \emph{not} called but coulombic
+  interactions \emph{are} included in the real-space part and truncated
+  at $r_c$.
+\end{itemize}
 
 The other relevant parameter is the switch \Lit{surface-dipole} which
 includes the dipole surface energy term of De Leeuw, Perram and
 Smith\cite{deleeuw:80}.  See the note in section~\ref{sec:ewald} for an
-explanation of why this term should \emph{never} be used for an ionic
+explanation of why this term should \emph{not} be used for an ionic
 (as opposed to dipolar) system.
 
 The two adjustable parameters which control the link cell force
