@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.16 91/10/02 13:51:42 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.17 91/10/02 13:56:56 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -154,19 +154,19 @@ int nc;
 {
    int ibin;
 
-   if(rc < -0.5 || rc >= 0.5)
+   if(rc < -0.5+eps || rc >= 0.5-eps)
    {
-      if(rc < -0.5 && rc >= -0.5-eps)
+      if(rc < -0.5+eps && rc >= -0.5-eps)
 	 rc = -0.5;
-      else if(rc >= 0.5 && rc <= 0.5+eps)
+      else if(rc >= 0.5-eps && rc <= 0.5+eps)
 	 rc = 0.5-eps;
       else 
 	 message(NULLI, NULLP, ERROR, 
-		 "Co-ordinate out of range in BIN (fill_cells) %f\n",rc);
+		 "Co-ordinate out of range in BIN (fill_cells) %.17g\n",rc);
    }
-   if( (ibin = ((rc+0.5)*nc)) >= nc )
+   if( (ibin = ((rc+0.5)*nc)) >= nc || ibin < 0)
 	 message(NULLI, NULLP, ERROR, 
-		 "Rounding problem in BIN (fill_cells) %f\n",rc);
+		 "Rounding problem in BIN (fill_cells) %.17g\n",rc);
    return ibin;
 }
 
