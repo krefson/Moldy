@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/molout.c,v 1.9 2001/05/21 15:07:57 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/molout.c,v 1.10 2002/03/04 11:41:45 kr Exp $";
 #endif
 
 #include "defs.h"
@@ -273,7 +273,7 @@ pdb_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info,
 	 atom_charge = site_info[spec->site_id[is]].charge*qconv;
          if(fabs(site_info[spec->site_id[is]].mass) != 0)
          {
-            (void)printf("HETATM%5d %2s%-2d NON A   1     %7.3f %7.3f %7.3f\
+            (void)printf("HETATM%5d %2s%-2d NON A   1    %8.3f%8.3f%8.3f\
  %5.2f %5.2f          %2s",
 			 itot, atom_name, ispec, site[0][isite], site[1][isite], site[2][isite],
 			 1.0,0.0, atom_name);
