@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.20 2005/02/04 14:52:15 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.21 2005/02/07 11:25:21 cf Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,9 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.20 2005/02/
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.21  2005/02/07 11:25:21  cf
+ *  Changed floats to reals.
+ *
  *  Revision 1.20  2005/02/04 14:52:15  cf
  *  Reads header info with dumpext to determine system info and maximum time slice range.
  *  Common utility messages/errors moved to utlsup.h.
@@ -134,6 +137,7 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.20 2005/02/
 #include "messages.h"
 #include "utlsup.h"
 
+double vdotf(int n, float *x, int ix, float *y, int iy);
 /*======================== Global variables ==================================*/
 extern int optind;
 static int verbose;
@@ -142,25 +146,6 @@ int ithread=0, nthreads=1;
 #define VAF  0
 #define VTF  1
 
-double vdotf(int n, real *x, int ix, real *y, int iy)
-{
-   register double      dot=0.0;
-   register int i, j;
-   if( ix == iy && ix == 1)
-   {
-      for(i = 0; i < n; i++)
-         dot += x[i] * y[i];
-   }
-   else
-   {
-      for(i = j = 0; i < n*ix; i += ix)
-      {
-         dot += x[i] * y[j];
-         j += iy;
-      }
-   }
-   return(dot);
-}
 /******************************************************************************
  *  header_to_moldy. Extract data from header info file created by dumpext.   *
  ******************************************************************************/
@@ -224,16 +209,16 @@ void header_to_moldy(FILE *Fp, system_mt *sys, spec_mp *spec_pp,
  ***********************************************************************/    
 void
 vaf_calc(spec_mt *species, char *spec_mask, int nspecies, int vstart, int vfinish,
-	 int vinc, int max_av, int it_inc, real (**vel)[3], real **vaf, int aflg)
+	 int vinc, int max_av, int it_inc, float (**vel)[3], real **vaf, int aflg)
 {
    register int i, it, irec, totmol, ivaf, ispec;
    spec_mp      spec;
-   real		(*vel0)[3], (*vel1)[3];
+   float	(*vel0)[3], (*vel1)[3];
 
    /* Outer loop for selecting initial time slice */
    for(it = 0; it <= (max_av-1)*it_inc; it+=it_inc)
 
-      /* Inner loop for calculating displacement from initial slice */ 
+      /* Inner loop for multiplying by current slice */ 
       for(irec = vstart; irec <= vfinish; irec+=vinc)
       {
 	 ivaf = (irec-vstart)/vinc;
@@ -247,11 +232,8 @@ vaf_calc(spec_mt *species, char *spec_mask, int nspecies, int vstart, int vfinis
                  for(i=0; i < 3; i++)
 	            vaf[ivaf][3*ispec+i] += vdotf(spec->nmols, vel0[totmol]+i, 
 				   3, vel1[totmol]+i, 3)/spec->nmols;
-           if( aflg && spec->rdof > 0 ) 
+           if( aflg == 0 || spec->rdof > 0)
               totmol+=spec->nmols;
-           else
-              if( !aflg ) 
-                 totmol+=spec->nmols;
            }
       }
 }
@@ -260,11 +242,11 @@ vaf_calc(spec_mt *species, char *spec_mask, int nspecies, int vstart, int vfinis
  ***********************************************************************/    
 void
 vtf_calc(spec_mt *species, char *spec_mask, int nspecies, int vstart, int vfinish, int vinc, 
-	 int max_av, int it_inc, real (**vel)[3], real **vtf, int aflg)
+	 int max_av, int it_inc, float (**vel)[3], real **vtf, int aflg)
 {
    register int it, irec, totmol, ivtf, ispec, imol, i;
    spec_mp      spec;
-   real		(*vel0)[3], (*vel1)[3];
+   float	(*vel0)[3], (*vel1)[3];
    real		vtftmp0[3], vtftmp1[3];
 
    /* Outer loop for selecting initial time slice */
@@ -368,7 +350,7 @@ main(int argc, char **argv)
    FILE         *Dp, *Hp;
    system_mt    sys;
    spec_mt      *species;
-   real         (**vel)[3];
+   float        (**vel)[3];
    int          nvaf, max_av, nspecies;
    real         **vaf;
    char         *spec_list = NULL;
@@ -583,8 +565,7 @@ main(int argc, char **argv)
    dump_size = 3*(aflg?sys.nmols_r:sys.nmols)*sizeof(float);
 
   /* Allocate memory for velocity data and zero */
-   vel = (real (**)[3])arralloc(sizeof(real[3]),2,0,nslices-1,0,(aflg?sys.nmols_r:sys.nmols)-1);
-   zero_real(vel[0][0], nslices*(aflg?sys.nmols_r:sys.nmols)*3);
+   vel = (float (**)[3])arralloc(sizeof(float[3]),2,0,nslices-1,0,(aflg?sys.nmols_r:sys.nmols)-1);
 
    if( (dump_buf = (float*)malloc(dump_size)) == 0)
       error(BUFFMEM, dump_size);
@@ -619,7 +600,8 @@ main(int argc, char **argv)
         else
            error(DUMPREC0, irec, dump_base, strerror(errno));
      }
-     memcpy(vel[irec/inc], dump_buf, dump_size);
+     memcpy(vel[irec/inc], dump_buf, dump_size);  /* read dump data */
+
 #ifdef DEBUG
      fprintf(stderr,"Sucessfully read dump record %d from file \"%s\"\n",
          irec, dump_base);
