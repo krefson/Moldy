@@ -19,11 +19,15 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 2.5 1994/01/26 11:57:07 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/manalyze.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 
 /*
- * $Log: moldyanalyze.c,v $
+ * $Log: manalyze.c,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
  * Revision 2.5  1994/01/26  11:57:07  keith
  * Tidied up lint/gcc warnings.
  * Fixed def'n of main to "int" coz it failed on broken (?) VMS compiler.

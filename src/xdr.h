@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.h,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
  * Revision 2.5.1.1  1994/02/03  18:36:12  keith
  * Tidied up and got rid of most of the global data items.
  *

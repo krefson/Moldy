@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 2.6 1994/02/17 16:38:16 keith Exp $
  *
  * $Log: string.h,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Added RS6000 macro for inclusion protection.
+ *
  * Revision 2.5  94/01/18  13:33:00  keith
  * Null update for XDR portability release
  * 

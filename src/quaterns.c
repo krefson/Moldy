@@ -22,7 +22,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * quaterns	Functions for manipulating quaternions			      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	quaterns.c,v $
+ *       $Log: quaterns.c,v $
+ * Revision 2.5  1994/01/18  13:32:54  keith
+ * Null update for XDR portability release
+ *
  * Revision 2.3  93/10/28  10:28:05  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -40,7 +43,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/quaterns.c,v 2.3 93/10/28 10:28:05 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/quaterns.c,v 2.5 1994/01/18 13:32:54 keith Stab $";
 #endif
 /*========================== Library include files ===========================*/
 #include <math.h>
