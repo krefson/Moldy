@@ -326,17 +326,17 @@ site_t		site_info[];
  * Centre_mass.  Shift system centre of mass to origin (in discrete steps),   *
  ******************************************************************************/
 void
-centre_mass(system, species)
-system_t	*system;
+centre_mass(species, nspecies, c_of_m)
 spec_t		species[];
+int		nspecies;
+vec_t		c_of_m;
 {
    double	mass;
-   vec_t	c_of_m;
    spec_t	*spec;
    int		imol;
 
    mass = c_of_m[0] = c_of_m[1] = c_of_m[2] = 0.0;
-   for(spec = species; spec < species + system->nspecies; spec++ )
+   for(spec = species; spec < species + nspecies; spec++ )
    {
       for(imol = 0; imol < spec->nmols; imol++)
       {
@@ -353,15 +353,26 @@ spec_t		species[];
    c_of_m[0] = floor(c_of_m[0]+0.5);
    c_of_m[1] = floor(c_of_m[1]+0.5);
    c_of_m[2] = floor(c_of_m[2]+0.5);
-   for(imol = 0; imol < system->nmols; imol++)
+}
+/******************************************************************************
+ * Shift.  Translate all co-ordinates.					      *
+ ******************************************************************************/
+void	shift(r, nmols, s)
+vec_t	r[];
+int	nmols;
+vec_t	s;
+{
+   int imol;
+   for(imol = 0; imol < nmols; imol++)
    {
-      system->c_of_m[imol][0] -= c_of_m[0];
-      system->c_of_m[imol][1] -= c_of_m[1];
-      system->c_of_m[imol][2] -= c_of_m[2];
+      r[imol][0] -= s[0];
+      r[imol][1] -= s[1];
+      r[imol][2] -= s[2];
    }
 }
 /******************************************************************************
  * moldy_out.  Select output routine and handle file open/close		      *
+ * Translate system relative to either centre of mass of posn of framework.   *
  ******************************************************************************/
 void
 moldy_out(n, system, species, site_info)
@@ -370,7 +381,20 @@ system_t	*system;
 spec_t		species[];
 site_t		site_info[];
 {
-   centre_mass(system, species);
+   spec_p	spec, frame_spec  = NULL;
+   vec_t	c_of_m;
+   
+   for(spec = species; spec < species+system->nspecies; spec++)
+      if( spec->framework )
+	 frame_spec = spec;
+
+   if( frame_spec != NULL )
+      shift(system->c_of_m, system->nmols, frame_spec->c_of_m[0]);
+   else
+   {
+      centre_mass(species, system->nspecies, c_of_m);
+      shift(system->c_of_m, system->nmols, c_of_m);
+   }
    schakal_out(n, system, species, site_info);
 }
 /******************************************************************************
