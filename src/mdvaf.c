@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdvaf.c,v 1.10 2000/11/13 16:01:24 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdvaf.c,v 1.11 2001/02/19 18:06:04 keith Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,9 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdvaf.c,v 1.10
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.11  2001/02/19 18:06:04  keith
+ *  Fix to work with a mixture of polyatomic and monatomic species.
+ *
  *  Revision 1.10  2000/11/13 16:01:24  keith
  *  Changed dump format to contain principle-frame angular velocities.
  *  Adapted mdvaf.c to calculate angular acf's too - added "-a" flag.
@@ -114,16 +117,34 @@ void	zero_float(float *r, int n)
    for(i=0; i < n; i++)
       r[i] = 0.0;
 }
-
+double vdotf(int n, float *x, int ix, float *y, int iy)
+{
+   register double      dot=0.0;
+   register int i, j;
+   if( ix == iy && ix == 1)
+   {
+      for(i = 0; i < n; i++)
+         dot += x[i] * y[i];
+   }
+   else
+   {
+      for(i = j = 0; i < n*ix; i += ix)
+      {
+         dot += x[i] * y[j];
+         j += iy;
+      }
+   }
+   return(dot);
+}
 /***********************************************************************
  * vaf_calc. Calculate vaf from velocity array		               *
  ***********************************************************************/    
 void
 vaf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc, 
-	 int max_av, int it_inc, float (**vel)[3], float **vaf, int aflg)
+	 int max_av, int it_inc, float (**vel)[3], float **vaf, int aflg, 
+	 int cptflg)
 {
-   int it, irec, totmol, ivaf, ispec, imol;
-   float		vaftmp;
+   int it, irec, totmol, ivaf, ispec, icpt;
    spec_mp      spec;
    float	(*vel0)[3], (*vel1)[3];
 
@@ -140,15 +161,26 @@ vaf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc,
 	 for( ispec = 0, spec = species+sp_range[0]; spec <= species+sp_range[1];
 	    spec += sp_range[2], ispec++)
          {
-	    if( aflg == 0 || spec->rdof > 0)
+         if( cptflg ) 
+	 {
+	    for(icpt=0; icpt < 3; icpt++)
 	    {
-	       vaftmp = 0.0;
-	       for( imol = 0; imol < spec->nmols; totmol++, imol++)
-		  vaftmp += DOTPROD(vel0[totmol],vel1[totmol]);
-	       vaf[ivaf][ispec] += vaftmp / spec->nmols;
+	       if( aflg == 0 || spec->rdof > 0)
+	       {
+		  vaf[ivaf][3*ispec+icpt] += vdotf(spec->nmols, vel0[0]+icpt, 
+					   3, vel1[0]+icpt, 3)/ spec->nmols;
+	       }
 	    }
-         }
+	 } else {
+	     if( aflg == 0 || spec->rdof > 0)
+	       {
+		 vaf[ivaf][ispec] += vdotf(3*spec->nmols, vel0[0], 1, 
+					  vel1[0], 1) / spec->nmols;
+	       }
+	 }
+
       }
+   }
 }
 /***********************************************************************
  * vtf_calc. Calculate vtf from velocity array		               *
@@ -191,7 +223,7 @@ vtf_calc(spec_mt *species, int *sp_range, int vstart, int vfinish, int vinc,
  * vaf_out().  Output routine for displaying vaf results                      *
  ******************************************************************************/
 void
-vaf_out(spec_mt *species, float **vaf, int max_av, int nvaf, int *sp_range, int aflg)
+vaf_out(spec_mt *species, float **vaf, int max_av, int nvaf, int *sp_range, int aflg, int cptflg)
 {
    int          ispec=0, ivaf;
    spec_mp      spec;
@@ -203,8 +235,17 @@ vaf_out(spec_mt *species, float **vaf, int max_av, int nvaf, int *sp_range, int 
       (void)printf("# %s\n",spec->name); 
        for( ivaf = 0; ivaf < nvaf; ivaf++)
        {
-          vaf[ivaf][ispec] /= max_av;
-          (void)printf("%10.7f\n",vaf[ivaf][ispec]);
+	 if( cptflg ) 
+	 {
+	   vaf[ivaf][3*ispec] /= max_av;
+	   vaf[ivaf][3*ispec+1] /= max_av;
+	   vaf[ivaf][3*ispec+2] /= max_av;
+	   (void)printf("%6d %10.7f %10.7f %10.7f\n",ivaf, vaf[ivaf][3*ispec],
+			vaf[ivaf][3*ispec+1],vaf[ivaf][3*ispec+2]);
+	 } else {
+	   vaf[ivaf][ispec] /= max_av;
+	   (void)printf("%10.7f\n",vaf[ivaf][ispec]);
+	 }
        }
        ispec++;
     }
@@ -222,7 +263,7 @@ vaf_out(spec_mt *species, float **vaf, int max_av, int nvaf, int *sp_range, int 
 int
 main(int argc, char **argv)
 {
-   int	aflg = 0,c, cflg = 0, ans_i, sym = 0;
+   int	aflg = 0,c, cflg = 0, ans_i, sym = 0,cptflg = 0;
    char 	line[80];
    extern char	*optarg;
    int		errflg = 0;
@@ -263,9 +304,12 @@ main(int argc, char **argv)
      outsw = VAF;
 
 
-   while( (c = getopt(argc, argv, "acr:s:d:t:v:i:g:o:q") ) != EOF )
+   while( (c = getopt(argc, argv, "3acr:s:d:t:v:i:g:o:q") ) != EOF )
       switch(c)
       {
+       case '3':
+	 cptflg++;
+	 break;
        case 'a':
 	 aflg++;
 	 break;
@@ -556,14 +600,15 @@ main(int argc, char **argv)
      if (max_av < 1)
           max_av = 1;
 
-     vaf = (float**)arralloc(sizeof(float),2,0,nvaf-1,0,nspecies-1);
-     zero_float(vaf[0],nvaf*nspecies);
+     vaf = (float**)arralloc(sizeof(float),2,0,nvaf-1,0,
+			     cptflg?3*nspecies-1:nspecies-1);
+     zero_float(vaf[0],nvaf*(cptflg?3*nspecies:nspecies));
 
   /* Calculate and print vaf/vtf values */
      if( outsw )
         vtf_calc(species, sp_range, vstart, vfinish, vinc, max_av, it_inc, vel, vaf);
      else
-        vaf_calc(species, sp_range, vstart, vfinish, vinc, max_av, it_inc, vel, vaf, aflg);
-     vaf_out(species, vaf, max_av, nvaf, sp_range, aflg);
+        vaf_calc(species, sp_range, vstart, vfinish, vinc, max_av, it_inc, vel, vaf, aflg, cptflg);
+     vaf_out(species, vaf, max_av, nvaf, sp_range, aflg, cptflg);
    return 0;    
 }
