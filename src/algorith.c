@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: algorith.c,v $
+ * Revision 2.7  1994/06/08  13:22:31  keith
+ * Null update for version compatibility
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -115,7 +118,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 2.7 1994/06/08 13:22:31 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -223,11 +226,17 @@ vec_mp		force;		/* Centre of mass forces [nmols][3]    (out)  */
 int		nsites,		/* Number of sites on one molecule      (in)  */
 		nmols;		/* Number of molecules                  (in)  */
 {
-   int	i,  imol;
+   int	i,  imol, isite;
+   double	f;
 
    for(imol = 0; imol < nmols; imol++)
       for(i = 0; i < 3; i++)
-         force[imol][i] = sum(nsites, site_force[i]+imol*nsites, 1);
+      {
+	 f = 0;
+	 for(isite=0; isite < nsites; isite++)
+	    f += site_force[i][isite+imol*nsites];
+	 force[imol][i] = f;
+      }
 }
 /******************************************************************************
  *  molecule_torque    Calculate the torque on a number of identical          *
@@ -355,6 +364,7 @@ int		nmols;		/* Number of molecules                   (in) */
     * quaternion multiplication in the equations of motion.                   */
    quat_mp	omega,		/* Principal frame angular velocities         */
    		ang_acc=qalloc(nmols);	/* Principal frame ang accelerations  */
+   real		*qp;
    register int	imol;
    int		i, j, k;
    register double	Iir, Ijk;	/* Temporaries for moments of inertia */
@@ -367,8 +377,12 @@ int		nmols;		/* Number of molecules                   (in) */
    vscale(4 * nmols, 2.0, omega[0], 1);
 
    for(imol = 0; imol < nmols; imol++)
-      ang_acc[imol][0] = -2.0 * vdot(4,qdot[imol],1,qdot[imol],1);
-
+   {
+      qp = qdot[imol];
+      ang_acc[imol][0] = -2.0 * 
+	 (qp[0]*qp[0] + qp[1]*qp[1] + qp[2]*qp[2] + qp[3]*qp[3]);
+   }
+ 
    for(i=1, j=2, k=3; i<4; i++, j=i%3+1, k=j%3+1)
       if(inertia[i-1] != 0.0)
       {
