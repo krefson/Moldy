@@ -33,7 +33,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * 	machines for which this is false. 				      *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log: alloc.c,v $
+ *       Revision 2.17  2004/11/22 17:49:46  kr
+ *       Minor grammatical fixes to output.
+ *
  *       Revision 2.16.4.1  2003/08/15 09:13:10  moldydv
  *       Modified NOMEM error message to handle both singular and plural.
  *
@@ -186,7 +189,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/alloc.c,v 2.17 2004/11/22 17:49:46 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
@@ -252,7 +255,7 @@ gptr	*talloc(int n, size_mt size, int line, char *file)
     */
    if( (size_mt)(size_t)(n*size) != n*size )
       message(NULLI, NULLP, FATAL, NOMEM, line, file,
-	       (int)n, (n==1)?' ':'s', (unsigned long)size);
+	       (int)n, (n==1)?" ":"s ", (unsigned long)size);
 #endif
    p = malloc(n*size);
 #ifdef DEBUGX
