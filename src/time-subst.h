@@ -4,7 +4,7 @@
 #ifndef MOLDY_TIME_H_INCLUDED
 #define MOLDY_TIME_H_INCLUDED
 #ifndef ANSI_LIBS
-#   ifdef unix
+#   if defined(unix) || defined(__unix__)
 /*
  *  We must protect the inclusion of <sys/types.h>.  But size_t may already
  *  be defined in "stddef.h" , so we define it out of the way.  The twist
