@@ -139,7 +139,7 @@ AC_TYPE_SIGNAL
 AC_FUNC_STRFTIME
 AC_FUNC_VPRINTF
 
-AC_SEARCH_LIBS(xdr_int, nsl sun rpclib)
+AC_SEARCH_LIBS(xdr_int, nsl sun rpclib, AC_DEFINE(HAVE_XDR_INT))
 
 AC_CHECK_FUNCS(gettimeofday getrusage strdup strerror strstr strchr memcpy memset remove strtol popen raise times)
 
