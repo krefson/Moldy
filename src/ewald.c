@@ -3,6 +3,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.13  90/08/02  15:50:17  keith
+ * Modified to exclude framework-framework interactions.
+ * N.B. Excluded from pe and stress but NOT forces (as they sum to 0).
+ * 
  * Revision 1.12  90/05/16  18:40:04  keith
  * Renamed own freer from cfree to tfree.
  * 
@@ -53,7 +57,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/stardent/moldy/RCS/ewald.c,v 1.12 90/05/16 18:40:04 keith Exp $";
+static char *RCSid = "$Header: /mnt/keith/moldy/RCS/ewald.c,v 1.14 90/08/22 10:32:44 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -71,6 +75,7 @@ double	err_fn();			/* Error function		      */
 double	det();				/* Determinant of 3x3 matrix	      */
 void	invert();			/* Inverts a 3x3 matrix		      */
 void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
+void	mat_sca_mul();			/* Multiplies a 3x3 matrix by scalar  */
 double	sum();				/* Sum of elements of 'real' vector   */
 #ifdef VCALLS
 void	saxpy();			/* A*x+y, x, y are long vectors	      */
@@ -81,9 +86,9 @@ void	message();			/* Write a warning or error message   */
 /*========================== External data references ========================*/
 extern	contr_t	control;		/* Main simulation control record     */
 /*========================== Macros ==========================================*/
-#define astar hinv[0]
-#define bstar hinv[1]
-#define cstar hinv[2]
+#define astar hinvp[0]
+#define bstar hinvp[1]
+#define cstar hinvp[2]
 #define moda(hmat) (hmat[0][0])
 #define modb(hmat) sqrt(SQR(hmat[0][1]) + SQR(hmat[1][1]))
 #define modc(hmat) sqrt(SQR(hmat[0][2]) + SQR(hmat[1][2]) + SQR(hmat[2][2]))
@@ -154,7 +159,7 @@ real		chg[];			/* Array of site charges	 (in) */
 double		*pe;			/* Potential energy		(out) */
 mat_t		stress;			/* Stress virial		(out) */
 {
-   mat_t	hinv;			/* Matrix of reciprocal lattice vects*/
+   mat_t	hinvp;			/* Matrix of reciprocal lattice vects*/
    register	int	h, k, l;	/* Recip. lattice vector indices     */
 		int	i, j, is, ssite;/* Counters.			     */
    		spec_p	spec;		/* species[ispec]		     */
@@ -272,7 +277,8 @@ mat_t		stress;			/* Stress virial		(out) */
 
    *pe -= self_energy+sheet_energy/vol;	/* Subtract self energy term	      */
 
-   invert(system->h, hinv);		/* Inverse of h is matrix of r.l.v.'s */
+   invert(system->h, hinvp);		/* Inverse of h is matrix of r.l.v.'s */
+   mat_sca_mul(2*PI, hinvp, hinvp);
 
 /*
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
@@ -283,15 +289,15 @@ mat_t		stress;			/* Stress virial		(out) */
 VECTORIZE
    for(is = 0; is < nsites; is++)
    {
-      kx = hinv[0][0]*site[0][is]+hinv[0][1]*site[1][is]+hinv[0][2]*site[2][is];
-      ky = hinv[1][0]*site[0][is]+hinv[1][1]*site[1][is]+hinv[1][2]*site[2][is];
-      kz = hinv[2][0]*site[0][is]+hinv[2][1]*site[1][is]+hinv[2][2]*site[2][is];
-      chx[1][is] = cos(2.0 * PI * kx);
-      shx[1][is] = sin(2.0 * PI * kx);
-      cky[1][is] = cos(2.0 * PI * ky);
-      sky[1][is] = sin(2.0 * PI * ky);
-      clz[1][is] = cos(2.0 * PI * kz);
-      slz[1][is] = sin(2.0 * PI * kz);
+      kx = astar[0]*site[0][is]+astar[1]*site[1][is]+astar[2]*site[2][is];
+      ky = bstar[0]*site[0][is]+bstar[1]*site[1][is]+bstar[2]*site[2][is];
+      kz = cstar[0]*site[0][is]+cstar[1]*site[1][is]+cstar[2]*site[2][is];
+      chx[1][is] = cos(kx);
+      shx[1][is] = sin(kx);
+      cky[1][is] = cos(ky);
+      sky[1][is] = sin(ky);
+      clz[1][is] = cos(kz);
+      slz[1][is] = sin(kz);
    }
 /*
  * Use addition formulae to get sin(h*astar*x)=sin(Kx*x) etc for each site
@@ -338,9 +344,9 @@ VECTORIZE
 /*
  * Calculate actual K vector and its squared magnitude.
  */
-      kv[0] = 2.0*PI*(h*astar[0] + k*bstar[0] + l*cstar[0]); 
-      kv[1] = 2.0*PI*(h*astar[1] + k*bstar[1] + l*cstar[1]); 
-      kv[2] = 2.0*PI*(h*astar[2] + k*bstar[2] + l*cstar[2]);
+      kv[0] = h*astar[0] + k*bstar[0] + l*cstar[0]; 
+      kv[1] = h*astar[1] + k*bstar[1] + l*cstar[1]; 
+      kv[2] = h*astar[2] + k*bstar[2] + l*cstar[2];
       
       ksq = SUMSQ(kv);
       
