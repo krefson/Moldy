@@ -18,6 +18,10 @@ Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
+#ifndef lint
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 2.5 1994/01/18 13:32:42 keith Stab $";
+#endif
+
 #include "defs.h"
 #if defined(ANSI) || defined(__STDC__)
 #include <stdarg.h>
@@ -80,6 +84,9 @@ int     out_line,out_page;
 #if defined(ANSI) || defined(__STDC__)
 #undef  va_alist
 #define	va_alist int *nerrs, ...
+#ifdef  va_dcl
+#   undef  va_dcl
+#endif
 #define va_dcl /* */
 #endif
 /*VARARGS*/
@@ -493,6 +500,7 @@ contr_mt		control;
 unit_mt		input_unit;
 char		backup_lockfile[L_name];
 char		dump_lockfile[L_name];
+int
 main(argc, argv)
 int	argc;
 char	*argv[];
