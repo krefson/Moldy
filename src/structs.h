@@ -19,9 +19,12 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/md/moldy/RCS/structs.h,v 2.7 1995/12/04 11:45:49 keith Exp keith $
+ * $Header: /home/eeyore_data/keith/md/moldy/RCS/structs.h,v 2.9 1996/09/25 18:11:24 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.8  1996/01/15 15:25:28  keith
+ * Corrected definition of thermostat dynamic vars.
+ *
  * Revision 2.7  1995/12/04 11:45:49  keith
  * Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
  * Thanks to V. Murashov.
@@ -153,11 +156,12 @@ typedef struct                  /* Control parameters for simulation          */
                 dump_file[L_name],      /* Name of file 'dump' writes to      */
                 backup_file[L_name],    /* Name of backup save file           */
                 temp_file[L_name];      /* Temporary file for writing restart */
-   int          spare[9];       /* Extra space for expansion                  */
+   int          spare[23];      /* Extra space for expansion (should be ODD)  */
    double       ttmass,         /* Nose-Hoover trans temp mass parameter      */
                 rtmass;         /* Nose-Hoover rotat temp mass parameter      */
-   boolean      const_temp,     /* Flag to turn on N&H CT method              */
-                xdr_write,      /* Write restart, dump files in portable way. */
+   int		pad;		/* To keep alignment of struct.		      */
+   int          const_temp;     /* Flag to turn on N&H CT method              */
+   boolean      xdr_write,      /* Write restart, dump files in portable way. */
                 strict_cutoff;  /* Perform real-space cutoff rigorously       */
    int          strain_mask;    /* Mask of constrained elements of h matrix   */
    int          nbins;          /* Number of bins for rdf calculation         */
