@@ -27,6 +27,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  * $Log: main.c,v $
+ * Revision 2.19  2001/02/19 19:36:44  keith
+ * First working version of combined isothermic/isobaric ensemble.
+ * (Previous version was faulty).
+ * Also includes uniform-dilation, constant-pressure mode.
+ *
  * Revision 2.18  2001/02/14 14:55:02  keith
  * Added # procs to final timing message
  *
@@ -194,7 +199,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.18 2001/02/14 14:55:02 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.19 2001/02/19 19:36:44 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -316,6 +321,7 @@ int main(int argc, char **argv)
 #if defined(SPMD) && !defined(READALL)
    replicate(&control, &system, &species, &site_info, &potpar, 
 	     &restart_header);
+   par_broadcast( &init_H_0, 1, sizeof(boolean), 0);
 #endif
    rdf_base = (int*)rdf_ptr(&rdf_size);
 
