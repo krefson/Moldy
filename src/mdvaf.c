@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.16 2004/12/07 13:00:02 cf Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -32,7 +32,10 @@ static char *RCSid = "$Header$";
  *		nb. mdvaf time intervals taken relative to extracted dump slices.     *
  ************************************************************************************** 
  *  Revision Log
- *  $Log$
+ *  $Log: mdvaf.c,v $
+ *  Revision 1.16  2004/12/07 13:00:02  cf
+ *  Merged with latest utilities.
+ *
  *  Revision 1.13.10.5  2004/12/07 11:03:37  cf
  *  Added read_dump_header and made static.
  *  Added verbose option for dumpext.
@@ -121,6 +124,8 @@ static char *RCSid = "$Header$";
 #endif
 
 /*======================== Global variables ==================================*/
+extern int optind;
+static int verbose;
 int ithread=0, nthreads=1;
 
 #define VAF  0
@@ -400,7 +405,7 @@ main(int argc, char **argv)
    char         *dumplims = NULL;
    char		*tempname;
    char		*vaflims = NULL;
-   char		dumpcommand[256];
+   char		*dumpcommand;
    int		dump_size;
    float	*dump_buf;
    FILE         *Dp, *dump_file;
@@ -426,8 +431,9 @@ main(int argc, char **argv)
    else
      outsw = VAF;
 
+   verbose = 0;
 
-   while( (c = getopt(argc, argv, "ad:t:l:i:g:o:qv") ) != EOF )
+   while( (c = getopt(argc, argv, "3acd:t:l:i:g:o:qv") ) != EOF )
       switch(c)
       {
        case 'a':  /* Calculate angular velocity function */
@@ -459,7 +465,8 @@ main(int argc, char **argv)
 	    error("failed to open file \"%s\" for output", optarg);
 	 break;
        case 'v':
-         verbose++;
+	 verbose++;
+	 break;
        default:
        case '?':
 	 errflg++;
@@ -679,17 +686,23 @@ main(int argc, char **argv)
    if( (dump_buf = (float*)malloc(dump_size)) == 0)
       error("malloc failed to allocate dump record buffer (%d bytes)",
           dump_size);
+   if( (dumpcommand = malloc(256+strlen(dump_names))) == 0)
+      error("malloc failed to allocate dumpext command string buffer (%d bytes)",
+          256+strlen(dump_names));
+
 #if defined (HAVE_POPEN) 
-   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d %s",
-      verbose?"-v":"", sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, dump_names);
+   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d %s %s",
+        sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, verbose?"-v":" ", dump_names);
+   if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
    
    if( (Dp = popen(dumpcommand,"r")) == 0)
         error("Failed to execute \'dumpext\" command - \n%s",
             strerror(errno));
 #else
    tempname = tmpnam((char*)0);
-   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d -o %s %s",
-         sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, tempname, dump_names);
+   sprintf(dumpcommand,"dumpext -R%d -Q%d -b -c %d -t %d-%d:%d -o %s %s %s",
+         sys.nmols, sys.nmols_r, aflg?7:6, start, finish, inc, tempname, verbose?"-v":" ", dump_names);
+   if( verbose ) fprintf(stderr,"About to execute command\n    %s\n",dumpcommand);
    system(dumpcommand);
    if( (Dp = fopen(tempname,"rb")) == 0)
         error("Failed to open \"%s\"",tempname);
@@ -698,6 +711,7 @@ main(int argc, char **argv)
 /* Loop for calculating trajectories from current and previous time slices */ 
    for(irec = 0; irec <= finish-start; irec+=inc)
    {
+     if( verbose ) fprintf(stderr,"Reading dump record %d from dumpext output\n",irec);
         if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
            if( !strcmp(strerror(errno),"Success") )
               error("Error reading record %d in dump file \"%s\"\n",irec, dump_name);
