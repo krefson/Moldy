@@ -80,6 +80,7 @@ void	init_averages(int nspecies, char *vsn, long int roll_interval,
 		      long int old_roll_interval, int *av_convert);
 int	getopt(int, char *const *, const char *);
 void	zero_real(real *r, int n);
+void    zero_double(double *r, int n);
 void    conv_potentials(const unit_mt *unit_from, const 
 			unit_mt *unit_to, pot_mt *potpar, int npotpar,
 			int ptype, site_mt *site_info, int max_id);
