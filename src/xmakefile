@@ -125,7 +125,7 @@ SHAKOBJS= $(SHAKS:%=%.o)
 
 UTILS = moldyext dumpanal dumpconv dumpext  manalyze
 
-EXTRAS = $(UTILS:%=%.c) mdshak.c ewald_parallel.c force_parallel.c
+EXTRAS = $(UTILS:%=%.c) mdshak.c ewald_parallel.c force_parallel.c ewald-RIL.c
 
 HFILES=		structs.h defs.h string.h time.h stddef.h stdlib.h messages.h xdr.h
 
@@ -352,6 +352,9 @@ force.o:	force.c structs.h defs.h
 #
 #  Rule for checking out source under RCS
 #
+ewald-RIL.c:
+	co -pRIL ewald.c > ewald-RIL.c
+
 $(CFILES) $(HFILES) $(EXTRAS) moldy.tex:
 	co $@
 
