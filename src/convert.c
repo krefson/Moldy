@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: convert.c,v $
+ *       Revision 2.11  2000/04/27 17:57:06  keith
+ *       Converted to use full ANSI function prototypes
+ *
  *       Revision 2.10  1999/11/01 17:22:10  keith
  *       Got rid of useless (and lint-unfriendly) _mp declarations.
  *       Made "const" qualifier conditionally excluded if using lint.
@@ -93,7 +96,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/convert.c,v 2.10 1999/11/01 17:22:10 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/convert.c,v 2.11 2000/04/27 17:57:06 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -139,9 +142,8 @@ static const conv_mt
  *  convert it to new units (unit_to).  Uses logarithms to avoid overflow.    *
  ******************************************************************************/
 #define	MAX_SCALE	80			/* 1e35 - safe for any machine*/
-static double	unit_scale(const dim_mt *dim, unit_mt *unit_from, unit_mt *unit_to)
-            	     			/* Dimensions			      */
-       	                     		/* Units to convert from/to	      */
+static double	unit_scale(const dim_mt *dim,   /* Dimensions    	      */
+			   const unit_mt *unit_from, const unit_mt *unit_to)
 {
    double	lnscale = 	dim->m*(log(unit_from->m) - log(unit_to->m))
 			      + dim->l*(log(unit_from->l) - log(unit_to->l))
@@ -155,16 +157,17 @@ static double	unit_scale(const dim_mt *dim, unit_mt *unit_from, unit_mt *unit_to
  *  Convert_potentials   Scale potential parameters, site masses and charges  *
  *  from input units to program units.					      *
  ******************************************************************************/
-void	conv_potentials(const unit_mt *unit_from, const unit_mt *unit_to, pot_mt *potpar, int npotpar, int ptype, site_mt *site_info, int max_id)
-             	                     	/* Values of units for conversion     */
-      		         		/* Array of potpar records[max_id**2] */
-   		        		/* Number of 'active' parameters      */
-   		      			/* Potential type		      */
-       		            		/* Site specification array[max_id]   */
-   		       			/* How many site id's		      */
+void	
+conv_potentials(const unit_mt *unit_from,
+		const unit_mt *unit_to, /* Values of units for conversion     */ 
+		pot_mt *potpar, 	/* Array of potpar records[max_id**2] */ 
+		int npotpar, 		/* Number of 'active' parameters      */ 
+		int ptype, 		/* Potential type                     */ 
+		site_mt *site_info,	/* Site specification array[max_id]   */ 
+		int max_id)		/* How many site id's                 */
 {
    int		idi, idj, ip;		/* Counters for id's and potpar	      */
-   static dim_mt	mass_dim   = {1,0,0,0},	/* Dimensions of mass		      */
+   static dim_mt	mass_dim   = {1,0,0,0},	/* Dimensions of mass	      */
                 charge_dim = {0,0,0,1};	/* Dimensions of charge		      */
    double	mscale = unit_scale(&mass_dim,   unit_from, unit_to),
                 qscale = unit_scale(&charge_dim, unit_from, unit_to);
@@ -188,9 +191,8 @@ void	conv_potentials(const unit_mt *unit_from, const unit_mt *unit_to, pot_mt *p
  *   input and program units.  Which to convert are indicated by the array    *
  *   'conv' which contains a pointer to the data and a dimension struct.      *
  ******************************************************************************/
-void	conv_control(const unit_mt *unit, boolean direction)
-             	       			/* Units conversion is to/from	      */
-       		          		/* True=from input, false=to input    */
+void	conv_control(const unit_mt *unit,/* Units conversion is to/from       */ 
+		     boolean direction)	 /* True=from input, false=to input   */
 {
    int		ic;			/* Counter			      */
    for(ic = 0; ic < NCONV; ic++)
