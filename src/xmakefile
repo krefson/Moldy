@@ -25,7 +25,7 @@ XDR=-DUSE_XDR
 #PARLIBL=-lmpi
 # SHMEM library on Edinburgh T3D
 #PARLIBC=-DSPMD -DSHMEM -DMPPMANY
-#PARLIBL=-lsma
+#PARLIBL=
 #  **** MSDOS with Turbo C ****
 #CC=tcc
 #CFLAGS= -A -DANSI_LIBS -f287 -mh -O -Z -G $(CFLAGS0)
@@ -50,9 +50,10 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #CFLAGS=	-O2 -mips2  $(XDR) $(PARLIBC) $(CFLAGS0)
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0) -lsun -lmalloc -lfastm
 #INLINE=
-##  **** MIPS for SGI, IRIX 6/TFP ****
-#CFLAGS= -DANSI_LIBS -O2 -mips4 -woff 1174 $(XDR) $(PARLIBC) $(CFLAGS0)
+##  **** MIPS for SGI, IRIX 6/R8000 ****
+#CFLAGS= -DANSI_LIBS -O3 -mips4 -woff 1174 $(XDR) $(PARLIBC) $(CFLAGS0)
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
+#CFLAGS2=-OPT:alias=restrict:fast_sqrt=on
 #INLINE=
 #  **** Sun C 3.0.1
 #CC=acc
@@ -73,10 +74,12 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #INLINE=
 #  **** DEC Alpha ****
 #CC=cc -migrate
-#CFLAGS= -O5 $(XDR) $(PARLIBC) $(CFLAGS0) -D_FASTMATH
-#CFLAGS2=
+#CFLAGS= -tune host -O4 $(XDR) $(PARLIBC) $(CFLAGS0) -D_FASTMATH
+#CFLAGS2=-ansi_alias -O5
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
-#  **** HP 700 ****
+#  **** HP 700 and Convex SPP ****
+#CC=c89
+##CC=mpicc
 #CFLAGS=	+O3  +Olibcalls $(XDR) $(PARLIBC) $(CFLAGS0)
 #CFLAGS2=       +Onoparmsoverlap 
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
@@ -104,7 +107,8 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #  **** Cray T3D ****
 #CC=cc -Tcray-t3d
 #CFLAGS= -O2 $(XDR) $(PARLIBC) $(CFLAGS0)
-#LDFLAGS=$(PARLIBL) $(LDFLAGS0)
+#CFLAGS2=-hrestrict=a
+#LDFLAGS=$(PARLIBL) $(LDFLAGS0) -L/usr/local/lib/bnchlib -lbnch -lsci
 #  ***** End *****
 LINT=		lint
 TAR=		tar
