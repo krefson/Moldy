@@ -7,7 +7,7 @@ char	*strtok();
 #define NSIGNAL 8
 #define buf_inc 128
 
-#ifdef CRAY
+#if defined(CRAY) && ! defined(unix)
 int     vfprintf (file, fmt, args)
 FILE    *file;
 char    *fmt;

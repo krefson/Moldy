@@ -1,9 +1,12 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/dumpconvert.c,v 1.2 89/09/07 18:15:54 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/dumpconvert.c,v 1.2 89/09/07 18:15:54 keith Exp $";
 #endif
 
 /*
  * $Log:	dumpconvert.c,v $
+ * Revision 1.2  89/09/07  18:15:54  keith
+ * checked in with -k by keith at 89.09.08.15.48.37.
+ * 
  * Revision 1.2  89/09/07  18:15:54  keith
  * Rationalised command-line parameters.  Now takes option '-d', + two
  * file names for input and output.  A file name of '-' means use stdin/out
@@ -25,7 +28,7 @@ int	read_header();
 void	binary_to_text();
 void	text_to_binary();
 
-#ifdef CRAY
+#if defined(CRAY) && ! defined(unix)
 int     vfprintf (file, fmt, args)
 FILE    *file;
 char    *fmt;
