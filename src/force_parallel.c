@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.6 90/05/16 18:41:00 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.8 90/10/18 17:46:00 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -103,6 +103,7 @@ void	transpose();			/* Generate 3x3 matrix transpose      */
 void    zero_real();                    /* Initialiser                        */
 void	force_inner();			/* Inner loop forward reference       */
 int	nprocessors();			/* Return no. of procs to execute on. */
+double	precision();			/* Floating pt precision.	      */
 /*========================== External data references ========================*/
 extern  contr_t control;
 /*========================== Structs local to module =========================*/
@@ -130,12 +131,40 @@ static          int nx = 0, ny = 0, nz = 0;
 #define         NREL(ix,iy,iz) ((iz)+NSH+NSHELL*((iy)+NSH+NSHELL*((ix)+NSH)))
 #define         CELLMAX 5
 #define         TOO_CLOSE       0.25    /* Error signalled if r**2 < this     */
-#define		BIN(rc, nc)	((int)((rc+2.5)*nc)%nc)
-#define		LOCATE(r)	NCELL(BIN(r[0], nx), BIN(r[1],ny), BIN(r[2],nz))
+#define		LOCATE(r,eps)	NCELL(cellbin(r[0], nx, eps), \
+				      cellbin(r[1], ny, eps), \
+				      cellbin(r[2], nz, eps))
 #define moda(hmat) (hmat[0][0])
 #define modb(hmat) sqrt(SQR(hmat[0][1]) + SQR(hmat[1][1]))
 #define modc(hmat) sqrt(SQR(hmat[0][2]) + SQR(hmat[1][2]) + SQR(hmat[2][2]))
 /*============================================================================*/
+/******************************************************************************
+ *  cellbin.    Safe binning function for putting molecules/sites into cells. *
+ *  Any error at the boundaries is disasterous and hard to detect.            *
+ *  Results may depend on machine-dependant rounding etc.		      *
+ ******************************************************************************/
+int cellbin(rc, nc, eps)
+double rc, eps;
+int nc;
+{
+   int ibin;
+
+   if(rc < -0.5 || rc >= 0.5)
+   {
+      if(rc < -0.5 && rc >= -0.5-eps)
+	 rc = -0.5;
+      else if(rc >= 0.5 && rc <= 0.5+eps)
+	 rc = 0.5-eps;
+      else 
+	 message(NULLI, NULLP, ERROR, 
+		 "Co-ordinate out of range in BIN (fill_cells) %f\n",rc);
+   }
+   if( (ibin = ((rc+0.5)*nc)) >= nc )
+	 message(NULLI, NULLP, ERROR, 
+		 "Rounding problem in BIN (fill_cells) %f\n",rc);
+   return ibin;
+}
+
 /******************************************************************************
  * As of version 4.0, the CRAY C compiler can not vectorise the 'kernel'      *
  * function.  A replacement in FORTRAN is provided which will vectorise. To   *
@@ -200,7 +229,7 @@ double  cutoff;
 
    nnab = 4*mx*my*mz;
    nabor = aalloc(nnab, ivec_t);
-#ifdef DEBUG
+#ifdef DEBUG1
    printf("  Distance    ix    iy    iz      sx        sy          sz\n");
 #endif
    for(ix = 0; ix < mx; ix++)
@@ -223,7 +252,7 @@ double  cutoff;
                nabor[inabor].j = iy;
                nabor[inabor].k = iz;
 	       inabor++;
-#ifdef DEBUG
+#ifdef DEBUG1
                printf("%12f %4d %4d %4d %12f %12f %12f\n",
                       dist,ix,iy,iz,s[0],s[1],s[2]);
 #endif
@@ -248,6 +277,7 @@ cell_t  *cell[];                        /* Array of cells (assume zeroed)(out)*/
 int	*frame_type;			/* Framework type counter	 (out)*/
 {
    int icell, imol, im=0, is, isite = 0;
+   double eps = precision();
    vec_t ssite;
    mat_t hinv;
 
@@ -270,7 +300,7 @@ int	*frame_type;			/* Framework type counter	 (out)*/
 	    ssite[1] = site[1][isite];
 	    ssite[2] = site[2][isite];
 	    mat_vec_mul(hinv, (vec_t*)ssite, (vec_t*)ssite, 1);
-	    icell = LOCATE(ssite);
+	    icell = LOCATE(ssite, eps);
 	    list->isite = isite++;
 	    list->num   = 1;
 	    list->frame_type = *frame_type;
@@ -281,7 +311,7 @@ int	*frame_type;			/* Framework type counter	 (out)*/
       }
       else
       {
-	 icell = LOCATE(c_of_m[imol]);
+	 icell = LOCATE(c_of_m[imol], eps);
 	 list->isite = isite;
 	 list->num   = spec->nsites;
 	 list->frame_type = 0;
@@ -323,7 +353,7 @@ reloc_t	***reloc;			/* Relocation index array	(in) */
       jx = ix + nabor[jnab].i;
       jy = iy + nabor[jnab].j;
       jz = iz + nabor[jnab].k;
-#ifdef DEBUG
+#ifdef DEBUG1
       if(jx<-nx || jx>=2*nx || jy<-ny || jy>=2*ny || jz<-nz || jz>=2*nz)
 	 message(NULLI,NULLP,FATAL,"Bounds error on reloc (%d,%d,%d)",jx,jy,jz);
 #endif
@@ -459,9 +489,6 @@ mat_t           stress;                 /* Stress virial                (out) */
    mat_t	*stress_n = (mat_t *)aalloc(nthreads, mat_t);
    real		***s_f_n;
 
-#ifdef DEBUG
-   int jnab;
-#endif
 #ifdef DEBUG2
    double ppe, rrx, rry, rrz;
    int im, is;
@@ -535,6 +562,7 @@ VECTORIZE
       message(NULLI, NULLP, FATAL,
 	      "Multiple framework molecules are not supported");
    
+
 #ifdef DEBUG2
    ppe = 0;
    spec = species; isite = 0;
@@ -656,11 +684,18 @@ mat_t	stress;
    int          icell,			/* Index for cells of molecule pair   */
                 nnab,	j0, jmin, jmax,	/* Number of sites in neighbour list  */
    		isite, jsite, ipot, lim;
+   int		nsites = system -> nsites;
    int		nfnab[2];
    cell_t       *cmol;
    double       norm = 2.0*control.alpha/sqrt(PI);	/* Coulombic prefactor*/
    s00 = s01 = s02 = s11 = s12 = s22 = 0.0;	/* Accumulators for stress    */
    reloc_alloc(system->h, reloc_v);
+#ifdef DEBUG6
+   { int i;
+     for(i = 0; i < CUBE(NSHELL); i++)
+	printf("%f %f %f\n", reloc_v[0][i], reloc_v[1][i], reloc_v[2][i]);
+  }
+#endif
 
 /******************************************************************************
  *  Start of main loops.  Loop over species, ispec, molecules, imol, and      *
@@ -676,7 +711,7 @@ mat_t	stress;
       iy = icell/nz - ny*ix;
       iz = icell - nz*(iy + ny*ix);
       nnab = 0;
-#ifdef DEBUG
+#ifdef DEBUG1
       printf("Working on cell %4d (%d,%d,%d) (sites %4d to %4d)\n", icell,
              ix,iy,iz,cell[icell]->isite,cell[icell]->isite+cell[icell]->num-1);
       printf("\n jcell\tjx jy jz\tNsites\n");
@@ -686,25 +721,31 @@ mat_t	stress;
        */ 
       nnab = site_neighbour_list(nab, reloc_i,n_nab_sites,nfnab,n_frame_types, 
 				 n_nabors, ix, iy, iz, nabor, cell, reloc);
+#ifdef DEBUG4
+      for(jsite=0; jsite<nnab; jsite++)
+	 printf("%d %d\n",nab[jsite], reloc_i[jsite]);
+#endif
+      gather(nnab, nab_sx, site[0], nab, nsites);     /* Construct list of site     */
+      gather(nnab, nab_sy, site[1], nab, nsites);     /* co-ordinated from nabor    */
+      gather(nnab, nab_sz, site[2], nab, nsites);     /* list.                      */
 
-      gather(nnab, nab_sx, site[0], nab);     /* Construct list of site     */
-      gather(nnab, nab_sy, site[1], nab);     /* co-ordinated from nabor    */
-      gather(nnab, nab_sz, site[2], nab);     /* list.                      */
-
-      gather(nnab, R, reloc_v[0], reloc_i);
+      gather(nnab, R, reloc_v[0], reloc_i, CUBE(NSHELL));
 VECTORIZE
       for(jsite=0; jsite<nnab; jsite++)
 	 nab_sx[jsite] += R[jsite];
-      gather(nnab, R, reloc_v[1], reloc_i);
+      gather(nnab, R, reloc_v[1], reloc_i, CUBE(NSHELL));
 VECTORIZE
       for(jsite=0; jsite<nnab; jsite++)
 	 nab_sy[jsite] += R[jsite];
-      gather(nnab, R, reloc_v[2], reloc_i);
+      gather(nnab, R, reloc_v[2], reloc_i, CUBE(NSHELL));
 VECTORIZE
       for(jsite=0; jsite<nnab; jsite++)
 	 nab_sz[jsite] += R[jsite];
-
-      gather(nnab, nab_chg, chg, nab);       /* Gather site charges as well*/
+#ifdef DEBUG7
+      for(jsite = 0; jsite < nnab; jsite++)
+	 printf("%f %f %f\n",nab_sx[jsite],nab_sy[jsite],nab_sz[jsite]);
+#endif
+      gather(nnab, nab_chg, chg, nab, nsites);       /* Gather site charges as well*/
       zero_real(forcejx,nnab);
       zero_real(forcejy,nnab);
       zero_real(forcejz,nnab);
@@ -727,11 +768,15 @@ VECTORIZE
          for(isite = cmol->isite; isite < lim; isite++)
          {                                   /* Loop over sites in molecule */
             for(ipot = 0; ipot < system->n_potpar; ipot++)
-               gather(jmax, nab_pot[ipot], potp[id[isite]][ipot], nab);
-#ifdef DEBUG
+               gather(jmax, nab_pot[ipot], potp[id[isite]][ipot], nab, nsites);
+#ifdef DEBUG1
             if(isite == 100)
-            for(jsite = jmin; jsite < jmax; jsite++)
-               printf("%4d %4d\n", jsite,nab[jsite]);
+#endif
+#if defined(DEBUG1) || defined(DEBUG5)
+	    { int jnab;
+            for(jnab = jmin; jnab < jmax; jnab++)
+               printf("%4d %4d\n", jnab,nab[jnab]);
+	   }
 #endif
 #ifdef CC40
             calcdist(jmin, jmax, r_sqr, rx, ry, rz,nab_sx,nab_sy,nab_sz,
@@ -811,6 +856,9 @@ VECTORIZE
             site_force[0][isite] += site0;
             site_force[1][isite] += site1;
             site_force[2][isite] += site2;
+#endif
+#ifdef DEBUG3
+	    printf("PE = %f\n",pe[0]);
 #endif
          }
       }
