@@ -1,7 +1,10 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.15 91/08/15 18:12:22 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.16 91/08/17 13:58:59 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.16  91/08/17  13:58:59  keith
+ * Added "__unix__" symbol for ANSI unix compilers.
+ * 
  * Revision 1.15  91/08/15  18:12:22  keith
  * Modifications for better ANSI/K&R compatibility and portability
  * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
@@ -69,8 +72,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.15 $"
-#define		 REVISION_DATE    "$Date: 91/08/15 18:12:22 $"
+#define          REVISION         "$Revision: 1.16 $"
+#define		 REVISION_DATE    "$Date: 91/08/17 13:58:59 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -78,7 +81,6 @@
 /*
  *  Set symbol USG to identify system V variant of unix, BSD for Berkeley.
  */
-#if (defined(unix) || defined(__unix__) ) && !defined(USG)
 #include <errno.h>
 /*
  * Berkeley error numbers appear to be very regular, so the following is
@@ -86,8 +88,11 @@
  * BSD is used to signal use of getrusage() rather than times() (unix only)
  * and absence of mem*() and strchr() functions from library.
  */
+#if (defined(unix) || defined(__unix__) ) && !defined(USG)
 #if EWOULDBLOCK==35 && EINPROGRESS==36 && EALREADY==37
 # define BSD
+#else
+# define USG
 #endif
 #endif
 /*
