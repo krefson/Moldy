@@ -6,6 +6,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	aux.c,v $
+ * Revision 1.5  89/06/14  14:14:44  keith
+ * Fixed ifdef's for CRAY to handle case of unicos.
+ * Fixed mistake in #define's for typedef clash in sysV CPU().
+ * 
  * Revision 1.4  89/06/09  17:01:53  keith
  * Made zero_real() call memset/bzero
  * Fixed vprintf() for machines which use _doprnt()
@@ -26,7 +30,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: aux.c,v 1.5 89/06/14 10:42:02 keith Exp $";
+static char *RCSid = "$Header: aux.c,v 1.5 89/06/14 14:14:44 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -314,7 +318,7 @@ double	s;
    for( i = 0; i < n*ix; i += ix )
       if( x[i] < s )
          break;
-   return(i);
+   return(i/ix);
 }
 void	gather(n, a, b, ix)
 int	n;
