@@ -375,7 +375,7 @@ ReadDCD.o:	ReadDCD.h
 #  Special options for performance-critical modules
 #
 auxil.o:	auxil.c defs.h
-	$(CC) $(DEFS) $(CFLAGS) $(OPT2) $(OPTAUX) -c  $<
+	$(CC) $(DEFS) $(CFLAGS) $(OPTAUX) -c  $<
 
 ewald.o:	ewald.c structs.h defs.h
 	$(CC) $(DEFS) $(CFLAGS) $(OPT2) $(CFLAGSP) -c $(INLINE) $<
