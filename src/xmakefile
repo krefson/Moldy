@@ -76,7 +76,7 @@ SHAKOBJS= $(SHAKS:%=%.o)
 
 UTILS = moldyext dumpconv dumpext  manalyze bdist
 
-UTILS2= mdshak msd mdavpos mdbond ransub mdvaf
+UTILS2= mdshak msd mdavpos mdbond  mdvaf
 
 UTILS3= plotrdf moldyext2
 
