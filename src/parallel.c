@@ -22,6 +22,9 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.21  1998/07/17 14:54:06  keith
+ *       Ported SHMEM version to IRIX 6/ SGI Origin 2000
+ *
  *       Revision 2.21  1998/07/17 12:06:53  keith
  *       Ported SHMEM parallel interface to Irix for Origin systems
  *
@@ -76,7 +79,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/users/keith/data/moldy/src/RCS/parallel.c,v 2.21 1998/07/17 12:06:53 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2.21 1998/07/17 14:54:06 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -1244,6 +1247,7 @@ pot_mt    **pot_ptr;
 restrt_mt *restart_header;
 {
    int av_convert;
+   int jran;
    /*
     *  Fetch the top-level structs
     */
@@ -1275,5 +1279,11 @@ restrt_mt *restart_header;
     * Copy the dynamic vars from the other processes.
     */
    copy_dynamics(system);
+   /*
+    * Synchronize pseudo-random number generator.
+    */
+   jran = getseed();
+   par_broadcast((gptr*)&jran, 1, sizeof jran, 0);
+   smdrand(jran);
 #endif
 }

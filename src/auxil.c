@@ -26,6 +26,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.17  1999/09/09 11:32:59  keith
+ *       Got rid of #ifdef unix and rely on HAVE_FEATURE macros to
+ *       conditionally compile the timers.  This enables compilation
+ *       on cygwin.  One remaining use of unix macros is to test for
+ *       allowable filenames - this remains for now as there's no
+ *       autoconf test.
+ *
  *       Revision 2.16  1998/12/07 18:15:34  keith
  *       Fixed bug which meant non-unix systems did not include <time.h>
  *       and failed to compile as a result.
@@ -275,7 +282,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2.16 1998/12/07 18:15:34 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.17 1999/09/09 11:32:59 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -649,20 +656,37 @@ VECTORIZE
 #endif
 /******************************************************************************
  *  random number generators. Note they assume 'unsigned' of at least 32 bits *
+ *  N.B. there are 2 independent streams.  "mdrand1()" should be called for   *
+ *  any process on the root node, whereas "mdrand" is updated synchronously   *
+ *  on all processors in a parallel run.				      *
  ******************************************************************************/
 #define  im  1771875L
 #define  ia  2416L
 #define  ic  374441L
-static unsigned long jran = 1;
+static unsigned long jran = 1, jran1 = 1;
 void	smdrand(seed)
 unsigned long seed;
 {
    jran = seed;
 }
+unsigned long getseed()
+{
+   return jran;
+}
 double	mdrand()
 {
    jran = (jran*ia + ic) % im;
    return (double)jran/(double)im;
+}
+void	smdrand1(seed)
+unsigned long seed;
+{
+   jran = seed;
+}
+double	mdrand1()
+{
+   jran1 = (jran1*ia + ic) % im;
+   return (double)jran1/(double)im;
 }
 /******************************************************************************
  *  Precision. Return smallest eps s.t. 1.0+eps > 1			      *

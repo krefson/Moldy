@@ -43,6 +43,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.10  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.9  1996/03/06 18:20:04  keith
  *       Added cast in xdr_vector() call to supress spurious warning message.
  *
@@ -167,7 +172,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/dump.c,v 2.9 1996/03/06 18:20:04 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.10 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -185,7 +190,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/dump.c,v 2.9
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
 static char	*mutate();
-double		mdrand();
+double		mdrand1();
 void		mat_vec_mul();
 static void	dump_convert();
 static void	real_to_float();
@@ -373,7 +378,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 2.9 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 2.10 $"+11,
 		                     sizeof dump_header.vsn-1);
 #ifdef USE_XDR
       if( control.xdr_write )
@@ -525,7 +530,7 @@ char	*name;
       return NULL;
 
    while( begin < pc_pos )
-      *begin++ = alpha[(int)(mdrand() * 26.0)];
+      *begin++ = alpha[(int)(mdrand1() * 26.0)];
 
    return name;
 }
