@@ -14,6 +14,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	values.c,v $
+ * Revision 1.9  91/03/12  15:43:29  keith
+ * Tidied up typedefs size_t and include file <sys/types.h>
+ * Added explicit function declarations.
+ * 
  * Revision 1.8  90/05/16  18:40:53  keith
  * Renamed own freer from cfree to tfree.
  * 
@@ -40,14 +44,16 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.8 90/05/16 18:40:53 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.10 91/08/15 18:12:19 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
+#include	"defs.h"
 #include	"structs.h"
 #include	"messages.h"
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
 #include	<math.h>
+#include	"stddef.h"
 /*========================== External function declarations ==================*/
 void	mat_vec_mul();
 void	q_conj_mul();			/* Quaternion multiply conjugated     */
@@ -65,7 +71,7 @@ char	*atime();
 void	new_line();
 void	new_lins();
 void	new_page();
-char            *talloc();	       /* Interface to memory allocator       */
+gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
 /*========================== External data references ========================*/
 extern	contr_t	control;
@@ -178,12 +184,12 @@ int	nspecies;
 /******************************************************************************
  * av_ptr   Return a pointer to averages database and its size (for restart)  *
  ******************************************************************************/
-char	*av_ptr(size)
-int	*size;
+gptr	*av_ptr(size)
+size_t	*size;
 {
    *size = (navs+1)*sizeof(av_u_t);
    if(av != NULL)
-      return((char*)av_cnt);
+      return((gptr*)av_cnt);
    message(NULLI, NULLP, FATAL, AVNOC, "av_ptr");
    return(NULL);					/* To satisfy lint    */
 }

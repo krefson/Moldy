@@ -18,6 +18,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.14  91/03/12  15:42:10  keith
+ * Tidied up typedefs size_t and include file <sys/types.h>
+ * Added explicit function declarations.
+ * 
  * Revision 1.13  91/03/07  17:52:32  keith
  * Macros in support of parallel version for titan added.
  * 
@@ -57,17 +61,20 @@
  * Modified talloc() to return null rather than exit if 0 bytes requested.
  * 
  * Revision 1.2  89/05/24  13:54:26  keith
- * Changed ifdef's to select on __STDC__ macro
+ * Changed ifdef's to select on defined(__STDC__) macro
  * 
  * Revision 1.1  89/04/27  16:52:17  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.13 91/03/07 17:52:32 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.15 91/08/15 18:11:43 keith Exp $";
 #endif
+/*========================== program include files ===========================*/
+#include "defs.h"
+#include "messages.h"
 /*========================== Library include files ===========================*/
-#if ANSI || __STDC__
+#if defined(ANSI) || defined(__STDC__)
 #   include <stdarg.h>
 #else
 #   include <varargs.h>
@@ -84,9 +91,6 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.13 91
 #ifndef THREADED
 # define THREAD_SYS(S) S;
 #endif
-/*========================== program include files ===========================*/
-#include "defs.h"
-#include "messages.h"
 /*========================== External function declarations ==================*/
 void	message();				/* Error handling routine     */
 void	inhibit_vectorization();		/* Self-explanatory dummy     */
@@ -98,31 +102,31 @@ int	malloc_debug();
 /******************************************************************************
  * talloc()	Call Calloc to allocate memory, test result and stop if failed*
  ******************************************************************************/
-char	*talloc(n, size, line, file)
-long	n;
+gptr	*talloc(n, size, line, file)
+int	n;
 size_t	size;
 int	line;
 char	*file;
 {
-   char *p;
-   THREAD_SYS(p = malloc((unsigned)n*size))
+   gptr *p;
+   THREAD_SYS(p = malloc(n*size))
    if(p == NULL && (n*size != 0))
      THREAD_SYS(message(NULLI, NULLP, FATAL, NOMEM, line, file,
 	       (int)n, (unsigned long)size))
-   (void)memset(p, 0, n*size);
+   (void)memset((gptr*)p, 0, n*size);
    return(p);
 }
 /******************************************************************************
  * Cfree - synonym to free()						      *
  ******************************************************************************/
 void	tfree(p)
-char	*p;
+gptr	*p;
 {
 #ifdef DEBUG
    if( ! malloc_verify() )
       message(NULLI, NULLP, FATAL, "Internal Error: Heap corrupt");
 #endif
-   THREAD_SYS(free(p))
+   THREAD_SYS(free((gptr*)p))
 }
 /******************************************************************************
  *  arralloc.   Allocate a psuedo array of any dimensionality and type with   *
@@ -131,7 +135,7 @@ char	*p;
  *  fashion ie last index varies most rapidly.  All storage is got in one     *
  *  block, and so can be freed in one go.  				      *
  *  array = (double*) arralloc(sizeof(double), 3, 0, 10, -10, 10, 0, 5);      *
- *  tfree((char*) array);					     	      *
+ *  xfree(array);					     	      *
  *  (N.B. if lower bound of 1st dimension != 0 then free array+l.b.           *
  ******************************************************************************/
 #define CSA(a) ((char*)(a))
@@ -163,19 +167,20 @@ va_list	ap;
 	 dpp[i] = dd + (i*dim - lb)*size/sizeof(int);
 }
             
-#if ANSI || __STDC__
+#if defined(ANSI) || defined(__STDC__)
+#undef va_alist
 #define	va_alist size_t size, int ndim, ...
 #define va_dcl /* */
 #endif
                 /*VARARGS*/
-char		*arralloc(va_alist)
+gptr		*arralloc(va_alist)
 va_dcl
 {
    va_list	ap, ap2;
    int		**p, **start;
    int		lb, ub, idim;
    long		n_ptr = 0, n_data = 1;
-#if ANSI || __STDC__
+#if defined(ANSI) || defined(__STDC__)
    va_start(ap, ndim);
 #else
    size_t	size;			/* size of array element	      */
@@ -205,7 +210,7 @@ va_dcl
    /*
     *  Allocate space  for pointers and data.
     */
-   start = (int**)talloc(1L, (size_t)((n_data+1)*size+n_ptr*sizeof(void**)),
+   start = (int**)talloc(1, (size_t)((n_data+1)*size+n_ptr*sizeof(void**)),
 			  __LINE__, __FILE__);
    /*
     * Set up pointers to form dope-vector array.
@@ -214,5 +219,5 @@ va_dcl
 
    va_end(ap);   
 
-   return (char*)p;
+   return (gptr*)p;
 }
