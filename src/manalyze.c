@@ -19,11 +19,18 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 2.3 93/10/28 10:28:54 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 2.5 1994/01/21 12:46:01 keith Stab $";
 #endif
 
 /*
- * $Log:	moldyanalyze.c,v $
+ * $Log: moldyanalyze.c,v $
+ * Revision 2.5  1994/01/21  12:46:01  keith
+ * Lint/gcc -Wall tidying
+ *
+ * Revision 2.4  94/01/18  13:23:14  keith
+ * Incorporated all portability experience to multiple platforms since 2.2.
+ * Including ports to VAX/VMS and Open VMS on Alpha AXP and Solaris.
+ * 
  * Revision 2.3  93/10/28  10:28:54  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -50,6 +57,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 
  * 
  */
 
+#include	"defs.h"
 #include	"stddef.h"
 #include	"structs.h"
 #include	"stdlib.h"
@@ -57,6 +65,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/moldyanalyze.c,v 
 
 
 char	*ctime();
+int
 main(argc, argv)
 int	argc;
 char	*argv[];
@@ -95,4 +104,5 @@ char	*argv[];
       fread(ptr,size,1,f);
       free(ptr);
    }
+   return 0;
 }
