@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.8.1.9  2000/12/12 12:43:48  keith
+ *       Updated to parallel 2.19.2.1 for 2.16 release
+ *
  *       Revision 2.8.1.8  1998/05/07 17:13:23  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -205,7 +208,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.8.1.8 1998/05/07 17:13:23 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.8.1.9 2000/12/12 12:43:48 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -281,14 +284,14 @@ extern int		ithread, nthreads;
 /*   static int hits=0, misses=0;*/
 static
 void      qsincos(coshx, sinhx, cosky, sinky, coslz, sinlz,
-		  qcoskr, qsinkr, coshxky, sinhxky, h, k,l, nsites)
+		  qcoskr, qsinkr, coshxky, sinhxky, h, k, l, 
+		  hlast, klast, nsites)
 real coshx[], sinhx[], cosky[], sinky[], coslz[], sinlz[],
      qcoskr[], qsinkr[], coshxky[], sinhxky[];
-int  h, k,l,nsites;
+int  h, k,l,hlast,klast,nsites;
 {
    int is;
    real qckr, chxky;
-   static int hlast=-1000000,klast=-1000000;
    
    if( h != hlast || k != klast ) 
    {
@@ -501,6 +504,10 @@ mat_mt		stress;			/* Stress virial		(out) */
    int		hmax = floor(control.k_cutoff/(2*PI)*moda(system->h)),
 		kmax = floor(control.k_cutoff/(2*PI)*modb(system->h)),
 		lmax = floor(control.k_cutoff/(2*PI)*modc(system->h));
+   /*
+    * Saved previous h and k to signal validity of coshxky, sinhxky caches.
+    */
+   int          hlast=-1000000,klast=-1000000;                                                                                          
    real		sqexpkr[4];
    mat_mt	stress_ew;
 /*
@@ -711,7 +718,7 @@ mat_mt		stress;			/* Stress virial		(out) */
  * efficiency & vectorisation there is a loop for each case.
  */
       qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,
-	      qcoskr,qsinkr,coshxky, sinhxky, h, k, l,nsarr0);
+	      qcoskr,qsinkr,coshxky, sinhxky, h, k, l, hlast,klast, nsarr0);
       ns1f = MIN(ns1, nsitesxf); ns0f = MAX(ns0, nsitesxf);
       sqexpkr[0] = sum(ns1f-ns0, qcoskr, 1);
       sqexpkr[1] = sum(ns1f-ns0, qsinkr, 1);
