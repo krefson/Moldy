@@ -8,6 +8,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.7  89/12/21  16:30:02  keith
+ * Reversed indices in 'site' and 'site_force' to allow stride of 1 in ewald.
+ * 
  * Revision 1.6  89/11/20  11:59:19  keith
  * Corrected normalisation in calculation of rdf.  Changed interface (cf main).
  * 
@@ -29,10 +32,14 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/rdf.c,v 1.6 89/11/20 11:59:19 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/rdf.c,v 1.7 89/12/21 16:30:02 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
-#include	<math.h>
+#if  defined(convexvc) || defined(stellar)
+#include <fastmath.h>
+#else
+#include <math.h>
+#endif
 #include 	"string.h"
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -50,6 +57,7 @@ extern contr_t	control;
 int	***rdf;				/* The RDF 'array'	      */
 /*========================== Macros ==========================================*/
 #define MATMUL(i, m, r) (m[i][0]*r[0] + m[i][1]*r[1] + m[i][2]*r[2])
+#define floor(x)  (double)((int)((x) + 10) - 10) /* Vectorisable macro floor()*/
 /*============================================================================*/
 
 /******************************************************************************
@@ -84,11 +92,14 @@ system_p	system;				/* System info struct	      */
 spec_t	species[];			/* Species info struct array  */
 {
    spec_p	spec;
-   register double	r, t;
+   register double	t;
+   double	r;
+   real		*site0 = site[0], *site1 = site[1], *site2 = site[2];
    vec_t	rij;
    double	rbin;				/* 1.0/bin width	      */
-   int		imol, isite, jsite;
-   int		*id = ialloc(system->nsites);
+   int		imol, isite, jsite, nsites = system->nsites;
+   int		*id = ialloc(system->nsites),
+                *bind = ialloc(system->nsites);
    int		*id_ptr;
    mat_t	hinv;
    double	lx   = system->h[0][0], lxy  = system->h[0][1],
@@ -108,12 +119,14 @@ spec_t	species[];			/* Species info struct array  */
          id_ptr += spec->nsites;
       }
 
-    for(isite = 0; isite < system->nsites; isite++)
-       for(jsite = isite+1; jsite < system->nsites; jsite++)
+    for(isite = 0; isite < nsites; isite++)
+    {
+VECTORIZE
+       for(jsite = isite+1; jsite < nsites; jsite++)
        {
-          rij[0] = site[0][jsite] - site[0][isite];
-          rij[1] = site[1][jsite] - site[1][isite];
-          rij[2] = site[2][jsite] - site[2][isite];
+          rij[0] = site0[jsite] - site0[isite];
+          rij[1] = site1[jsite] - site1[isite];
+          rij[2] = site2[jsite] - site2[isite];
           
           rij[0] -= lx  *      floor(MATMUL(0,hinv,rij) + 0.5);
           rij[0] -= lxy * (t = floor(MATMUL(1,hinv,rij) + 0.5));
@@ -123,10 +136,14 @@ spec_t	species[];			/* Species info struct array  */
           rij[2] -= lz  * t;
            
           r = sqrt(rij[0]*rij[0] + rij[1]*rij[1] + rij[2]*rij[2]);
-	  if ( r < control.limit )
-             rdf[id[isite]][id[jsite]][(int)(rbin * r)]++;
+	  bind[jsite] = rbin*r;
        }
-    cfree((char*)id);
+NOVECTOR
+       for(jsite = isite+1; jsite < nsites; jsite++)
+	  if( bind[jsite] < control.nbins )
+             rdf[id[isite]][id[jsite]][bind[jsite]]++;
+    }
+    cfree((char*)id);    cfree((char*)bind);
 }
 /******************************************************************************
  * print_rdf.  Calculate the radial distribution function from the binned pair*
