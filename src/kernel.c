@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.14.2.4.2.3  2002/03/20 11:49:48  kr
+ *       Corrected bug in 1/r^4 forces
+ *
  *       Revision 2.14.2.4.2.2  2002/03/15 15:17:02  kr
  *       Fixed some bugs in forces
  *
@@ -203,7 +206,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/kernel.c,v 2.14.2.4.2.2 2002/03/15 15:17:02 kr Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/kernel.c,v 2.14.2.4.2.3 2002/03/20 11:49:48 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -323,9 +326,7 @@ double	dist_pot(real *potpar,          /* Array of potential parameters      */
 		  - potpar[1] * exp(-potpar[2]*cutoff)
 		  * (SQR(cutoff)/potpar[2] + 2*cutoff/SQR(potpar[2]) + 2.0 / CUBE(potpar[2])));
        else
-	  return( potpar[0] / ( 3.0*CUBE(cutoff))
-		  - potpar[1] * exp(-potpar[2]*cutoff)
-		  * (SQR(cutoff)/potpar[2] + 2*cutoff/SQR(potpar[2]) + 2.0 / CUBE(potpar[2])));
+	  return( potpar[0] / ( 3.0*CUBE(cutoff)));
     case MCYPOT:
       if( potpar[3]  > BPAR_TOL )
          return( potpar[2] * (SQR(cutoff)/potpar[3] + 2*cutoff/SQR(potpar[3])
