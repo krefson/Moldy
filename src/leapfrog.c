@@ -35,6 +35,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: leapfrog.c,v $
+ *       Revision 2.11  2001/05/24 16:26:43  keith
+ *       Updated program to store and use angular momenta, not velocities.
+ *        - added conversion routines for old restart files and dump files.
+ *       Got rid of legacy 2.0 and lower restart file reading code.
+ *
  *       Revision 2.10  2001/05/22 14:52:45  keith
  *       Added control param "dont-use-symm-rot" to switch between rotational
  *       leapfrog versions at runtime.
@@ -83,7 +88,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.10 2001/05/22 14:52:45 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.11 2001/05/24 16:26:43 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -311,10 +316,9 @@ void rot_substep(quat_mt (*rot), quat_mt (*amom), quat_mt (*quat), int nmols)
 void leapf_quat_b(double step, quat_mt (*quat), quat_mt (*amom), 
 		  real *inertia, int nmols)
 {
-   int imol,i;
+   int i;
    double idmin, idiff;
    quat_mt	*rot  = qalloc(nmols);
-   real	inx = inertia[0], iny = inertia[1], inz = inertia[2];	
    real rinertia[3];
    static int firsttime = 0, saxis, orthaxis1,orthaxis2;
 
@@ -383,9 +387,9 @@ void leapf_quat_b(double step, quat_mt (*quat), quat_mt (*amom),
 void leapf_quat_a(double step, quat_mt (*quat), quat_mt (*amom), 
 		  real *inertia, int nmols)
 {
-   int imol,i;
+   int i;
    quat_mt	*rot  = qalloc(nmols);
-   real	inx = inertia[0], iny = inertia[1], inz = inertia[2];	
+
    real rinertia[3];
 
    for(i=0; i<3; i++)
@@ -430,7 +434,7 @@ void leapf_quat(double step, quat_mt (*quat), quat_mt (*amom),
  ******************************************************************************/
 void leapf_amom(double step, quat_mt (*amom), vec_mt (*torque), int nmols)
 {
-   int imol, i;
+   int imol;
 
    for(imol = 0; imol < nmols; imol++)
    {
