@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.14  1997/10/06 09:01:27  keith
+ *       Changed text of self-energy message to read kJ/mol.
+ *
  *       Revision 2.13  1996/11/05 16:45:49  keith
  *       - Reorganized code by extracting generation of sin and cosine tables
  *         into new function trig_recur()
@@ -206,7 +209,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.13 1996/11/05 16:45:49 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.14 1997/10/06 09:01:27 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -411,14 +414,14 @@ real	**chg, **qcoskr, **qsinkr;
    int h, k,l; 
    real *csp, *base;
 
-#ifndef __MSDOS__
+#ifndef ALLOC_SEPARATELY
    /*
     * Attempt to cache-align these arrays for optimum performance.
     * This requires NON-ANSI pointer conversion and arithmetic.
     * It should work with any UNIX address space, so make it conditional.
     */
    base = dalloc((2*(hmax+kmax+lmax)+15)*nsarray+10*NLINE+NCACHE);
-#if defined(unix) && !defined(__BOUNDS_CHECKING_ON)
+#if defined(ALLOC_ALIGN) && !defined(__BOUNDS_CHECKING_ON)
    csp = (real*)0 + (((base - (real*)0) - 1 | NCACHE-1) + 1);
 #else
    csp = base;
