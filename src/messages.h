@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/md/moldy/RCS/messages.h,v 2.14 1996/09/02 21:45:42 keith Exp $
+ * $Header: /home/eeyore_data/keith/moldy/src/RCS/messages.h,v 2.15 1998/05/07 17:06:11 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -58,7 +58,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #define EXTPOT	"potentials specified for unused sites - ignored"
 #define DUPPOT	"potentials already set for this site pair"
 #define NOPOT	"no potential parameters given between sites %d and %d"
-#define ERRS	"system specification file contains %d errors"
+#define ERRS	"system specification file contains %d error%c"
 #define SUCCES	"system specification file successfully read in"
 #define LATTIC	"system successfully initialised from lattice start"
 #define	REFORM	"wrong length record in restart file at byte %ld\
@@ -99,7 +99,7 @@ rotational degrees of freedom (%d vs %d)"
 #define TOOCLS	"Sites %d and %d closer than %fA."
 #define TOODIM  "Arralloc request for %d dimensions - max %d"
 #define INSIDE  "Array bounds [%d...%d] inside out (from ARRALLOC)"
-#define UNKPTY  "KERNEL called with unkown potential type %d"
+#define UNKPTY  "KERNEL called with unknown potential type %d"
 #define NOCELL  "Not enough values to specify unit cell\n\
      expected 3 lengths, 3 angles and number of unit cells in MD cell."
 #define INVCEL  "Invalid unit cell parameters - must be +ve and angles < 180"
@@ -111,7 +111,7 @@ rotational degrees of freedom (%d vs %d)"
 #define QNORM2  "Quaternion %d (%f,%f,%f,%f) - normalisation error in beeman"
 #define Qconst  "Quaternion %d - constraint error (%g)"
 #define NIMOLS  "Wrong number of molecules of %s - given %d, expected %d"
-#define INITER  "Initialisation file contains %d errors"
+#define INITER  "Initialisation file contains %d error%c"
 #define ROTLEN  "Length (%d) not a multiple of quaternion number (%d) in \
 \"rotate\""
 #define OVRLAP  "%s - Result matrix overlaps input"

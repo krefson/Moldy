@@ -29,6 +29,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: input.c,v $
+ *       Revision 2.10  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.9  1996/11/04 17:32:28  keith
  *       Fixed non-ANSI compliance in get_line() which decremented pointer to
  *       1 element below start of array and compared with beginning. I doubt
@@ -202,7 +207,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/input.c,v 2.9 1996/11/04 17:32:28 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/input.c,v 2.10 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -543,7 +548,7 @@ pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
             message(&nerrs,NULLP,WARNING,NOPOT,idi,idj);
 
    if(nerrs > 0)			/* if any errors have been detected   */
-      message(&nerrs,NULLP,FATAL,ERRS,nerrs);
+      message(&nerrs,NULLP,FATAL,ERRS,nerrs,(nerrs>1)?'s':' ');
    else
       message(&nerrs,NULLP,INFO,SUCCES);
 }
@@ -644,7 +649,7 @@ quat_mt	qpf[];				/* Princ frame rotation quaternion    */
    }
 
    if(nerrs > 0)				/* Is file all correct?       */
-      message(NULLI, NULLP, FATAL, INITER, nerrs);
+      message(NULLI, NULLP, FATAL, INITER, nerrs,(nerrs>1)?'s':' ');
 
    for(cur = init; cur != NULL; cur = cur->next)
    {
