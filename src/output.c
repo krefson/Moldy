@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.10  1995/12/07 17:54:06  keith
+ *       Reworked V. Murashov's thermostat code.
+ *       Convert mass params from kJ/mol ps^2 to prog units. Defaults=100.
+ *
  *       Revision 2.9  1995/12/04 11:45:49  keith
  *       Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
  *       Thanks to V. Murashov.
@@ -168,7 +172,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/output.c,v 2.9 1995/12/04 11:45:49 keith Exp keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/output.c,v 2.10 1995/12/07 17:54:06 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -183,9 +187,6 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/output.c,v 2
 #include	"stddef.h"
 #include 	"string.h"
 #include        <stdio.h>
-#ifdef		MPI
-#include	<mpi.h>
-#endif
 /*========================== Program include files ===========================*/
 #include "structs.h"
 #include "messages.h"
@@ -205,8 +206,8 @@ static  int	out_line = 999999;	    /* Which line of output           */
 /*========================== Macros ==========================================*/
 #define		S_USED		0x01
 /*========================== Special Control output cases ====================*/
-static  CONST int	one=1;
-extern	CONST unit_mt	prog_unit;
+static        int	one=1;
+extern	      unit_mt	prog_unit;
 static	CONST match_mt	special[] = {
         {"lattice-start",	"%d", "",	(gptr*)&one},
 	{"restart-file",	"%s", "",	(gptr*)""},
