@@ -144,55 +144,51 @@ char	*argv[];
    else
       fields = optarg;
       
-   if( argc > optind )
-   {
-      if(strcmp(argv[optind],"-") && freopen(argv[optind], "r", stdin) == NULL)
-	 error("Failed to open file \"%s\" for input", argv[optind]);
-   }
-   if( argc > ++optind )
-   {
-      if(strcmp(argv[optind],"-") && freopen(argv[optind], "w", stdout) == NULL)
-	 error("Failed to open file \"%s\" for writing", argv[optind]);
-   }
-
    if( tokenise(strdup(fields), mask, MAX_FIELDS) == 0 )
       error("Invalid field specification \"%s\": usage eg 1,3,5-9,4",fields);
 
 #ifdef DEBUG
-{
-   int i;
-   for(i = 0; i < MAX_FIELDS; i++)
-      if(mask[i])
-	 putchar('1');
-      else
-	 putchar('0');
-   putchar('\n');
-}
-#endif
-      
-   while( ! feof( stdin) )
    {
-      buf = read_record();
-      end = strlen(buf);
-      cnt = 0;
-      field = 0;
-      while( cnt < end )
-      {
-	 if(sscanf(buf+cnt, "%63s%n", sfield, &inc) != EOF)
-	 {
-	    if(mask[field])
-	    {
-	       putchar('\t');
-	       fputs(sfield,stdout);
-	    }
-	    cnt += inc;
-	    field++;
-	 }
-	 else
-	    cnt = end;			/* Flag exit from inner loop	*/
-      }
+      int i;
+      for(i = 0; i < MAX_FIELDS; i++)
+         if(mask[i])
+	    putchar('1');
+         else
+	    putchar('0');
       putchar('\n');
    }
+#endif
+      
+   while(optind < argc)
+     {
+       if(strcmp(argv[optind],"-") && freopen(argv[optind], "r", stdin) == NULL)
+	 error("Failed to open file \"%s\" for reading\n", argv[optind]);  
+       optind++;     
+       while( ! feof( stdin) )
+	 {
+	   buf = read_record();
+	   end = strlen(buf);
+	   cnt = 0;
+	   field = 0;
+	   while( cnt < end )
+	     {
+	       if(sscanf(buf+cnt, "%63s%n", sfield, &inc) != EOF)
+		 {
+		   if(mask[field])
+		     {
+		       putchar('\t');
+		       fputs(sfield,stdout);
+		     }
+		   cnt += inc;
+		   field++;
+		 }
+	       else
+		 cnt = end;			/* Flag exit from inner loop	*/
+	     }
+	   if( field > 0 )
+	     putchar('\n');
+	 }
+     }
 }
 
 
