@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/mdavpos.c,v 2.18 2002/06/21 11:29:07 kr Exp $";
+static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/mdavpos.c,v 2.19 2002/09/19 09:26:29 kr Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *
@@ -28,6 +28,10 @@ static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/mdavpos.c,v 2.18 2002
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.19  2002/09/19 09:26:29  kr
+ *  Tidied up header declarations.
+ *  Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *  Revision 2.18  2002/06/21 11:29:07  kr
  *  Got rid of K&R varargs-compatibility stuff.
  *
@@ -174,14 +178,6 @@ void    zero_real(real *r, int n);
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 contr_mt                control;
-#define OUTBIN 2
-#define SHAK   0
-#define XYZ 1
-#define DCD 3
-#define PDB 4
-#define CSSR 5
-#define ARC 6
-#define XTL 7
 #define FRAC 0
 #define CART 1
 /******************************************************************************
