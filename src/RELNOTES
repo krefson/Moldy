@@ -14,7 +14,7 @@ RELEASE 2.15
  * Common support routines for all utilities extracted to separate
    files.  Both Msd And mdshak now support all 5 output formats.
 
- * New utilitey "mdvaf" added.  Calculates (linear) velocity
+ * New utility "mdvaf" added.  Calculates (linear) velocity
    autocorrelation function.
  
  * Comments documenting new potential addition in kernel.c clarified.
