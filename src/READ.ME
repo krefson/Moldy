@@ -262,9 +262,14 @@ The file moldy-2.yy.zip contains ".exe" files for moldy and the
 utilities compiled with Mingw32/gcc as above which will run on
 a 486 or above.  Just unpack the distribution into a convenient
 directory.  The ".exe" files may either be left in place or moved to 
-a suitable "bin" directory.   The PATH should be setin autoexec.bat to
+a suitable "bin" directory.   The PATH should be set in autoexec.bat to
 include whichever directory the ".exe" files are kept in.
 
+N.B.  ALL PLATFORMS.  It is important that the "dumpext" utility is
+      found in a directory  in the  shell search path as it is invoked
+      by several  of the other utilities to read dump files. If this
+      is not the case they will not work.
+    	
 
 	RUNNING
 	-------
