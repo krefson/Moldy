@@ -157,7 +157,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision$ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.32 $ $}
 \newcommand{\moldyversion}{2.16}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -5262,6 +5262,7 @@ from dump slices recorded during a \moldy\ run. The utility is similar to
 \Lit{[-a]}
 \Lit{[-l]}
 \Lit{[-i]}
+\Lit{[-v]} 
 \Lit{[-o} \textit{output-file}\Lit{]}
 \end{center}
 
@@ -5282,6 +5283,7 @@ use fractional coordinates.
 angles are 90 degrees.
 \item[-i] shift averaged positions so that all particles lie within the
 MD cell.
+\item[-v] give more verbose information while processing dump files.
 \item[-o] name of optional output file. Defaults to standard output.
 \end{Argdescription}
 
@@ -5336,6 +5338,7 @@ The command line options are:
 \Lit{[-p]} 
 \Lit{[-x]}
 \Lit{[-j]}
+\Lit{[-v]} 
 \Lit{[-o} \textit{output-file}\Lit{]}
 \end{center}
 
@@ -5358,6 +5361,7 @@ where the arguments have the following meanings:
 \item[-p] switch on 3D periodic boundary conditions.
 \item[-x] ignore right and straight angles.
 \item[-j] calculate bonds and angles between molecular sites rather than centres of mass.
+\item[-v] give more verbose information while processing dump files.
 \item[-o] name of optional output file. Defaults to standard output.
 \end{Argdescription}
 
@@ -5469,6 +5473,7 @@ Alternatively, the command line options are
 \Lit{[-f} \textit{output-type}\Lit{]}
 \Lit{[-y]}
 \Lit{[-i} \textit{extra-text}\Lit{]}
+\Lit{[-v]} 
 \Lit{[-o} \textit{output-file}\Lit{]}
 \end{center}
 where the meanings of the options are
@@ -5486,6 +5491,7 @@ format.
   from one side of the MD cell to the other.
 \item[-i]   this inserts its argument into the output file and is used
 to add extra SCHAKAL commands, such as BOX.
+\item[-v] give more verbose information while processing dump files.
 \item[-o] name of output file. Defaults to standard output.
 \end{Argdescription}
 
