@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1.3 1999/10/11 14:13:29 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1.4 1999/10/29 16:44:28 keith Exp keith $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdvaf.c,v 1
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.4  1999/10/29 16:44:28  keith
+ *  Added function to read velocities from dump files.
+ *
  *  Revision 1.4  1999/10/12 17:41:24  craig
  *  Added new function 'vel_to_moldy' to read velocity data
  *
@@ -85,7 +88,6 @@ void	zero_real();
 void	tfree();
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
-char    *comm;
 contr_mt                control;
 
 #define VAF  0
