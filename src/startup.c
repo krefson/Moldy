@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.35  2005/01/11 17:31:20  kr
+ *      Fixed debugging output when -DDEBUG specified.
+ *
  *      Revision 2.34  2004/11/23 15:40:59  kr
  *      Corrected minor compiler warnings.
  *
@@ -337,7 +340,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/startup.c,v 2.34 2004/11/23 15:40:59 kr Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/startup.c,v 2.35 2005/01/11 17:31:20 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -1096,7 +1099,7 @@ void validate_control(void)
       message(&nerrs, NULLP, ERROR, INVVAL, control.backup_interval, "backup-interval");
    if( control.cpu_limit < 0.0 )
       message(&nerrs, NULLP, ERROR, INVVLF, control.cpu_limit, "cpu-limit");
-   if( control.density < 0.0 )
+   if( control.density <= 0.0 )
       message(&nerrs, NULLP, ERROR, INVVLF, control.density, "density");
    if( control.pressure < 0.0 )
       message(&nerrs, NULLP, ERROR, INVVLF, control.pressure, "pressure");
