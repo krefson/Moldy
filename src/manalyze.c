@@ -19,11 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/manalyze.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/manalyze.c,v 2.7 1994/06/08 13:22:31 keith stab $";
 #endif
 
 /*
  * $Log: manalyze.c,v $
+ * Revision 2.7  1994/06/08 13:22:31  keith
+ * Null update for version compatibility
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -81,9 +84,9 @@ char	*argv[];
 {
    FILE		*f = stdin;
    restrt_mt	restart_header;
-   unsigned		size;
+   unsigned		size, offset;
    char		*ptr;
-   int		rec = 1;
+   int		n, rec = 1;
    if(argc > 1)
    {
       f = fopen(argv[1],"r");
@@ -100,18 +103,23 @@ char	*argv[];
    	exit(1);
    }
    fread(&restart_header, size, 1,f);
+   offset = sizeof size;
    printf("Restart file was written at %s", ctime(&restart_header.timestamp));
    printf("This is restart No %d of run \"%s\" started %s\n",
             restart_header.seq, restart_header.title, restart_header.init_date);
    printf("It was written by version %s of write_restart\n",restart_header.vsn);
-   printf("\n\tHeader record\t%d\tbytes\n",size);
-   while(!feof(f))
+   printf("\n\tHeader record\t%d\tbytes %9X %9X\n",size, offset, size);
+   offset += sizeof restart_header + sizeof size;
+   do
    {
-      (void)fread((gptr*)&size, sizeof size, 1, f);
-      printf("\tRecord %d \t%d\tbytes\n",rec++,size);
+      n = fread((gptr*)&size, sizeof size, 1, f);
+      if( n < 1 )
+	 break;
+      printf("\tRecord %d \t%d\tbytes %9X %9X\n",rec++,size, offset, size);
+      offset += size + sizeof size;
       ptr = malloc(size);
       fread(ptr,size,1,f);
       free(ptr);
-   }
+   } while(!feof(f));
    return 0;
 }
