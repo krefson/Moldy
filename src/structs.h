@@ -1,7 +1,10 @@
 /*
- * $Header: structs.h,v 1.4 89/05/22 14:05:48 keith Exp $
+ * $Header: structs.h,v 1.5 89/06/01 21:25:33 keith Exp $
  *
  * $Log:	structs.h,v $
+ * Revision 1.5  89/06/01  21:25:33  keith
+ * Control.out eliminated, use printf and freopen instead to direct output.
+ * 
  * Revision 1.4  89/05/22  14:05:48  keith
  * Added rescale-separately option, changed 'contr_t' format.
  * 
@@ -173,6 +176,13 @@ typedef struct                  /* Record of dimensions of physical quantity  */
                 t,
                 q;
 } dim_t, *dim_p;
+
+typedef	struct				/* Struct template for keyword	      */
+{					/* in read_control.		      */
+   char	*key,
+	*format,
+	*ptr;
+}	match_t;
 
 #define DLEN	28		/* Length of date/time string		      */
 typedef	struct			/* Restart file header format 		      */
