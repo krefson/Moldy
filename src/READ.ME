@@ -220,6 +220,19 @@ also executes the command file "defcomm.com" which defines the command
 symbols to execute the programs.  It is a good idea to execute this
 file from your LOGIN.COM to make them available every time you log in.
 
+N.B. Depending on how your VMS system is set up you may need to take
+additional steps to link moldy with the C runtime library.  Consult
+your local documentation or systems staff.  If the C library isn't linked
+by default the command
+
+   $ assign sys$library:vaxcrtl lnk$library
+   
+before the executing the compile command file
+
+   $ @compile
+
+may well do the trick.
+
 
 	RUNNING
 	-------
