@@ -6,6 +6,12 @@ Copyright (C) 1999 Craig Fisher */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: bdist.c,v $
+ *  Revision 1.4  1999/09/24 16:44:30  craig
+ *  Minor changes to Usage message.
+ *
+ *  Revision 1.3  1999/09/21 15:34:10  keith
+ *  Minor portability modifications.
+ *
  *  Revision 1.2  1999/09/14 13:30:35  keith
  *  Fixed "return of ptr to stack var" error.
  *
@@ -359,8 +365,8 @@ char	*argv[];
 
    if( errflg )
    {
-      fputs("Usage: bdist [-i input-file] [-b bond lims] ",stderr);
-      fputs("[-a angle lims] [-o output-file]\n",stderr);
+      fputs("Usage: bdist [-i input-file] [-b bond-limits] ",stderr);
+      fputs("[-a angle-limits] [-o output-file]\n",stderr);
       exit(2);
    }
 
