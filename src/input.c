@@ -29,6 +29,20 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: input.c,v $
+ *       Revision 2.8  1995/10/25 11:59:00  keith
+ *       Fixed input parser bug which didn't notice missing "=" and silently
+ *       used incorrect value.
+ *
+ *       Revision 2.7.1.2  1995/10/25 11:49:49  keith
+ *       Fixed input parser bug which didn't notice missing "=" and silently
+ *       used incorrect value.
+ *
+ * Revision 2.7.1.1  1994/12/16  12:02:34  keith
+ * Experimental version with partial Ewald sum evaluated at rlv's only.
+ *
+ * Revision 2.7  1994/06/08  13:22:31  keith
+ * Null update for version compatibility
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -183,7 +197,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/input.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/input.c,v 2.8 1995/10/25 11:59:00 keith Exp keith $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -703,7 +717,7 @@ CONST match_mt *match;
       if(!strcmp(strlower(name),"end"))
          break;
       if( n_items < 1 )
-         message(&nerrs,line,ERROR,NOVAL,name);
+         message(&nerrs,line,ERROR,NOKEY);
       else
       {
 	 for( match_p = match; match_p->key; match_p++ )
@@ -713,8 +727,13 @@ CONST match_mt *match;
             message(&nerrs,line,ERROR,NOTFND,name);
          else					/* Found it, so convert value */
          {
-            if( n_items == 1 && strcmp(match_p->format,SFORM) == 0 )
-                *(char*)match_p->ptr = '\0';	/* name=<empty> - assign null */
+            if( n_items == 1 )
+	    {
+	       if(strcmp(match_p->format,SFORM) == 0 )
+		  *(char*)match_p->ptr = '\0';	/* name=<empty> - assign null */
+	       else
+		  message(&nerrs,line,ERROR,NOVAL,name);
+	    }
 	    else
 	    {
                n_items = assign(value, match_p->format, match_p->ptr);
