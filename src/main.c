@@ -6,10 +6,13 @@
  *		values of the simulation control parameters.		      *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log:	main.c,v $
+ * Revision 1.1  89/04/20  16:00:48  keith
+ * Initial revision
+ * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: main.c,v 1.1 89/04/20 16:00:48 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -110,9 +113,10 @@ char	*argv[];
    start_up((argc>1)?argv[1]:"", &system, &species, &site_info, &potpar);
    meansq_f_t = (vec_t (*)[2])ralloc(2*system.nspecies);
    
-   while( control.istep++ < control.nsteps &&
+   while( control.istep < control.nsteps &&
 	  cpu()-cpu_base+delta_cpu < control.cpu_limit)
    {
+      control.istep++;
       do_step(&system, species, site_info, potpar,
 	      meansq_f_t, pe, dip_mom, stress_vir);
    
