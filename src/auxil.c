@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.13  1998/05/22 17:04:58  keith
+ *       Standardized unix, __unix __unix__ macros and
+ *       protected unix-specific parts.
+ *
  *       Revision 2.12  1998/05/21 18:27:01  keith
  *       Fixed rt_clock() to avoid spurious compiler warnings re return value.
  *
@@ -261,7 +265,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2.12 1998/05/21 18:27:01 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2.13 1998/05/22 17:04:58 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -606,6 +610,9 @@ int	ix[];
 {
    int i;
 VECTORIZE
+#ifdef _CRAY_T3E
+#pragma _CRI cache_bypass  b
+#endif
    for( i = 0; i < n; i++)
    {
 #ifdef DEBUG
