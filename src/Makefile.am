@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = no-dependencies dist-zip 
 
-HFILES= structs.h defs.h messages.h xdr.h  list.h utlsup.h ReadDCD.h defconf.h elem.h
+HFILES= structs.h defs.h messages.h xdr.h  list.h utlsup.h ReadDCD.h defconf.h specdata.h sginfo.h
 
 UTILC = algorith.c alloc.c auxil.c ansi.c convert.c eigens.c kernel.c input.c matrix.c quaterns.c restart.c startup.c values.c xdr.c ReadDCD.c utlsup.c molout.c
 
@@ -54,7 +54,7 @@ INFILES = 	control.water control.tip4p control.mgclh2o control.clay \
 		argon-example.out tips2-example.out \
 		quartz-example.out
 
-EXTRA_DIST = figures moldy.tex moldy.sty moldy.perl moldy.bbl plotrdf moldyext2 $(INFILES) ewald-RIL.c 
+EXTRA_DIST = figures moldy.tex moldy.sty moldy.perl moldy.bbl plotrdf moldyext2 $(INFILES) ewald-RIL.c LICENSE-SGINFO
 
 dist-local:	
 		bibtex moldy
@@ -159,9 +159,16 @@ msd.o: msd.c defs.h config.h structs.h messages.h utlsup.h
 output.o: output.c defs.h config.h structs.h messages.h
 parallel.o: parallel.c defs.h config.h structs.h messages.h
 quaterns.o: quaterns.c defs.h config.h
-ransub.o: ransub.c defs.h config.h structs.h messages.h utlsup.h elem.h
+ransub.o: ransub.c defs.h config.h structs.h messages.h utlsup.h \
+        specdata.h
 restart.o: restart.c defs.h config.h structs.h messages.h xdr.h
+sgclib.o: sgclib.c sginfo.h
+sgio.o: sgio.c sginfo.h
+spgrexp.o: spgrexp.c sginfo.h specdata.h messages.h defs.h config.h
 startup.o: startup.c defs.h config.h structs.h messages.h
-utlsup.o: utlsup.c defs.h config.h structs.h messages.h
+syswrite.o: syswrite.c defs.h config.h structs.h messages.h utlsup.h \
+        sginfo.h specdata.h
+transparse.o: transparse.c sginfo.h
+utlsup.o: utlsup.c defs.h config.h structs.h messages.h specdata.h
 values.o: values.c defs.h config.h structs.h messages.h
 xdr.o: xdr.c structs.h defs.h config.h xdr.h
