@@ -25,6 +25,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.13  1996/01/15 15:14:00  keith
+ *       De "lint"-ed the code.
+ *       Removed "old" RDF code call.
+ *
  *       Revision 2.12  1995/12/07 17:43:53  keith
  *       Reworked V. Murashov's thermostat code.  Created new functions
  *       nhtherm() and gtherm() to calculate alphadot.
@@ -203,7 +207,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.12 1995/12/07 17:43:53 keith Exp keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.13 1996/01/15 15:14:00 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -247,6 +251,7 @@ void            rdf_calc();	       /* Accumulate and bin rdf	      */
 double 		value();	       /* Return thermodynamic average	      */
 double 		roll_av();	       /* Return thermodynamic average	      */
 double          vdot();		       /* Fast vector dot product	      */
+double		sum();		       /* Fast vector sum.		      */
 void            vscale();	       /* Vector by constant multiply	      */
 double          vec_dist();	       /* normalised vector distance	      */
 void		thermalise();	       /* Randomize velocities to given temp  */
@@ -297,10 +302,12 @@ system_mp	system;
 spec_mp		species;
 {
    spec_mp	spec;
-   int		ispec;
+   int		ispec, imol, i;
    double 	*temp_value = dalloc(2*system->nspecies);
    double	min_temp=MIN(value(t_n,0),roll_av(t_n,0));
    double	rtemp = 0.0, ttemp = 0.0, scale;
+   double	total_mass;
+   vec_mt	momentum;
    int		tdof=0, rdof=0;
 
    /*
@@ -398,6 +405,31 @@ spec_mp		species;
 	 }
 	 
       }
+   }
+   /* 
+    * Subtract spurious net velocity introduced by scaling species
+    * separately.  This will introduce an apparent error into the
+    * instantaneous "temperature".  But the error was there anyway
+    * since net linear velocity shouldn't be included in the
+    * calculation.  Do nothing for joint rescaling since that does
+    * conserve momentum or for a framework system.
+    */
+   if( control.scale_options & 0x1 )
+   {
+      total_mass = 0.0;
+      zero_real(momentum, 3);
+      for (spec = species; spec < species+system->nspecies && ! spec->framework;
+	   spec++)
+      {
+	 total_mass += spec->mass*spec->nmols;
+	 for(i = 0; i < 3; i++)	
+	    momentum[i] += spec->mass*sum(spec->nmols, spec->vel[0]+i,3);
+      }
+      if(spec == species+system->nspecies)/* Normal loop exit => no framework */
+	 for (spec = species; spec < species+system->nspecies; spec++)
+	    for(i = 0; i < 3; i++)	    
+	       for(imol = 0; imol < spec->nmols; imol++)
+		  spec->vel[imol][i] -= momentum[i] / total_mass;
    }
    tfree((gptr*)temp_value);
 }
