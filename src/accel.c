@@ -5,6 +5,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	accel.c,v $
+ * Revision 1.7  89/08/10  17:28:05  keith
+ * Fixed if statement so that rdf's started on rather than after 'begin-rdf'
+ * 
  * Revision 1.6  89/07/03  18:17:25  keith
  * Made code to add dipole energy and force conditional, like Ewald.
  * 
@@ -25,7 +28,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: accel.c,v 1.6 89/07/03 18:17:25 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/accel.c,v 1.7 89/08/10 17:28:05 keith Stab $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<math.h>
@@ -304,12 +307,15 @@ mat_t           stress;		       /* Virial part of stress	(out) */
  * and Smith Proc Roy Soc A373, 27-56 (1980)
  */
       for (i = 0; i < 3; i++)
-      {
 	 dip_mom[i] = vdot(sys->nsites, site_base[0] + i, 3, chg, 1);
-	 for ( isite = 0; isite < sys->nsites; isite++ )
-	    s_f_base[isite][i] -= 4.0*PI/(3.0*vol) * dip_mom[i] * chg[isite];
+      if( control.surface_dipole )
+      {
+	 for (i = 0; i < 3; i++)
+	    for ( isite = 0; isite < sys->nsites; isite++ )
+	       s_f_base[isite][i] -= 4.0*PI/(3.0*vol) * dip_mom[i] * chg[isite];
+	 
+	 pe[1] += 2.0*PI/(3.0*vol) * SUMSQ(dip_mom);
       }
-      pe[1] += 2.0*PI/(3.0*vol) * SUMSQ(dip_mom);
    }
 
 /*
