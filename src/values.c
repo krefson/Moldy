@@ -14,6 +14,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	values.c,v $
+ * Revision 1.4  89/06/22  15:45:29  keith
+ * Tidied up loops over species to use one pointer as counter.
+ * 
  * Revision 1.3  89/06/01  21:25:40  keith
  * Control.out eliminated, use printf and freopen instead to direct output.
  * 
@@ -25,7 +28,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: values.c,v 1.3 89/06/01 21:25:40 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/values.c,v 1.4 89/06/22 15:45:29 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -230,7 +233,7 @@ mat_t		stress_vir;	/* 'Potential' part of stress, or virial      */
       add_average(CONV_E * e, tke_n, ispec);	/* c of m  kinetic energy     */
       tot_ke += e;
 
-      add_average(e/(1.5*kB*spec->nmols), tt_n, ispec);
+      add_average(e/(1.5*spec->nmols*kB), tt_n, ispec);
 						/* c of mass temp.	      */
       if(spec->rdof > 0)			/* Only if polyatomic species */
       {
