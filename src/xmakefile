@@ -140,7 +140,7 @@ INFILES = 	control.water control.tip4p control.mgclh2o control.clay \
 		quartz-example.out
 
 SHAKS=	algorith alloc auxil ansi eigens kernel input matrix\
-		quaterns restart startup values xdr
+		quaterns restart startup values xdr ReadDCD
 
 SHAKC= $(SHAKS:%=%.c)
 
@@ -392,6 +392,7 @@ algorith.o alloc.o matrix.o:	defs.h messages.h
 
 xdr.o restart.o dump.o:	structs.h defs.h messages.h xdr.h
 
+ReadDCD.o:	ReadDCD.h
 #
 #  Special options for performance-critical modules
 #
