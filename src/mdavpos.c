@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 2.4 1998/01/28 09:55:37 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdavpos.c,v 2.6 1998/05/07 17:06:11 keith Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *       
@@ -28,6 +28,14 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdavpos.c,v 
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.6  1998/06/26 17:43:55  craig
+ *  Lattice parm and angle fields in pdb output routine increased
+ *
+ *  Revision 2.5  1998/05/07 17:06:11  keith
+ *  Reworked all conditional compliation macros to be
+ *  feature-specific rather than OS specific.
+ *  This is for use with GNU autoconf.
+ *
  *  Revision 2.4  1998/01/28 09:55:37  keith
  *  Changed to "HAVE_POPEN" macro from system-specifics
  *
@@ -511,9 +519,8 @@ mat_mp		avh;
    gamma = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/a/b);
 
 /* Write the pdb header */
-   (void)printf("CRYST1   %6.3f   %6.3f   %6.3f  %5.2f  %5.2f  %5.2f P 1\n",
+   (void)printf("CRYST1 %8.3f %8.3f %8.3f %6.2f %6.2f %6.2f P 1\n",
           a,b,c,alpha,beta,gamma);
-
    for(spec = avpos; spec < avpos+system->nspecies; ispec++, spec++)
    {
      make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
