@@ -23,6 +23,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: convert.c,v $
+ *       Revision 2.8  1995/12/06 17:49:03  keith
+ *       Updated conversion table for thermostat parameters.
+ *
+ *       Revision 2.7  1994/06/08 13:22:31  keith
+ *       Null update for version compatibility
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -74,7 +80,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/convert.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/convert.c,v 2.8 1995/12/06 17:49:03 keith Exp keith $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -103,10 +109,13 @@ typedef struct
   unit_mt	unit;			/* Units (in MKS) for conversion from */
 }  conv_mt,  *conv_mp;
 /*========================== Global variables ================================*/
+#define TMUNIT (MUNIT/CONV_TM)
 static CONST conv_mt 
 	conv[] = {  {&control.step,	{0,0,1,0},	{1,1,TUNIT,1}},
                     {&control.pressure,	{1,-1,-2,0},	{1e6,1,1,1}},
 		    {&control.pmass,	{1,0,0,0},	{MUNIT,1,1,1}},
+		    {&control.ttmass,	{1,2,0,0},	{TMUNIT,LUNIT,1,1}},
+		    {&control.rtmass,	{1,2,0,0},	{TMUNIT,LUNIT,1,1}},
 		    {&control.cutoff,	{0,1,0,0},	{1,LUNIT,1,1}},
 		    {&control.density,	{1,-3,0,0},	{.001,.01,1,1}},
 		    {&control.alpha,	{0,-1,0,0},	{1,LUNIT,1,1}},
