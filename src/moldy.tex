@@ -118,7 +118,7 @@
 %%%%%%%%%%% No option defaults to ``hypertex'' using LaTeX and  %%%%%%%%
 %%%%%%%%%%% ``pdftex'' using pdflatex.                          %%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\usepackage{hyperref}
+\usepackage{hyperref}
 %
 % Comment this out for LaTeX2html translation
 %
@@ -146,16 +146,17 @@
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \newcommand{\RCSrevision}{$ $Revision: 2.15 $ $}
+\newcommand{\moldyversion}{2.13}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% Document fromt matter/titlepage stuff               %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\title{{\Huge Moldy User's Manual}\\Release \RCSrevision}
+\title{Moldy User's Manual}
 \author{Keith Refson\\Department of Earth Sciences\\Parks Road
 \\Oxford OX1 3PR\\keith@earth.ox.ac.uk\\}
-
+\version{\RCSrevision for release \moldyversion}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1724,13 +1725,15 @@ U_z = - \frac{1}{8 \epsilon_0 V \alpha^2}
 The way \moldy\ is invoked depends to some extent on the operating
 system, but usually by issuing the command \Lit{moldy}.\footnote{On
   VMS, \Lit{moldy} may be defined as a foreign command by \Lit{\$
-    moldy :== \$mydisk:[mydir]moldy}} For Unix(tm) and MS-DOS the
-executable file \Fname{moldy} or \Fname{MOLDY.EXE} should be placed in
-the shell search path (\eg\ in the current directory). There are two
-optional arguments - the name of the control file (see
-section~\ref{sec:control}) and the output file (see
-section~\ref{sec:output}).  If either is omitted, control input is
-read from the ``standard input'' which may be a terminal or a job
+    moldy :== \$mydisk:[mydir]moldy}} For Unix(tm) Windows 95 and NT
+and MS-DOS the executable file \Fname{moldy} or \Fname{MOLDY.EXE}
+should be placed in the shell search path (\eg\ in the current
+directory). There is no GUI and \moldy\ should always be run from a
+command line, from a terminal window under Unix or a MS-DOS window
+under Windows 95/NT.  There are two optional arguments - the name of
+the control file (see section~\ref{sec:control}) and the output file
+(see section~\ref{sec:output}).  If either is omitted, control input
+is read from the ``standard input'' which may be a terminal or a job
 command file depending on the operating system and circumstances, and
 the output is written to ``standard output'' which may be a terminal
 or batch job logfile.\footnote{Some operating systems (Unix and
@@ -1755,7 +1758,7 @@ UNIX any of
 \end{verbatim}
 will cause moldy to read from the file called \Fname{control} and in
 the first two examples to write its output to \Fname{output.lis}.  The
-command-line interface for MS-DOS is very similar. 
+command-line interface for Windows and MS-DOS is very similar. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{The Control File}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2992,8 +2995,11 @@ available for:
 \item[VMS]  The archive is a DCL command file called \Fname{moldy.com},
 and is unpacked by the command \Lit{@moldy}.
 
-\item[MS Windows 3/Windows 95] The shareware program ``winzip'' may be
-  used to unpack the compressed tar archive \Fname{moldy.tar.gz}.
+\item[MS Windows 3/Windows 95/NT] The shareware program ``winzip'' may be
+  used to unpack the compressed tar archive
+  \Fname{moldy.tar.gz}. There is also a precompiled binary version for
+  Windows 95/NT which is available as \Fname{moldy.zip}.  Winzip may
+  also be used to uncompress this distribution.
 
 \item[MS-DOS] The files must be unpacked from the tar archive on
 another host and transferred to the PC by disk or ftp.
@@ -3025,7 +3031,7 @@ Then just type \Lit{make} to compile and link \moldy\  and
 \item[VMS]  Simply type \Lit{@compile} to execute the command file
 \Fname{compile.com}. This will build \moldy\  and the utilities.
 
-\item[DOS] There is a makefile for Borland Turbo C called
+\item[DOS/MS Windows 3] There is a makefile for Borland Turbo C called
   \Fname{Makefile.mak} in the standard distribution.  This must be
   edited to select the appropriate compiler options before executing
   \emph{make}.\footnote{Be sure to delete or rename the unix make file
@@ -3033,15 +3039,34 @@ Then just type \Lit{make} to compile and link \moldy\  and
     execute this in preference to \Fname{Makefile.mak}}
   Alternatively the programs may be built within the interactive
   environment.  Consult the \Fname{makefile} to find out which source
-  files to link to build \moldy\ and the utilities.  Moldy has also
+  files to link to build \moldy\ and the utilities.  \moldy\ has also
   been built using Watcom C.
   
-\item[MS Windows 3/Windows 95] It is probable that the Borland C
-  \Fname{Makefile.mak} will work under Borland C for Windows or
-  Windows 95.\footnote{The author's experience of Windows 3 and
-    Windows 95 platforms is very limited.  I would very much welcome
-    any reports from users on how to build \moldy\ in these
-    environments for inclusion in future versions of this manual.}
+\item[Windows 95/NT] The most straightforward way to build \moldy\ is
+  to install one of the ports of the GNU gcc compiler such as the
+  Mingw32 or Cygnus versions.  The Mingw32 version is the more
+  straightforward and has the advantage over Cygnus that the
+  executable files do not depend on a DLL file and are therefore more
+  portable. Both are available over the internet via the URL
+  \htmladdnormallink{http://www.fu.is.saga-u.ac.jp/\%7Ecolin/gcc.html}%
+{http://www.fu.is.saga-u.ac.jp/\%7Ecolin/gcc.html} which contains links
+  to both distributions. (The mirror site in the USA
+  \htmladdnormallink{http://www.geocities.com/Tokyo/Towers/6162/gcc.html}%
+{http://www.geocities.com/Tokyo/Towers/6162/gcc.html} may be
+  faster).  Both ports contain the GNU make program and will work with
+  the supplied \Fname{Makefile}.  Simply edit \Fname{Makefile} and
+  uncomment the appropriate set of compiler options before invoking
+  \Fname{make}.
+  
+  \moldy\ has also been successfully compiled using Watcom C and the
+  development environment.  Consult the Makefile to see which objects
+  to link to build \moldy\ and the utilities. It is also possible that
+  the Borland C \Fname{Makefile.mak} will work under Borland C for
+  Windows 95 or NT\footnote{The author's experience of Windows 3 and
+    Windows 95 platforms is somewhat limited.  I would very much
+    welcome any reports from users on how to build \moldy\ in these
+    environments for inclusion in future versions of this manual.}.
+
 
 \end{description}
 
