@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.23  2001/07/11 10:41:52  keith
+ *       Fixed a couple of compilation problems caused by erroneous "protoize".
+ *
  *       Revision 2.22  2001/05/24 16:26:44  keith
  *       Updated program to store and use angular momenta, not velocities.
  *        - added conversion routines for old restart files and dump files.
@@ -142,7 +145,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.22 2001/05/24 16:26:44 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.24 2001/07/26 17:30:18 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -296,15 +299,6 @@ bool_t xdr_av_head_t(XDR *xdrs, av_head_mt *ap)
       xdr_double(xdrs, &ap->align);
 }
 
-static
-bool_t xdr_old_av_u_t(XDR *xdrs, old_av_u_mt *ap)
-{
-   return
-      xdr_vector(xdrs, (gptr*)&ap->cnt.av, 2, sizeof(int), (xdrproc_t)xdr_int) &&
-      xdr_opaque(xdrs, (gptr*)(&ap->cnt.av+2*sizeof(int)), 
-		 (7+MAX_ROLL_INTERVAL)*XDR_DOUBLE_SIZE-2*XDR_INT_SIZE);
-}
-
 static size_mt  xdr_av_size;
 static int    av_convert;
 
@@ -316,31 +310,13 @@ void   xdr_set_av_size_conv(size_mt size, int av_conv)
 
 bool_t xdr_averages(XDR *xdrs, gptr *ap)
 {
-   /*
-    * The global flag av_convert requires explanation.  It is
-    * set by init_averages() which is always called before
-    * this function.  av_convert=1 if we are reading data in
-    * the old (fixed length = MAX_ROLL_INTERVAL) format and
-    * 0 or 2 otherwise. 
-    */
    unsigned    navst;		/* Total # of average data items */
-   old_av_u_mt *apo = (old_av_u_mt *)ap;
    av_head_mt  *aph = (av_head_mt  *)ap;
 
-   if( xdrs->x_op == XDR_DECODE && av_convert == 1 )
-   {
-      navst = (xdr_av_size-sizeof(old_av_u_mt)) / sizeof(double);
-      return
-	 xdr_old_av_u_t(xdrs,apo) &&
-	 xdr_vector(xdrs, (gptr*)(apo+1), navst, sizeof(double), (xdrproc_t)xdr_double);
-      }
-   else
-   {
-      navst = (xdr_av_size-sizeof(av_head_mt)) / sizeof(double);
-      return
-	 xdr_av_head_t(xdrs,aph) &&
-	 xdr_vector(xdrs, (gptr*)(aph+1), navst, sizeof(double), (xdrproc_t)xdr_double);
-   }
+   navst = (xdr_av_size-sizeof(av_head_mt)) / sizeof(double);
+   return
+      xdr_av_head_t(xdrs,aph) &&
+      xdr_vector(xdrs, (gptr*)(aph+1), navst, sizeof(double), (xdrproc_t)xdr_double);
 }
 
 #ifdef NEED_XDR_VECTOR
