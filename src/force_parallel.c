@@ -9,7 +9,10 @@
  *		module (kernel.c) for ease of modification.		      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	force.c,v $
+ *       $Log:	force_parallel.c,v $
+ * Revision 1.1  90/01/31  13:19:28  keith
+ * Initial revision
+ * 
  * Revision 1.8.1.8  89/11/01  17:34:15  keith
  * Modified to use SPAXPY vectorised scattered add.
  * 
@@ -64,7 +67,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/force.c,v 1.8.1.8 89/11/01 17:34:15 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.1 90/01/31 13:19:28 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -135,7 +138,7 @@ static          int nx = 0, ny = 0, nz = 0;
  * use it, compile this module with -DFKERNEL to define the symbol FKERNEL.   *
  ******************************************************************************/
 #ifdef FKERNEL
-#ifdef unix
+#if defined(unix) && !defined(cray)
 #define KERNEL kernel_
 #endif
 void    KERNEL();                       /* Force kernel routine               */
