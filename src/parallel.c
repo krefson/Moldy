@@ -22,6 +22,9 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.11  1994/11/24 14:48:17  keith
+ *       Fixed problem with arg lists for TCGMSG
+ *
  * Revision 2.10  1994/10/17  10:49:41  keith
  * Changed arg list of bspstart to match changed library version.
  *
@@ -484,6 +487,18 @@ system_mp	system;
    par_broadcast((gptr*)system->hddoto,  9, sizeof(real), 0); 
    par_broadcast((gptr*)system->hddotvo, 9, sizeof(real), 0);
 
+   par_broadcast((gptr*)system->ta,      system->nspecies, sizeof(real), 0);
+   par_broadcast((gptr*)system->tap,     system->nspecies, sizeof(real), 0);
+   par_broadcast((gptr*)system->tadot,   system->nspecies, sizeof(real), 0);
+   par_broadcast((gptr*)system->tadoto,  system->nspecies, sizeof(real), 0);
+   par_broadcast((gptr*)system->tadotvo, system->nspecies, sizeof(real), 0);
+					                   	      
+   par_broadcast((gptr*)system->ra,      system->nspecies, sizeof(real), 0);
+   par_broadcast((gptr*)system->rap,     system->nspecies, sizeof(real), 0);
+   par_broadcast((gptr*)system->radot,   system->nspecies, sizeof(real), 0);
+   par_broadcast((gptr*)system->radoto,  system->nspecies, sizeof(real), 0);
+   par_broadcast((gptr*)system->radotvo, system->nspecies, sizeof(real), 0);
+
    ap = av_ptr(&asize,0);	      /* get addr, size of database   */
    par_broadcast(ap, 1, asize,0);
 #endif
@@ -531,4 +546,3 @@ restrt_mt *restart_header;
    copy_dynamics(system);
 #endif
 }
-
