@@ -8,6 +8,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.6  89/11/20  11:59:19  keith
+ * Corrected normalisation in calculation of rdf.  Changed interface (cf main).
+ * 
  * Revision 1.5  89/10/24  17:18:33  keith
  * Modified pbc algorithm to use floor() library function.
  * Now works with non-orthorhombic cell.
@@ -26,7 +29,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/rdf.c,v 1.5 89/10/24 17:18:33 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/rdf.c,v 1.6 89/11/20 11:59:19 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<math.h>
@@ -76,7 +79,7 @@ system_p	system;				/* System info struct	      */
  *  rdf_calc.  Calculate site pair distances and bin for RDF.                 *
  ******************************************************************************/
 void	rdf_calc(site, system, species)
-vec_t		site[];				/* Site co-ordinate array     */
+real		**site;				/* Site co-ordinate array     */
 system_p	system;				/* System info struct	      */
 spec_t	species[];			/* Species info struct array  */
 {
@@ -108,9 +111,9 @@ spec_t	species[];			/* Species info struct array  */
     for(isite = 0; isite < system->nsites; isite++)
        for(jsite = isite+1; jsite < system->nsites; jsite++)
        {
-          rij[0] = site[jsite][0] - site[isite][0];
-          rij[1] = site[jsite][1] - site[isite][1];
-          rij[2] = site[jsite][2] - site[isite][2];
+          rij[0] = site[0][jsite] - site[0][isite];
+          rij[1] = site[1][jsite] - site[1][isite];
+          rij[2] = site[2][jsite] - site[2][isite];
           
           rij[0] -= lx  *      floor(MATMUL(0,hinv,rij) + 0.5);
           rij[0] -= lxy * (t = floor(MATMUL(1,hinv,rij) + 0.5));

@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.6  89/12/15  12:56:26  keith
+ * Added conditional ionclusion of <fastmath.h> for stellar
+ * 
  * Revision 1.5  89/11/01  17:29:10  keith
  * Sin and cos loop vectorised - mat_vec_mul extracted from loop.
  * 'Uniform charge sheet' term added in case of electrically charged system.
@@ -29,7 +32,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/ewald.c,v 1.5 89/11/01 17:29:10 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore1/keith/md/moldy/RCS/ewald.c,v 1.6 89/12/15 12:56:26 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -68,8 +71,8 @@ extern	contr_t	control;		/* Main simulation control record     */
  *  Ewald  Calculate reciprocal-space part of coulombic forces		      *
  ******************************************************************************/
 void	ewald(site,site_force,system,species,chg,pe,stress)
-vec_t		site[],			/* Site co-ordinate arrays	 (in) */
-		site_force[];		/* Site force arrays		(out) */
+real		**site,			/* Site co-ordinate arrays	 (in) */
+		**site_force;		/* Site force arrays		(out) */
 system_p	system;			/* System record		 (in) */
 spec_t	species[];			/* Array of species records	 (in) */
 real		chg[];			/* Array of site charges	 (in) */
@@ -87,6 +90,7 @@ mat_t		stress;			/* Stress virial		(out) */
    register	real	sqcoskr,sqsinkr;/* Sum q(i) sin/cos(K.r(i))          */
 		double	ksq;		/* Squared magnitude of K vector     */
 		double	pe_local = 0.0;	/* Local accumulator for pot. energy */
+   		double	kx,ky,kz;
    		vec_t	kv;		/* (Kx,Ky,Kz)  			     */
 #ifdef OLDEWALD
    real		*chxky	= dalloc(nsites),
@@ -111,9 +115,8 @@ mat_t		stress;			/* Stress virial		(out) */
 		**sky = (real**)arralloc(sizeof(real),2, 0, kmax, 0, nsites-1),
 		**slz = (real**)arralloc(sizeof(real),2, 0, lmax, 0, nsites-1);
    real		*coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
-   vec_t	*kr = ralloc(nsites);		/* K.Ri			      */
-   real		*qcoskr,			/* q(i) cos(K.R(i))	      */
-		*qsinkr;			/* q(i) sin(K.R(i))	      */
+   real		*qcoskr = dalloc(nsites),	/* q(i) cos(K.R(i))	      */
+		*qsinkr = dalloc(nsites);	/* q(i) sin(K.R(i))	      */
 #ifdef VCALLS
    real		*temp	= dalloc(nsites);
 #else
@@ -171,22 +174,19 @@ mat_t		stress;			/* Stress virial		(out) */
    for(is = 0; is < nsites; is++)
       chx[0][is] = cky[0][is] = clz[0][is] = 1.0;
 
-   mat_vec_mul(hinv, site, kr, nsites);
 VECTORIZE
    for(is = 0; is < nsites; is++)
    {
-      chx[1][is] = cos(2.0 * PI * kr[is][0]);
-      shx[1][is] = sin(2.0 * PI * kr[is][0]);
-      cky[1][is] = cos(2.0 * PI * kr[is][1]);
-      sky[1][is] = sin(2.0 * PI * kr[is][1]);
-      clz[1][is] = cos(2.0 * PI * kr[is][2]);
-      slz[1][is] = sin(2.0 * PI * kr[is][2]);
+      kx = hinv[0][0]*site[0][is]+hinv[0][1]*site[1][is]+hinv[0][2]*site[2][is];
+      ky = hinv[1][0]*site[0][is]+hinv[1][1]*site[1][is]+hinv[1][2]*site[2][is];
+      kz = hinv[2][0]*site[0][is]+hinv[2][1]*site[1][is]+hinv[2][2]*site[2][is];
+      chx[1][is] = cos(2.0 * PI * kx);
+      shx[1][is] = sin(2.0 * PI * kx);
+      cky[1][is] = cos(2.0 * PI * ky);
+      sky[1][is] = sin(2.0 * PI * ky);
+      clz[1][is] = cos(2.0 * PI * kz);
+      slz[1][is] = sin(2.0 * PI * kz);
    }
-/*
- *  Finished with kr[].  Re-assign space to qcoskr/qsinkr
- */
-   qcoskr = kr[0];
-   qsinkr = qcoskr + nsites;
 /*
  * Use addition formulae to get sin(h*astar*x)=sin(Kx*x) etc for each site
  */
@@ -338,6 +338,7 @@ VECTORIZE
       pe_k = 0.5 * coeff * (SQR(sqcoskr) + SQR(sqsinkr));
       pe_local += pe_k;
 
+      sqsinkr *= coeff; sqcoskr *= coeff;
 /*
  * Calculate long-range coulombic contribution to stress tensor
  */
@@ -357,9 +358,9 @@ NOVECTOR
 VECTORIZE
       for(is = 0; is < nsites; is++)
 	 temp[is] = qsinkr[is]*sqcoskr - qcoskr[is]*sqsinkr;
-      saxpy(nsites, kv[0]*coeff, temp, 1, site_force[0], 3);
-      saxpy(nsites, kv[1]*coeff, temp, 1, site_force[0]+1, 3);
-      saxpy(nsites, kv[2]*coeff, temp, 1, site_force[0]+2, 3);
+      saxpy(nsites, kv[0], temp, 1, site_force[0], 1);
+      saxpy(nsites, kv[1], temp, 1, site_force[1], 1);
+      saxpy(nsites, kv[2], temp, 1, site_force[2], 1);
 #else
 /*
  * Evaluation of site forces. Vectorises under CRAY CC 4.0 & Convex VC 2.0
@@ -367,10 +368,10 @@ VECTORIZE
 VECTORIZE
       for(is = 0; is < nsites; is++)
       {
-	 force_comp = coeff * (qsinkr[is]*sqcoskr - qcoskr[is]*sqsinkr);
-	 site_force[is][0] += kv[0] * force_comp;
-	 site_force[is][1] += kv[1] * force_comp;
-	 site_force[is][2] += kv[2] * force_comp;
+	 force_comp = qsinkr[is]*sqcoskr - qcoskr[is]*sqsinkr;
+	 site_force[0][is] += kv[0] * force_comp;
+	 site_force[1][is] += kv[1] * force_comp;
+	 site_force[2][is] += kv[2] * force_comp;
       }
 #endif
    }
@@ -382,7 +383,7 @@ VECTORIZE
    
    cfree((char*)chx[0]); cfree((char*)cky[0]); cfree((char*)clz[0]); 
    cfree((char*)shx[0]); cfree((char*)sky[0]); cfree((char*)slz[0]);
-   cfree((char*)kr);
+   cfree((char*)qcoskr); cfree((char*)qsinkr);
 #ifdef OLDEWALD
    cfree((char*)chxky);	 cfree((char*)shxky); 
 #endif
