@@ -19,11 +19,27 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 2.2 93/09/06 14:42:43 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 2.5 1994/01/18 16:26:29 keith Exp $";
 #endif
 
 /*
- * $Log:	dumpconvert.c,v $
+ * $Log: dumpconvert.c,v $
+ * Revision 2.5  1994/01/18  16:26:29  keith
+ * Incorporated all portability experience to multiple platforms since 2.2.
+ * Rewrote varargs functions to use stdargs conditionally on __STDC__
+ *
+ * Revision 2.5  94/01/18  13:13:09  keith
+ * Incorporated all portability experience to multiple platforms since 2.2.
+ * Rewrote varargs functions to use stdargs conditionally on __STDC__
+ * 
+ * Revision 2.4  93/12/21  18:49:40  keith
+ * Portability improvements:
+ * 1. Moved malloc etc declarations into header files
+ * 2. Rewrote varargs functions to use stdargs conditionally on __STDC__
+ * 
+ * Revision 2.3  93/10/28  10:28:50  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.2  93/09/06  14:42:43  keith
  * Fixed portability problems/bugs in XDR code.
  * 
@@ -59,10 +75,16 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 2
  * 
  */
 
+#include "defs.h"
+#include "stdlib.h"
 #include "stddef.h"
 #include "structs.h"
 #include "string.h"
+#if defined(ANSI) || defined(__STDC__)
+#include <stdarg.h>
+#else
 #include <varargs.h>
+#endif
 #include <stdio.h>
 #ifdef USE_XDR
 #include "xdr.h"
@@ -86,7 +108,6 @@ char *cs, *ct;
 #endif
 
 int av_convert;
-char	*calloc();
 
 #if defined(CRAY) && ! defined(unix)
 int     vfprintf (file, fmt, args)
@@ -98,20 +119,29 @@ va_list args;
 }
 #endif
 
+#if defined(ANSI) || defined(__STDC__)
+#undef  va_alist
+#define	va_alist char *format, ...
+#define va_dcl /* */
+#endif
 /*VARARGS*/
 void error(va_alist)
 va_dcl
 {
-   char	*format;
    va_list p;
+#if defined(ANSI) || defined(__STDC__)
+   va_start(p, format);
+#else
+   char	*format;
+
    va_start(p);
    format = va_arg(p, char *);
+#endif
    vfprintf(stderr,format,p);
    fputc('\n',stderr);
    va_end(p);
    exit(3);
 }
-
 
 void read_text(buf,buflen)
 float  *buf;
@@ -223,10 +253,10 @@ dump_mt	*header;
    char *c;
    
    fgets(header->title, sizeof header->title, stdin);
-   if(c = strchr(header->title, '\n'))
+   if((c = strchr(header->title, '\n')))
       *c = '\0';
    fgets(header->vsn, sizeof header->vsn, stdin);
-   if(c = strchr(header->vsn, '\n'))
+   if((c = strchr(header->vsn, '\n')))
       *c = '\0';
    num  = 2;
    num += scanf("%d %d %d %d %d", &header->istep, &header->dump_interval,
@@ -272,6 +302,7 @@ dump_mt	*header;
 	   header->dump_init, header->dump_size); 
 }
 
+void
 main(argc, argv)
 int	argc;
 char	*argv[];
