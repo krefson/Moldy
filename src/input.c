@@ -4,12 +4,15 @@
  * Strlower();		Convert a string to lowercase (Internal use only)     *
  * Get_line();		Read next input line.         (Internal use only)     *
  * Read_sysdef()       	Read the system specification file     	       	      *
- * Print_sysdef()       Inverse of read_sysdef()       	       	       	      *
  * Lattice_start()	Read initial crystal structure and set it up	      *
  * Read_control()       Read control file				      *
  ******************************************************************************
  *      Revision Log
  *       $Log:	input.c,v $
+ * Revision 1.4  89/06/16  16:56:08  keith
+ * Corrected bug in lattice_start() which crashed for point atoms/ions
+ * Added message for successful lattice start
+ * 
  * Revision 1.3  89/06/01  21:24:24  keith
  * Control.out eliminated, use printf and freopen instead to direct output.
  * 
@@ -21,7 +24,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: input.c,v 1.3 89/06/01 21:24:24 keith Exp $";
+static char *RCSid = "$Header: input.c,v 1.5 89/06/20 18:23:46 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<ctype.h>
@@ -36,18 +39,10 @@ void		message();
 /*========================== External data references ========================*/
 extern	contr_t	control;		/* Main simulation control record     */
 extern	unit_t	input_unit;		/* Unit specification (see Convert.c) */
-/*========================== Structs local to module =========================*/
-typedef	struct				/* Struct template for keyword	      */
-{					/* in read_control.		      */
-   char	*key,
-	*format,
-	*ptr;
-}	match_t;
-/*========================== Potential type specification ====================*/
-static char	*types[] = {"lennard-jones","buckingham","mcy"};
-static int	npotp[]  = {2,		    3,	 	 4};
+extern	char	*types[];		/* Names of potential function types  */
+extern	int	npotp[];		/* Number of parameters of each type  */
+extern	int	npott;			/* Dimensions of above arrays	      */
 /*========================== Macros ==========================================*/
-#define	NPOTT	(sizeof npotp / sizeof(int))
 #define		LLEN		132
 		/* Flags to indicate status of potpar and site_info records   */
 #define		S_USED		0x01
@@ -59,7 +54,7 @@ static int	npotp[]  = {2,		    3,	 	 4};
 /*========================== Control file keyword template ===================*/
 					/* format SFORM is defined as %NAMLENs*/
 					/* in structs.h, to avoid overflow */
-static	match_t	match[] = {
+match_t	match[] = {
 		{"title",	    	SFORM,	 control.title},
                 {"nsteps",	    	"%d",	(char*)&control.nsteps},
                 {"step",	    	"%lf",	(char*)&control.step},
@@ -108,8 +103,8 @@ static	match_t	match[] = {
                 {"length-unit",	    	"%lf",	(char*)&input_unit.l},
                 {"time-unit",		"%lf",	(char*)&input_unit.t},
                 {"charge-unit",		"%lf",	(char*)&input_unit.q}
-                          };
-#define		NMATCH	(sizeof match / sizeof(match_t))
+	     };
+int	nmatch=(sizeof match / sizeof(match_t));
 /*=============================================================================
  |   Start of functions							      |
  =============================================================================*/
@@ -308,10 +303,10 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
 
    /* Next line is keyword indicating type of potentials to be used	      */
    n_items = sscanf(get_line(line,LLEN,file), "%s", name);
-   for(i = 0; i < NPOTT; i++)			/* Is 'name' a known type?    */
+   for(i = 0; i < npott; i++)			/* Is 'name' a known type?    */
       if(strcmp(strlower(name), types[i]) == 0)
          break;
-   if(i == NPOTT)				/* Did the loop find 'name'?  */
+   if(i == npott)				/* Did the loop find 'name'?  */
       message(&nerrs,line,FATAL,UNKPOT,name);	/* no			      */
    system->ptype = i;				/* yes		              */
    n_potpar = system->n_potpar = npotp[i];
@@ -361,48 +356,6 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
       message(&nerrs,NULLP,FATAL,ERRS,nerrs);
    else
       message(&nerrs,NULLP,INFO,SUCCES);
-}
-/******************************************************************************
- *  print sysdef   Print out the definition of the system, in the format that *
- *  read_sysdef can interpret.						      *
- ******************************************************************************/
-void	print_sysdef(system, species, site_info, potpar)
-system_p	system;			/* Pointer to system array (in main)  */
-spec_t		species[];		/* Pointer to species array 	      */
-site_p		site_info;		/* pointer to site_info array	      */
-pot_t		potpar[];		/* Potential parameter array	      */
-{
-   spec_p	spec;
-   int	ispec, isite, idi, idj, idij, ip;
-   int	n_potpar = npotp[system->ptype];
-   for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
-   {
-      (void)printf(" %-16s  %d\n", spec->name, spec->nmols);
-      for(isite=0; isite < spec->nsites; isite++)
-         (void)printf(" %6d %9g %9g %9g %9g %9g %s\n",
-         		spec->site_id[isite],
-	         	spec->p_f_sites[isite][0],
-	         	spec->p_f_sites[isite][1],
-	         	spec->p_f_sites[isite][2],
-	         	site_info[spec->site_id[isite]].mass,
-	         	site_info[spec->site_id[isite]].charge,
-	         	site_info[spec->site_id[isite]].name);
-   }
-   (void)printf(" end\n");
-   (void)printf(" %s potential parameters\n",types[system->ptype]);
-   for(idi = 1; idi < system->max_id; idi++)
-      for(idj = idi; idj < system->max_id; idj++)
-      {
-         idij = idj + idi * system->max_id;
-         if(potpar[idij].flag & S_USED)
-         {
-            (void)printf(" %6d %6d", idi, idj);
-            for(ip = 0; ip < n_potpar; ip++)
-               (void)printf("%9g",potpar[idij].p[ip]);
-            (void)printf("\n");
-         }
-      }
-   (void)printf(" end\n");
 }
 /******************************************************************************
  * lattice_start   Initialse the simulation co-ordinates on a lattice. Read   *
@@ -540,7 +493,7 @@ FILE	*file;
          break;
       if( !strcmp(name,"?") )
       {
-	 for( i = 0; i < NMATCH; i++ )
+	 for( i = 0; i < nmatch; i++ )
 	 {
 	    (void)printf(" %s =",match[i].key);
 	    (void)printf(match[i].format,match[i].ptr);
@@ -552,10 +505,10 @@ FILE	*file;
          message(&nerrs,line,ERROR,NOVAL,name);
       else
       {
-         for( i = 0; i < NMATCH; i++ )		/* Search table for key	      */
+         for( i = 0; i < nmatch; i++ )		/* Search table for key	      */
             if( !strcmp(strlower(name), match[i].key) )
                break;				/* Found it          	      */
-	 if( i == NMATCH )			/* Reached end without success*/
+	 if( i == nmatch )			/* Reached end without success*/
             message(&nerrs,line,ERROR,NOTFND,name);
          else					/* Found it, so convert value */
          {
