@@ -1,7 +1,11 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.22 92/06/15 16:52:00 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.23 93/03/09 15:59:24 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.23  93/03/09  15:59:24  keith
+ * Changed all *_t types to *_mt for portability.
+ * Reordered header files for GNU CC compatibility.
+ * 
  * Revision 1.22  92/06/15  16:52:00  keith
  * Put parens round arg on xfree macro to make it safe with expr.
  * 
@@ -90,8 +94,8 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.22 $"
-#define		 REVISION_DATE    "$Date: 92/06/15 16:52:00 $"
+#define          REVISION         "$Revision: 1.23 $"
+#define		 REVISION_DATE    "$Date: 93/03/09 15:59:24 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
@@ -137,6 +141,9 @@
 /*
  * Set ANSI_LIBS only if you have the standard ANSI headers and libraries
  */
+#ifdef __cray__
+#   define CRAY
+#endif
 #if defined(CRAY) && defined(__STDC__)	/* scc compiler comes with libraries*/
 #   define ANSI_LIBS
 #endif
@@ -147,11 +154,10 @@
  * is still veclib.
  */
 #if defined(__convexc__)
-#   if defined(__stdc__)
+#   if defined(__stdc__) /* Anything but "-pcc" mode */
 #      define ANSI
+#      define ANSI_LIBS
 #   endif
-#   define ANSI_LIBS
-#   define convexvc
 #endif
 #if defined(vms)
 #   define ANSI
@@ -166,7 +172,7 @@
 #if defined(sun) || defined(stellar) || defined(titan) /* So do these     */
 #define HAVE_VPRINTF
 #endif
-#if defined(cray) && defined(unix)	/* ie UNICOS			*/
+#if defined(cray) && (defined(unix) || defined(__unix__)) /* ie UNICOS   	*/
 #define HAVE_VPRINTF
 #endif
 /*
