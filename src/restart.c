@@ -11,6 +11,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 1.15  92/03/24  12:41:07  keith
+ * Moved reset-averages code to values.c and did it properly.
+ * 
  * Revision 1.14  92/03/19  15:14:12  keith
  * Added support for dynamic allocation of rolling average arrays,
  * conversion of existing restart files is done on fly.
@@ -64,7 +67,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.14 92/03/19 15:14:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.15 92/03/24 12:41:07 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -262,7 +265,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
    int		zero = 0, one = 1;
    restrt_t	save_header;
    FILE		*save;
-   char		*vsn = "$Revision: 1.14 $"+11;
+   char		*vsn = "$Revision: 1.15 $"+11;
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)
@@ -326,7 +329,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
    else
       cwrite(save,  (gptr*)&zero, sizeof(int), 1);/* Otherwise flag no rdf data*/
       
-   if( fclose(save) )				/* Delayed write error?       */
+   if( ferror(save) || fclose(save) )            /* Delayed write error?       */
       message(NULLI, NULLP, FATAL, REWRT, strerror(errno));
 
    if(replace(control.temp_file, save_name) == 0)/* Rename temp file to output*/

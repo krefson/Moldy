@@ -23,6 +23,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.17  92/04/21  17:49:16  keith
+ * Corrected error message
+ * 
  * Revision 1.16  92/03/02  15:28:32  keith
  * Fixed bug which caused dump/restart consistency check to erroneously
  * report an error on the second dump write.
@@ -87,7 +90,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.16 92/03/02 15:28:32 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.17 92/04/21 17:49:16 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -205,7 +208,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 1.16 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 1.17 $"+11,
 		                     sizeof dump_header.vsn-1);
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;
@@ -232,9 +235,9 @@ double		pe;
       dump_header.timestamp = time((time_t *)0);
 
       if( (dumpf = fopen(cur_file, "w+b")) == 0)
-         	message(NULLI, NULLP, FATAL, DOERRW, cur_file, strerror(errno));
+	 message(NULLI, NULLP, FATAL, DOERRW, cur_file, strerror(errno));
       if( fwrite((gptr*)&dump_header, sizeof(dump_t), 1, dumpf) == 0)
-         	message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+	 message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
       file_pos = ftell(dumpf);
    }
 
@@ -245,14 +248,14 @@ double		pe;
    if( fseek(dumpf, file_pos, SEEK_SET) )		/* Write data at end */
       message(NULLI, NULLP, FATAL, SEFAIL, cur_file, strerror(errno));
    if( fwrite((gptr*)dump_buf, sizeof(float), dump_size, dumpf) < dump_size )
-      	message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+      message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
 
    (void)fseek(dumpf, 0L, SEEK_SET);			/* Write header      */
    if( fwrite((gptr*)&dump_header, sizeof(dump_t), 1, dumpf) == 0)
-      	message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+      message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
 
-   if( fclose(dumpf) )
-      	message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+   if( ferror(dumpf) || fclose(dumpf) )
+      message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
 
    firsttime = 0;
    xfree(dump_buf);
