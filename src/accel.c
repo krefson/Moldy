@@ -25,6 +25,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ * Revision 2.8  1994/07/07  16:57:01  keith
+ * Updated for parallel execution on SPMD machines.
+ * Interface to MP library routines hidden by par_*() calls.
+ * Compile with -DSPMD to activate
+ *
  * Revision 2.7  1994/06/08  13:07:39  keith
  * New version of array allocator which breaks up requests for DOS.
  *
@@ -181,7 +186,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.7 1994/06/08 13:07:39 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.8 1994/07/07 16:57:01 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -560,6 +565,7 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
  */
    zero_real(stress[0], 9);	       /* Initialise stress tensor   */
    zero_real(meansq_f_t[0][0], 6 * sys->nspecies);
+   zero_real(dip_mom, 3);
    zero_real(site_force[0], sys->nsites);
    zero_real(site_force[1], sys->nsites);
    zero_real(site_force[2], sys->nsites);
