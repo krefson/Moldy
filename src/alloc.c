@@ -18,6 +18,17 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.15  91/08/19  16:44:11  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
+ * 
  * Revision 1.14  91/03/12  15:42:10  keith
  * Tidied up typedefs size_t and include file <sys/types.h>
  * Added explicit function declarations.
@@ -68,12 +79,15 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.15 91/08/15 18:11:43 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.15 91/08/19 16:44:11 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
 #include "messages.h"
 /*========================== Library include files ===========================*/
+#ifdef DEBUGX
+#include <stdio.h>
+#endif
 #if defined(ANSI) || defined(__STDC__)
 #   include <stdarg.h>
 #else
@@ -114,6 +128,9 @@ char	*file;
      THREAD_SYS(message(NULLI, NULLP, FATAL, NOMEM, line, file,
 	       (int)n, (unsigned long)size))
    (void)memset((gptr*)p, 0, n*size);
+#ifdef DEBUGX
+   fprintf(stderr,"Alloc: %16s line %3d: %x to %x\n", file, line, p, p+n*size);
+#endif
    return(p);
 }
 /******************************************************************************
