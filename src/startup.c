@@ -37,6 +37,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: startup.c,v $
+ * Revision 2.8  1994/07/07  16:57:01  keith
+ * Updated for parallel execution on SPMD machines.
+ * Interface to MP library routines hidden by par_*() calls.
+ * Compile with -DSPMD to activate
+ *
  * Revision 2.7  1994/06/08  13:16:34  keith
  * Changed all timestep-related parameters to type "long". This means
  * that 16-bit DOS compilers can do more than 32767 timesteps.
@@ -214,7 +219,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 2.7 1994/06/08 13:16:34 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 2.8 1994/07/07 16:57:01 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -246,6 +251,7 @@ void		zero_real();
 void		eigens();
 void		transpose();
 void		mat_vec_mul();
+double          det();
 void		q_mul();
 void		rot_to_q();
 void		print_sysdef();
@@ -327,11 +333,11 @@ CONST match_mt	match[] = {
 {"temperature",      "%lf",  "0.0",          (gptr*)&control.temp},
 {"pressure",         "%lf",  "0.0",          (gptr*)&control.pressure},
 {"w",                "%lf",  "100.0",        (gptr*)&control.pmass},
-{"cutoff",           "%lf",  "10.0",         (gptr*)&control.cutoff},
+{"cutoff",           "%lf",  "0.0",          (gptr*)&control.cutoff},
 {"subcell",          "%lf",  "0.0",          (gptr*)&control.subcell},
 {"density",          "%lf",  "1.0",          (gptr*)&control.density},
-{"alpha",            "%lf",  "0.3",          (gptr*)&control.alpha},
-{"k-cutoff",         "%lf",  "2.0",          (gptr*)&control.k_cutoff},
+{"alpha",            "%lf",  "0.0",          (gptr*)&control.alpha},
+{"k-cutoff",         "%lf",  "0.0",          (gptr*)&control.k_cutoff},
 {"rdf-limit",        "%lf",  "10.0",         (gptr*)&control.limit},
 {"cpu-limit",        "%lf",  "1.0e20",       (gptr*)&control.cpu_limit},
 {"mass-unit",        "%lf",  "1.6605655e-27",(gptr*)&input_unit.m},
@@ -451,7 +457,7 @@ spec_mt	species[];
    int		ispec, imol;		/* Counters for species, molecules etc*/
    spec_mp	spec;
    double	mass = 0.0;		/* Whole system mass		      */
-   double	n_third = exp(log((double)system->nmols)/3.0);
+   double	n_third = pow((double)system->nmols,1.0/3.0);
    int		nz = 1, ny = (int)(n_third+0.5), nx = (int)(SQR(n_third)+0.5);
    int		*nmols = ialloc(system->nspecies), nm;
    double	delta_x = (double)nx / system->nmols,
@@ -465,7 +471,7 @@ spec_mt	species[];
    }
       
    system->h[0][0] = system->h[1][1] = system->h[2][2] 
-                   = exp((log(mass) - log(control.density))/3.0);
+                   = pow(mass/control.density, 1.0/3.0);
  					/* L = cube root of mass/density      */
    memst(nmols, 0, system->nspecies*sizeof(int));
    for(imol = 0; imol < system->nmols; imol++)
@@ -504,8 +510,8 @@ spec_mt	species[];
       mass += spec->mass * spec->nmols;
       
    system->h[0][0] = system->h[1][1] = system->h[2][2] 
-                   = exp((log(mass) - log(control.density))/3.0);
- 					/* L = cube root of mass/density      */
+                   = pow(mass/control.density, 1.0/3.0);
+    					/* L = cube root of mass/density      */
    for(imol = 0; imol < system->nmols; imol++)
       for(i = 0; i < 3; i++)		/* Centre of mass co-ords -1 < x < 1  */
          system->c_of_m[imol][i] = mdrand() - 1.0;
@@ -889,7 +895,39 @@ spec_mt	species[];		/* NEW 'species' struct array	      */
    xfree((spec_tmp-system->nspecies));
    xfree(site_tmp);
    xfree(pot_tmp);
-}	
+}
+/******************************************************************************
+ * Init_cutoffs.  Set the initial values of the alpha parameter and cutoffs   *
+ * for the Ewald Sum according to the formulae in Fincham, (1993) CCP5 38, p17*
+ * alpha = (nsites*pi^3/V^2 tr/tf)^1/6 is the optmum value		      *
+ * r_c = p^1/2 / alpha and k_c = 2 * alpha / p^1/2                            *
+ * are the cutoffs which giva an accuracy of exp(-p). Here use 10^-5.         *
+ * Any value explicity specified in the control file is left alone.           *
+ ******************************************************************************/
+#define LOGACC   11.5 /* p =11.5 <=> acc = 10^-5 */
+#define TRoverTF 5.5  /* Ratio of indiv. interaction times - approx */
+void      init_cutoffs(alpha, cutoff, k_cutoff, h, nsites)
+double   *alpha, *cutoff, *k_cutoff;
+mat_mt   h;
+int      nsites;
+{
+   double max_cutoff = MIN3(h[0][0], h[1][1], h[2][2]);
+   double vol = det(h);
+
+   if( *alpha == 0.0 )
+      *alpha = pow(nsites*CUBE(PI)/SQR(vol)*TRoverTF, 1.0/6.0);
+   if( *cutoff == 0.0 )
+   {
+      *cutoff = sqrt(LOGACC)/ *alpha;
+      if( *cutoff > max_cutoff )
+      {
+	 message( NULLI, NULLP, WARNING, MAXCUT, *cutoff, max_cutoff);
+	 *cutoff = max_cutoff;
+      }
+   }
+   if( *k_cutoff == 0.0 )
+      *k_cutoff = 2.0* (*alpha) * sqrt(LOGACC);
+}
 /******************************************************************************
  *  startup	This function sets up everything that is needed to start a    *
  *  run.  It controls the reading in of the control, system specification and *
@@ -1080,6 +1118,9 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
       if(control.limit <= 0.0)			/* Choose RDF limit           */
 	 control.limit = 0.5*MIN3(system->h[0][0],system->h[1][1],
 				  system->h[2][2]);
+
+      init_cutoffs(&control.alpha, &control.cutoff, &control.k_cutoff, 
+		   system->h, system->nsites);
 
       (void)strcpy(restart_header->init_date, atime());
       (void)strcpy(restart_header->title,control.title);
