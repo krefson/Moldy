@@ -25,7 +25,7 @@
 \topmargin=0pt
 \textheight=9in
 {\def\$#1${#1}%                               %%% Special Kludge for RCS
-\xdef\RCSrevision{\$Revision: 2.1 $}\xdef\manversA{$\$junk $ $}}
+\xdef\RCSrevision{\$Revision: 2.5 $}\xdef\manversA{$\$junk $ $}}
 \title{{\Huge Moldy User's Manual}\\ \RCSrevision}
 \author{Keith Refson\\Department of Earth Sciences\\Parks Road
 \\Oxford OX1 3PR\\keith@earth.ox.ac.uk\\}
@@ -78,10 +78,11 @@ added.  Such flexibility is possible because \moldy\  is written in the
 `C' language which permits dynamic memory allocation.
 
 \moldy\  is written to be highly portable and has been tested on a wide
-range of computers and operating  systems, including CRAY COS, VAX/VMS
-and  Unix(tm) (both   BSD  and  system  V  varieties).   It should  be
-straightforward to  move  it to  any  other machine  with a   good `C'
-compiler.
+range of computers and operating systems, including CRAY COS, VAX/VMS,
+MS-DOS and Unix\footnote{Goodness knows who will own the Unix
+registered trademark by the time you read this.}  (both BSD and system V
+varieties).  It should be straightforward to move it to any other
+machine with a good `C' compiler.
 
 To be of real use a simulation  program must run efficiently on modern
 high-speed computers, which  are  increasingly of vector   or parallel
@@ -1492,22 +1493,23 @@ U_z = \frac{1}{8 \pi \epsilon_0 V \alpha^2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The way \moldy\  is invoked depends to some extent on the operating
+The way \moldy\ is invoked depends to some extent on the operating
 system, but usually by issuing the command \verb'moldy'\footnote{On
 VMS, {\tt moldy} may be defined as a foreign command by {\tt \$ moldy
-:== \$mydisk:[mydir]moldy} For Unix(tm) the executable file {\tt
-moldy} should be placed in the shell search path (\eg in the current
-directory). For COS the executable binary should be in a local dataset
-called {\tt MOLDY}, which is often a permanent dataset, locally
-accessed by {\tt ACCESS,DN=MOLDY.}}.  There are two optional arguments
-- the name of the control file (see section~\ref{sec:control}) and the
-output file (see section~\ref{sec:output}).  If either is omitted,
-control input is read from the ``standard input'' which may be a
-terminal or a job command file depending on the operating system and
-circumstances, and the output is written to ``standard output'' which
-may be a terminal or batch job logfile\footnote{Some operating systems
-(Unix and COS) allow {\em file redirection\/} whereby the standard input
-is associated with some file.  This may also be used to supply the
+:== \$mydisk:[mydir]moldy} For Unix(tm) and MS-DOS the executable file
+{\tt moldy} or {\tt MOLDY.EXE} should be placed in the shell search
+path (\eg in the current directory). For COS the executable binary
+should be in a local dataset called {\tt MOLDY}, which is often a
+permanent dataset, locally accessed by {\tt ACCESS,DN=MOLDY.}}.  There
+are two optional arguments - the name of the control file (see
+section~\ref{sec:control}) and the output file (see
+section~\ref{sec:output}).  If either is omitted, control input is
+read from the ``standard input'' which may be a terminal or a job
+command file depending on the operating system and circumstances, and
+the output is written to ``standard output'' which may be a terminal
+or batch job logfile\footnote{Some operating systems (Unix and COS)
+allow {\em file redirection\/} whereby the standard input is
+associated with some file.  This may also be used to supply the
 control file, provided that no command line parameter is given.}.
 Here are examples for VAX/VMS, Unix (tm) and COS (Cray Operating
 System), which assume that in each case the command has been set up to
@@ -1526,8 +1528,9 @@ UNIX any of
         % moldy control
 \end{verbatim}
 will cause moldy to read from the file called \verb'control' and in
-the first two examples to write its output to \verb'output.lis'.
-Under COS (Cray Operating System) any of the control statements
+the first two examples to write its output to \verb'output.lis'.  The
+command-line interface for MS-DOS is very similar.  Under COS (Cray
+Operating System) any of the control statements
 \begin{verbatim}
         MOLDY.
         MOLDY,'CONTROL OUTPUT'.
@@ -2443,8 +2446,8 @@ computer time.
 %dumps the data.
 
 Two utility programs included in the distribution are {\em
-dumpanalyze\/} which identifies dump files by printing out the headers
-and {\em dumpextract\/} which extracts atomic or molecular
+dumpanal\/} which identifies dump files by printing out the headers
+and {\em dumpext\/} which extracts atomic or molecular
 trajectories.  The latter should be useful as a prototype for writing
 programs to analyse dump data.
 
@@ -2454,12 +2457,12 @@ generated the data.  In the past it has not usually been possible to
 sensibly transfer binary data between computers of different
 architectures.  However \moldy\ is able to write dump files in a
 portable format using XDR (see section~\ref{sec:xdr}) which may be
-read by {\em dumpextract\/} on any machine.  The control parameter
+read by {\em dumpext\/} on any machine.  The control parameter
 \verb'xdr' enables XDR mode for dumps as well as restart files.
 As yet, XDR is not available on every machine.  Therefore a program
-called {\em dumpconvert\/} is provided which converts dump files to a
+called {\em dumpconv\/} is provided which converts dump files to a
 portable text file format (which may be easily moved between machines)
-and back again. It is described in appendix~\ref{sec:dumpconvert}.
+and back again. It is described in appendix~\ref{sec:dumpconv}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2677,6 +2680,9 @@ is unpacked by the command \verb+tar xvf moldy.tar+ and the second by
 \item[VMS]  The archive is a DCL command file called {\em moldy.com},
 and is unpacked by the command \verb'@moldy'.
 
+\item[MS-DOS] The files must be unpacked from the tar archive on
+another host and transferred to the PC by disk or ftp.
+
 \item[COS]  The archive is a JCL job file. It does not contain the
 manual, examples or utilities, which are only of much use on the
 front-end system.  N.B.  For unicos, use the unix distribution.
@@ -2701,6 +2707,15 @@ for). Then just type \verb'make' to compile and link \moldy\  and
 
 \item[VMS]  Simply type \verb'@compile' to execute the command file
 ``compile.com''. This will build \moldy\  and the utilities.
+
+\item[DOS] There is a makefile for Borland Turbo C called Makefile.mak
+in the standard distribution.  This must be edited to select the
+appropriate compiler options before executing ``make''\footnote{Be
+sure to delete or rename the unix make file ``Makefile'' since Turbo C
+``make'' will attempt to execute this in preference to
+``Makefile.mak''} Alternatively the programs may be built within the
+interactive environment.  Consult the makefile to find out which
+source files to like to build \moldy\ and the utilities.
 
 \item[COS]  In contrast to the other cases the cray COS distribution
 is a self-contained JCL  file which, when executed, will compile and
@@ -2728,7 +2743,7 @@ systems.  Different versions of a function are selected by the C
 preprocessor and conditionally compiled according to the pre-defined
 preprocessor symbols (see the documentation for your compiler).  For
 ease of portability {\em all system-dependent functions are in the
-module ``aux.c''\/} and {\em all preprocessor conditionals are in the
+module ``auxil.c''\/} and {\em all preprocessor conditionals are in the
 header file ``defs.h''}.
 
 If the target machine has ANSI conformant C libraries, all that must
@@ -2743,7 +2758,7 @@ necessary to define it by hand, either in ``defs.h'' or by setting
 the compiler option \verb'-DUSG' in the makefile. In addition, if the
 symbol \verb'HAVE_VPRINTF' is defined, it is assumed that the library
 contains the function \verb'vprintf()', otherwise the replacement in
-``aux.c'' is used. If your system does not have \verb'vprintf()' but
+``auxil.c'' is used. If your system does not have \verb'vprintf()' but
 does have \verb'_doprnt()' then define the symbol \verb'HAVE_DOPRNT'
 to use it.
 
@@ -2752,31 +2767,27 @@ In this section, details of system-dependent functions are described
 for the major operating systems.  
 \begin{itemize}
 \item The ANSI header file ``string.h'' is missing
-from Berkeley unix, and incomplete in other systems.  A file,
-``string.h'' is supplied with \moldy\ which conditionally includes
-``strings.h'', or ``string.h'' for other systems.  In addition the
-ANSI header files ``stddef.h'' and ``stdlib.h'' are missing from many
-unix systems and ``time.h'' does not contain the required
-declarations.  Replacements are included  which again may
-be dispensed with on an ANSI conformant system.
-\item The  ANSI typedefs \verb'time_t' and \verb'size_t' are not
-defined in some UNIX implementations. They are explicitly defined in
-``time.h'' and ``stddef.h'' and the \verb'time()' function is
-explicitly declared in ``aux.c''.
+from Berkeley unix, and incomplete in other systems, as is ``time.h''.
+Other files such as ``stdlib.h'' and ``stddef.h'' are new with ANSI C.
+Replacements are included which may be dispensed with on an ANSI
+conformant system - If the symbol \verb'ANSI_LIBS' is defined they
+simply include the system version.
 \item The supplied \verb'clock()' function on UNIX systems resets to
 zero after 36 minutes.  Replacements, called \verb'cpu()' for both
-system V and Berkeley UNIXes are supplied in ``aux.c''. (Otherwise
+system V and Berkeley UNIXes are supplied in ``auxil.c''. (Otherwise
 \verb'cpu()' simply calls \verb'clock()'.)
-\item The ANSI function to delete a file, \verb'remove()' is missing
-from UNIX systems and COS\@.  Replacements are supplied in ``aux.c''.
-\item Replacements are provided for functions \verb'memset()' and
-\verb'memcpy()' which are missing from Berkeley UNIX.
+\item The ANSI function to delete a file, \verb'remove()', the
+signalling function \verb'raise()' and the string  functions
+\verb'strstr()' and \verb'strerror()' are missing from pre-ANSI
+libraries.  Replacements are supplied in ``auxil.c''. 
+\item Replacements are provided for functions \verb'memset()',
+\verb'memcpy()' and \verb'strchr()' which are missing from Berkeley UNIX.
 \item The function \verb'vprintf()' is often absent from older
 libraries. Replacements are provided which {\em a)\/} call the internal
 function \verb'_doprnt()' (or  \verb'XPRINTF()' in the case of COS) or
 {\em b)\/} implements a portable \verb'vprintf()'.  Use the preprocessor
 macros  \verb'HAVE_VPRINTF' or \verb'HAVE_DOPRNT' to select which.
-\item ``Aux.c'' contains the functions \verb'replace()' and \verb'purge()'.
+\item ``Auxil.c'' contains the functions \verb'replace()' and \verb'purge()'.
 \verb'replace()' renames a file, making a backup of any existing file
 of that name. \verb'purge()' removes the previous or backup version of
 a file.  The pure ANSI versions just interface to \verb'rename()' and
@@ -2816,7 +2827,7 @@ Thus it is the inner loops in ``force.c'', ``ewald.c'' and
 pair-distance loop of \verb'rdf_calc()' in ``rdf.c'' should vectorize
 for efficient radial distribution function evaluation. Others which
 are of minor importance are in ``beeman.c'', ``matrix.c'',
-``quaterns.c'' and ``algorith.c''.  ``Aux.c'' contains alternative
+``quaterns.c'' and ``algorith.c''.  ``Auxil.c'' contains alternative
 versions of various sum, dot product, scatter and gather routines
 \etc\ which are interfaces to machine-specific libraries \eg\
 Cray scilib, Convex veclib (which usually have FORTRAN calling
@@ -3088,74 +3099,74 @@ each one may be a range separated by a hyphen with an optional
 increment following a colon.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Moldyextract}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Moldyext}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 It is usual to plot the instantaneous values of energy, temperature
 \etc\ during the course of a simulation, for example to monitor the
-approach to equilibrium.  {\em Moldyextract\/} processes the periodic
+approach to equilibrium.  {\em Moldyext\/} processes the periodic
 output produced by \moldy\ (see section~\ref{sec:output}) and extracts
 this information from each timestep recorded.  It is presented in
 tabular form for input into plotting programs.  The command is
 \begin{center}
-\verb'moldyextract -f' {\em fields output-file1 output-file2} \ldots
+\verb'moldyext -f' {\em fields output-file1 output-file2} \ldots
 \end{center}
 where {\em fields\/} is a list in the selector format above.  The
 numbering runs from left to right, ignoring newlines and blank columns
 so that the translational KEs in figure~\ref{fig:output} are fields 1
 and 14 and the $\sigma_{zz}$ component of the stress tensor is 30.
 
-{\em Moldyextract\/} can currently only extract information from the
+{\em Moldyext\/} can currently only extract information from the
 ``instantaneous'' section of the output, not the rolling averages or
 standard deviations.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Dumpanalyze}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Dumpanal}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-{\em Dumpanalyze\/} examines the dump files given as arguments and
+{\em Dumpanal\/} examines the dump files given as arguments and
 prints out the header information to help with identification. For
 example
 \begin{center}
-\verb'dumpanalyze' {\em dump-file1 dump-file2} \ldots
+\verb'dumpanal' {\em dump-file1 dump-file2} \ldots
 \end{center}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Dumpconvert}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Dumpconv}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\label{sec:dumpconvert}
-{\em Dumpconvert\/} is a tool for moving binary dump files between
+\label{sec:dumpconv}
+{\em Dumpconv\/} is a tool for moving binary dump files between
 computers of different architectures.  It has mostly been superseded
 by the portable XDR format dump files introduced in version~2.1 (see
 section~\ref{sec:xdr}) but is retained in case of machines for which
 no XDR implementation is available.  The command
 \begin{center}
-\verb'dumpconvert' {\em binary-dump-file text-dump-file} 
+\verb'dumpconv' {\em binary-dump-file text-dump-file} 
 \end{center}
 creates a straightforward ASCII text file with a representation of the
 dump information in the binary file including the header.  The command
 \begin{center}
-\verb'dumpconvert -d' {\em text-dump-file binary-dump-file} 
+\verb'dumpconv -d' {\em text-dump-file binary-dump-file} 
 \end{center}
 converts it back.  Seven significant decimals are used which ought to
 retain almost all of the precision of the single precision binary
 floating-point numbers.  You can also convert an old ``native'' format
 dump into XDR format using the \verb'-x' option, {\em viz\/}
 \begin{center}
-\verb'dumpconvert -x' {\em native-dump-file xdr-dump-file}. 
+\verb'dumpconv -x' {\em native-dump-file xdr-dump-file}. 
 \end{center}
 The \verb'-x' and \verb'-d' options may be combined if the input is a
 text format dump.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Dumpextract}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Dumpext}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Dumps are designed so that \moldy\ can take care of all the
 bookkeeping, perform data security checks and to divide a lot of data
 into manageable portions.  It is therefore not in a convenient form
 for reading by other programs, especially FORTRAN ones.  {\em
-Dumpextract\/} is a program which processes dump files, extracts a
+Dumpext\/} is a program which processes dump files, extracts a
 subset of the information and outputs it in a form more suitable for
 reading by other programs.  It is invoked with the command:
 \begin{center}
-\verb'dumpextract -R ' {\em nmols\/} \verb' -Q ' {\em nquats\/} 
+\verb'dumpext -R ' {\em nmols\/} \verb' -Q ' {\em nquats\/} 
 \verb'-c' {\em components\/}
 \verb'[-t' {\em timeslices\/} \verb']' \\
 \verb'[-m' {\em molecules\/} \verb']'
@@ -3210,8 +3221,8 @@ option.
 
 The dump files must, of course, be part of the same dump sequence;
 this is carefully checked.  They may be supplied as arguments in any
-order; {\em dumpextract\/} automatically determines the sequence from
-the information in the headers.  This is not as daft as it sounds,
+order; {\em dumpext\/} automatically determines the sequence from
+the information in the headers.  This is not as pointless as it sounds,
 since the list may be generated using unix shell wildcards which arrange
 them in alphabetical rather than numeric order.
 
@@ -3227,7 +3238,7 @@ easily read in C with an
 \verb'fread()' call with the appropriate number of bytes or from
 FORTRAN77 using direct-access unformatted read\footnote{The usual
 FORTRAN sequential unformatted read is not suitable as this expects
-record size information to be present.  {\em Moldyextract\/} can not
+record size information to be present.  {\em Dumpext\/} can not
 write this as its format is entirely determined by the whim of the
 compiler writer.  FORTRAN unformatted sequential files are not
 guaranteed to be portable even between different compilers on the same
