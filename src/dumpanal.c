@@ -1,9 +1,12 @@
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: dumpanalyze.c,v 1.1 89/04/11 15:04:51 keith Exp $";
 #endif
 
 /*
- * $Log$
+ * $Log:	dumpanalyze.c,v $
+ * Revision 1.1  89/04/11  15:04:51  keith
+ * Initial revision
+ * 
  */
 
 #include <stdio.h>
@@ -40,10 +43,12 @@ void	print_header(header)
 dump_t	*header;
 {
    printf("Title\t\t\t= \"%s\"\n",header->title);
+   printf("RCS Revision\t\t= %.*s\n", strlen(header->vsn)-1, header->vsn);
    printf("Istep\t\t\t= %d\n",header->istep);
    printf("Dump_interval\t\t= %d\n", header->dump_interval);
    printf("Dump_level\t\t= %d\n", header->dump_level);
    printf("Max dumps\t\t= %d\n", header->maxdumps);
+   printf("Dump Size\t\t= %d\n", header->dump_size);
    printf("Number of dumps\t\t= %d\n", header->ndumps);
    printf("Timestamp\t\t= %s", ctime(&header->timestamp));
    printf("Restart Timestamp\t= %s", ctime(&header->restart_timestamp));
