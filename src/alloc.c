@@ -38,6 +38,12 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: alloc.c,v $
+ * Revision 2.6  1994/02/21  16:55:58  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
+ * Added sanity test for 16-bit architectures.
+ *
  * Revision 2.5  1994/01/18  13:32:09  keith
  * Null update for XDR portability release
  *
@@ -139,7 +145,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /tmp_mnt/home/eeyore/keith/md/moldy/RCS/alloc.c,v 2.6 1994/02/21 16:55:58 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
@@ -218,7 +224,11 @@ char	*file;
      THREAD_SYS(message(NULLI, NULLP, FATAL, NOMEM, line, file,
 	       (int)n, (unsigned long)size))
 #ifdef DEBUGX
-   fprintf(stderr,"Alloc: %16s line %3d: %x to %x\n", file, line, p, p+n*size);
+   fprintf(stderr,"Alloc: %16s line %3d: %lu bytes (%x to %x)\n", 
+	   file, line, n*size, p, p+n*size);
+#endif
+#ifdef DEBUGZ
+   (void)memset((gptr*)p,0x10,n*size);
 #endif
    return(p);
 }
@@ -300,6 +310,9 @@ va_dcl
    ndim = va_arg(ap, int);
 #endif
 
+#ifdef DEBUGY
+   fprintf(stderr,"%dD array of %lu byte elements:", ndim, size);
+#endif
    if( size % sizeof(word_mt) != 0 )  /* Code only works for 'word' objects */
       message(NULLI, NULLP, FATAL, WDPTR, size);
    /*
@@ -310,15 +323,27 @@ va_dcl
    {
       lb = va_arg(ap, int);
       ub = va_arg(ap,int);
+#ifdef DEBUGY
+      fprintf(stderr,"[%d...%d]", lb, ub);
+#endif
       if(ub < lb)
          message(NULLI, NULLP, FATAL, INSIDE, lb, ub);
       n_data *= ub - lb + 1;
       if( idim < ndim-1 )
 	 n_ptr  += n_data;
    }
+#ifdef DEBUGY
+   putc('\n',stderr);
+#endif
    /*
     *  Allocate space  for pointers and data.
     */
+#ifdef DEBUGY
+   {
+      size_mt mallen=(n_data+1)*size+n_ptr*sizeof(word_mt**);
+      fprintf(stderr,"Calling talloc(%lu)....\n", mallen);
+   }
+#endif
    start = (word_mt**)talloc(1,
 			     (size_mt)((n_data+1)*size+n_ptr*sizeof(word_mt**)),
 			     __LINE__, __FILE__);
