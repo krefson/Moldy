@@ -1,23 +1,3 @@
-/* MOLecular DYnamics simulation code, Moldy.
-Copyright (C) 1988, 1992, 1993 Keith Refson
- 
-This program is free software; you can redistribute it and/or modify it
-under the terms of the GNU General Public License as published by the
-Free Software Foundation; either version 2, or (at your option) any
-later version.
- 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
- 
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
- 
-In other words, you are welcome to use, share and improve this program.
-You are forbidden to forbid anyone else to use, share and improve
-what you give them.   Help stamp out software-hoarding!  */
 /******************************************************************************
  * kernel	Functions to calculate the forces, potential and distant pot'l*
  *		correction for various potentials.  ALL POTENTIAL-DEPENDANT   *
@@ -34,10 +14,18 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.10  1999/09/20 10:27:30  keith
+ *       Updated comments to assist with adding a new potential.
+ *
  *       Revision 2.9  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
  *       This is for use with GNU autoconf.
+ * Revision 1997/10/24 Wunderlich/Fisher 
+ * New Morse Type potential with 7 para,eters (B-H) included
+ * This potential is compatibel with the Mxdorto progarm written by Kawabata Tokyo
+ * Remark: Colomb Term A/r is already includued in Moldy. 
+ * Phi(r_ij) =    B {"exp((C-R) *D)  - E/r
  *
  *       Revision 2.8  1996/10/04 17:27:24  keith
  *       Rescheduled line order to overlap divide/computation on DEC Alpha/T3D.
@@ -147,7 +135,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/kernel.c,v 2.9 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/kernel.c,v 2.10 1999/09/20 10:27:30 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -175,6 +163,7 @@ const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 		              {"buckingham",3},
                               {"mcy",4},
 		              {"generic",6},
+		              {"morse",7},
 		              {0,0}};	            /* MUST be null-terminated*/
 /*
  *  Array of dimensions of pot'l parameters.  Triplets contain powers
@@ -186,7 +175,10 @@ const dim_mt   pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
                                  {{1,8,-2},{1,2,-2},{0,-1,0}},
 		                 {{1,2,-2},{0,-1,0},{1,2,-2},{0,-1,0}},
 			         {{1,2,-2},{0,-1,0},{1,14,-2},
-			          {1,6,-2},{1,8,-2},{1,10,-2}}};
+			          {1,6,-2},{1,8,-2},{1,10,-2}}, 
+			         {{1,2,-2},{0, 1,0},{0,-1, 0},
+			          {1,8,-2},{1,2,-2},            
+			                   {0,-1,0},{0, 1, 0}}};
 
 /*========================== Macros ==========================================*/
 
@@ -204,6 +196,7 @@ const dim_mt   pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
 #define E6POT 1
 #define MCYPOT 2
 #define GENPOT 3
+#define MORPOT 4
 /*============================================================================*/
 /******************************************************************************
  *  dist_pot   return attractive part of potential integrated outside cutoff. *
@@ -230,6 +223,13 @@ int	ptype;				/* Potential type selector	      */
          return( 0.0 );
     case GENPOT:
       return ( potpar[4] / ( 3.0*CUBE(cutoff)) + potpar[3] / cutoff);
+    case MORPOT:
+      if( potpar[5] != 0.0 )
+         return( potpar[3] / ( 3.0*CUBE(cutoff))
+            +2.0*potpar[4] * (SQR(cutoff)/potpar[5] + 2*cutoff/SQR(potpar[5])
+	    +2.0 / CUBE(potpar[5])) * exp(-potpar[5]*(cutoff-potpar[6])));
+      else
+         return( potpar[3] / ( 3.0*CUBE(cutoff)) );
    }
 }
 /******************************************************************************
@@ -255,11 +255,12 @@ real	*pot[];			/* Vectors of potential parameters.	 (in) */
                  r_4_r, r_8_r;
    register real erfc_term;		/* Intermediates in erfc calculation. */
    	    real ppe = 0.0;		/* Local accumulator of pot. energy.  */
-   	    real exp_f1, exp_f2;	/* Temporary for b*exp(-cr) etc       */
+   	    real exp_f1, exp_f2, exp_f3; /* Temporary for b*exp(-cr) etc      */
    register int	jsite;			/* Loop counter for vectors.	      */
    real *p0 = pot[0], *p1 = pot[1],     /* Local bases for arrays of pot'l    */
         *p2 = pot[2], *p3 = pot[3],     /* parameters.			      */
-        *p4 = pot[4], *p5 = pot[5];
+        *p4 = pot[4], *p5 = pot[5],
+        *p6 = pot[6], *p7 = pot[7];
 
    if(alpha > 0.0)
       switch(ptype)
@@ -374,6 +375,35 @@ VECTORIZE
 	                   + p1[jsite]*exp_f1 * r_r;
 	 }
 	 break;      
+       case MORPOT:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+	 {
+	    /*
+	     * Calculate r and coulombic part
+	     */
+	    r         = sqrt(r_sqr[jsite]);
+	    ar	      = alpha*r;
+	    t         = 1.0/(1.0+PP*ar);
+	    erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+	    r_r	      = 1.0 / r;
+	    t         = POLY5(t) * erfc_term * r_r;
+	    erfc_term = t + norm * erfc_term;
+	    r_sqr_r   = SQR(r_r);
+            /*
+	     * Non-coulombic ie potential-specific part
+	     */
+	    exp_f1 = p0[jsite] * exp((-p1[jsite] - r)*p2[jsite]);
+	    r_6_r  = p3[jsite] * CUBE(r_sqr_r);
+	    exp_f2 = p4[jsite] * exp(-2.0 * p5[jsite] * ( r - p6[jsite]));
+	    exp_f3 =-p4[jsite] * 2.0 * exp(-p5[jsite] * ( r - p6[jsite]));
+	    ppe += t + exp_f1 - r_6_r + exp_f2  + exp_f3;
+	    forceij[jsite] = r_sqr_r*( -6.0*r_6_r + erfc_term) 
+	                   + r_r    *(p2[jsite] *exp_f1    
+	                   +(2.0    * p5[jsite])*exp_f2 
+	                   +          p5[jsite] *exp_f3 );
+	 }
+	 break;      
       }
    else
       switch(ptype)
@@ -437,6 +467,27 @@ VECTORIZE
 	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r - 4.0*r_4_r - 6.0*r_6_r 
 				      - 8.0*r_8_r)
 	                   + p1[jsite]*exp_f1 * r_r;
+	 }
+	 break;      
+       case MORPOT:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+	 {
+	    /*
+	     * Calculate r and coulombic part
+	     */
+	    r       = sqrt(r_sqr[jsite]);
+	    r_r	    = 1.0 / r;
+	    r_sqr_r = SQR(r_r);
+	    exp_f1  = p0[jsite] * exp((-p1[jsite] - r)*p2[jsite]);
+	    r_6_r   = p3[jsite] * CUBE(r_sqr_r);
+	    exp_f2  = p4[jsite] * exp(-2.0 * p5[jsite] * ( r - p6[jsite]));
+	    exp_f3  =-p4[jsite] * 2.0 * exp(-p5[jsite] * ( r - p6[jsite]));
+	    ppe    +=     exp_f1 - r_6_r + exp_f2  + exp_f3;
+	    forceij[jsite] = r_sqr_r*( -6.0*r_6_r            ) 
+	                   + r_r    *(p2[jsite] *exp_f1    
+	                   +(2.0    * p5[jsite])*exp_f2 
+	                   +          p5[jsite] *exp_f3 );
 	 }
 	 break;      
       }     
