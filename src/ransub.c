@@ -27,6 +27,9 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.20  2004/11/23 13:15:39  kr
+ *  Fixed some real/double type errors
+ *
  *  Revision 1.19  2004/11/23 12:20:30  kr
  *  Removed C99 array allocation => arralloc
  *
@@ -172,7 +175,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/ransub.c,v 1.19 2004/11/23 12:20:30 kr Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/ransub.c,v 1.20 2004/11/23 13:15:39 kr Exp $";
 #endif  
 
 #include "defs.h"
@@ -184,6 +187,7 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/ransub.c,v 1.19 2004/11
 #include <string.h>
 #include <time.h>
 #include <stdio.h>
+#include <ctype.h>
 #include "structs.h"
 #include "messages.h"
 #include "utlsup.h"
@@ -204,6 +208,9 @@ int	getopt(int, char *const *, const char *);
 void    afree(gptr *p);
 char    *atime(void);
 double  det(mat_mt a);
+void    eigens(real *A, real *RR, real *E, int N);
+void    eigensort(real *, real *, int, vec_mt);
+double  mdrand(void);
 char	*read_ftype(char *filename);
 int     read_ele(spec_data *element, char *filename);
 int     read_pdb(char *, mat_mp, char (*)[NLEN], vec_mp, double *, char *, char *);

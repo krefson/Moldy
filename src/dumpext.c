@@ -587,7 +587,7 @@ main(int argc, char **argv)
          fprintf(stderr,"Dump headers don't match: file\"%s\"\n", dump_name);
 	 exit(2);
       } else if (verbose) {
-      fprintf(stderr,"Dump file \"%s\" contains slices %d to %d\n",dump_name,
+      fprintf(stderr,"Dump file \"%s\" contains slices %ld to %ld\n",dump_name,
               header.istep/header.dump_interval,header.istep/header.dump_interval+header.ndumps-1);
       };
 

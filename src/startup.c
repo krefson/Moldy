@@ -36,7 +36,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * gauss_rand()		Return random sample from univariant gaussian         *
  ******************************************************************************
  *      Revision Log
- *      $Log$
+ *      $Log: startup.c,v $
+ *      Revision 2.33  2004/11/22 18:21:10  kr
+ *      Merget "util_updates" branch into main
+ *
  *      Revision 2.32.2.2  2004/05/07 08:06:08  moldydv
  *      Eigenvalues and vectors sorted to determine "standard" pfc's.
  *
@@ -331,7 +334,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/startup.c,v 2.33 2004/11/22 18:21:10 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -369,6 +372,7 @@ void		banner_page(system_mp system, spec_mt *species,
 			    restrt_mt *restart_header);
 void		zero_real(real *r, int n);
 void		eigens(real *A, real *RR, real *E, int N);
+void            eigensort(real *, real *, int, vec_mt);
 void		transpose(mat_mt, mat_mt);
 void		mat_mul(mat_mt a, mat_mt b, mat_mt c); 
 void		mat_sca_mul(real s, mat_mt a, mat_mt b); 
