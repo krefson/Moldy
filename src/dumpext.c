@@ -1,3 +1,4 @@
+#include 	"string.h"
 #include 	<stdio.h>
 #include	"structs.h"
 
@@ -29,6 +30,48 @@ list_t	*head;
       return;
    fprintf(stderr,"%-8d%s\n",head->i, head->p);
    print_list(head->next);
+}
+
+/******************************************************************************
+ * forstr.  Parse string str of format s-f:n  (final 2 parts optional),       *
+ *          returning integer values of s,f,n. f defaults to s and n to 1     *
+ ******************************************************************************/
+int
+forstr(str, start, finish, inc)
+char	*str;
+int	*start, *finish, *inc;
+{
+   char	*p, *pp;
+   long strtol();
+   
+   if( (p = strchr(str,':')) != NULL)
+   {
+      *inc = strtol(p+1, &pp, 0);
+      if( pp == p+1 )
+	 goto limerr;
+      *p = 0;
+   }
+   else
+      *inc = 1;
+   if( (p = strchr(str,'-')) != NULL)
+   {
+      *p = 0;
+      *start = strtol(str, &pp, 0);
+      if( pp == str )
+	 goto limerr;
+      *finish = strtol(p+1, &pp, 0);
+      if( pp == p+1 )
+	 goto limerr;
+   }
+   else
+   {
+      *start = *finish = strtol(str, &pp, 0);
+      if( pp == str )
+	 goto limerr;
+   }
+   return 0;
+ limerr:
+   return -1;
 }
 
 void
@@ -96,6 +139,7 @@ char	*argv[];
    char		*dump_name;
    FILE		*dump_file;
    int		nfiles = 0, pflg = 0;
+   int		start,finish,inc, i;
 
    dump_t	proto_header, header;
 
@@ -117,24 +161,36 @@ char	*argv[];
 	 nmols_r = atoi(optarg);
 	 break;
        case 'r':
-	 cur = (list_t *)calloc(1, sizeof(list_t));
-	 cur->i = atoi(optarg);
-	 if( cur->i < 0 || cur->i >= nmols)
-	 {
-	    fprintf(stderr, "Molecule index %d out of range\n", cur->i);
-	    exit(2);
-	 }
-	 insert(cur, &r_head);
+	 if( forstr(optarg, &start, &finish, &inc) )
+	    errflg++;
+	 else
+	    for(i = start; i <= finish; i+= inc)
+	    {
+	       cur = (list_t *)calloc(1, sizeof(list_t));
+	       cur->i = i;
+	       if( cur->i < 0 || cur->i >= nmols)
+	       {
+		  fprintf(stderr,"Molecule index %d out of range\n", cur->i);
+		  exit(2);
+	       }
+	       insert(cur, &r_head);
+	    }
 	 break;
        case 'q':
-	 cur = (list_t *)calloc(1, sizeof(list_t));
-	 cur->i = atoi(optarg);
-	 if( cur->i < 0 || cur->i >= nmols_r)
-	 {
-	    fprintf(stderr, "Quaternion index %d out of range\n", cur->i);
-	    exit(2);
-	 }
-	 insert(cur, &q_head);
+	 if( forstr(optarg, &start, &finish, &inc) )
+	    errflg++;
+	 else
+	    for(i = start; i <= finish; i+= inc)
+	    {
+	       cur = (list_t *)calloc(1, sizeof(list_t));
+	       cur->i = i;
+	       if( cur->i < 0 || cur->i >= nmols_r)
+	       {
+		  fprintf(stderr, "Quaternion index %d out of range\n", cur->i);
+		  exit(2);
+	       }
+	       insert(cur, &q_head);
+	    }
 	 break;
        case '?':
 	 errflg++;
