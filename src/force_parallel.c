@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.21 92/02/26 14:34:10 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.22 92/03/19 15:48:27 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -142,7 +142,7 @@ static          int nx = 0, ny = 0, nz = 0;
  * to increase this from 1, your system must be *highly* inhomogeneous
  * and may not make sense!
  */
-#define         NMULT 1.0
+#define         NMULT 1.5
 #define		NSHELL (2*NSH+1)
 #define         NREL(ix,iy,iz) ((iz)+NSH+NSHELL*((iy)+NSH+NSHELL*((ix)+NSH)))
 #define         CELLMAX 5
