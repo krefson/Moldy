@@ -113,6 +113,7 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 # It's not essential but it speeds the program up slightly.
 #LDFLAGS=$(PARLIBL) $(LDFLAGS0) -L/usr/local/lib/bnchlib -lbnch -lsci
 #  ***** End *****
+PRFLAGS=-c "-DUSE_XDR -DSPMD -D__MSDOS__"
 LINT=		lint
 TAR=		tar
 DCLAR=		dclar
@@ -148,9 +149,9 @@ SHAKOBJS= $(SHAKS:%=%.o)
 
 UTILS = moldyext dumpanal dumpconv dumpext  manalyze
 
-UTILS2= mdshak msd mdavpos
+UTILS2= mdshak msd mdavpos 
 
-EXTRA0 = $(UTILS:%=%.c) $(UTILS2:%=%.c)  ewald_parallel.c force_parallel.c
+EXTRA0 = $(UTILS:%=%.c) $(UTILS2:%=%.c) ReadDCD.c ReadDCD.h  ewald_parallel.c force_parallel.c
 
 EXTRAS = $(EXTRA0) ewald-RIL.c
 
@@ -216,7 +217,7 @@ $(FIGTEXPS):
 		 for file in *.tex; do mv $$file ../`basename $$file .tex`-eepic.ftx; done;)
 
 protoize:	$(CFILES) $(HFILES)
-		protoize -k $(CFILES)
+		protoize -k $(PRFLAGS) $(CFILES)
 
 proto-mdshak:	mdshak.c $(SHAKC)
 		protoize mdshak.c $(SHAKC)
@@ -319,10 +320,10 @@ moldy.tar:	$(CFILES) $(HFILES)  Makefile xmakefile \
 		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
 
 moldy.tar.Z:	moldy.tar
-		compress moldy.tar
+		compress -c moldy.tar > moldy.tar.Z
 
 moldy.tar.gz:	moldy.tar
-		gzip moldy.tar
+		gzip -c moldy.tar > moldy.tar.gz
 
 moldy.shar:	$(CFILES) $(HFILES)  Makefile xmakefile \
 		$(EXTRAS) $(INFILES) $(DOC) getopt.c $(VMSBUILD) $(DOSBUILD)
