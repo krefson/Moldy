@@ -288,6 +288,7 @@ extern int              ithread, nthreads;
  */
 #define         NMULT 2.0
 #define         TOO_CLOSE       0.25    /* Error signalled if r**2 < this     */
+#define         TOO_FAR       0.0025    /* Error signalled if r**2 < this     */
 #define		IMCELL_XTRA 1
 #define		IMCELL_L (2*IMCELL_XTRA+1)
 #define         NIMCELLS (IMCELL_L*IMCELL_L*IMCELL_L)
@@ -1122,7 +1123,11 @@ void force_inner(int ithread,
 	       jsite += search_lt(jmax-jsite, r_sqr+jsite, 1, TOO_CLOSE);
 	       if( jsite < jmax )
 	       {
-		  if( molmap[isite] != molmap[nab[jsite]])
+		  if( molmap[isite] != molmap[nab[jsite]] && 
+				  !(system->ptype==5 && 
+				  nab_pot[0][isite]==0.0 &&
+				  nab_pot[1][isite]==0.0 &&
+				  nab_pot[2][isite]==0.0))
 		     message(NULLI, NULLP, WARNING, TOOCLS,
 			     isite, nab[jsite], sqrt(TOO_CLOSE));
 		  jsite++;
