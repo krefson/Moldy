@@ -11,6 +11,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 1.7  90/05/02  15:28:55  keith
+ * Removed references to size_t and time_t typedefs, no longer in "defs.h"
+ * 
  * Revision 1.6  89/11/01  17:40:36  keith
  * Read_restart modified to allow skip of read of averages data -
  * specified by asize=0.
@@ -30,7 +33,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/restart.c,v 1.6 89/11/01 17:40:36 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 1.7 90/05/02 15:28:55 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -195,7 +198,7 @@ system_p	system;
    cread(restart, (char*)system->hddotvo, sizeof(vec_t), 3);
 
    ap = av_ptr(&asize);			/* get addr and size of database      */
-   if( asize == 0 )			/* Don't read in any data	      */
+   if( asize == 0 || control.reset_averages)/* Don't read in any data	      */
       cskip(restart);
    else
       cread(restart, ap, asize, 1);
@@ -231,8 +234,9 @@ pot_p		potpar;			/* To be pointed at potpar array      */
       return;
    }
 
+   control.reset_averages = 0;		/* This flag never propagated.	      */
    (void)memcpy((char*)&save_header, (char*)&restart_header, sizeof(restrt_t));
-   (void)strncpy(save_header.vsn, "$Revision: 1.6 $"+11,
+   (void)strncpy(save_header.vsn, "$Revision: 1.7 $"+11,
 		                  sizeof save_header.vsn-1);
    save_header.prev_timestamp = restart_header.timestamp;
    save_header.timestamp = time((time_t*)0);		/* Update header      */
