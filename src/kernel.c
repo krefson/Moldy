@@ -34,6 +34,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.14.2.4  2002/02/18 15:29:36  kr
+ *       Fixed dist-pot term to include all terms for Generic and Buckingham potentials.
+ *       This makes a difference for pathalogical cases like Floris ion-water potentials.
+ *
+ *       Revision 2.14.2.3  2001/05/28 17:48:36  keith
+ *       Added "hiw7+win" potential for flexible Cr-6H2O cluster potential
+ *
  *       Revision 2.14.2.2  2001/02/22 11:51:47  keith
  *       Added "generic+win" potential.
  *
@@ -184,7 +191,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/kernel.c,v 2.14.2.2 2001/02/22 11:51:47 keith Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/kernel.c,v 2.15 2002/02/14 17:22:31 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -197,14 +204,14 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/kernel.c,v 2.1
 void	message(int *,...);		/* Write a warning or error message   */
 /*========================== Potential type specification ====================*/
 #define LJPOT 0		/* Lennard Jones.   U=p0*((p1/r)^6 - (p1/r)^12)       */
-#define E6POT 1		/* 6-exp potential  U=p0/r^6 + p1*exp(-p2*r)          */
-#define MCYPOT 2	/* MCY water pot.  J.Chem.Phys 64,1351(1976)    */
+#define E6POT 1		/* 6-exp potential  U=-p0/r^6 + p1*exp(-p2*r)         */
+#define MCYPOT 2	/* MCY water pot.  J.Chem.Phys 64,1351(1976)          */
 			/*		    U= p0*exp(-p1*r) - p2*exp(-p3*r)  */
 #define GENPOT 3	/* "generic" potential for multipurpose use.          */
-			/* U= p0*exp(-p1*r) + p2/r^12 - p3/r^4 -p4/r^6 -p5/r^8 */
+			/* U= p0*exp(-p1*r) + p2/r^12 - p3/r^4 -p4/r^6 -p5/r^8*/
 #define HIWPOT 4	/* HIW pot. R.R.Pappalardo, J.Phys.Chem 97,4500(1993) */
 			/*		    U= p0/r^4 + p1/r^6 + p2/r^12      */
-#define HIWWIN  5	/* HIW+ harmonic window potential		      */
+#define HIWWIN  5	/* HIW flexible + windows potential                   */
 #define MORPOT 6	/* Busing-Ida-Gilbert plus Morse-potential of Mdxorto */
 			/* Material Design using Personal computer, Ed        */
                         /* Kazuyuki Hirao,  (1994) ISBN 4-7853-6803-9         */
@@ -222,7 +229,7 @@ const pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 		              {"hiw+win",5},
 		              {"morse",7},
 		              {"generic+win",8},
-			      {"hiw7+win",6},
+			      {"hiwfl+win",6},
 		              {0,0}};	            /* MUST be null-terminated*/
 /*
  *  Array of dimensions of pot'l parameters.  Triplets contain powers
@@ -255,7 +262,7 @@ const dim_mt   pot_dim[][NPOTP]= {
 #define PP	 0.3275911
 
 #define POLY5(t)   ((t)*(E1 + (t)*(E2 + (t)*(E3 + (t)*(E4 + (t)*E5)))))
-
+#define BPAR_TOL 1.0e-7
 /*============================================================================*/
 /******************************************************************************
  *  dist_pot   return attractive part of potential integrated outside cutoff. *
@@ -273,9 +280,16 @@ double	dist_pot(real *potpar,          /* Array of potential parameters      */
     case LJPOT:
       return(potpar[0]*CUBE(SQR(potpar[1])/cutoff) / 3.0);
     case E6POT:
-      return(potpar[0] / ( 3.0*CUBE(cutoff)));
+       if( potpar[2] > BPAR_TOL ) 
+	  return( potpar[0] / ( 3.0*CUBE(cutoff))
+		  - potpar[1] * exp(-potpar[2]*cutoff)
+		  * (SQR(cutoff)/potpar[2] + 2*cutoff/SQR(potpar[2]) + 2.0 / CUBE(potpar[2])));
+       else
+	  return( potpar[0] / ( 3.0*CUBE(cutoff))
+		  - potpar[1] * exp(-potpar[2]*cutoff)
+		  * (SQR(cutoff)/potpar[2] + 2*cutoff/SQR(potpar[2]) + 2.0 / CUBE(potpar[2])));
     case MCYPOT:
-      if( potpar[3] != 0.0 )
+      if( potpar[3]  > BPAR_TOL )
          return( potpar[2] * (SQR(cutoff)/potpar[3] + 2*cutoff/SQR(potpar[3])
 	   		   + 2.0 / CUBE(potpar[3])) * exp(-potpar[3]*cutoff));
       else
@@ -283,7 +297,15 @@ double	dist_pot(real *potpar,          /* Array of potential parameters      */
     case GENWIN:
        /*FALLTHRU*/
     case GENPOT:
-      return ( potpar[4] / ( 3.0*CUBE(cutoff)) + potpar[3] / cutoff);
+       if( potpar[1] > BPAR_TOL ) 
+	  return ( - potpar[0] * exp(-potpar[1]*cutoff) *
+		   (SQR(cutoff)/potpar[1] + 2*cutoff/SQR(potpar[1]) + 2.0 / CUBE(potpar[1])) 
+		   -potpar[2] / ( 9.0*CUBE(CUBE(cutoff))) + potpar[3] / cutoff 
+		   + potpar[4] / ( 3.0*CUBE(cutoff)) + potpar[5] / ( 5.0*SQR(cutoff)*CUBE(cutoff)));
+       else
+	  return ( -potpar[2] / ( 9.0*CUBE(CUBE(cutoff))) + potpar[3] / cutoff 
+		   + potpar[4] / ( 3.0*CUBE(cutoff)) + potpar[5] / ( 5.0*SQR(cutoff)*CUBE(cutoff)));
+	  
     case MORPOT:
       if( potpar[5] != 0.0 )
          return( potpar[3] / ( 3.0*CUBE(cutoff))
@@ -606,7 +628,7 @@ VECTORIZE
                                + 12.0 * r_12_r + erfc_term - r*fwin);  
          }
          break; 
-     }
+      }
    else
       switch(ptype)
       {
