@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/mdvaf.c,v 1.13 2002/09/19 09:26:29 kr Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/mdvaf.c,v 1.13.10.1 2003/07/29 09:40:53 moldydv Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,9 @@ static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/mdvaf.c,v 1.13 200
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.13.10.1  2003/07/29 09:40:53  moldydv
+ *  Species now specified with -g in 'true' selector format.
+ *
  *  Revision 1.13  2002/09/19 09:26:29  kr
  *  Tidied up header declarations.
  *  Changed old includes of string,stdlib,stddef and time to <> form
@@ -108,8 +111,8 @@ void	read_restart(FILE *restart, char *vsn, system_mp system, int av_convert);
 void	init_averages(int nspecies, char *vsn, long int roll_interval, 
    long int old_roll_interval, int *av_convert);
 int	getopt(int, char *const *, const char *);
-gptr	*talloc(int n, size_mt size, int line, char *file);
 void	tfree(gptr *p);
+extern  int optind;
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
 contr_mt                control;
@@ -265,8 +268,7 @@ vaf_out(spec_mt *species, float **vaf, int max_av, int nvaf, char *spec_mask, in
 int
 main(int argc, char **argv)
 {
-   int	aflg = 0,c, cflg = 0, ans_i, sym = 0,cptflg = 0;
-   char 	line[80];
+   int	aflg = 0,c, cflg = 0, cptflg = 0;
    extern char	*optarg;
    int		errflg = 0;
    int		intyp = 0;
@@ -275,18 +277,21 @@ main(int argc, char **argv)
    int		nslices;
    int		dflag, iflag, sflag, vflag;
    int		outsw;
-   int		irec, it_inc = 1;
-   char		*filename = NULL, *dump_name = NULL;
-   char		*dumplims = NULL;
+   int		irec, ispec, it_inc = 1;
+   char         *filename = NULL, *dump_base = NULL;
+   char         *dump_name = NULL, *dump_names = NULL;
+   char         *dumplims = NULL;
    char		*vaflims = NULL;
    char		*tempname;
    char		dumpcommand[256];
    int		dump_size;
    float	*dump_buf;
-   FILE		*Fp, *Dp;
+   FILE         *Fp, *Dp, *dump_file;
+   dump_mt      dump_header;
+   dump_sysinfo_mt *dump_sysinfo;
+   size_mt      sysinfo_size;
    system_mt    sys;
-   spec_mt      *species;
-   restrt_mt	restart_header;
+   spec_mt      *species, *spec;
    site_mt      *site_info;
    pot_mt       *potpar;
    float        (**vel)[3];
@@ -296,6 +301,8 @@ main(int argc, char **argv)
    float        **vaf;
    char         *spec_list = "1-50";
    char         spec_mask[MAX_SPECIES];
+   int          arglen, ind, genflg;
+   int          xdr = 0;
 
 #define MAXTRY 100
    control.page_length=1000000;
@@ -307,7 +314,7 @@ main(int argc, char **argv)
      outsw = VAF;
 
 
-   while( (c = getopt(argc, argv, "3acr:s:d:t:v:i:g:o:q") ) != EOF )
+   while( (c = getopt(argc, argv, "3acd:t:v:i:g:o:q") ) != EOF )
       switch(c)
       {
        case '3':
@@ -319,20 +326,8 @@ main(int argc, char **argv)
        case 'c':
          cflg++;
          break;
-       case 'r':
-	 if( intyp )
-	    errflg++;
-	 intyp = c;
-	 filename = optarg;
-	 break;
-        case 's':
-	 if( intyp )
-	    errflg++;
-	 intyp = c;
-	 filename = optarg;
-	 break;
        case 'd':
-	 dump_name = optarg;
+	 dump_base = optarg;
 	 break;
        case 't':
 	 dumplims = mystrdup(optarg);
@@ -360,8 +355,7 @@ main(int argc, char **argv)
 
    if( errflg )
    {
-      fprintf(stderr,
-         "Usage: %s [-s sys-spec-file |-r restart-file] [-a] [-c] ",comm);
+      fprintf(stderr,"Usage: %s [-a] [-c] ",comm);
       fputs("-d dump-files -t s[-f[:n]] [-v s[-f[:n]]] ",stderr);
       fputs("[-g s[-f[:n]]] [-i init-inc] [-q] [-o output-file]\n",stderr);
       exit(2);
@@ -370,61 +364,98 @@ main(int argc, char **argv)
    if( tokenise(mystrdup(spec_list), spec_mask, MAX_SPECIES) == 0 )
        error("Invalid species specification \"%s\": usage eg 1,3,5-9,4",spec_list);
 
-   if(intyp == 0)
-   {
-      fputs("How do you want to specify the simulated system?\n", stderr);
-      fputs("Do you want to use a system specification file (1)", stderr);
-      fputs(" or a restart file (2)\n", stderr);
-      if( (ans_i = get_int("? ", 1, 2)) == EOF )
-	 exit(2);
-      intyp = ans_i-1 ? 'r': 's';
-      if( intyp == 's' )
-      {
-	 fputs( "Do you need to skip 'control' information?\n", stderr);
-	 if( (sym = get_sym("y or n? ","yYnN")) == 'y' || sym == 'Y')
-	    cflg++;
-      }
+   /* Prepare dump file name for reading */
+   genflg = 0;
+   if( dump_base != 0 ) genflg++;
 
-      if( (filename = get_str("File name? ")) == NULL )
-	 exit(2);
+   if( genflg == 0 && optind < argc ) {
+      arglen = 0;
+      for(ind=optind; ind < argc; ind++) {
+         arglen += strlen(argv[ind]) + 1;
+      }
+      dump_names=malloc(arglen);
+      dump_names[0] = 0;
+      for(ind=optind; ind < argc; ind++) {
+         strcat(dump_names,argv[ind]);
+         if(ind < argc-1) strcat(dump_names," ");
+      }
    }
 
-   switch(intyp)
+   /* Dump dataset                            */
+   if( dump_base == 0 && dump_names == 0)
    {
-    case 's':
-      if( (Fp = fopen(filename,"r")) == NULL)
-	 error("Couldn't open sys-spec file \"%s\" for reading", filename);
-      if( cflg )
-      {
-	 do
-	 {
-	    fscanf(Fp, "%s",line);
-	    (void)strlower(line);
-	 }
-	 while(! feof(stdin) && strcmp(line,"end"));
-      }
-      read_sysdef(Fp, &sys, &species, &site_info, &potpar);
-      qpf = qalloc(sys.nspecies);
-      initialise_sysdef(&sys, species, site_info, qpf);
-      break;
-    case 'r':
-      if( (Fp = fopen(filename,"rb")) == NULL)
-	 error("Couldn't open restart file \"%s\" for reading -\n%s\n", 
-	       filename, strerror(errno));
-      re_re_header(Fp, &restart_header, &control_junk);
-      re_re_sysdef(Fp, restart_header.vsn, &sys, &species, &site_info, &potpar);
-      break;
-    default:
-      error("Internal error - invalid input type", "");
+        fputs("Enter canonical name of dump files (as in control)\n",stderr);
+        if( (dump_base = get_str("Dump file name? ")) == NULL) exit(2);
+        genflg++;
    }
 
-  /* Dump dataset			      */
-   if( dump_name == 0 )
+   if( dump_names == 0 ) dump_names = dump_base;
+
+   /* Prepare to read header info */
+   if( genflg )
    {
-	fputs("Enter canonical name of dump files (as in control)\n",stderr);
-	if( (dump_name = get_str("Dump file name? ")) == NULL)
-	exit(2);
-    }
+      dump_name = malloc(strlen(dump_base) + 2);
+      sprintf(dump_name, dump_base, 0);
+   }
+   else
+   {
+      dump_name = argv[optind];
+   }
+   if( (dump_file = open_dump(dump_name, "rb")) == NULL)
+   {
+      fprintf(stderr, "Failed to open dump file \"%s\"\n", dump_name);
+      exit(2);
+   }
+
+   /*
+    * Read dump header. On first call we need to read only the first
+    * part of sysinfo to determine nspecies and consequently the size
+    * of the buffer needed to hold all of it.
+    */
+   sysinfo_size = sizeof(dump_sysinfo_mt);
+   dump_sysinfo = (dump_sysinfo_mt*)malloc(sysinfo_size);
+   if( read_dump_header(dump_name, dump_file, &dump_header, &xdr,
+                        sysinfo_size, dump_sysinfo)
+       || ferror(dump_file) || feof(dump_file) )
+   {
+      fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
+      exit(2);
+   }
+   sysinfo_size = sizeof(dump_sysinfo_mt)
+      + sizeof(mol_mt) * (dump_sysinfo->nspecies-1);
+   (void)free(dump_sysinfo);
+
+   /*
+    * Allocate space for and read dump sysinfo.
+    */
+   dump_sysinfo = (dump_sysinfo_mt*)malloc(sysinfo_size);
+   /*
+    * Rewind and reread header, this time including sysinfo.
+    */
+   (void)rewind_dump(dump_file, xdr);
+   if( read_dump_header(dump_name, dump_file, &dump_header, &xdr,
+                        sysinfo_size, dump_sysinfo)
+       || ferror(dump_file) || feof(dump_file) )
+   {
+      fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
+      exit(2);
+   }
+
+   sys.nspecies = dump_sysinfo->nspecies;
+
+   sys.nmols    = dump_sysinfo->nmols;
+   sys.nmols_r  = dump_sysinfo->nmols_r;
+
+   species = aalloc(dump_sysinfo->nspecies, spec_mt );
+   for( ispec = 0, spec = species; ispec < dump_sysinfo->nspecies; ispec++, spec++)
+   {
+      spec->nmols = dump_sysinfo->mol[ispec].nmols;
+      spec->rdof = dump_sysinfo->mol[ispec].rdof;
+      spec->framework = dump_sysinfo->mol[ispec].framework;
+      strncpy(spec->name, dump_sysinfo->mol[ispec].name, L_spec);
+   }
+
+   allocate_dynamics(&sys, species);
 
   /*
    *  Ensure that the dump limits start, finish, inc are set up,
@@ -543,8 +574,11 @@ main(int argc, char **argv)
    for(irec = 0; irec <= finish-start; irec+=inc)
    {
         if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
-           error("Error reading record %d in dump file - \n%s\n",
-              irec, strerror(errno));
+           if( !strcmp(strerror(errno),"Success") )
+              error("Error reading record %d in dump file \"%s\"\n",irec, dump_name);
+           else
+              error("Error reading record %d in dump file \"%s\" - \n%s\n",
+                 irec, dump_name, strerror(errno));
 	memcpy(vel[irec/inc], dump_buf, dump_size);
 #ifdef DEBUG
         fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
