@@ -17,6 +17,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	algorith.c,v $
+ * Revision 1.1.1.9  91/03/12  15:42:03  keith
+ * Tidied up typedefs size_t and include file <sys/types.h>
+ * Added explicit function declarations.
+ * 
  * Revision 1.1.1.8  90/10/22  16:41:43  keith
  * Make vec_dist() robust in case of all-zero vectors.
  * 
@@ -48,16 +52,17 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 1.1.1.8 90/10/22 16:41:43 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 1.1.1.11 91/08/14 14:23:15 keith Exp $";
 #endif
-/*========================== Library include files ===========================*/
-#include 	<math.h>
-#include 	"string.h"
 /*========================== program include files ===========================*/
 #include 	"defs.h"
 #include 	"messages.h"
+/*========================== Library include files ===========================*/
+#include 	<math.h>
+#include 	"string.h"
+#include	"stddef.h"
 /*========================== External function declarations ==================*/
-char            *talloc();	       /* Interface to memory allocator       */
+gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
 void	mat_vec_mul();			/* 3 x 3 Matrix by Vector multiplier  */
 void	mat_mul();	          	/* 3 x 3 matrix multiplier	      */
@@ -74,7 +79,6 @@ double	sum();				/* Vector sum			      */
 void	vscale();
 void	message();			/* Error message and exit handler     */
 /*========================== Macros ==========================================*/
-#define	veccpy(v1,v2,n) (void)memcpy((char*)(v1),(char*)(v2),(n)*sizeof(vec_t))
 #define MATMUL(i, m, r, o) (m[i][0]*r[0][o] + m[i][1]*r[1][o] + m[i][2]*r[2][o])
 /*============================================================================*/
 /******************************************************************************
@@ -190,7 +194,7 @@ VECTORIZE
          torque[imol][i] = torq;
       }
    }
-   tfree((char *)princ_force);
+   xfree(princ_force);
 }
 /******************************************************************************
  *  make_sites     Calculate the atomic site co-ordinates for nmols identical *
@@ -245,7 +249,7 @@ int		nmols,		/* Number of molecules                        */
           site[1][isite] -= lyz * t;
           site[2][isite] -= lz  * t;
       }
-   tfree((char*) ssite);
+   xfree(ssite);
 }
 /******************************************************************************
  *  newton   Apply newton's equation to calculate the acceleration of a       *
@@ -312,7 +316,7 @@ int		nmols;		/* Number of molecules                   (in) */
    q_mul(quat, ang_acc, qddot, nmols);
    vscale(4 * nmols, 0.5, qddot[0], 1);
 
-   tfree((char*)ang_acc);
+   xfree(ang_acc);
 }
 /******************************************************************************
  *  Parinello   Calculate the correction to the scaled centre of mass         *
@@ -352,7 +356,7 @@ int	nmols;			/* Size of vel and acc/ number molecules (in) */
       for(imol = 0; imol < nmols; imol++)       /* to accelerations           */
          acc_out[imol][i] = acc[imol][i] - acc_corr[imol][i];
 
-   tfree((char*)acc_corr);
+   xfree(acc_corr);
 }
 /******************************************************************************
  *  Trans_ke  calculate and return the translational kinetic energy           *
@@ -370,7 +374,7 @@ int	nmols;			/* Number of molecules			 (in) */
 
    ke = vdot(3*nmols, vel[0], 1, vel[0], 1);
 
-   tfree((char*)vel);
+   xfree(vel);
    return(0.5 * mass * ke);
 }
    
@@ -392,7 +396,7 @@ int	nmols;			/* Number of molecules			 (in) */
    for(i = 0; i < 3; i++)
       ke += inertia[i] * vdot(nmols, omega_p[0]+i+1, 4, omega_p[0]+i+1, 4);
 
-   tfree((char*)omega_p);
+   xfree(omega_p);
    return(0.5 * ke);
 }
 /******************************************************************************
@@ -416,7 +420,7 @@ int	nmols;				/* Number of molecules		(in)  */
          ke_dyad[i][j] += mass * vdot(nmols, vel[0]+i, 3, vel[0]+j, 3);
       }     
 
-   tfree((char*)vel);
+   xfree(vel);
 }
 /******************************************************************************
  * Rahman   Calculate the unit cell matrix accelerations                      *
