@@ -1,7 +1,11 @@
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.5 90/03/09 17:34:45 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/defs.h,v 1.6 90/03/26 18:04:33 keith Exp $
  *
  * $Log:	defs.h,v $
+ * Revision 1.6  90/03/26  18:04:33  keith
+ * Tidied up system dependant includes.
+ * Added system-dependant backup and temp file names (for input.c).
+ * 
  * Revision 1.5  90/03/09  17:34:45  keith
  * Added preprocessor directives to define USG (ie system V) for unicos.
  * 
@@ -26,11 +30,62 @@
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 1.5 $"
-#define		 REVISION_DATE    "$Date: 90/03/09 17:34:45 $"
+#define          REVISION         "$Revision: 1.6 $"
+#define		 REVISION_DATE    "$Date: 90/03/26 18:04:33 $"
 #define		 REVISION_STATE   "$State: Exp $"
-
-/* Vectorisation directive translation*/
+/******************************************************************************
+ *  Configurational information.  Edit this to tailor to your machine	      *
+ ******************************************************************************/
+/*
+ *  Set symbol USG to identify system V variant of unix.
+ */
+#if unix && ( sysV || SysV || cray)
+# define USG
+#endif
+/*
+ * Define operating-system dependant default filenames
+ */
+#ifdef VMS
+#define BACKUP_FILE	"MDBACKUP.DAT"
+#define TEMP_FILE	"MDTEMPXXXX.DAT"
+#endif
+#ifdef CMS
+#define BACKUP_FILE	"MDBACKUP MOLDY A1"
+#define TEMP_FILE	"MDTEMP XXXXXXXX A1"
+#endif
+/*
+ *  Define types time_t and size_t
+ */
+#if unix || CRAY
+typedef long		time_t;
+typedef	unsigned	size_t;
+#include		<time.h>
+#else
+#include		<stddef.h>
+#include		<time.h>
+#endif
+/*
+ * Set HAVE_VPRINTF if this function is in target machine's library.
+ */
+#ifdef __STDC__				/* ANSI has it			*/
+#define HAVE_VPRINTF
+#endif
+#if defined(sun) || defined(vms) || defined(stellar) /* So do these     */
+#define HAVE_VPRINTF
+#endif
+#if defined(cray) && defined(unix)	/* ie UNICOS			*/
+#define HAVE_VPRINTF
+#endif
+/*
+ *  Otherwise does machine have _doprnt?
+ */
+#if defined(convex) || defined(sequent)
+#define HAVE_DOPRNT
+#endif
+/* 
+ * Vectorisation directive translation.  N.B. Most preprocessors munge 
+ * directives so the #define must substiture the preprocessor OUTPUT.
+ */
 #ifdef CRAY
 #define VECTORIZE ## ivdep
 #define NOVECTOR  ## novector
@@ -48,7 +103,9 @@
 #endif
 #endif
 #endif
-
+/******************************************************************************
+ *  End of machine/OS configuration.					      *
+ ******************************************************************************/
 #ifndef SEEK_END
 #define	SEEK_SET	0
 #define	SEEK_CUR	1
@@ -127,35 +184,6 @@ typedef	real	quat_t[4];
 typedef quat_t	*quat_p;
 typedef real    mat_t[3][3];
 typedef vec_t	*mat_p;
-
-#if unix || CRAY
-typedef long		time_t;
-typedef	unsigned	size_t;
-#include		<time.h>
-#else
-#include		<stddef.h>
-#include		<time.h>
-#endif
-
-/*
- *  Set symbol USG to identify system V variant of unix.  Add your system
- *  here if necessary.
- */
-#if unix && ( sysV || SysV || cray)
-# define USG
-#endif
-
-/*
- * Define system-dependant default filenames
- */
-#ifdef VMS
-#define BACKUP_FILE	"MDBACKUP.DAT"
-#define TEMP_FILE	"MDTEMPXXXX.DAT"
-#endif
-#ifdef CMS
-#define BACKUP_FILE	"MDBACKUP MOLDY A1"
-#define TEMP_FILE	"MDTEMP XXXXXXXX A1"
-#endif
 
 #define		cfree	xfree
 
