@@ -6,13 +6,22 @@ SHELL=/bin/sh
 #  USE_XDR.  Uncomment this line to enable XDR support.
 XDR=-DUSE_XDR
 #  **** Scalar machines using default C compiler ****
-#CFLAGS=	-O  $(XDR) $(CFLAGS0)
-#CFLAGS=	-O4 $(CFLAGS0)
+CFLAGS=	-O  $(XDR) $(CFLAGS0)
+#LDFLAGS= $(LDFLAGS0)
+#INLINE=
+#  **** Scalar machines using gcc - can compile with -g ****
+#CC=	gcc
+#CFLAGS= -O2 -ffast-math $(XDR) $(CFLAGS0)
+#CFLAGSAUX=-funroll-loops
+#LDFLAGS= $(LDFLAGS0)
+#INLINE=
+#  **** IBM RS6000 ****
+#CC=c89
+#CFLAGS=	-O -DRS6000 $(XDR) $(CFLAGS0)
 #LDFLAGS= $(LDFLAGS0)
 #INLINE=
 #  **** MIPS for SGI etc ****
 #CFLAGS=	-O2 -mips2  $(XDR) $(CFLAGS0)
-#CFLAGS=	-O4 $(XDR) $(CFLAGS0)
 #LDFLAGS= $(LDFLAGS0) -lmalloc -lfastm
 #INLINE=
 #  **** Sun (unbundled) CC -- fastest options & better than gcc 2.0
@@ -20,12 +29,6 @@ XDR=-DUSE_XDR
 #CFLAGS= -cg89 -libmil -dalign  -O4 $(XDR) $(CFLAGS0)
 #CFLAGS2= 
 #LDFLAGS= $(LDFLAGS0)
-#INLINE=
-#  **** Scalar machines using gcc - can compile with -g ****
-CC=	gcc
-CFLAGS= -O2 -ffast-math $(XDR) $(CFLAGS0)
-CFLAGSAUX=-funroll-loops
-LDFLAGS= $(LDFLAGS0)
 #INLINE=
 #  **** gcc on Suns with unbundled ANSI CC ****
 #CC=	gcc
@@ -160,7 +163,7 @@ ci:		$(CFILES) $(HFILES) xmakefile $(EXTRAS) $(DOC)
 
 print:		$(CFILES) $(HFILES)
 		for file in $(CFILES) $(HFILES) ;do\
-			a2ps $(A2FLAGS) ${SHFILE} | lpr -l -Plp2\
+			a2ps $(A2FLAGS) ${SHFILE} | lpr -l\
                         ;done
 		touch print
 
