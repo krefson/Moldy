@@ -314,8 +314,6 @@ int	 sgno=0, sgopt=0; /* Space group number and associated option */
  * read_pdb().  Read structural data from pdb file.                           *
  ******************************************************************************/
 int      read_pdb(char *filename, mat_mp h, char (*label)[NLEN], vec_mp x, double *charge, char *title, char *spgr)
-
-                                    /* Species' C of M coordinates */
 {
 int      natoms = 0;
 double   cell[6];                                  /* Cell parameters */
@@ -324,7 +322,7 @@ mat_mt   hinv;
 double   tr[3];
 char     line[LLEN], keyword[LLEN];
 int      irow;
-int      scaleflg = 0, crystflag = 0;
+int  scaleflg = 0, crystflag = 0;
 FILE     *Fp;
 
    if( (Fp = fopen(filename,"r")) == NULL)
@@ -421,7 +419,7 @@ int      linec, linep; char *linev[32];
 int      blankflg = 0;                    /* Blanks in atom labels?            */
 int      multi_flag = 0;                  /* Flag for multiple units in file   */
 int      dupl_flag, symm_unit_reset=1;
-int      symm_unit_begin=0, symm_unit_end=0; /* Initialiation for lint only */
+int      symm_unit_begin=0, symm_unit_end=0; /* Initialization for lint only */
 T_RTMx   trans_matrix;
 double   sfact;
 int      keywd = 0;
@@ -643,9 +641,11 @@ int      read_xtl(char *filename, mat_mp h, char (*label)[NLEN], vec_mp x, doubl
 {
 int      i, num_tokens, natoms = 0;
 double   cell[6];                                  /* Cell parameters */
+mat_mt   hinv;
 char     line[LLEN], *buff[32];
 char	 dummy[4], temp_name[6];
-int      crystflag = 0, sgno = 0, sgopt = 0;
+int      sgno = 0, sgopt = 0;
+boolean	 crystflag = false, cart = false;
 FILE     *Fp;
 
    if( (Fp = fopen(filename,"r")) == NULL)
@@ -668,7 +668,7 @@ FILE     *Fp;
          if( sscanf(get_line(line,LLEN,Fp,0),"%10lf %10lf %10lf %10lf %10lf %10lf",
             &cell[0],&cell[1],&cell[2],&cell[3],&cell[4],&cell[5]) < 6 )
                error("Error in CELL line of \"%s\" -- should have 6 parameters", filename);
-         crystflag = 1;
+         crystflag = true;
       }
 
       if(strncmp(strlower(line),"symmetry ",9) == 0 )         /* Space group */
@@ -716,17 +716,20 @@ FILE     *Fp;
          get_line(line,LLEN,Fp,0);
          if( strncmp(strlower(line),"name ",5) == 0)
          {
+           num_tokens = get_tokens(line, buff, " ");
+           if( num_tokens > 1 &&  strncmp(strlower(*(buff+1)),"carx",4) == 0)
+              cart = true;
            do {
               get_line(line,LLEN,Fp,0);
 
               if( strcmp(strlower(line),"eof") !=0 )
               {
-		/* Read atom type from scattering element, as label not always element symbol */
+		 /* Read atom type from scattering element, as label not always element symbol */
                  if( sscanf(line,"%s %lf %lf %lf %lf %*lf %*lf   %s",
                      dummy, &x[natoms][0], &x[natoms][1], &x[natoms][2], &charge[natoms], temp_name) < 6)
                     error("File \"%s\" has incorrect format", filename);
 
-                 str_cut(temp_name, label[natoms]); /* Convert cssr atom name to atom symbol */
+                 str_cut(temp_name, label[natoms]); /* Extract atom symbol from symbol+number */
                  trim(label[natoms]);
                  natoms++;
               }
@@ -750,6 +753,11 @@ FILE     *Fp;
       }
 
       cell_to_prim(cell,h);
+      if( cart)
+      {
+        invert(h,hinv);
+        mat_vec_mul(hinv, x, x, natoms);   /* Convert to fractional coords */
+      }
    }
 
    return natoms;
@@ -764,7 +772,6 @@ double   cell[6];                                  /* Cell parameters */
 char     line[LLEN];
 char     temp_name[8];
 double   cellmax[3], cellmin[3];
-mat_mt   hinv;
 int	 i,j;
 FILE     *Fp;
 
