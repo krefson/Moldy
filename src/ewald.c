@@ -22,7 +22,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * Ewald	The reciprocal-space part of the standard Ewald sum technique *
  ******************************************************************************
  *      Revision Log
- *       $Log: ewald.c,v $
+ *       $Log: ewald-RIL.c,v $
+ *       Revision 1.1  1998/05/07 17:06:11  keith
+ *       Initial revision
+ *
  *       Revision 2.8.1.6  1996/11/12 15:33:52  keith
  *       Updated to match Ewald.c 2.13 with cache tuning etc.
  *
@@ -66,7 +69,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  * Got rid of all global (external) data items except for
  * "control" struct and constant data objects.  The latter
- * (pot_dim, potspec, prog_unit) are declared with CONST
+ * (pot_dim, potspec, prog_unit) are declared with const
  * qualifier macro which evaluates to "const" or nil
  * depending on ANSI/K&R environment.
  * Also moved as many "write" instantiations of "control"
@@ -197,7 +200,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.15 1997/10/06 09:04:04 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/ewald-RIL.c,v 1.1 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -230,7 +233,7 @@ void	transpose();			/* Transposes a 3x3 matrix	      */
 void    zero_real();            	/* Initialiser                        */
 void    zero_double();          	/* Initialiser                        */
 double	sum();				/* Sum of elements of 'real' vector   */
-#if defined(ANSI) || defined(__STDC__)
+#ifdef HAVE_STDARG_H
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 void	note(char *,...);		/* Write a message to the output file */
 void	message(int *,...);		/* Write a warning or error message   */
@@ -402,14 +405,14 @@ real	**chg, **qcoskr, **qsinkr;
    int h, k,l; 
    real *csp, *base;
 
-#ifndef __MSDOS__
+#ifndef ALLOC_SEPARATELY
    /*
     * Attempt to cache-align these arrays for optimum performance.
     * This requires NON-ANSI pointer conversion and arithmetic.
     * It should work with any UNIX address space, so make it conditional.
     */
    base = dalloc((2*(hmax+kmax+lmax)+15)*nsarray+10*NLINE+NCACHE);
-#if defined(unix) && !defined(__BOUNDS_CHECKING_ON)
+#if defined(ALLOC_ALIGN) && !defined(__BOUNDS_CHECKING_ON)
    csp = (real*)0 + (((base - (real*)0) - 1 | NCACHE-1) + 1);
 #else
    csp = base;
@@ -614,7 +617,7 @@ mat_mt		stress;			/* Stress virial		(out) */
 	 message(NULLI, NULLP, WARNING, SYSCHG, sq*CONV_Q, intra/vol*CONV_E);
       }
 
-      note("Ewald self-energy = %f kJ/mol",self_energy*CONV_E);
+      note("Ewald self-energy = %f Kj/mol",self_energy*CONV_E);
    }
 
    *pe -= self_energy;			/* Subtract self energy term	      */
