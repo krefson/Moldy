@@ -25,6 +25,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.12  1995/12/07 17:43:53  keith
+ *       Reworked V. Murashov's thermostat code.  Created new functions
+ *       nhtherm() and gtherm() to calculate alphadot.
+ *       Changed to Program units.
+ *
  *       Revision 2.11  1995/12/05 11:24:57  keith
  *       Added new function "poteval" which calls "kernel" to evaluate
  *       potential at single point and modified "distant_const" to
@@ -198,7 +203,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.11 1995/12/05 11:24:57 keith Exp keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.12 1995/12/07 17:43:53 keith Exp keith $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -253,6 +258,10 @@ double          gaussianr2();          /* Return omega*I*omega                */
 void            q_conj_mul();          /* Quat. conjugated x by quat. dot     */
 void	inhibit_vectorization();       /* Self-explanatory dummy              */
 void            kernel();              /* Potential function evaluation       */
+#ifdef SPMD
+void		par_rsum();
+void		par_dsum();
+#endif
 #if defined(ANSI) || defined(__STDC__)
 gptr		*arralloc(size_mt,int,...); /* Array allocator		      */
 void		note(char *, ...);	/* Write a message to the output file */
@@ -527,9 +536,9 @@ vec_mp		torque[];
                qd_tmp = qalloc(spec->nmols);
                q_conj_mul(spec->quat, spec->qdotp, qd_tmp, spec->nmols); 
 	       vscale(4*spec->nmols, 2.0, qd_tmp[0], 1);
-               sys->rap[ispec] = gaussianr1(torque[spec-species], qd_tmp[0],
+               sys->rap[ispec] = gaussianr1(torque[spec-species], qd_tmp,
                                           spec->nmols);
-	       temp_value[2*ispec+1] = gaussianr2(qd_tmp[0],  
+	       temp_value[2*ispec+1] = gaussianr2(qd_tmp,  
                                                   spec->inertia, spec->nmols);
                xfree(qd_tmp);
             } 
@@ -619,7 +628,7 @@ int	ptype;				/* Potential type selector	      */
       pp[i] = potpar+i;
 
    rr = SQR(r);
-   kernel(0,1,&f,&pe,&rr,0,0.0,0.0,0.0,ptype, pp);
+   kernel(0,1,&f,&pe,&rr,(real*)0,0.0,0.0,0.0,ptype, pp);
    return pe;
 }
 /******************************************************************************
@@ -1030,13 +1039,13 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
                   q_conj_mul(spec->quat, spec->qdotp, qd_tmp, spec->nmols); 
 		  vscale(4*spec->nmols, 2.0, qd_tmp[0], 1);
                   hoover_rot(sys->rap[ispec], spec->inertia, 
-                             torque[spec-species], acc_tmp[0],
-                             qd_tmp[0], spec->nmols);
+                             torque[spec-species], acc_tmp,
+                             qd_tmp, spec->nmols);
                }
                else
 	          memcp(acc_tmp[0], torque[spec-species], 3 * spec->nmols * 
                         sizeof(real)); 
-	       euler(acc_tmp[0], spec->quat, spec->qdotp,
+	       euler(acc_tmp, spec->quat, spec->qdotp,
 		     spec->qddot, spec->inertia, spec->nmols);
             }
 	 memcp(qd_tmp[0], sys->qdotp[0], 4 * sys->nmols_r * sizeof(real));
@@ -1121,13 +1130,14 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
 
    if( ithread == 0 )
    {
+#ifdef OLDRDF
 /*
  * Accumulate radial distribution functions
  */
       if (control.rdf_interval > 0 && control.istep >= control.begin_rdf &&
 	  control.istep % control.rdf_interval == 0)
 	 rdf_calc(site, sys, species);
-
+#endif
 /*
  * Perform periodic dump of dynamic data
  */
