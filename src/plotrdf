@@ -29,7 +29,7 @@ while ( <> ) {
     #
     # Store rdfs and column heads at end of "A-B RDF" block or and of RDFs
     #
-    if ( (/^\s([^-]+-[^-]+) RDF$/ || /^_+$/) && @rdf != 0) {
+    if ( (/^\s([^\s]+-[^\s]+) RDF$/ || /^_+$/) && @rdf != 0) {
       push @rdflist, [@rdf];
       push @hdrlist, $hdr;
       $nrdf = scalar(@rdf);
@@ -38,7 +38,7 @@ while ( <> ) {
     # 
     # Record column header and binwidth
     #
-    $hdr=$1 if (/^\s([^-]+-[^-]+) RDF$/);
+    $hdr=$1 if (/^\s([^\s]+-[^\s]+) RDF$/);
     $binw=$1 if  (/^\sRadial Distribution Functions\sBin width=([0-9.]+)$/);
     #
     # Record data block
