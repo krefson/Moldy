@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.11 1997/11/27 16:00:38 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.13 1998/01/28 09:55:05 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,10 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.11
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 1.12  1998/01/09 11:34:14  keith
+ *  Added casts to arralloc() calls for portability.
+ *  Changed to "HAVE_POPEN" macro from system-specifics
+ *
  *  Revision 1.11  1997/11/27 16:00:38  keith
  *  Lintified it to avoid compiler warnings and complaints from
  *  nervous users.
@@ -687,7 +691,7 @@ char	*argv[];
    vec_mt 	**traj_cofm;
    mat_mt	*hmat;
    real		range[3][2];
-   int		range_flag[3] = {0,0,0};
+   int		range_flag[3];
    site_mt	*site_info;
    pot_mt	*potpar;
    quat_mt	*qpf;
@@ -698,6 +702,7 @@ char	*argv[];
 
 #define MAXTRY 100
    control.page_length=1000000;
+   range_flag[0] = range_flag[1] = range_flag[2] = 0;
 
    comm = argv[0];
    if( strstr(comm, "msd") )
