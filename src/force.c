@@ -92,7 +92,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force.c,v 2.8 1994/07/07 16:58:14 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/force.c,v 2.9 1994/12/16 11:58:54 keith stab keith $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -724,7 +724,9 @@ mat_mt          stress;                 /* Stress virial                (out) */
    {
       note("MD cell divided into %d subcells (%dx%dx%d)",ncells,nx,ny,nz);
 
-      if(control.cutoff >= NSH*MIN3(system->h[0][0],system->h[1][1],system->h[2][2]))
+      if(control.cutoff >= NSH*MIN3(system->h[0][0]*(nx-1)/nx,
+				    system->h[1][1]*(ny-1)/ny,
+				    system->h[2][2]*(nz-1)/nz))
 	 message(NULLI, NULLP, FATAL, CUTOFF, NSH);
       if( reloc )
 	 xfree((reloc-NSH*onx));
