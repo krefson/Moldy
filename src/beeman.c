@@ -37,7 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *          of particles.  This may cause 'consistency' messages from lint.   *
  ******************************************************************************
  *      Revision Log
- *       $Log:	beeman.c,v $
+ *       $Log: beeman.c,v $
+ * Revision 2.5  1994/01/18  13:32:13  keith
+ * Null update for XDR portability release
+ *
  * Revision 2.3  93/10/28  10:27:45  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -74,7 +77,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/beeman.c,v 2.3 93/10/28 10:27:45 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/beeman.c,v 2.5 1994/01/18 13:32:13 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -92,7 +95,7 @@ void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
-extern	contr_mt	control;
+extern	contr_mt	control;            /* Main simulation control parms. */
 /*========================== Macros ==========================================*/
 #define	TOLERANCE	1.0e-4
 /*============================================================================*/
@@ -141,6 +144,7 @@ quat_mp		qdot;			/* Quaternion derivatives (update)    */
 /******************************************************************************
  *   Apply periodic boundary conditions to put particles back in MD box       *
  ******************************************************************************/
+static
 void escape(c_of_m, nmols)
 int		nmols;		/* First dimension of c-of-m                  */
 vec_mp		c_of_m;		/* Centre of mass co-ordinates (updat)        */

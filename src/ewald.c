@@ -22,7 +22,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * Ewald	The reciprocal-space part of the standard Ewald sum technique *
  ******************************************************************************
  *      Revision Log
- *       $Log:	ewald.c,v $
+ *       $Log: ewald.c,v $
+ * Revision 2.5  1994/01/18  13:32:27  keith
+ * Null update for XDR portability release
+ *
  * Revision 2.3  93/10/28  10:27:48  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -67,14 +70,14 @@ what you give them.   Help stamp out software-hoarding!  */
  * --Moved defn of NULL to stddef.h and included that where necessary.
  * --Eliminated clashes with ANSI library names
  * --Modified defs.h to recognise CONVEX ANSI compiler
- * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ * --Modified declaration of size_mt and inclusion of sys/types.h in aux.c
  *   for GNU compiler with and without fixed includes.
  * 
  * Revision 1.18  91/05/29  16:33:01  keith
  * Modified code for speed improvement in TITAN
  * 
  * Revision 1.17  91/03/12  15:42:31  keith
- * Tidied up typedefs size_t and include file <sys/types.h>
+ * Tidied up typedefs size_mt and include file <sys/types.h>
  * Added explicit function declarations.
  * 
  * Revision 1.16  91/02/07  16:52:18  keith
@@ -142,7 +145,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 2.3 93/10/28 10:27:48 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 2.5 1994/01/18 13:32:27 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -170,7 +173,7 @@ void	mat_vec_mul();			/* Multiplies a 3x3 matrix by 3xN vect*/
 void	mat_sca_mul();			/* Multiplies a 3x3 matrix by scalar  */
 double	sum();				/* Sum of elements of 'real' vector   */
 #if defined(ANSI) || defined(__STDC__)
-gptr	*arralloc(size_t,int,...); 	/* Array allocator		      */
+gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 void	note(char *,...);		/* Write a message to the output file */
 void	message(int *,...);		/* Write a warning or error message   */
 #else
@@ -179,7 +182,7 @@ void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
-extern	contr_mt	control;		/* Main simulation control record     */
+extern	contr_mt	control;	/* Main simulation control record     */
 /*========================== Macros ==========================================*/
 #define astar hinvp[0]
 #define bstar hinvp[1]
@@ -193,6 +196,7 @@ extern	contr_mt	control;		/* Main simulation control record     */
  * function because some compilers (notably Stellar's) generate MUCH better  *
  * vector code this way. 						     *
  *****************************************************************************/
+static
 void      qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,chg,
 		  qcoskr,qsinkr,k,l,nsites)
 real coshx[], sinhx[], cosky[], sinky[], coslz[], sinlz[],

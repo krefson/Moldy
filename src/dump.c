@@ -43,6 +43,15 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ * Revision 2.5  1994/02/01  14:33:45  keith
+ * Revised consistency checks to safeguard existing files:
+ * Now checks timestep in dump header.
+ * Reverted behaviour on dump-level change to start new run
+ *  - acidentally botched in 2.4.
+ * Changed behaviour on restart-file consistency check failure
+ * to start new run too.
+ * Improved messages.
+ * 
  * Revision 2.4  1994/01/24  18:32:32  keith
  * Don't rename dump run if restarting from backup file and
  * dump file exists and matches.
@@ -133,7 +142,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 2.5 1994/02/01 14:33:45 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -163,9 +172,7 @@ void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
-extern contr_mt	control;
-extern restrt_mt restart_header;
-extern int	backup_restart;
+extern contr_mt	control;                    /* Main simulation control parms. */
 #ifdef USE_XDR
 static   XDR		xdrs;
 #endif
@@ -176,6 +183,7 @@ static   XDR		xdrs;
 			            (3*system->nmols + 3*system->nmols_r + 9) +\
 			     (level & 1))
 /*============================================================================*/
+static
 int read_dump_hdr(fname, dumpf, hdr_p, xdr_write)
 char	*fname;
 FILE	**dumpf;
@@ -184,7 +192,7 @@ boolean	*xdr_write;
 {
    int      errflg = true;	/* Provisionally !!   */
 
-   *xdr_write = FALSE;
+   *xdr_write = false;
    if( (*dumpf = fopen(fname, "r+b")) == NULL)	/* Open dump file     */
       message(NULLI, NULLP, WARNING, DOERRR, fname, strerror(errno));
    else 
@@ -200,7 +208,7 @@ boolean	*xdr_write;
 	 if( strstr(hdr_p->vsn,"(XDR)") )
 	 {
 	    errflg = false;
-	    *xdr_write = TRUE;
+	    *xdr_write = true;
 	 }
       }
 #endif
@@ -222,7 +230,9 @@ boolean	*xdr_write;
 
 /*============================================================================*/
 
-void	dump(system, force, torque, stress, pe)
+void	dump(system, force, torque, stress, pe, restart_header, backup_restart)
+restrt_mt	*restart_header;
+int		backup_restart;
 system_mp	system;
 vec_mt		force[], torque[];
 mat_mt		stress;
@@ -248,7 +258,7 @@ double		pe;
 #define		NMUTATES 10   		/* Max number of mutation attempts.   */
    int		nmutates = 0;   	/* Number of mutation attempts.	      */
    int		junk;
-   boolean	xdr_write = FALSE;	/* Is current dump in XDR format?     */
+   boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
 
    if( ! strchr(control.dump_file, '%') )
@@ -278,9 +288,9 @@ double		pe;
 	 message(NULLI, NULLP, WARNING, DUMPTS, fname, 
 		 istep_hdr,dump_header.istep);
       else if( firsttime && 				  /* Matches Restart */
-	    dump_header.timestamp < restart_header.timestamp &&
-	    dump_header.restart_timestamp != restart_header.prev_timestamp &&
-	    dump_header.restart_timestamp != restart_header.timestamp )
+	    dump_header.timestamp < restart_header->timestamp &&
+	    dump_header.restart_timestamp != restart_header->prev_timestamp &&
+	    dump_header.restart_timestamp != restart_header->timestamp )
 	 message(NULLI, NULLP, WARNING, CONTIG, fname);
       else
 	 errflg = false;
@@ -338,14 +348,14 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 2.5 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 2.5.1.1 $"+11,
 		                     sizeof dump_header.vsn-1);
 #ifdef USE_XDR
       if( control.xdr_write )
       {
 	 (void)strncat(dump_header.vsn, " (XDR)",
 		                     sizeof dump_header.vsn-1);
-	 xdr_write = TRUE;
+	 xdr_write = true;
       }
 #endif
       dump_header.dump_interval = control.dump_interval;
@@ -428,7 +438,7 @@ double		pe;
 
    dump_convert(dump_buf, system, force, torque, stress, pe);
    dump_header.ndumps++;
-   dump_header.restart_timestamp = restart_header.timestamp;
+   dump_header.restart_timestamp = restart_header->timestamp;
 
 #ifdef USE_XDR
    if( xdr_write )

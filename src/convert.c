@@ -22,7 +22,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * Convert	Functions for conversion of units of input parameters.	      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	convert.c,v $
+ *       $Log: convert.c,v $
+ * Revision 2.5  94/01/18  13:32:14  keith
+ * Null update for XDR portability release
+ * 
  * Revision 2.3  93/10/28  10:27:46  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -56,7 +59,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/convert.c,v 2.3 93/10/28 10:27:46 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/convert.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -66,7 +69,8 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/convert.c,v 2.3 9
 #include	"structs.h"
 #include	"messages.h"
 /*========================== External data references ========================*/
-extern	contr_mt	control;
+extern	      contr_mt	control;            /* Main simulation control parms. */
+extern  CONST dim_mt	pot_dim[][NPOTP];    /* Pot'l dimension specification */
 /*========================== External function declarations ==================*/
 #if defined(ANSI) || defined(__STDC__)
 void	note(char *, ...);		/* Write a message to the output file */
@@ -84,17 +88,14 @@ typedef struct
   unit_mt	unit;			/* Units (in MKS) for conversion from */
 }  conv_mt,  *conv_mp;
 /*========================== Global variables ================================*/
-extern dim_mt   pot_dim[][NPOTP];
-#define	NPOTT	(sizeof npotp / sizeof(int))
-		/* Specification array for conversion between units 	      */
-
-static	conv_mt	conv[] = {  {&control.step,	{0,0,1,0},	{1,1,TUNIT,1}},
-                            {&control.pressure,	{1,-1,-2,0},	{1e6,1,1,1}},
-			    {&control.pmass,	{1,0,0,0},	{MUNIT,1,1,1}},
-			    {&control.cutoff,	{0,1,0,0},	{1,LUNIT,1,1}},
-			    {&control.density,	{1,-3,0,0},	{.001,.01,1,1}},
-			    {&control.alpha,	{0,-1,0,0},	{1,LUNIT,1,1}},
-			    {&control.limit,	{0,-1,0,0},	{1,LUNIT,1,1}}};
+static CONST conv_mt 
+	conv[] = {  {&control.step,	{0,0,1,0},	{1,1,TUNIT,1}},
+                    {&control.pressure,	{1,-1,-2,0},	{1e6,1,1,1}},
+		    {&control.pmass,	{1,0,0,0},	{MUNIT,1,1,1}},
+		    {&control.cutoff,	{0,1,0,0},	{1,LUNIT,1,1}},
+		    {&control.density,	{1,-3,0,0},	{.001,.01,1,1}},
+		    {&control.alpha,	{0,-1,0,0},	{1,LUNIT,1,1}},
+		    {&control.limit,	{0,-1,0,0},	{1,LUNIT,1,1}}};
 #define	NCONV	(sizeof conv / sizeof(conv_mt))
 /*============================================================================*/
 /******************************************************************************
@@ -104,7 +105,7 @@ static	conv_mt	conv[] = {  {&control.step,	{0,0,1,0},	{1,1,TUNIT,1}},
  ******************************************************************************/
 #define	MAX_SCALE	80			/* 1e35 - safe for any machine*/
 static double	unit_scale(dim, unit_from, unit_to)
-dim_mp	dim;				/* Dimensions			      */
+CONST dim_mp	dim;			/* Dimensions			      */
 unit_mp	unit_from, unit_to;		/* Units to convert from/to	      */
 {
    double	lnscale = 	dim->m*(log(unit_from->m) - log(unit_to->m))
@@ -121,7 +122,7 @@ unit_mp	unit_from, unit_to;		/* Units to convert from/to	      */
  ******************************************************************************/
 void	conv_potentials(unit_from, unit_to, potpar, npotpar, ptype,
 			   site_info, max_id)
-unit_mp		unit_from, unit_to;	/* Values of units for conversion     */
+CONST unit_mp	unit_from, unit_to;	/* Values of units for conversion     */
 pot_mt		potpar[];		/* Array of potpar records[max_id**2] */
 int		npotpar;		/* Number of 'active' parameters      */
 int		ptype;			/* Potential type		      */
@@ -137,7 +138,7 @@ int		max_id;			/* How many site id's		      */
    double	potscale[NPOTP];	/* Scale factors for pot'l parameters */
 
    for(ip = 0; ip < npotpar;ip++)	/* Work out scale factors for pot'l   */
-      potscale[ip] = unit_scale(pot_dim[ptype]+ip,unit_from, unit_to);
+      potscale[ip] = unit_scale(&pot_dim[ptype][ip],unit_from, unit_to);
 
    for(idi = 0; idi < max_id; idi++)
    {
@@ -154,7 +155,7 @@ int		max_id;			/* How many site id's		      */
  *   'conv' which contains a pointer to the data and a dimension struct.      *
  ******************************************************************************/
 void	conv_control(unit, direction)
-unit_mp		unit;			/* Units conversion is to/from	      */
+CONST unit_mp	unit;  			/* Units conversion is to/from	      */
 boolean		direction;		/* True=from input, false=to input    */
 {
    int		ic;			/* Counter			      */

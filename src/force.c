@@ -29,7 +29,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *		module (kernel.c) for ease of modification.		      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	force.c,v $
+ *       $Log: force.c,v $
+ * Revision 2.5  1994/01/18  13:32:31  keith
+ * Null update for XDR portability release
+ *
  * Revision 2.4  94/01/13  14:42:44  keith
  * Minor optimization using "store at end of loop" trick.
  * 
@@ -113,14 +116,14 @@ what you give them.   Help stamp out software-hoarding!  */
  * --Moved defn of NULL to stddef.h and included that where necessary.
  * --Eliminated clashes with ANSI library names
  * --Modified defs.h to recognise CONVEX ANSI compiler
- * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ * --Modified declaration of size_mt and inclusion of sys/types.h in aux.c
  *   for GNU compiler with and without fixed includes.
  * 
  * Revision 1.8.1.22  91/05/29  16:34:40  keith
  * Modified code for speed improvement in TITAN
  * 
  * Revision 1.8.1.21  91/03/12  15:42:36  keith
- * Tidied up typedefs size_t and include file <sys/types.h>
+ * Tidied up typedefs size_mt and include file <sys/types.h>
  * Added explicit function declarations.
  * 
  * Revision 1.8.1.20  91/02/07  16:30:50  keith
@@ -150,7 +153,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * Renamed own freer from cfree to tfree.
  * 
  * Revision 1.8.1.14  90/05/02  15:35:03  keith
- * Removed references to size_t and time_t typedefs, no longer in "defs.h"
+ * Removed references to size_mt and time_t typedefs, no longer in "defs.h"
  * 
  * Revision 1.8.1.13  90/03/09  20:50:43  keith
  * Replaced 'vadd' and 'calcdist' with inline code (OK UNDER CRAY C 4.1)
@@ -222,7 +225,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force.c,v 2.4 94/01/13 14:42:44 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force.c,v 2.5 1994/01/18 13:32:31 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -256,7 +259,7 @@ double	precision();			/* Floating pt precision.	      */
 void    kernel();                       /* Force kernel routine               */
 double  mol_radius();			/* Radius of largest molecule.        */
 #if defined(ANSI) || defined(__STDC__)
-gptr	*arralloc(size_t,int,...); 	/* Array allocator		      */
+gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 void	note(char *, ...);		/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
 #else
@@ -265,7 +268,7 @@ void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
-extern  contr_mt control;
+extern contr_mt control;                    /* Main simulation control parms. */
 /*========================== Structs local to module =========================*/
 typedef struct cell_s			/* Prototype element of linked list of*/
 {					/* molecules within interaction range */
@@ -332,6 +335,7 @@ NOVECTOR
  *  Any error at the boundaries is disasterous and hard to detect.            *
  *  Results may depend on machine-dependant rounding etc.		      *
  ******************************************************************************/
+static
 int cellbin(rc, nc, eps)
 double rc, eps;
 int nc;
@@ -515,7 +519,7 @@ double  cutoff;
     */
    nnab = 4*(mx+1)*(my+1)*(mz+1);
    cellmap = (int***)arralloc(sizeof ***cellmap, 3, 0, mx, -my-1, my, -mz-1, mz);
-   (void)memset((gptr*)(cellmap[0][-my-1]-mz-1),0, nnab*sizeof ***cellmap);
+   memst(cellmap[0][-my-1]-mz-1,0, nnab*sizeof ***cellmap);
 
    /*
     * Add cells with corner-pair distances < cutoff
@@ -698,6 +702,7 @@ int	*frame_type;			/* Framework type counter	 (out)*/
  *  site_neightbour list.  Build the list of sites withing interaction radius *
  *                         from the lists of sites in cells.		      *
  ******************************************************************************/
+static
 int	site_neighbour_list(nab, reloc_i, n_nab_sites, nfnab, n_frame_types,
 			    n_nabors, ix, iy, iz, nabor, cell, reloc, work )
 int	*nab;				/* Array of sites in list      (out) */
@@ -852,6 +857,7 @@ mat_mt          stress;                 /* Stress virial                (out) */
    real         **nab_pot			/* Gathere'd pot par array    */
    		= (real**)arralloc(sizeof(real), 2,
 				   0, n_potpar-1, 0, n_nab_sites-1);
+   double	subcell = control.subcell;	/* Local copy. May change it. */
    static	int n_cell_list = 1;
    cell_mt      *c_ptr = aalloc(n_cell_list, cell_mt );
    spec_mp      spec;
@@ -870,10 +876,10 @@ mat_mt          stress;                 /* Stress virial                (out) */
 #endif
   
 
-   if(control.subcell <= 0.0) control.subcell = control.cutoff/5.0;
-   nx = system->h[0][0]/control.subcell+0.5;
-   ny = system->h[1][1]/control.subcell+0.5;
-   nz = system->h[2][2]/control.subcell+0.5;
+   if(subcell <= 0.0) subcell = control.cutoff/5.0;
+   nx = system->h[0][0]/subcell+0.5;
+   ny = system->h[1][1]/subcell+0.5;
+   nz = system->h[2][2]/subcell+0.5;
    ncells = nx*ny*nz;
    if( nx != onx || ny != ony || nz != onz )
    {
