@@ -23,6 +23,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.11  1996/02/07 18:26:58  keith
+ *       Restructured for convergence of std and RIL versions
+ *        - eliminated ewald-inner.
+ *
  *       Revision 2.10  1994/12/30 11:46:08  keith
  *       Fixed bug which caused core dump for very small k-cutoff (hmax=0)
  *
@@ -184,7 +188,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.10 1994/12/30 11:46:08 keith stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.11 1996/02/07 18:26:58 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -349,12 +353,24 @@ mat_mt		stress;			/* Stress virial		(out) */
 		kmax = floor(control.k_cutoff/(2*PI)*modb(system->h)),
 		lmax = floor(control.k_cutoff/(2*PI)*modc(system->h));
 /*
+ * lower and upper limits for parallel loops.   
+ */
+#if defined(SPMD) && defined(MPPMANY)
+   int  nsnode = (nsites+nthreads-1)/nthreads;
+   int  nsarr0 = nsnode * nthreads;
+   int  ns0 = MIN(nsites, nsnode * ithread), 
+        ns1 = MIN(nsites, nsnode * (ithread+1));
+#else	    
+   int		ns0 = 0, ns1 = nsites;
+   int		nsarr0 = nsites;
+#endif
+/*
  * Kludge to optimize performance on RS6000s with 4-way assoc. cache.
  */
 #ifdef RS6000
-   int		nsarray = (nsites+64)/512*512 + MAX((nsites+64)%512-64,64);
+   int		nsarray = (nsarr0+64)/512*512 + MAX((nsarr0+64)%512-64,64);
 #else
-   int		nsarray = nsites;
+   int		nsarray = nsarr0;
 #endif
 /*
  * Arrays for cos & sin (h x(i)), (k y(i)) and (l z(i)) eg chx[h][isite]
@@ -384,8 +400,7 @@ mat_mt		stress;			/* Stress virial		(out) */
    static	double	self_energy,	/* Constant self energy term	      */
    			sheet_energy;	/* Correction for non-neutral system. */
    static	boolean init = true;	/* Flag for the first call of function*/
-   static	int	nsitesxf;	/* Number of non-framework sites.     */
-
+   static       int     nsitesxf;       /* Number of non-framework sites.     */
 /*
  * First call only - evaluate self energy term and store for subsequent calls
  * Self energy includes terms for non-framework sites only.
@@ -448,7 +463,6 @@ mat_mt		stress;			/* Stress virial		(out) */
       }
 
       note("Ewald self-energy = %f Kj/mol",self_energy*CONV_E);
-      init = false;
    }
 
    if( ithread == 0 )
@@ -486,14 +500,16 @@ mat_mt		stress;			/* Stress virial		(out) */
 	    }
 	 }
       }
-
+   if( init )
+      note("%d K-vectors included in reciprocal-space sum",nhkl);
+   init = false;
 /*
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
  */
-   coshx = chx[0]; cosky = cky[0]; coslz = clz[0];
    sinhx = shx[0]; sinky = sky[0]; sinlz = slz[0];
+   coshx = chx[0]; cosky = cky[0]; coslz = clz[0];
 VECTORIZE
-   for(is = 0; is < nsites; is++)
+   for(is = ns0; is < ns1; is++)
    {
       coshx[is] = cosky[is] = coslz[is] = 1.0;
       sinhx[is] = sinky[is] = sinlz[is] = 0.0;
@@ -504,7 +520,7 @@ VECTORIZE
    {
       coshx = chx[1]; sinhx = shx[1];
 VECTORIZE
-      for(is = 0; is < nsites; is++)
+      for(is = ns0; is < ns1; is++)
       {
 	 kx = astar[0]*site0[is]+astar[1]*site1[is]+astar[2]*site2[is];
 	 coshx[is] = cos(kx); sinhx[is] = sin(kx);
@@ -514,7 +530,7 @@ VECTORIZE
    {
       cosky = cky[1]; sinky = sky[1];
 VECTORIZE
-      for(is = 0; is < nsites; is++)
+      for(is = ns0; is < ns1; is++)
       {
 	 ky = bstar[0]*site0[is]+bstar[1]*site1[is]+bstar[2]*site2[is];
 	 cosky[is] = cos(ky); sinky[is] = sin(ky);
@@ -524,7 +540,7 @@ VECTORIZE
    {
       coslz = clz[1]; sinlz = slz[1];
 VECTORIZE
-      for(is = 0; is < nsites; is++)
+      for(is = ns0; is < ns1; is++)
       {
 	 kz = cstar[0]*site0[is]+cstar[1]*site1[is]+cstar[2]*site2[is];
 	 coslz[is] = cos(kz); sinlz[is] = sin(kz);
@@ -540,7 +556,7 @@ VECTORIZE
       cm1 = chx[h-1]; sm1 = shx[h-1];
       c1  = chx[1];   s1  = shx[1];
 VECTORIZE
-      for(is = 0; is < nsites; is++)
+      for(is = ns0; is < ns1; is++)
       {
 	 coss      = cm1[is]*c1[is] - sm1[is]*s1[is];
 	 sinhx[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
@@ -554,7 +570,7 @@ VECTORIZE
       cm1 = cky[k-1]; sm1 = sky[k-1];
       c1  = cky[1];   s1  = sky[1];
 VECTORIZE
-      for(is = 0; is < nsites; is++)
+      for(is = ns0; is < ns1; is++)
       {
 	 coss      = cm1[is]*c1[is] - sm1[is]*s1[is];
 	 sinky[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
@@ -568,13 +584,21 @@ VECTORIZE
       cm1 = clz[l-1]; sm1 = slz[l-1];
       c1  = clz[1];   s1  = slz[1];
 VECTORIZE
-      for(is = 0; is < nsites; is++)
+      for(is = ns0; is < ns1; is++)
       {
 	 coss      = cm1[is]*c1[is] - sm1[is]*s1[is];
 	 sinlz[is] = sm1[is]*c1[is] + cm1[is]*s1[is];
 	 coslz[is] = coss;
       }
    }
+#if defined(SPMD) && defined(MPPMANY)
+   par_collect_all(chx[0]+ns0, chx[0], nsnode, nsarray, hmax+1);
+   par_collect_all(shx[0]+ns0, shx[0], nsnode, nsarray, hmax+1);
+   par_collect_all(cky[0]+ns0, cky[0], nsnode, nsarray, kmax+1);
+   par_collect_all(sky[0]+ns0, sky[0], nsnode, nsarray, kmax+1);
+   par_collect_all(clz[0]+ns0, clz[0], nsnode, nsarray, lmax+1);
+   par_collect_all(slz[0]+ns0, slz[0], nsnode, nsarray, lmax+1);
+#endif
 /*
  * Start of main loops over K vector indices h, k, l between -*max, *max etc.
  * To avoid calculating K and -K, only half of the K-space box is covered. 
