@@ -18,6 +18,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.16  91/10/17  14:22:21  keith
+ * Added debugging code
+ * 
  * Revision 1.15  91/08/19  16:44:11  keith
  * Modifications for better ANSI/K&R compatibility and portability
  * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
@@ -79,7 +82,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.15 91/08/19 16:44:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.16 91/10/17 14:22:21 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
@@ -185,9 +188,12 @@ va_list	ap;
 }
             
 #if defined(ANSI) || defined(__STDC__)
-#undef va_alist
-#define	va_alist size_t size, int ndim, ...
-#define va_dcl /* */
+#   undef va_alist
+#   define	va_alist size_t size, int ndim, ...
+#   ifdef va_dcl
+#      undef va_dcl
+#   endif
+#   define va_dcl /* */
 #endif
                 /*VARARGS*/
 gptr		*arralloc(va_alist)
