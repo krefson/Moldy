@@ -274,11 +274,12 @@ real            **vec;          /* Output vector.  CAN BE SAME AS INPUT  (out)*/
  * input data file for the graphics program SCHAKAL88.			      *
  ******************************************************************************/
 void
-schakal_out(n, system, species, site_info)
+schakal_out(n, system, species, site_info, insert)
 int	n;
 system_t	*system;
 spec_t		species[];
 site_t		site_info[];
+char		*insert;
 {
    double	**site = (double**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
@@ -319,6 +320,9 @@ site_t		site_info[];
 	 }
       }
    }
+
+   if( insert != NULL)
+      (void)printf("%s\n", insert);
 
    (void)printf("END %d\n", n);
 }
@@ -375,11 +379,12 @@ vec_t	s;
  * Translate system relative to either centre of mass of posn of framework.   *
  ******************************************************************************/
 void
-moldy_out(n, system, species, site_info)
+moldy_out(n, system, species, site_info, insert)
 int	n;
 system_t	*system;
 spec_t		species[];
 site_t		site_info[];
+char		*insert;
 {
    spec_p	spec, frame_spec  = NULL;
    vec_t	c_of_m;
@@ -395,7 +400,7 @@ site_t		site_info[];
       centre_mass(species, system->nspecies, c_of_m);
       shift(system->c_of_m, system->nmols, c_of_m);
    }
-   schakal_out(n, system, species, site_info);
+   schakal_out(n, system, species, site_info, insert);
 }
 /******************************************************************************
  * main().   Driver program for generating SCHAKAL input files from MOLDY     *
@@ -421,6 +426,7 @@ char	*argv[];
    int		iout = 0;
    char		*filename = NULL, *dump_name = NULL;
    char		*dumplims = NULL;
+   char		*insert = NULL;
    char		cur_dump[256];
    int		dump_size;
    float	*dump_buf;
@@ -436,7 +442,7 @@ char	*argv[];
    control.page_length=1000000;
 #define MAXTRY 100
 
-   while( (c = getopt(argc, argv, "o:cr:s:d:n:") ) != EOF )
+   while( (c = getopt(argc, argv, "o:cr:s:d:n:i:") ) != EOF )
       switch(c)
       {
        case 'o':
@@ -459,6 +465,9 @@ char	*argv[];
        case 'n':
 	 dumplims = optarg;
 	 break;
+       case 'i':
+	 insert = optarg;
+	 break;
        default:
        case '?':
 	 errflg++;
@@ -466,8 +475,8 @@ char	*argv[];
 
    if( errflg )
    {
-      fputs("Usage: mdshak [-s sys-spec-file] [-r restart-file] ",stderr);
-      fputs("[-d dump-files] [-n s[-f[:n]]]\n", stderr);
+      fputs("Usage: mdshak [-c] [-s sys-spec-file] [-r restart-file] ",stderr);
+      fputs("[-d dump-files] [-n s[-f[:n]]] [-o output-file]\n", stderr);
       exit(2);
    }
 
@@ -551,11 +560,11 @@ char	*argv[];
    {
     case 's':				/* Lattice_start file		      */
 	lattice_start(Fp, &system, species, qpf);
-	moldy_out(1, &system, species, site_info);
+	moldy_out(1, &system, species, site_info, insert);
       break;
     case 'r':				/* Restart file			      */
 	read_restart(Fp, &system);
-	moldy_out(1, &system, species, site_info);
+	moldy_out(1, &system, species, site_info, insert);
       break;
     case 'd':				/* Dump dataset			      */
 	if( dump_name == 0 )
@@ -646,7 +655,7 @@ char	*argv[];
 
 	   dump_to_moldy(dump_buf, &system);
 
-	   moldy_out(iout++, &system, species, site_info);
+	   moldy_out(iout++, &system, species, site_info, insert);
 #ifdef DEBUG
 	   fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
 		   irec%header.maxdumps, cur_dump);
