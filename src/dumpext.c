@@ -1,4 +1,25 @@
+/* MOLecular DYnamics simulation code, Moldy.
+Copyright (C) 1988, 1992, 1993 Keith Refson
+ 
+This program is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation; either version 2, or (at your option) any
+later version.
+ 
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+ 
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ 
+In other words, you are welcome to use, share and improve this program.
+You are forbidden to forbid anyone else to use, share and improve
+what you give them.   Help stamp out software-hoarding!  */
 #include "defs.h"
+#include	"stdlib.h"
 #include	"stddef.h"
 #include 	"string.h"
 #include 	<stdio.h>
@@ -6,8 +27,6 @@
 
 #undef MIN
 #define MIN(x,y) ( (x) > (y) ? (y) : (x))
-
-char *malloc(), *calloc();
 
 /*========================== Macros ==========================================*/
 #define DUMP_SIZE(level, n, n_r)  \
@@ -17,7 +36,7 @@ char *malloc(), *calloc();
                                     (3*n + 3*n_r + 9) +\
                              (level & 1))
 /*============================================================================*/
-typedef struct list_t
+typedef struct list_mt
 {
    struct list_mt	*next;
    int			i;
@@ -25,7 +44,7 @@ typedef struct list_t
    int num;
 } list_mt;
 
-typedef struct cpt_t
+typedef struct cpt_mt
 {
    int ncpt, offset, size, mols;
    char name[32];
