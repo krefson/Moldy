@@ -35,6 +35,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: leapfrog.c,v $
+ *       Revision 2.13  2001/06/28 15:48:23  keith
+ *       Fixed bug in implementation of Nose-poincare thermostat to do with
+ *       update of smom in rotational update stage.
+ *
  *       Revision 2.12  2001/05/24 16:34:41  keith
  *       Eliminated some redundant variables
  *
@@ -91,7 +95,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.12 2001/05/24 16:34:41 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.13 2001/06/28 15:48:23 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -388,7 +392,7 @@ void leapf_quat_b(double step, quat_mt (*quat), quat_mt (*amom),
    /*
     * Finally, apply half of delta-from-symmetry rotation
     */
-   make_rot(0.5*step, orthaxis1, amom, 
+   make_rot(0.5*stepdts, orthaxis1, amom, 
 	    rinertia[orthaxis1]-rinertia[orthaxis2], rot, nmols);
    rot_substep(rot, amom, quat, nmols);
 
