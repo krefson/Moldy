@@ -6,6 +6,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	aux.c,v $
+ * Revision 1.3  89/06/01  21:23:04  keith
+ * Control.out eliminated, use printf and freopen instead to direct output.
+ * 
  * Revision 1.2  89/06/01  18:00:42  keith
  * Moved `vadd()' from aux.c to force.c for ease of vectorisation.
  * Now no need to compile aux.c with vectorisation.
@@ -16,7 +19,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: aux.c,v 1.2 89/06/01 18:00:42 keith Exp $";
+static char *RCSid = "$Header: aux.c,v 1.7 89/06/09 15:45:11 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -43,14 +46,6 @@ int	ix, iy;
 {
    double SDOT();
    return(SDOT(&n, x, &ix, y, &iy));
-}
-void	vcopy(n,x,ix,y,iy)
-int	n;
-real	*x, *y;
-int	ix, iy;
-{
-   void SCOPY();
-   SCOPY(&n, x, &ix, y, &iy);
 }
 double sum(n,x,ix)
 int	n;
@@ -119,17 +114,6 @@ int	ix, iy;
      return(sdot_(&n, x, &ix, y, &iy));
    else
      return(ddot_(&n, x, &ix, y, &iy));
-}
-void	vcopy(n,x,ix,y,iy)
-int	n;
-real	*x, *y;
-int	ix, iy;
-{
-   void dcopy_(), scopy_();
-   if(SINGLE)
-      scopy_(&n, x, &ix, y, &iy);
-   else
-      dcopy_(&n, x, &ix, y, &iy);
 }
 double sum(n,x,ix)
 int	n;
@@ -204,68 +188,113 @@ int	ix[];
 }
 #endif
 /******************************************************************************
- *  Vector handling functions - versions for scalar machines.		      *
+ * alliant versions - with cray librarries				      *
  ******************************************************************************/
-#if ! defined(CRAY) && ! defined(convexvc)
+#if defined(alliant)
 double vdot(n,x,ix,y,iy)
 int	n;
 real	*x, *y;
 int	ix, iy;
 {
-   register double	dot=0.0;
-   while(n-- > 0)
-   {
-      dot += *x * *y;
-      x += ix;  y += iy;
-   }
-   return(dot);
-}
-void	vcopy(n,x,ix,y,iy)
-register int	n;
-register real	*x, *y;
-register int	ix, iy;
-{
-   while(n-- > 0)
-   {
-      *y = *x;
-      x += ix;  y += iy;
-   }
+   double sdot_();
+   return(sdot_(&n, x, &ix, y, &iy));
 }
 double sum(n,x,ix)
-register int	n;
-register real	*x;
-register int	ix;
+int	n;
+real	*x;
+int	ix;
 {
-   register double	s=0.0;
-   while(n-- > 0)
-   {
-      s += *x;
-      x += ix;
-   }
-   return(s);
+   double ssum_();
+   return(ssum_(&n, x, &ix));
 }
 void	vscale(n,s,x,ix)
-register int	n;
-register double	s;
-register real	*x;
-register int	ix;
+int	n;
+double	s;
+real	*x;
+int	ix;
 {
-   while(n-- > 0)
-   {
-      *x *= s;
-      x += ix;
-   }
+   void sscal_();
+   sscal_(&n, &s, x, &ix);
 }
 void saxpy(n, sa, sx, ix, sy, iy)
 int	n, ix, iy;
 double	sa;
 double	sx[], sy[];
 {
-   while(n-- > 0)
-   {
-      *sy += sa * *sx;
-      sx += ix;  sy += iy;
-   }
+   void saxpy_();
+   saxpy_(&n, &sa, sx, &ix, sy, &iy);
+}
+int	search_lt(n, x, ix, s)
+int	n;
+real	x[];
+int	ix;
+double	s;
+{
+   int	isrchflt_();
+   return( isrchflt_(&n, x, &ix, &s) - 1);
+}
+void	gather(n, a, b, ix)
+int	n;
+real	a[], b[];
+int	ix[];
+{
+   void gather_();
+   gather_(&n, a, b+1, ix);
+}
+void	scatter(n, a, ix, b)
+int	n;
+real	a[], b[];
+int	ix[];
+{
+   void scatter_();
+   scatter_(&n, a+1, ix, b);
+}
+
+#endif
+/******************************************************************************
+ *  Vector handling functions - versions for scalar machines.		      *
+ ******************************************************************************/
+#if ! defined(CRAY) && ! defined(convexvc) && ! defined(alliant)
+double vdot(n,x,ix,y,iy)
+int	n;
+real	x[], y[];
+int	ix, iy;
+{
+   register double	dot=0.0;
+   int i, j;
+   for(i = (n-1)*ix, j = (n-1)*iy; i >= 0; i -= ix, j -= iy)
+      dot += x[i] * y[j];
+   return(dot);
+}
+double sum(n,x,ix)
+register int	n;
+register real	x[];
+register int	ix;
+{
+   register double	s=0.0;
+   int i;
+   for(i = (n-1)*ix; i >= 0; i -= ix)
+      s += x[i];
+   return(s);
+}
+void	vscale(n,s,x,ix)
+register int	n;
+register double	s;
+register real	x[];
+register int	ix;
+{
+   int i;
+   for(i = (n-1)*ix; i >= 0; i -= ix)
+      x[i] *= s;
+}
+void saxpy(n, sa, sx, ix, sy, iy)
+int	n, ix, iy;
+double	sa;
+double	sx[], sy[];
+{
+   int i, j;
+   for(i = (n-1)*ix, j = (n-1)*iy; i >= 0; i -= ix, j -= iy)
+      sy[j] += sa * sx[i];
 }
 int	search_lt(n, x, ix, s)
 int	n;
@@ -274,7 +303,7 @@ int	ix;
 double	s;
 {
    int i;
-   for( i = 0; i < n; i += ix )
+   for( i = 0; i < n*ix; i += ix )
       if( x[i] < s )
          break;
    return(i);
@@ -285,7 +314,7 @@ real	a[], b[];
 int	ix[];
 {
    int i;
-   for(i = 0; i < n; i++)
+   for(i = n-1; i >= 0; i--)
       a[i] = b[ix[i]];
 }
 void	scatter(n, a, ix, b)
@@ -294,17 +323,10 @@ real	a[], b[];
 int	ix[];
 {
    int i;
-   for(i = 0; i < n; i++)
+   for(i = n-1; i >= 0; i--)
       a[ix[i]] = b[i];
 }
 #endif
-void	zero_real(r,n)
-real	*r;
-int	n;
-{
-   while( n-- > 0 )
-      *r++ = 0.0;
-}
 /******************************************************************************
  *  random number generators. Note they assume 'unsigned' of at least 32 bits *
  ******************************************************************************/
@@ -368,10 +390,14 @@ char	*atime()
 #ifdef USG
 
 #define TICK 60.0
+#define size_t NOTHING
+#define time_t NOTHING
 #include <sys/types.h>
 #include <sys/times.h>
+#undef size_t
+#undef time_t
 
-double	cpu()
+double        cpu()
 {
    struct tms buf;
  
@@ -381,9 +407,11 @@ double	cpu()
 }
 #else
 
-#define KERNEL		/* This stops sys/time.h from including time.h again  */
+#define KERNEL          /* This stops sys/time.h from including time.h again  */
+#define time_t NOTHING
 #include <sys/time.h>
 #include <sys/resource.h>
+#undef time_t
 
 double	cpu()	/* The standard unix 'clock' wraps after 36 mins.	      */
 {
@@ -402,6 +430,25 @@ double	cpu()	/* The standard unix 'clock' wraps after 36 mins.	      */
 double	cpu()
 {
    return((double)clock() / CLK_TCK);
+}
+#endif
+/******************************************************************************
+ * Zero real.  assumes memset or bzero.					      *
+ ******************************************************************************/
+#if defined(unix) && !defined(USG)   	/* BSD Unix - use bzero		      */
+void	zero_real(r,n)
+real	*r;
+int	n;
+{
+   int bzero();
+   (void)bzero((char *)r, n * sizeof(real));
+}
+#else					/* SYSV unix or ANSI - use memset()   */
+void	zero_real(r,n)
+real	*r;
+int	n;
+{
+   (void)memset((char *)r, 0, n * sizeof(real));
 }
 #endif
 /******************************************************************************
@@ -539,7 +586,7 @@ va_list args;
 #else
 #if defined(convex) || defined(sequent)
 
-int	vfprintf (file, fmt)
+int	vprintf (fmt, args)
 char	*fmt;
 va_list	args;
 {
