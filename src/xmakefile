@@ -148,7 +148,9 @@ SHAKOBJS= $(SHAKS:%=%.o)
 
 UTILS = moldyext dumpanal dumpconv dumpext  manalyze
 
-EXTRA0 = $(UTILS:%=%.c) mdshak.c ewald_parallel.c force_parallel.c
+UTILS2= mdshak msd mdavpos
+
+EXTRA0 = $(UTILS:%=%.c) $(UTILS2:%=%.c)  ewald_parallel.c force_parallel.c
 
 EXTRAS = $(EXTRA0) ewald-RIL.c
 
@@ -195,7 +197,13 @@ dumpconv:	dumpconv.c xdr.o $(HFILES)
 mdshak:		mdshak.o $(SHAKOBJS) $(GETOPT) 
 		$(CC) -o mdshak $(LDFLAGS1) mdshak.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) -lm
 
-utilities:	$(UTILS) mdshak
+msd:		msd.o $(SHAKOBJS) $(GETOPT) 
+		$(CC) -o msd $(LDFLAGS1) msd.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) -lm
+
+mdavpos:	mdavpos.o $(SHAKOBJS) $(GETOPT) 
+		$(CC) -o mdavpos $(LDFLAGS1) mdavpos.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS) -lm
+
+utilities:	$(UTILS) $(UTILS2)
 
 $(FIGTEXPS):	
 		(cd figures; \
@@ -213,10 +221,10 @@ protoize:	$(CFILES) $(HFILES)
 proto-mdshak:	mdshak.c $(SHAKC)
 		protoize mdshak.c $(SHAKC)
 
-install:	moldy $(UTILS) mdshak
+install:	moldy $(UTILS) $(UTILS2)
 		for file in $?; do install $$file $$HOME/bin/; done
 
-install2:	moldy $(UTILS) mdshak
+install2:	moldy $(UTILS) $(UTILS2)
 		for file in $?; do install $$file $$HOME/bin.$$HOSTTYPE/; done
 
 Makefile:	xmakefile
@@ -285,8 +293,8 @@ tags:		$(CFILES) $(HFILES)
 		etags $(CFILES) $(HFILES)  
 
 clean:		
-		/bin/rm -f $(OFILES) $(LFILES) moldy $(UTILS) mdshak\
-			mdshak.o moldy.dvi moldy.toc moldy.log
+		/bin/rm -f $(OFILES) $(LFILES) moldy $(UTILS) $(UTILS2) \
+			mdshak.o msd.o mdavpos.o moldy.dvi moldy.toc moldy.log
 
 spotless:	
 		$(MAKE) clean
@@ -338,11 +346,13 @@ link_moldy.com:		Makefile
 		./make_vms_link moldy $(FILES) > link_moldy.com
 
 compile_utils.com:	Makefile
-		./make_vms_compile mdshak getopt $(UTILS) > compile_utils.com
+		./make_vms_compile getopt $(UTILS) $(UTILS2) > compile_utils.com
 
 link_utils.com:	Makefile
-		./make_vms_link mdshak mdshak getopt $(SHAKS) > link_utils.com
 		for file in $(UTILS); do ./make_vms_link $$file $$file getopt>> \
+			link_utils.com; done
+		for file in $(UTILS2); do \
+			./make_vms_link $$file $$file getopt $(SHAKS) >> \
 			link_utils.com; done
 
 moldy.com:	$(CFILES) $(HFILES) $(EXTRAS)\
