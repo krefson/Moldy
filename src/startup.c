@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.27  2001/02/20 10:34:33  keith
+ *      Revised criteria for testing if FP parameters changed on restart.
+ *
  *      Revision 2.26  2001/02/19 19:36:45  keith
  *      First working version of combined isothermic/isobaric ensemble.
  *      (Previous version was faulty).
@@ -303,7 +306,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.26 2001/02/19 19:36:45 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.27 2001/02/20 10:34:33 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -397,6 +400,7 @@ const match_mt	match[] = {
 {"step",             "%lf",  "0.005",        (gptr*)&control.step},
 {"text-mode-save",   "%d",   "0",            (gptr*)&control.print_sysdef},
 {"new-sys-spec",     "%d",   "0",            (gptr*)&control.new_sysdef},
+{"molecular-cutoff", "%d",   "0",            (gptr*)&control.molpbc},
 {"scale-options"   , "%d",   "0",            (gptr*)&control.scale_options},
 {"therm-options"   , "%d",   "0",            (gptr*)&control.scale_options},
 {"surface-dipole",   "%d",   "0",            (gptr*)&control.surface_dipole},

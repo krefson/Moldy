@@ -26,6 +26,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.32  2001/02/21 09:45:11  keith
+ *       Modified rescale() function to reset thermostat variable to 1 and
+ *       associated momentum to 0.  Every scaling now resets the thermostat
+ *       to the default condition.
+ *
  *       Revision 2.31  2001/02/19 19:36:44  keith
  *       First working version of combined isothermic/isobaric ensemble.
  *       (Previous version was faulty).
@@ -300,7 +305,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.31 2001/02/19 19:36:44 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.32 2001/02/21 09:45:11 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -779,7 +784,8 @@ eval_forces(system_mp sys,             /* Pointer to system info        (in) */
    for (spec = species; spec < &species[nspecies]; spec++)
    {
       make_sites(sys->h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		site_sp[spec-species],spec->nmols,spec->nsites,SITEPBC);
+		 site_sp[spec-species],spec->nmols,spec->nsites,
+		 control.molpbc?MOLPBC:SITEPBC);
 #ifdef DEBUG1
    { int is;
      printf("%s co-ordinates\n",spec->name);

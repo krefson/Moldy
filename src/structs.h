@@ -19,9 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.16 2001/02/13 17:45:09 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.17 2001/02/19 19:36:45 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.17  2001/02/19 19:36:45  keith
+ * First working version of combined isothermic/isobaric ensemble.
+ * (Previous version was faulty).
+ * Also includes uniform-dilation, constant-pressure mode.
+ *
  * Revision 2.16  2001/02/13 17:45:09  keith
  * Added symplectic Parrinello-Rahman constant pressure mode.
  *
@@ -187,7 +192,7 @@ typedef struct                  /* Control parameters for simulation          */
    double       step;           /* Value of timestep in program units         */
    boolean      print_sysdef,   /* Flag to print out system specification file*/
                 new_sysdef,     /* Read new sysdef instead of restart file one*/
-                place1,		/* Placeholder for restart file compatibility */
+                molpbc,		/* Switch to molecular from site cutoff scheme*/
                 reset_averages; /* Flag to set average counters to zero       */
    int          scale_options;  /* Scale each species separately              */
    boolean      surface_dipole, /* Flag surface dipole term in Ewald sum      */
