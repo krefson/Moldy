@@ -3,6 +3,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.3  89/06/09  13:38:17  keith
+ * Older code for computation of q cos/sin k.r restored conditionally by
+ * use of macro OLDEWALD.  This is for more primitive vectorising compilers.
+ * 
  * Revision 1.2  89/06/08  10:42:51  keith
  * Modified to circumvent compiler bug in VMS/VAXC 2.4-026
  * 
@@ -11,7 +15,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: ewald.c,v 1.2 89/06/08 10:42:51 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/ewald.c,v 1.3 89/06/09 13:38:17 keith Stab $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef	convexvc
@@ -36,9 +40,9 @@ void	note();				/* Write a message to the output file */
 /*========================== External data references ========================*/
 extern	contr_t	control;		/* Main simulation control record     */
 /*========================== Macros ==========================================*/
-#define astar(i) hinv[i][0]
-#define bstar(i) hinv[i][1]
-#define cstar(i) hinv[i][2]
+#define astar hinv[0]
+#define bstar hinv[1]
+#define cstar hinv[2]
 #define moda(hmat) (hmat[0][0])
 #define modb(hmat) sqrt(SQR(hmat[0][1]) + SQR(hmat[1][1]))
 #define modc(hmat) sqrt(SQR(hmat[0][2]) + SQR(hmat[1][2]) + SQR(hmat[2][2]))
@@ -194,9 +198,9 @@ mat_t		stress;			/* Stress virial		(out) */
 /*
  * Calculate actual K vector and its squared magnitude.
  */
-      kv[0] = 2.0*PI*(h*astar(0) + k*bstar(0) + l*cstar(0)); 
-      kv[1] = 2.0*PI*(h*astar(1) + k*bstar(1) + l*cstar(1)); 
-      kv[2] = 2.0*PI*(h*astar(2) + k*bstar(2) + l*cstar(2));
+      kv[0] = 2.0*PI*(h*astar[0] + k*bstar[0] + l*cstar[0]); 
+      kv[1] = 2.0*PI*(h*astar[1] + k*bstar[1] + l*cstar[1]); 
+      kv[2] = 2.0*PI*(h*astar[2] + k*bstar[2] + l*cstar[2]);
       
       ksq = SUMSQ(kv);
       
