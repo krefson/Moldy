@@ -23,6 +23,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.3  89/05/15  17:54:12  keith
+ * Added members 'vsn' and 'dump_size' to header (cf structs.h r1.3)
+ * Fixed bugs in call of write and ftell to write data correctly.
+ * 
  * Revision 1.2  89/05/11  13:56:05  keith
  * Tidied up code using flags rather than GOTO's
  * Fixed bug in 'dump_convert' which wrote outside array bounds
@@ -33,7 +37,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: dump.c,v 1.3 89/05/15 17:38:22 keith Exp $";
+static char *RCSid = "$Header: dump.c,v 1.3 89/05/15 17:54:12 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -76,7 +80,7 @@ double		pe;
    char		cur_file[L_name],	/* Names of current and previous      */
    		prev_file[L_name],	/* dump files.			      */
    		*fname;			/* Pointer to one of above filenames  */
-   int		filenum=control.dump_offset+(control.istep-control.begin_dump) /
+   int		filenum=(control.istep-control.begin_dump) /
    		        (control.dump_interval * control.maxdumps),
 		ndumps =(control.istep-control.begin_dump) /
    			 control.dump_interval % control.maxdumps; 
@@ -140,14 +144,13 @@ double		pe;
 	 (void)fclose(dumpf);
 	 if( ndumps != 0 )
 	 {
-	    ndumps = 0;
+	    ndumps = 0; filenum = 0;
 	    control.begin_dump = control.istep;
-	    control.dump_offset = ++filenum;
             (void)sprintf(cur_file, control.dump_file, filenum);
 	 }
       }
    }
-   if( control.istep == control.begin_dump )
+   if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
       (void)strncpy(dump_header.vsn, "$Revision: 1.3 $"+11,
