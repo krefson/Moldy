@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/msd.c,v 2.0.4.1 2000/12/07 15:58:27 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/msd.c,v 2.0.2.2 2000/12/11 17:56:52 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,10 +35,6 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/msd.c,v 2.0.4.
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
- *  Revision 2.0.4.1  2000/12/07 15:58:27  keith
- *  Mainly cosmetic minor modifications and added special comments to
- *  shut lint up.
- *
  *  Revision 2.0  1999/11/18 09:58:33  keith
  *  checked in with -k by keith at 1999/11/25 14:27:58
  *
@@ -264,19 +260,22 @@ int		nslices, sp_range[3];
  * msd_calc. Calculate msds from trajectory array		       *
  ***********************************************************************/    
 void
-msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, range, traj_cofm, msd)
+msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, range, traj_cofm, msd, isf)
 spec_mt		species[];
 vec_mt		**traj_cofm;
-real            ***msd;
+real            ***msd, ***isf;
 int		sp_range[3];
 real            range[3][3];
 int             mstart, mfinish, minc, max_av, it_inc;
 {
    int it, irec, totmol, imsd, ispec, imol, nmols, cmols, i;
    spec_mp      spec;
-   double       msdtmp, stmp;
+   double       msdtmp, stmp, isftmp,qvec ;
+   double       cos();
    vec_mt	*tct0, *tct1;
-
+   
+    qvec = 1.700;
+    printf("the read in value of the qvector is %f Angstrom inverse\n", qvec);
    /* Outer loop for selecting initial time slice */
    for(it = 0; it <= (max_av-1)*it_inc; it+=it_inc)
 
@@ -294,7 +293,7 @@ int             mstart, mfinish, minc, max_av, it_inc;
                             ispec++, spec += sp_range[2])
 	    {
 	       nmols = spec->nmols;
-	       msdtmp = 0.0;
+	       msdtmp = 0.0; isftmp= 0.0;
                cmols= 0;
 	       for( imol = 0; imol < nmols; totmol++, imol++)
 	       {
@@ -302,10 +301,12 @@ int             mstart, mfinish, minc, max_av, it_inc;
                   {
 		     stmp = tct1[totmol][i] - tct0[totmol][i] ;
 		     msdtmp += SQR(stmp);
+                     isftmp += cos(qvec*stmp);                     
                      cmols++;
                   }
 	       }
 	       msd[imsd][ispec][i] += (cmols == 0 ? 0 : msdtmp / cmols);
+               isf[imsd][ispec][i] += (cmols == 0 ? 0 : isftmp / (cmols*3.));
 	    }
 	 }
       }
@@ -314,14 +315,16 @@ int             mstart, mfinish, minc, max_av, it_inc;
  * msd_out().  Output routine for displaying msd results                      *
  ******************************************************************************/
 void
-msd_out(species, msd, max_av, nmsd, sp_range)
+msd_out(species, msd, isf, max_av, nmsd, tstep, tdint, sp_range)
 spec_mt         *species;
-real            ***msd;
+real            ***msd, ***isf;
+double          tstep;
+long            tdint;
 int             max_av;
 int             nmsd, sp_range[3];
 {
    int          ispec=0, imsd, i;
-   real         totmsd;
+   real         totmsd, tmsd, totisf;
    spec_mp      spec;
 
    for(spec = species+sp_range[0]; spec <= species+sp_range[1]; spec += sp_range[2])
@@ -329,20 +332,166 @@ int             nmsd, sp_range[3];
        (void)printf("# %s\n",spec->name);
        for( imsd = 0; imsd < nmsd; imsd++)
        {
-         totmsd = 0;
+         tmsd = imsd * tstep *tdint;
+         (void)printf("%7.5f\t",tmsd);
+	 totmsd = 0; totisf=0;
          for( i=0; i<3; i++)
          {
            msd[imsd][ispec][i] /= max_av;
+           isf[imsd][ispec][i] /= max_av;
+           totisf += isf[imsd][ispec][i];
            totmsd += msd[imsd][ispec][i];
-           (void)printf("%10.7f ", msd[imsd][ispec][i]);
+           (void)printf("%11.7f %11.7f ", msd[imsd][ispec][i], isf[imsd][ispec][i]);
          }
-         (void)printf("%10.7f\n",totmsd);
+         (void)printf("%11.7f %11.7f\n",totmsd,totisf);
        }
        ispec++;
    }
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
 }
+/***********************************************************************
+ * vhscf_calc. Calculate vhscfs from trajectory array		       *
+ ***********************************************************************/    
+void 
+rmsd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, range,traj_cofm, irbin,rmsd,isff,vhscf,kcounter)
+spec_mt		species[];
+real 		***vhscf,**isff,**rmsd;
+vec_mt		**traj_cofm;
+int		sp_range[3];
+real            range[3][3];
+int             mstart, mfinish, minc, max_av, it_inc,irbin,kcounter;
+{
+   int it, irec, totmol, imsd, ispec, imol, nmols, cmols, i,j,k,l;
+   spec_mp      spec;
+   double       rmsdtmp, stmp, isfftmp,qvec,rtmp,rsqrtmp ;
+   double       sin(),sqrt(),log10(),pow();
+   vec_mt	*tct0, *tct1;
+   real		*tmpvhscf=dalloc(irbin);
+   
+    qvec = 1.700; 
+    printf("the read in value of the qvector is %f Angstrom inverse\n", qvec);
+   /* Outer loop for selecting initial time slice */
+   for(it = 0; it <= (max_av-1)*it_inc; it+=it_inc)
+    {
+      /* Inner loop for calculating displacement from initial slice */ 
+      for(irec = mstart; irec <= mfinish; irec+=minc)
+      {
+	 imsd = (irec-mstart)/minc;
+         tct0 = traj_cofm[it];
+	 tct1 = traj_cofm[it+irec];
+            
+		/*choose time imsd to bin r(imsd)*/
+                     if(imsd >= 2)
+                   {
+                     k = (int)(log10((float)imsd)/log10(2.) + pow(10.,-10.));
+                     j = k -(int)(log10((float)imsd)/log10(2.0) -pow(10.,-10.));}
+                   else 
+                     j = 0; 
+                    totmol = 0;
+            for(spec = species+sp_range[0], ispec=0; spec <= species+sp_range[1];
+                            ispec++, spec += sp_range[2])
+	    {
+	       nmols = spec->nmols;
+	       rmsdtmp = 0;  isfftmp= 0.0;
+               cmols= 0;
+       /*initialize the temporary vhscf array for each species*/   
+               for(l=0;l<irbin-1;l++)
+                 {tmpvhscf[l]=0.;}
+	       for( imol = 0; imol < nmols; totmol++, imol++)
+	     {
+                 rsqrtmp = 0.0;
+               for(i=0; i<3; i++)
+               {
+                 if( in_region( traj_cofm[0][totmol], range) )
+                  {
+		     stmp = tct1[totmol][i] - tct0[totmol][i] ;
+		     rsqrtmp += SQR(stmp);
+                  }
+               }
+              
+                     rtmp = sqrt(rsqrtmp);
+                     rmsdtmp +=  rsqrtmp;
+                     if(rtmp!=0.)
+                     {isfftmp += sin(qvec*rtmp)/(qvec*rtmp);}
+                     else {isfftmp += 1.0;}
+                     
+              /*choose the correct rbin by calculating the number of the bin*/
+                   if(j==1) 
+                   { l = (int)(rtmp/0.1+0.5);
+                      /*if(l==11){printf("l is %d and rtmp is %f\n",l,rtmp);}*/ 
+                      if(l<= irbin-1)
+                      {
+                      tmpvhscf[l] +=1.;
+                      /*if(l==11){printf("value of k-1 is %d,ispec is %d and the value of vhscf is %f\n",k-1,ispec,tmpvhscf[l]);}*/
+                      }
+                   }                                         
+                     cmols++;
+              }    
+                
+	       rmsd[imsd][ispec] += (cmols == 0 ? 0 : rmsdtmp / cmols);
+               isff[imsd][ispec] += (cmols == 0 ? 0 : isfftmp / cmols);
+                 
+                 for(l=0;l<irbin-1;l++)
+                 {vhscf[l][ispec][k-1] += tmpvhscf[l] / cmols;}
+                 /*if(l==11)printf("value of vhscf[l][ispec][k-1] is %f\n",tmpvhscf[l]);*/
+	    }
+         }
+   }                
+   (void)printf("the rmsd_calc is successfully completed\n");
+   (void)free(tmpvhscf);
+}
+/******************************************************************************
+ *rmsd_out().  Output routine for displaying msd results                      *
+ ******************************************************************************/
+void
+rmsd_out(species, rmsd, isff, max_av, nmsd, tstep, tdint, irbin, vhscf,kcounter,sp_range)
+spec_mt         *species;
+real		***vhscf,**isff,**rmsd;
+double          tstep;
+long            tdint;
+int             max_av,irbin;
+int             nmsd, sp_range[3],kcounter;
+{
+   int          ispec=0, imsd, k,l;
+   real         totrmsd, tmsd, totisff,totvhscf;
+   spec_mp      spec;
+
+  for(spec = species+sp_range[0]; spec <= species+sp_range[1]; spec += sp_range[2])
+   {
+       (void)printf("# %s\n",spec->name);
+       for( imsd = 0; imsd < nmsd; imsd++)
+       {
+         tmsd = imsd * tstep *tdint;
+         (void)printf("%7.5f\t",tmsd);
+           totrmsd = rmsd[imsd][ispec] / max_av;
+           totisff = isff[imsd][ispec] / max_av;
+         (void)printf("%11.7f %11.7f\n",totrmsd,totisff);
+       }
+       ispec++;
+   }
+   if( ferror(stdout) )
+      error("Error writing output - \n%s\n", strerror(errno));
+
+  /*output routine for the vhsc function*/
+      ispec = 0;
+  for(spec = species+sp_range[0]; spec <= species+sp_range[1]; spec += sp_range[2])
+     {
+       (void)printf("\n# %s\n",spec->name);
+         for(l=0;l<irbin;l++)
+       { (void)printf("\n");
+         (void)printf("%d\t",l);
+         for(k=0;k<kcounter;k++)
+         { vhscf[l][ispec][k] = vhscf[l][ispec][k] / max_av;
+          (void)printf("%11.7f\t",vhscf[l][ispec][k]);
+       	 }
+       }
+        ispec++;
+       }
+   if( ferror(stdout) )
+      error("Error writing output - \n%s\n", strerror(errno));
+}
+
 /******************************************************************************
  * main().  Driver program for calculating trajectories/msds from MOLDY dumps *
  * Acceptable inputs are sys-spec files or restart files. Actual 	      *
@@ -368,7 +517,7 @@ char	*argv[];
    int		outsw = MSD, trajsw = GNUP;
    int		start, finish, inc;
    int		mstart, mfinish, minc;
-   int		nslices;
+   int		nslices,i,j,k,l;
    int		sp_range[3];
    int		dflag, iflag, sflag, mflag;
    int		irec, it_inc = 1;
@@ -378,6 +527,9 @@ char	*argv[];
    char		*tempname = NULL;
    char		dumpcommand[256];
    int		dump_size;
+   int		isw = 0;
+   double       tstep,rmax;
+   long         tdint;
    float	*dump_buf;
    FILE		*Fp, *Dp;
    restrt_mt	restart_header;
@@ -391,10 +543,12 @@ char	*argv[];
    quat_mt	*qpf;
    contr_mt	control_junk;
    int          nmsd, max_av, nspecies;
-   real         ***msd;
-   int		it;
+   real         ***msd,***isf,***vhscf;
+   double       log10(),pow();
+   real 	**rmsd,**isff;
+   int		it,irbin,kcounter;
 
-   zero_real(range[0],9);
+   zero_real(range,9);
 
 #define MAXTRY 100
    control.page_length=1000000;
@@ -404,8 +558,9 @@ char	*argv[];
       outsw = MSD;
    else if( strstr(comm, "mdtraj") )
       outsw = TRAJ;
+   printf("the outsw string is %d\n",outsw);
 
-   while( (c = getopt(argc, argv, "cr:s:d:t:m:i:g:o:w:uxXyYzZ") ) != EOF )
+   while( (c = getopt(argc, argv, "cr:s:d:t:m:i:g:o:v:w:uxXyYzZ") ) != EOF )
       switch(c)
       {
        case 'c':
@@ -442,6 +597,12 @@ char	*argv[];
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error("failed to open file \"%s\" for output", optarg);
 	 break;
+        case 'v':
+         isw = 1;
+         rmax= 12.0;
+         irbin = (int)(rmax/0.1);
+         printf("no. of r bins is  %d\n",irbin);  
+         break;      
        case 'u':
 	 outsw = TRAJ;
          break;
@@ -477,6 +638,7 @@ char	*argv[];
          "Usage: %s [-s sys-spec-file |-r restart-file] [-c] ",comm);
       fputs("[-d dump-files] [-t s[-f[:n]]] [-m s[-f[:n]]] [-g s[-f[:n]]] ",stderr);
       fputs("[-i initial-time-increment] [-u] [-w trajectory-format] ",stderr);
+      fputs("[-f s[-f[:n]]] [-q qvector]",stderr);
       fputs("[-x|-X] [-y|-Y] [-z|-Z] [-o output-file]\n",stderr);
       exit(2);
    }
@@ -523,6 +685,9 @@ char	*argv[];
 	 error("Couldn't open restart file \"%s\" for reading -\n%s\n", 
 	       filename, strerror(errno));
       re_re_header(Fp, &restart_header, &control_junk);
+      tstep = control_junk.step;
+      tdint = control_junk.dump_interval;
+      printf("value of the timestep and dump interval got from control file is %7.5f %ld\n ",tstep,tdint); 
       re_re_sysdef(Fp, restart_header.vsn, &sys, &species, &site_info, &potpar);
       break;
     default:
@@ -566,6 +731,7 @@ char	*argv[];
    } while(dflag);
 
    nslices = (finish-start)/inc+1;  /* no. of time slices in traj_cofm */
+   
 
    /* Ensure initial time slice increment is valid for given dump range */
    do
@@ -668,7 +834,7 @@ char	*argv[];
 
   /* Allocate memory for trajectory data and zero */
    traj_cofm = (vec_mt**)arralloc(sizeof(vec_mt),2,0,nslices-1,0,sys.nmols-1);
-   zero_real(traj_cofm[0][0], nslices*sys.nmols*3);
+   zero_real(traj_cofm[0], nslices*sys.nmols*3);
 
   /* Allocate array to store unit cell matrices */
    hmat = aalloc(nslices, mat_mt);
@@ -731,27 +897,63 @@ char	*argv[];
 /*
  * Output either msd values or trajectory coords
  */
-   if( outsw == MSD)
+   if( outsw != TRAJ)
    {
-  /* Calculate msd parameters */
+  /* Calculate msd parameters and intermediate scattering function*/
      nmsd = (mfinish-mstart)/minc+1; /* No of msd time intervals */
-     max_av = (nslices - mfinish)/it_inc; /* Max no of msd calcs to average over */
+     kcounter=(int)(log10((float)nmsd)/log10(2.0) + pow (10.,-10.));
+     printf("value of msd time interval is %d and kcounter is %d\n", nmsd,kcounter); 
+    max_av = (nslices - mfinish)/it_inc; /* Max no of msd calcs to average over */
 
      if (max_av < 1)
           max_av = 1;
-
-  /* Allocate memory for msd array and zero */
+     if (isw == 0)
+     {
+  /* Allocate memory for msd and isf array and zero both */
          msd = (real***)arralloc(sizeof(real),3,0,nmsd-1,0,nspecies-1,0,2);
          zero_real(msd[0][0],nmsd*nspecies*3);
+         isf = (real***)arralloc(sizeof(real),3,0,nmsd-1,0,nspecies-1,0,2);
+         zero_real(isf[0][0],nmsd*nspecies*3);                                                                                         
 
-  /* Calculate and print msd values */
-     msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, range, traj_cofm, msd);
-     msd_out(species, msd, max_av, nmsd, sp_range);
-   }
-   else /* Otherwise output trajectories in selected format */
-     switch(trajsw)
-     {
-       case IDL:
+
+ /* Calculate and print msd and isf values */
+     msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, range, traj_cofm, msd, isf);
+     msd_out(species, msd, isf, max_av, nmsd, tstep, tdint, sp_range);                                                                 
+     }
+     else
+     {    
+         (void)printf("the value of inner switch is %d\n",isw);
+         (void)printf("I am here and about to define rmsd and isff array\n");
+      /* Allocate memory for rmsd and isff array and zero both*/
+         rmsd=(real**)arralloc(sizeof(real),2,0,nmsd-1,0,nspecies-1);
+         isff=(real**)arralloc(sizeof(real),2,0,nmsd-1,0,nspecies-1);
+         zero_real(rmsd[0],nmsd*nspecies);
+         zero_real(isff[0],nmsd*nspecies);
+ 
+       /*  for(k=0;k<nmsd-1;k++)
+         {
+          for(j=0;j<nspecies-1; j++)
+          { 
+         rmsd[k][j] = 0.0;   
+         isff[k][j] = 0.0;
+          }
+         } */   
+      /*Allocate memory and zero for vhscf*/
+         vhscf=(real***)arralloc(sizeof(real),3,0,irbin-1,0,nspecies-1,0,kcounter-1);
+         zero_real(vhscf[0][0],irbin*nspecies*kcounter);
+
+          (void)printf("I have defined and initialised rmsd, isff and vhscf array\n"); 
+    
+     /*Calculate and print rmsd and isff values*/
+     rmsd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, range,traj_cofm,irbin,rmsd,isff,vhscf,kcounter); 
+     rmsd_out(species, rmsd, isff,  max_av, nmsd, tstep, tdint, irbin,vhscf,kcounter,sp_range);  
+       }
+     }
+     else
+      /* Otherwise output trajectories in selected format */      
+      switch(trajsw)
+      {                                                                                                                      
+      case IDL:
           traj_idl(species, traj_cofm, nslices, range, sp_range);
           break;
        case GNUP:
