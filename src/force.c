@@ -10,6 +10,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	force.c,v $
+ * Revision 1.6  89/07/04  18:43:14  keith
+ * Fixed error in kernel and force which led to sites being allocated the
+ * wrong potential parameters.  Needed extra parameter to kernel.
+ * 
  * Revision 1.5  89/06/22  15:44:23  keith
  * Tidied up loops over species to use one pointer as counter.
  * 
@@ -30,7 +34,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: force.c,v 1.5 89/06/22 15:44:23 keith Exp $";
+static char *RCSid = "$Header: force.c,v 1.6 89/07/04 18:43:14 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -302,25 +306,26 @@ mat_t           stress;                 /* Stress virial                (out) */
 		 * 'nnab'. Nsites is certainly too big, but as 'ewald' uses
 		 * more store, it shouldn't increase total program use.
 		 */
-   int          *nab  = ialloc(nsites),		/* Neigbour site gather vector*/
-                *nab3 = ialloc(nsites),		/* Stride 3 version of above  */
-   		*id = ialloc(nsites),   	/* Array of site_id[nsites]   */
-                *reloc_i = ialloc(nsites);	/* Vector of pbc relocations  */
-   real         *R = dalloc(nsites);    	/* pbc site relocation cpt    */
-   real         *nab_sx  = dalloc(nsites),	/* 'Gathered' list of         */
-   		*nab_sy  = dalloc(nsites),	/*   neighbour site co-ords   */
-                *nab_sz  = dalloc(nsites),	/*   - x,y,z components.      */
-                *forcejx = dalloc(nsites),	/* List of neighbour site     */
-                *forcejy = dalloc(nsites),	/*  forces in gathered form   */
-                *forcejz = dalloc(nsites),	/*  - xyz components.	      */
-                *rx      = dalloc(nsites),	/* Reference to neigbour site */
-                *ry      = dalloc(nsites),	/* - site vector adjusted for */
-                *rz      = dalloc(nsites),	/*  periodic boundaries. xyz. */
-                *r_sqr   = dalloc(nsites),	/* Squared site-site distance */
-                *nab_chg = dalloc(nsites),	/* Gathered neig. site charges*/
-                *forceij = dalloc(nsites);	/* -V'(r) / r		      */
+   int		n_nab_sites = nsites;		/* Max # sites in n'bor list  */
+   int          *nab  = ialloc(n_nab_sites),	/* Neigbour site gather vector*/
+                *nab3 = ialloc(n_nab_sites),	/* Stride 3 version of above  */
+   		*id = ialloc(n_nab_sites),   	/* Array of site_id[nsites]   */
+                *reloc_i = ialloc(n_nab_sites);	/* Vector of pbc relocations  */
+   real         *R = dalloc(n_nab_sites);    	/* pbc site relocation cpt    */
+   real         *nab_sx  = dalloc(n_nab_sites),	/* 'Gathered' list of         */
+   		*nab_sy  = dalloc(n_nab_sites),	/*   neighbour site co-ords   */
+                *nab_sz  = dalloc(n_nab_sites),	/*   - x,y,z components.      */
+                *forcejx = dalloc(n_nab_sites),	/* List of neighbour site     */
+                *forcejy = dalloc(n_nab_sites),	/*  forces in gathered form   */
+                *forcejz = dalloc(n_nab_sites),	/*  - xyz components.	      */
+                *rx      = dalloc(n_nab_sites),	/* Reference to neigbour site */
+                *ry      = dalloc(n_nab_sites),	/* - site vector adjusted for */
+                *rz      = dalloc(n_nab_sites),	/*  periodic boundaries. xyz. */
+                *r_sqr   = dalloc(n_nab_sites),	/* Squared site-site distance */
+                *nab_chg = dalloc(n_nab_sites),	/* Gathered neig. site charges*/
+                *forceij = dalloc(n_nab_sites);	/* -V'(r) / r		      */
 #ifdef VCALLS
-   real         *force_comp = dalloc(nsites);
+   real         *force_comp = dalloc(n_nab_sites);
 #endif
    real         force_cpt, site0, site1, site2, s00, s01, s02, s11, s12, s22;
    real         reloc_v[3][27];			/* PBC relocation vectors     */
@@ -329,7 +334,7 @@ mat_t           stress;                 /* Stress virial                (out) */
                                     0,n_potpar-1, 1, max_id-1, 0, nsites-1);
    real         **nab_pot			/* Gathere'd pot par array    */
    		= (real**)arralloc(sizeof(real), 2,
-				   0, n_potpar-1, 0, nsites-1);
+				   0, n_potpar-1, 0, n_nab_sites-1);
    cell_t       *mol = aalloc(system->nmols, cell_t );
    spec_p       spec;
    cell_t       *cmol;
@@ -414,7 +419,7 @@ mat_t           stress;                 /* Stress virial                (out) */
        */ 
       nnab = site_neighbour_list(nab, reloc_i,
 				 n_nabors, ix, iy, iz, nabor, cell, reloc);
-      if(nnab > nsites) message(NULLI,NULLP,FATAL,TONAB,nnab);
+      if(nnab > n_nab_sites) message(NULLI,NULLP,FATAL,TONAB,nnab);
 
 VECTORIZE
       for(jnab = 0; jnab < nnab; jnab++)     /* Build stride 3 nabor list  */
@@ -461,8 +466,8 @@ VECTORIZE
 
             /*  Call the potential function kernel                            */
 #ifdef FKERNEL
-            KERNEL(&j0, &nnab, forceij, pe, r_sqr, nab_chg, chg+isite,
-		   &norm, &control.alpha, &system->ptype, &nsites, nab_pot[0]);
+            KERNEL(&j0, &nnab, forceij, pe, r_sqr, nab_chg, chg+isite, &norm,
+		   &control.alpha, &system->ptype, &n_nab_sites, nab_pot[0]);
 #else
             kernel(j0, nnab, forceij, pe, r_sqr, nab_chg, chg[isite],
 		   norm, control.alpha, system->ptype, nab_pot);
