@@ -17,6 +17,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	algorith.c,v $
+ * Revision 1.1.1.7  90/09/28  13:28:09  keith
+ * Inserted braces around VECTORIZE directives and changed include files
+ * for STARDtardent 3000 series (via cond. comp symbol "ardent").
+ * 
  * Revision 1.1.1.6  90/07/16  15:55:25  keith
  * Fixed bugs in constant-stress code
  * 
@@ -41,7 +45,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 1.1.1.6 90/07/16 15:55:25 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 1.1.1.7 90/09/28 13:28:09 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include 	<math.h>
@@ -117,14 +121,19 @@ double	vec_dist(v1, v2, n)
 real	*v1, *v2;		/* Input vectors			      */
 int	n;			/* Length ie v1[n], v2[n]		      */
 {
-   register	double s1=0,s2=0;	/* Accumulators for sums	      */
+   register	double s=0, s1=0,s2=0;	/* Accumulators for sums	      */
    while(n-- > 0)
    {
-      s1 += (*v1 - *v2) * (*v1 - *v2);
-      s2 += *v1 * *v1;
+      s  += (*v1 - *v2) * (*v1 - *v2);
+      s1 += *v1 * *v1;
+      s2 += *v2 * *v2;
       v1++; v2++;
    }
-   return(sqrt(s1 / s2));
+   s1 = MAX(s1,s2);
+   if( s1 == 0.0 )
+      return s1;
+   else
+      return(sqrt(s / s1));
 }
 /******************************************************************************
  *  molecule_force     Calculate the centre of mass forces on a number of     *
