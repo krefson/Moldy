@@ -29,6 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: input.c,v $
+ *       Revision 2.12  2000/04/27 17:57:08  keith
+ *       Converted to use full ANSI function prototypes
+ *
  *       Revision 2.11  1999/07/22 13:14:45  keith
  *       SOme grammatical fixes to error messages.
  *
@@ -210,7 +213,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/input.c,v 2.11 1999/07/22 13:14:45 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/input.c,v 2.12 2000/04/27 17:57:08 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -562,7 +565,7 @@ void	lattice_start(FILE *file, system_mp system, spec_mp species, quat_mt (*qpf)
 {
    typedef struct init_s {int species;  struct init_s *next;
                   double r[3], q[4];} init_mt; 	/* For linked list of coords  */
-   init_mt	*cur, *init = NULL;		/* Current and header of list */
+   init_mt	*cur, *next, *init = NULL;		/* Current and header of list */
    double	a, b, c, calpha, cbeta, cgamma;	/* Unit cell lengths, angles  */
    int		ix, iy, iz, nx, ny, nz;		/* Number of unit cells in MDC*/
    spec_mp	spec;
@@ -664,6 +667,12 @@ void	lattice_start(FILE *file, system_mp system, spec_mp species, quat_mt (*qpf)
 	       nmols[cur->species]++;
 	    }
    }
+   for(cur = init; cur != NULL; cur = next)
+   {
+      next = cur -> next;
+      xfree(cur);
+   }
+   xfree(nmols);
    message(NULLI, NULLP, INFO, LATTIC);
 }
 /*******************************************************************************
