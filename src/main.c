@@ -7,6 +7,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.7  89/08/10  17:30:54  keith
+ * Fixed if statement so that rdf's started on rather than after 'begin-rdf'
+ * 
  * Revision 1.6  89/07/05  18:19:37  keith
  * Code to support the portable text mode save configuration added.
  * Calculation of when to output averages and rdf data fixed to print
@@ -31,7 +34,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: main.c,v 1.6 89/07/05 18:19:37 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/main.c,v 1.7 89/08/10 17:30:54 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -63,6 +66,8 @@ contr_t	control = {
 	false,			/* Read new sysdef instead of restart file one*/
 	false,			/* Flag to turn on P&R CP method	      */
 	false,			/* Flag to set average counters to zero       */
+	false,			/* Whether to scale each species separately   */
+	false,			/* Flag surface dipole term in Ewald sum      */
 	false,			/* Flag to read initial state from sysdef file*/
 	"",			/* Name of system specification file	      */
 	"",			/* Name of file to read restart conf. from    */
@@ -79,7 +84,6 @@ contr_t	control = {
 #endif
 #endif
 	"",			/* Name of main output file		      */
-	0,			/* To preserve alignment of structure	      */
 	100,			/* Number of bins for rdf calculation	      */
 	1234567,		/* Seed for random number generator	      */
 	132,			/* Line width for output file		      */
@@ -87,7 +91,6 @@ contr_t	control = {
 	10,			/* Number of timesteps between scales	      */
 	1000000,		/* Stop scaling after n timesteps	      */
 	1001,			/* Number of 'equilibration' steps	      */
-	0,			/* Whether to scale each species separately   */
 	100,			/* Frequency of averages calculation	      */
 	1,			/* Start of configuration dumps		      */
 	0,			/* Dump filename offset (internal use only)   */
