@@ -92,7 +92,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 2.3 93/10/28 12:28:58 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 2.3 93/10/28 15:23:41 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -969,6 +969,7 @@ mat_mt	stress;
    		= (real**)arralloc(sizeof(real), 2,
 				   0, system->n_potpar-1, 0, n_nab_sites-1);
    real         force_cpt, site0, site1, site2, s00, s01, s02, s11, s12, s22;
+   register real rrx,rry,rrz;
    real         reloc_v[3][CUBE(NSHELL)];	/* PBC relocation vectors     */
    real 	**pp, **ppp;
    int          ix, iy, iz;		/* 3-d cell indices for ref and neig. */
@@ -1079,11 +1080,13 @@ VECTORIZE
 VECTORIZE
             for(jsite=jmin; jsite < jmax; jsite++)
             {
-               rx[jsite] = nab_sx[jsite] - site0;
-               ry[jsite] = nab_sy[jsite] - site1;
-               rz[jsite] = nab_sz[jsite] - site2;
-               r_sqr[jsite] = rx[jsite]*rx[jsite] + ry[jsite]*ry[jsite]
-                                                  + rz[jsite]*rz[jsite];
+               rrx = nab_sx[jsite] - site0;
+               rry = nab_sy[jsite] - site1;
+               rrz = nab_sz[jsite] - site2;
+               r_sqr[jsite] = rrx*rrx+rry*rry+rrz*rrz;
+               rx[jsite] = rrx;
+               ry[jsite] = rry;
+               rz[jsite] = rrz;
             }
             if( (jsite = jmin+search_lt(jmax-jmin, r_sqr+jmin, 1, TOO_CLOSE))
 	       < jmax )
