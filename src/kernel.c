@@ -34,6 +34,18 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.10.4.3  2000/12/06 17:45:30  keith
+ *       Tidied up all ANSI function prototypes.
+ *       Added LINT comments and minor changes to reduce noise from lint.
+ *       Removed some unneccessary inclusion of header files.
+ *       Removed some old and unused functions.
+ *       Fixed bug whereby mdshak.c assumed old call for make_sites().
+ *
+ *       Revision 2.10.4.2  2000/08/31 11:26:34  keith
+ *       Fixed bugs in non-coulombic code which cause FPE errors on systems which trap
+ *       Revision 2.11  2000/04/27 17:57:08  keith
+ *       Converted to use full ANSI function prototypes
+ *
  *       Revision 2.10  1999/09/20 10:27:30  keith
  *       Updated comments to assist with adding a new potential.
  *
@@ -150,20 +162,12 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/kernel.c,v 2.10 1999/09/20 10:27:30 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/kernel.c,v 2.10.4.3 2000/12/06 17:45:30 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
 /*========================== Library include files ===========================*/
-#ifdef stellar
-#   include <fastmath.h>
-#else
-#ifdef ardent
-#   include <vmath.h>
-#else
-#   include <math.h>
-#endif
-#endif
+#include <math.h>
 /*========================== Program include files ===========================*/
 #include "structs.h"
 #include "messages.h"
@@ -208,15 +212,18 @@ const dim_mt   pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
  *  dist_pot   return attractive part of potential integrated outside cutoff. *
  *  dist_pot = - int_{r_c}^{infty} r^2 U(r) dr                                *
  ******************************************************************************/
-double	dist_pot(real *potpar, double cutoff, int ptype)
-    	         			/* Array of potential parameters      */
-      	       				/* Cutoff distance		      */
-   	      				/* Potential type selector	      */
+double	dist_pot(real *potpar,          /* Array of potential parameters      */
+		 double cutoff,         /* Cutoff distance                    */ 
+		 int ptype)             /* Potential type selector            */
+    	         		
+      	       			
+   	      			
 {
    switch(ptype)
    {
     default:
       message(NULLI, NULLP, FATAL, UNKPTY, ptype);
+      /*FALLTHRU*/
     case LJPOT:
       return(potpar[0]*CUBE(SQR(potpar[1])/cutoff) / 3.0);
     case E6POT:
@@ -236,16 +243,17 @@ double	dist_pot(real *potpar, double cutoff, int ptype)
  *  atomic distances (r_sqr), charges (chg) , pot'l parameters (pot[which]),  *
  *  and returns a vector of forces (forceij) and the potential energy (pe)    *
  ******************************************************************************/
-void	kernel(int jmin, int nnab, real *forceij, double *pe, real *r_sqr, real *nab_chg, double chg, double norm, double alpha, int ptype, real **pot)
-   	           		/* Lower and upper limits for vectors.   (in) */
-   	      			/* Index of potential type in potspec[]. (in) */
-      	    			/* Potential energy accumulator.     (in/out) */
-      	            		/* Ewald parameter and 2*alpha/sqrt(pi). (in) */
-      	    			/* Electric charge of reference site.    (in) */
-    	          		/* Vector of -1/r * dU(r)/dr            (out) */
-    	        		/* Vector of site-site distances (**2).  (in) */
-    	          		/* Vector of charges of neighbour sites. (in) */
-    	       			/* Vectors of potential parameters.	 (in) */
+void	kernel(int jmin,     
+	       int nnab,        /* Lower and upper limits for vectors.   (in) */
+	       real *forceij,   /* Vector of dU(r)/dr for each in r_sqr.(out) */
+	       double *pe,      /* Potential energy accumulator.     (in/out) */
+	       real *r_sqr,     /* Vector of site-site distances (**2).  (in) */
+	       real *nab_chg,   /* Vector of charges of neighbour sites. (in) */
+	       double chg,      /* Electric charge of reference site.    (in) */
+	       double norm,     
+	       double alpha,    /* Ewald parameter and 2*alpha/sqrt(pi). (in) */
+	       int ptype,       /* Index of potential type in potspec[]. (in) */ 
+	       real **pot)      /* Vectors of potential parameters.      (in) */
 {
    register real t, ar;			/* Argument of erfc() polynomial.     */
    register real r;			/* Site-site distance.		      */
@@ -264,6 +272,7 @@ void	kernel(int jmin, int nnab, real *forceij, double *pe, real *r_sqr, real *na
       {
        default:
 	 message(NULLI, NULLP, FATAL, UNKPTY, ptype);
+	 /*FALLTHRU*/
        case LJPOT:
 VECTORIZE
          for(jsite=jmin; jsite < nnab; jsite++)
@@ -378,6 +387,7 @@ VECTORIZE
       {
        default:
 	 message(NULLI, NULLP, FATAL, UNKPTY, ptype);
+	 /*FALLTHRU*/
        case LJPOT:
 VECTORIZE
          for(jsite=jmin; jsite < nnab; jsite++)
