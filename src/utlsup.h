@@ -3,6 +3,7 @@
  */
 #define MAX_SPECIES 50                     /* Maximum no of different species          */
 #define DOTPROD(x,y)   ((x[0]*y[0])+(x[1]*y[1])+(x[2]*y[2])) /* Scalar product between x and y */
+#define xtoupper(c) (islower(c) ? toupper(c) : c)
 /*
  * file formats
  */
