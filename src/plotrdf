@@ -65,7 +65,7 @@ sub rdfout  {
     for( $j=0; $j < $nrdf ; $j++) {
 	printf $plotfd ("%8.3f", $r);
 	foreach $hdr ( keys %$rdflist ) {
-	    printf $plotfd (" %8.3f",$scale*$$rdflist{$hdr}[$j]);
+	    printf $plotfd (" %11.6f",$scale*$$rdflist{$hdr}[$j]);
 	}
 	printf $plotfd ("\n");
 	$r += $binw;
