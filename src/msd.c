@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.19 1999/10/08 10:54:51 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.20 1999/10/11 14:05:19 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -28,13 +28,21 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.1
  *		Output in columnar form "x y z total" for successive time intervals.  *
  *		Selection of species using -g: 0 = species 1, 1 = species 2, etc.     *
  *		Default msd time intervals:			     	              *
- *                             1 to (total no. of dump slices-1)/2, step size 1       *
+ *                             0 to (total no. of dump slices-1)/2, step size 1       *
  *		Option -u outputs trajectory coordinates in columnar format           *
  *		"x y z" against time for each particle of selected species.           *
  *		nb. msd time intervals taken relative to extracted dump slices.       *
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 1.21  1999/10/25  15:34:32  craig
+ *  Re-added zeroing of range_flag for non-ANSI machines.
+ *  Tidied up usage message.
+ *  Changed to generic matrix multiplier for converting coords.
+ *
+ *  Revision 1.20  1999/10/11 14:05:19  keith
+ *  Removed common functions to "utlsup.c".
+ *
  *  Revision 1.19  1999/10/08 10:54:51  keith
  *  Corrected it_inc limits for when only one or two time slices are selected.
  *  Reduced memory alloc to msd to account for selected species.
@@ -147,10 +155,8 @@ int	getopt();
 gptr	*talloc();
 void    tfree();
 void    zero_real();
-void    mat_vec_mul3();
 /*======================== Global vars =======================================*/
 int ithread=0, nthreads=1;
-static char  *comm;
 #define MSD  0
 #define TRAJ 1
 #define GNUP 0
@@ -333,7 +339,7 @@ char	*argv[];
    char		*filename = NULL, *dump_name = NULL;
    char		*dumplims = NULL, *speclims = NULL;
    char		*msdlims = NULL;
-   char		*tempname;
+   char		*tempname = NULL;
    char		dumpcommand[256];
    int		dump_size;
    float	*dump_buf;
@@ -344,7 +350,7 @@ char	*argv[];
    vec_mt 	**traj_cofm;
    mat_mt	*hmat;
    real		range[3][2];
-   int		range_flag[3];
+   int		range_flag[3]={0,0,0};
    site_mt	*site_info;
    pot_mt	*potpar;
    quat_mt	*qpf;
@@ -401,7 +407,7 @@ char	*argv[];
 	 break;
        case 'u':
 	 outsw = TRAJ;
-	 break;
+         break;
        case 'x':
          range_flag[0] = 1;
          break;
@@ -424,8 +430,8 @@ char	*argv[];
       fprintf(stderr,
          "Usage: %s [-s sys-spec-file |-r restart-file] [-c] ",comm);
       fputs("[-d dump-files] [-t s[-f[:n]]] [-m s[-f[:n]]] ",stderr);
-      fputs("[-g s[-f[:n]]] [-i init_inc] ",stderr);
-      fputs("[-u] [-w] [-x] [-y] [-z] [-o output-file]\n",stderr);
+      fputs("[-g s[-f[:n]]] [-i initial-time-increment] [-u]",stderr);
+      fputs("[-w trajectory-format] [-x] [-y] [-z] [-o output-file]\n",stderr);
       exit(2);
    }
 
@@ -646,7 +652,7 @@ char	*argv[];
         if( fread(dump_buf, dump_size, 1, Dp) < 1 || ferror(Dp) )
            error("Error reading record %d in dump file - \n%s\n",
               irec, strerror(errno));
-        dump_to_moldy(dump_buf, &sys);  /*read dump data */
+        dump_to_moldy(dump_buf, &sys);  /* read dump data */
 
 	memcpy(hmat[irec/inc], sys.h, sizeof(mat_mt));
 
@@ -674,7 +680,7 @@ char	*argv[];
 
 /* Convert trajectories from frac coords to Cartesian coords */
    for( it = 0; it < nslices; it++)
-      mat_vec_mul3(hmat[it], traj_cofm[it], sys.nmols);
+      mat_vec_mul(hmat[it], traj_cofm[it], traj_cofm[it], sys.nmols);
 
 /*
  * Output either msd values or trajectory coords
