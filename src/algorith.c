@@ -17,6 +17,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	algorith.c,v $
+ * Revision 1.1.1.6  90/07/16  15:55:25  keith
+ * Fixed bugs in constant-stress code
+ * 
  * Revision 1.1.1.5  90/05/16  18:39:06  keith
  * *** empty log message ***
  * 
@@ -38,7 +41,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 1.1.1.5 90/05/16 18:39:06 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 1.1.1.6 90/07/16 15:55:25 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include 	<math.h>
@@ -153,20 +156,25 @@ int		nsites,		/* Number of sites on one molecule      (in)  */
 {
    vec_p	princ_force = ralloc(nsites);
    int	i, j, k, imol, isite;
+   register     double torq;
 
    for(imol = 0; imol < nmols; imol++)
    {
       for(i = 0; i < 3; i++)
+      {
 VECTORIZE
 	 for(isite = 0; isite < nsites; isite++)
 	    princ_force[isite][i] = site_force[i][isite+imol*nsites];
+      }
       rotate(princ_force, princ_force, nsites, quat+imol, 1, inv);
       for(i = 0, j = 1, k = 2; i < 3; i++, j=(j+1)%3, k=(k+1)%3)
       {
-         torque[imol][i] = 0.0;
+         torq = 0.0;
+VECTORIZE
 	 for(isite = 0; isite < nsites; isite++)
-	    torque[imol][i] += site[isite][j]*princ_force[isite][k]
-	                      -site[isite][k]*princ_force[isite][j];
+	    torq += site[isite][j]*princ_force[isite][k]
+	           -site[isite][k]*princ_force[isite][j];
+         torque[imol][i] = torq;
       }
    }
    tfree((char *)princ_force);
