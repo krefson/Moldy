@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.10  1994/12/30 11:46:08  keith
+ *       Fixed bug which caused core dump for very small k-cutoff (hmax=0)
+ *
  * Revision 2.9  1994/07/07  16:58:14  keith
  * Versions for SPMD parallel machines.
  * These are based on the *_parallel.c versions for shared-memory but
@@ -181,7 +184,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 2.9 1994/07/07 16:58:14 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.10 1994/12/30 11:46:08 keith stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -213,18 +216,15 @@ void	transpose();			/* Transposes a 3x3 matrix	      */
 void    zero_real();            	/* Initialiser                        */
 void    zero_double();          	/* Initialiser                        */
 double	sum();				/* Sum of elements of 'real' vector   */
-void	ewald_inner();			/* Inner loop forward reference       */
-int	nprocessors();			/* Return no. of procs to execute on. */
 #if defined(ANSI) || defined(__STDC__)
 gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
-void	note(char *, ...);		/* Write a message to the output file */
-void	message(int *, ...);		/* Write a warning or error message   */
+void	note(char *,...);		/* Write a message to the output file */
+void	message(int *,...);		/* Write a warning or error message   */
 #else
 gptr	*arralloc();	        	/* Array allocator		      */
 void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 #endif
-void ewald_inner();
 /*========================== External data references ========================*/
 extern	contr_mt	control;       	/* Main simulation control record     */
 extern int		ithread, nthreads;
@@ -236,7 +236,7 @@ extern int		ithread, nthreads;
 #define modb(hmat) sqrt(SQR(hmat[0][1]) + SQR(hmat[1][1]))
 #define modc(hmat) sqrt(SQR(hmat[0][2]) + SQR(hmat[1][2]) + SQR(hmat[2][2]))
 /*============================================================================*/
-   struct _hkl {double kx, ky, kz; int h,k,l;};
+   struct s_hkl {double kx, ky, kz; int h,k,l;};
 /*****************************************************************************
  * qsincos().  Evaluate q sin(k.r) and q cos(k.r).  This is in a separate    *
  * function because some compilers (notably Stellar's) generate MUCH better  *
@@ -324,21 +324,30 @@ double		*pe;			/* Potential energy		(out) */
 mat_mt		stress;			/* Stress virial		(out) */
 {
    mat_mt	hinvp;			/* Matrix of reciprocal lattice vects*/
-   register	int	h, k, l;	/* Recip. lattice vector indices     */
-		int	i, is, ssite;/* Counters.			     */
-   		spec_mp	spec;		/* species[ispec]		     */
-   register	int	nsites = system->nsites;
-   		double	kx,ky,kz;
-   		vec_mt	kv;		/* (Kx,Ky,Kz)  			     */
-   	 	struct _hkl *hkl;
-   		int	nhkl = 0;
-   register	real	coss;
+   int		h, k, l;		/* Recip. lattice vector indices     */
+   int		i, j, is, ssite;	/* Counters.			     */
+   spec_mp	spec;			/* species[ispec]		     */
+   int		nsites = system->nsites;
+   double	pe_k,			/* Pot'l energy for current K vector */
+		coeff, coeff2;		/* 2/(e0V) * A(K) & similar	     */
+   double	r_4_alpha = -1.0/(4.0 * control.alpha * control.alpha);
+   double	sqcoskr,sqsinkr,	/* Sum q(i) sin/cos(K.r(i))          */
+		sqcoskrn, sqsinkrn,
+		sqcoskrf, sqsinkrf;
+   real		coss;
+   double	ksq,			/* Squared magnitude of K vector     */
+		kcsq = SQR(control.k_cutoff);
+   double	kx,ky,kz,kzt;
+   vec_mt	kv;			/* (Kx,Ky,Kz)  			     */
+   real		force_comp, kv0, kv1, kv2;
+   struct	s_hkl *hkl, *phkl;
+   int		nhkl = 0;
 /*
  * Maximum values of h, k, l  s.t. |k| < k_cutoff
  */
-		int	hmax = floor(control.k_cutoff/(2*PI)*moda(system->h)),
-			kmax = floor(control.k_cutoff/(2*PI)*modb(system->h)),
-			lmax = floor(control.k_cutoff/(2*PI)*modc(system->h));
+   int		hmax = floor(control.k_cutoff/(2*PI)*moda(system->h)),
+		kmax = floor(control.k_cutoff/(2*PI)*modb(system->h)),
+		lmax = floor(control.k_cutoff/(2*PI)*modc(system->h));
 /*
  * Kludge to optimize performance on RS6000s with 4-way assoc. cache.
  */
@@ -364,17 +373,18 @@ mat_mt		stress;			/* Stress virial		(out) */
 		**slz = (real**)arralloc((size_mt)sizeof(real),2,
 					 0, lmax, 0, nsarray-1);
    real		*coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
-   real               *c1, *s1, *cm1, *sm1;
+   real		*c1, *s1, *cm1, *sm1;
    real		*site0, *site1, *site2;
-   double	r_4_alpha = -1.0/(4.0 * control.alpha * control.alpha);
+   real		*site_fx = site_force[0],
+   		*site_fy = site_force[1],
+   		*site_fz = site_force[2];
+   real		*qcoskr = dalloc(nsarray),	/* q(i) cos(K.R(i))	      */
+		*qsinkr = dalloc(nsarray);	/* q(i) sin(K.R(i))	      */
    double	vol = det(system->h);	/* Volume of MD cell		      */
    static	double	self_energy,	/* Constant self energy term	      */
    			sheet_energy;	/* Correction for non-neutral system. */
    static	boolean init = true;	/* Flag for the first call of function*/
    static	int	nsitesxf;	/* Number of non-framework sites.     */
-
-   invert(system->h, hinvp);		/* Inverse of h is matrix of r.l.v.'s */
-   mat_sca_mul(2*PI, hinvp, hinvp);
 
 /*
  * First call only - evaluate self energy term and store for subsequent calls
@@ -415,7 +425,6 @@ mat_mt		stress;			/* Stress virial		(out) */
        * Sqxf is total non-framework charge.  Calculate grand total in sq.
        */
       sqxf = sq;
-
       for(; is < nsites; is++)
 	 sq += chg[is];
       /*
@@ -441,32 +450,6 @@ mat_mt		stress;			/* Stress virial		(out) */
       note("Ewald self-energy = %f Kj/mol",self_energy*CONV_E);
       init = false;
    }
-   
-   /*
-    * Build array hkl[] of k vectors within cutoff
-    */
-   hkl = aalloc(4*(hmax+1)*(kmax+1)*(lmax+1), struct _hkl);
-   for(h = 0; h <= hmax; h++)
-      for(k = (h==0 ? 0 : -kmax); k <= kmax; k++)
-      {
-	 kv[0] = h*astar[0] + k*bstar[0];
-	 kv[1] = h*astar[1] + k*bstar[1];
-	 kz = h*astar[2] + k*bstar[2];
-	 for(l = (h==0 && k==0 ? 1 : -lmax); l <= lmax; l++)
-	 {
-	  /*  kv[0] = kx + l*cstar[0]; 
-	    kv[1] = ky + l*cstar[1]; */
-	    kv[2] = kz + l*cstar[2];
-	    if( SUMSQ(kv) < SQR(control.k_cutoff) )
-	    {
-	       hkl[nhkl].h = h; hkl[nhkl].k = k; hkl[nhkl].l = l;
-	       hkl[nhkl].kx = kv[0];
-	       hkl[nhkl].ky = kv[1];
-	       hkl[nhkl].kz = kv[2];
-	       nhkl++;
-	    }
-	 }
-      }
 
    if( ithread == 0 )
    {
@@ -475,6 +458,35 @@ mat_mt		stress;			/* Stress virial		(out) */
       for(i=0; i<3; i++)
 	 stress[i][i] += sheet_energy/vol;
    }
+   
+   invert(system->h, hinvp);		/* Inverse of h is matrix of r.l.v.'s */
+   mat_sca_mul(2*PI, hinvp, hinvp);
+   /*
+    * Build array hkl[] of k vectors within cutoff. 
+    * N. B. This code presupposes upper-triangular H matrix.
+    */
+   hkl = aalloc(4*(hmax+1)*(kmax+1)*(lmax+1), struct s_hkl);
+   for(h = 0; h <= hmax; h++)
+      for(k = (h==0 ? 0 : -kmax); k <= kmax; k++)
+      {
+	 kx = h*astar[0] + k*bstar[0];
+	 ky = h*astar[1] + k*bstar[1];
+	 kzt = h*astar[2] + k*bstar[2];
+	 ksq = SQR(kx) + SQR(ky);
+	 for(l = (h==0 && k==0 ? 1 : -lmax); l <= lmax; l++)
+	 {
+	    kz = kzt + l*cstar[2];
+	    if( SQR(kz)+ksq < kcsq )
+	    {
+	       hkl[nhkl].h = h; hkl[nhkl].k = k; hkl[nhkl].l = l;
+	       hkl[nhkl].kx = kx;
+	       hkl[nhkl].ky = ky;
+	       hkl[nhkl].kz = kz;
+	       nhkl++;
+	    }
+	 }
+      }
+
 /*
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
  */
@@ -568,61 +580,21 @@ VECTORIZE
  * To avoid calculating K and -K, only half of the K-space box is covered. 
  * Points on the axes are included once and only once. (0,0,0) is omitted.
  */
-   ewald_inner(ithread, nthreads, nhkl, hkl, nsarray, nsites, nsitesxf, 
-		  chx, cky, clz, shx, sky, slz, chg, &vol, &r_4_alpha,
-		  stress, pe, site_force);
-
-   afree((gptr*)chx); afree((gptr*)cky); afree((gptr*)clz); 
-   afree((gptr*)shx); afree((gptr*)sky); afree((gptr*)slz);
-   xfree(hkl);
-}
-/*****************************************************************************
- *  Ewald_inner().  Part of Ewald sum to run in parallel on multi-stream or  *
- *  multi-processor computers.  It splits up the loop over k-vectors by using*
- *  a stride of the number of threads in use.  The loop starts from a value  *
- *  unique to the thread.    Summable quantities, pe, stress, site_force are *
- *  accumulated where specified by the arguments so it is the callers	     *
- *  responsibility to provide a separte area and accumulate the grand totals *
- *****************************************************************************/
-void
-ewald_inner(ithread, nthreads, nhkl, hkl, nsarray, nsites, nsitesxf, 
-            chx, cky, clz, shx, sky, slz,
-	    chg, volp, r_4_alphap, stress, pe, site_force)
-int ithread, nthreads, nhkl;
-struct _hkl hkl[];
-int nsarray;
-int nsites;
-int nsitesxf;			/* N sites excluding framework sites.	      */
-real **chx, **cky, **clz, **shx, **sky, **slz;
-double *volp, *r_4_alphap;
-mat_mt	stress;
-double *pe;
-real	chg[];
-real	**site_force;
-{
-   vec_mt	kv;
-   double ksq, coeff, coeff2, pe_k;
-   double sqcoskr, sqsinkr, sqcoskrn, sqsinkrn, sqcoskrf, sqsinkrf;
-   real *coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
-   int is, i, j, h, k, l;
-   struct _hkl *phkl;
-   double vol = *volp, r_4_alpha = *r_4_alphap;
-   real		force_comp, kv0, kv1, kv2;
-   real *qcoskr = dalloc(nsarray), *qsinkr = dalloc(nsarray);
-   real		*site_fx = site_force[0],
-   		*site_fy = site_force[1],
-   		*site_fz = site_force[2];
-
    for(phkl = hkl+ithread; phkl < hkl+nhkl; phkl += nthreads)
    {
+/*
+ * Calculate actual K vector and its squared magnitude.
+ */
       h  = phkl->h;	    k     = phkl->k;  l     = phkl->l;
       kv0 = kv[0] = phkl->kx; 
       kv1 = kv[1] = phkl->ky; 
       kv2 = kv[2] = phkl->kz;
+
+      ksq = SUMSQ(kv);
+
 /*
  * Calculate pre-factors A(K) etc
  */
-      ksq = SUMSQ(kv);
       coeff  = 2.0 / (EPS0 * vol) * exp(ksq * r_4_alpha) / ksq;
       coeff2 = 2.0 * (1.0 - ksq * r_4_alpha) / ksq;
       
@@ -667,7 +639,6 @@ NOVECTOR
 	 for(j = i; j < 3; j++)
 	    stress[i][j] -= pe_k * coeff2 * kv[i] * kv[j];
       }
-
 /*
  * Evaluation of site forces.   Non-framework sites interact with all others
  */
@@ -679,7 +650,6 @@ VECTORIZE
 	 site_fy[is] += kv1 * force_comp;
 	 site_fz[is] += kv2 * force_comp;
       }
-#if 1
 /*
  *  Framework sites -- only interact with non-framework sites
  */
@@ -691,11 +661,12 @@ VECTORIZE
 	 site_fy[is] += kv1 * force_comp;
 	 site_fz[is] += kv2 * force_comp;
       }
-#endif
 /*
  * End of loop over K vectors.
  */
    }
+   afree((gptr*)chx); afree((gptr*)cky); afree((gptr*)clz); 
+   afree((gptr*)shx); afree((gptr*)sky); afree((gptr*)slz);
    xfree(qcoskr); xfree(qsinkr);
+   xfree(hkl);
 }
-
