@@ -42,7 +42,11 @@ what you give them.   Help stamp out software-hoarding!  */
  *  last one.)								      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	dump.c,v $
+ *       $Log: dump.c,v $
+ * Revision 2.4  1994/01/24  18:32:32  keith
+ * Don't rename dump run if restarting from backup file and
+ * dump file exists and matches.
+ *
  * Revision 2.3  93/10/28  10:27:47  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -129,7 +133,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 2.5 94/01/18 13:32:17 keith Exp Locker: keith $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 2.5 1994/02/01 14:33:45 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -180,7 +184,7 @@ boolean	*xdr_write;
 {
    int      errflg = true;	/* Provisionally !!   */
 
-   *xdr_write = false;
+   *xdr_write = FALSE;
    if( (*dumpf = fopen(fname, "r+b")) == NULL)	/* Open dump file     */
       message(NULLI, NULLP, WARNING, DOERRR, fname, strerror(errno));
    else 
@@ -234,6 +238,7 @@ double		pe;
    		        (control.dump_interval * control.maxdumps),
 		ndumps =(control.istep-control.begin_dump) /
    			 control.dump_interval % control.maxdumps; 
+   int		istep_hdr;		/* Timestep for dump header	      */
    unsigned     dump_size = DUMP_SIZE(control.dump_level);
                                         /* Size in floats of each dump record */
    float	*dump_buf=aalloc(dump_size,float);      /* For converted data */
@@ -243,7 +248,7 @@ double		pe;
 #define		NMUTATES 10   		/* Max number of mutation attempts.   */
    int		nmutates = 0;   	/* Number of mutation attempts.	      */
    int		junk;
-   boolean	xdr_write = false;	/* Is current dump in XDR format?     */
+   boolean	xdr_write = FALSE;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
 
    if( ! strchr(control.dump_file, '%') )
@@ -256,17 +261,38 @@ double		pe;
       if( ndumps == 0 )		fname = prev_file;
                         else    fname = cur_file;
 
-      errflg = read_dump_hdr(fname, &dumpf, &dump_header, &xdr_write);
-      if( !errflg )
-      {
-	 if( control.dump_level != dump_header.dump_level )
-	    message(NULLI, NULLP, INFO, DMPALT);
-
-	 if( firsttime && dump_header.timestamp < restart_header.timestamp &&
+      istep_hdr = control.istep - ndumps*control.dump_interval;
+      if( ndumps == 0 )
+	 istep_hdr -= control.maxdumps;
+      errflg = true;
+      /*
+       * Attempt to read header and perform consistency checks which,
+       * if failed, are "fatal" to dump run and initiate a *NEW* run
+       * by setting errflg. 
+       */
+      if( read_dump_hdr(fname, &dumpf, &dump_header, &xdr_write) /* fails */ )
+	 errflg = true;		                 /* message already printed */
+      else if( control.dump_level != dump_header.dump_level )	/* Level    */
+	 message(NULLI, NULLP, WARNING, DMPALT);
+      else if( istep_hdr != dump_header.istep ) 		/* Timeslice */
+	 message(NULLI, NULLP, WARNING, DUMPTS, fname, 
+		 istep_hdr,dump_header.istep);
+      else if( firsttime && 				  /* Matches Restart */
+	    dump_header.timestamp < restart_header.timestamp &&
 	    dump_header.restart_timestamp != restart_header.prev_timestamp &&
 	    dump_header.restart_timestamp != restart_header.timestamp )
-	    message(NULLI, NULLP, FATAL, CONTIG, fname);
-
+	 message(NULLI, NULLP, WARNING, CONTIG, fname);
+      else
+	 errflg = false;
+      /*
+       * At this point we think we have a matching dump header.  
+       * Check to see if amount of data in file matches and whether
+       * length of file is consistent with header.  Any errors now are
+       * too serious to just start another dump sequence and so abort
+       * the run. 
+       */
+      if( !errflg )
+      {
 	 if( dump_header.ndumps < (ndumps ? ndumps : control.maxdumps ) )
             message(NULLI,NULLP,FATAL, SHTDMP,
 		    fname, dump_header.ndumps, ndumps);
@@ -306,6 +332,7 @@ double		pe;
 	    control.begin_dump = control.istep;
             (void)sprintf(cur_file, control.dump_file, filenum);
 	 }
+	 message(NULLI,NULLP,WARNING,DRESET);
       }
    }
    if( errflg || control.istep == control.begin_dump )
