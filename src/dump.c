@@ -43,6 +43,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.22  2001/05/24 16:26:43  keith
+ *       Updated program to store and use angular momenta, not velocities.
+ *        - added conversion routines for old restart files and dump files.
+ *       Got rid of legacy 2.0 and lower restart file reading code.
+ *
  *       Revision 2.21  2001/03/06 15:32:10  keith
  *       Fixed classic  C "shoot own feet" bug.
  *
@@ -225,7 +230,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.21 2001/03/06 15:32:10 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.22 2001/05/24 16:26:43 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -371,7 +376,7 @@ int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_writ
       errflg = true;
       if( sscanf(hdr_p->vsn, "%d.%d", &vmajor, &vminor) < 2 )
 	 message(NULLI, NULLP, WARNING, INRVSN, hdr_p->vsn);
-      if( vmajor < 2 || vminor <= 17)
+      if( vmajor < 2 || vminor <= 22)
 	 message(NULLI, NULLP, WARNING, OLDVSN, hdr_p->vsn);
       else
 	 errflg = false;
@@ -388,7 +393,7 @@ int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_writ
        */
 #ifdef USE_XDR
       if( *xdr_write ) {
-	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo) )
+	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo, vmajor, vminor) )
 	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
 	 errflg = false;
       } else
@@ -407,6 +412,11 @@ void write_dump_header(FILE *dumpf, char *cur_file, dump_mt *dump_header,
 		      boolean xdr_write,
 		      int sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
 {
+   int vmajor, vminor;
+
+   if( sscanf(dump_header->vsn, "%d.%d", &vmajor, &vminor) < 2 )
+      message(NULLI, NULLP, WARNING, INRVSN, dump_header->vsn);
+
    dump_setpos(dumpf, 0L, xdr_write);
 #ifdef USE_XDR
    if( xdr_write )
@@ -415,7 +425,7 @@ void write_dump_header(FILE *dumpf, char *cur_file, dump_mt *dump_header,
 	 message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
       if( dump_sysinfo ) 
       {
-	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo) )
+	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo, vmajor, vminor) )
 	    message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
       }
    }
@@ -490,7 +500,7 @@ void	dump(system_mp system, spec_mt *species,
    boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.21 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.23 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    if( ! strchr(control.dump_file, '%') )
@@ -609,9 +619,16 @@ void	dump(system_mp system, spec_mt *species,
       for (ispec = 0, spec = species; spec < &species[system->nspecies]; 
 	   ispec++, spec++)
       {
-	 strcpy(dump_sysinfo->mol[ispec].name, spec->name);
+	 dump_sysinfo->mol[ispec].inertia[0] = spec->inertia[0];
+	 dump_sysinfo->mol[ispec].inertia[1] = spec->inertia[1];
+	 dump_sysinfo->mol[ispec].inertia[2] = spec->inertia[2];
+	 dump_sysinfo->mol[ispec].mass = spec->mass;
+	 dump_sysinfo->mol[ispec].dipole = spec->dipole;
+	 dump_sysinfo->mol[ispec].charge = spec->charge;
 	 dump_sysinfo->mol[ispec].nmols = spec->nmols;
 	 dump_sysinfo->mol[ispec].rdof = spec->rdof;
+	 dump_sysinfo->mol[ispec].framework = spec->framework;
+	 strcpy(dump_sysinfo->mol[ispec].name, spec->name);
       }
 
       note(DUMPST, cur_file, control.istep);

@@ -26,6 +26,16 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.h,v $
+ *       Revision 2.13  2000/11/15 17:52:00  keith
+ *       Changed format of dump files.
+ *       Added second struct with sufficient information
+ *       about the simulation that most utility programs
+ *       (namely those which do not need site co-ordinates)
+ *       should not need to read sys-spec or restart files.
+ *
+ *       New options "-c -1" to dumpext prints header info.
+ *       -- dumpanal removed.
+ *
  *       Revision 2.12  2000/11/10 12:16:28  keith
  *       Tidied up some dubious cases to get rid of compiler warnings.
  *       Updated configure scripts -- fix for non-pgcc linux case.
@@ -79,7 +89,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSidh = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.h,v 2.12 2000/11/10 12:16:28 keith Exp $";
+static char *RCSidh = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.h,v 2.13 2000/11/15 17:52:00 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef USE_XDR
@@ -151,7 +161,7 @@ void   xdr_set_npotpar(int npotpar);
 bool_t xdr_pot(XDR *xdrs, pot_mt *sp);
 bool_t xdr_restrt(XDR *xdrs, restrt_mt *sp);
 bool_t xdr_dump(XDR *xdrs, dump_mt *sp);
-bool_t xdr_dump_sysinfo(XDR *xdrs, dump_sysinfo_mt *sp);
+bool_t xdr_dump_sysinfo(XDR *xdrs, dump_sysinfo_mt *sp, int vmajor, int vminor);
 void   xdr_set_av_size_conv(size_mt size, int av_conv);
 bool_t xdr_averages(XDR *xdrs, gptr *ap);
 
@@ -169,4 +179,8 @@ bool_t  xdr_bool(void);
 
 #define XDR_RESTRT_SIZE  (2*XDR_ULONG_SIZE+(DLEN)+(L_name)+L_vsn+XDR_INT_SIZE)
 #define XDR_DUMP_SIZE    ((L_name)+L_vsn+6*XDR_INT_SIZE+4*XDR_ULONG_SIZE)
-#define XDR_SYSINFO_SIZE(nspecies) (XDR_FLOAT_SIZE+(3+2*nspecies)*XDR_INT_SIZE + 32*nspecies)
+#define XDR_SYSINFO_SIZE_PRE22(nspecies) (XDR_FLOAT_SIZE+(3+2*nspecies)*XDR_INT_SIZE + 32*nspecies)
+#define XDR_SYSINFO_SIZE(nspecies) (XDR_FLOAT_SIZE+2*XDR_INT_SIZE+\
+				    nspecies*( 6*XDR_FLOAT_SIZE\
+					      +3*XDR_INT_SIZE\
+					      +L_name))

@@ -19,9 +19,18 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.20 2001/05/24 16:26:44 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.21 2001/07/26 17:30:17 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.21  2001/07/26 17:30:17  keith
+ * Now prints both conserved hamiltonian and total system energy
+ * (T+V) in the same vertical column.
+ *
+ * Got rid of old code to read old restart files from moldy 2.
+ * Added code to convert V2.19 and below restart files.
+ *
+ * Corrected minor mistake in initialization of NPPR unit cell variables.
+ *
  * Revision 2.20  2001/05/24 16:26:44  keith
  * Updated program to store and use angular momenta, not velocities.
  *  - added conversion routines for old restart files and dump files.
@@ -388,11 +397,16 @@ typedef struct                  /* Dump file header format                    */
    size_mt	sysinfo_size;
 }       dump_mt;
 
-typedef struct mol_mt
+typedef struct mol_mt		/* Per species information for dump header.   */
 {
-   char name[L_spec];
+   float inertia[3];
+   float mass;
+   float dipole;
+   float charge;
    int nmols;
    int rdof;
+   int framework;
+   char name[L_spec];
 } mol_mt;
 
 typedef struct dump_sysinfo_mt  /* Dump file system info format               */

@@ -1,28 +1,18 @@
 TODO
 ====
-Use vertical slots in total energy of output to print int'l energy and
-conserved Hamiltonian separately.
-
-Fix reader to handle DOS linebreaks.
-
 Port to new Autoconf.
+Get Configure to select options better, eg mpicc where underlying
+compiler is Portland.
 
-Update restart with "xdr-sizeof" -- implement a replacement.
+
 Eliminate extra args for kernel.
 Take DEBUG_THERMOSTAT out of accel.c
 Get rid of system header -subst files?
 
-Fix T3E version - don't use MPI_ABORT as it dumps core
-
 Zap value of save-file when written to avoid overwriting?  Or test for
 restart-file and save-file being identical and handle?
 
-Get Configure to select options better, eg mpicc where underlying
-compiler is Portland.
-
-RRP's suggestion for the dump header is to include the masses and charges.
-
-Ceed to document the -c option if msd and  delete the last sentence
+Need to document the -c option if msd and  delete the last sentence
 in the explanation of mdvaf.
 
 Add molecule selection capabilities to "msd" and "mdvaf".
@@ -40,8 +30,25 @@ Update manual to document leapfrog algorithms and molecular-cutoff option.
 
 Incorporate Craig's configuration generator.
 
+NOTYET
+======
+
+Update restart with "xdr-sizeof" -- implement a replacement.
+  -- postponed since it's not too widespread.  SGI amd DU don't have it.
+
+Fix T3E version - don't use MPI_ABORT as it dumps core
+  -- Apparently there is no global exit call for MPI.
+     postpone until I can think of a better way.
+
 DONE
 ====
+RRP's suggestion for the dump header is to include the masses and charges.
+
+Fix reader to handle DOS linebreaks.
+
+Use vertical slots in total energy of output to print int'l energy and
+conserved Hamiltonian separately.
+
 Allow ttmass and W to be changed during run somehow.
 
 Unpack into own directory.

@@ -19,11 +19,21 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dumpconv.c,v 2.13 2000/11/10 12:16:27 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dumpconv.c,v 2.14 2000/11/15 17:51:59 keith Exp $";
 #endif
 
 /*
  * $Log: dumpconv.c,v $
+ * Revision 2.14  2000/11/15 17:51:59  keith
+ * Changed format of dump files.
+ * Added second struct with sufficient information
+ * about the simulation that most utility programs
+ * (namely those which do not need site co-ordinates)
+ * should not need to read sys-spec or restart files.
+ *
+ * New options "-c -1" to dumpext prints header info.
+ * -- dumpanal removed.
+ *
  * Revision 2.13  2000/11/10 12:16:27  keith
  * Tidied up some dubious cases to get rid of compiler warnings.
  * Updated configure scripts -- fix for non-pgcc linux case.
@@ -346,13 +356,14 @@ void dump_setpos(FILE *dumpf, size_mt file_pos, boolean xdr_write)
    }
 }
 
-
 static
 int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_write,
 		     int sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
 {
    int      errflg = true;	/* Provisionally !!   */
+#ifdef USE_XDR
    char     vbuf[sizeof hdr_p->vsn + 1];
+#endif
    int	    vmajor,vminor;
 
    *xdr_write = false;
@@ -391,7 +402,7 @@ int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_writ
       errflg = true;
       if( sscanf(hdr_p->vsn, "%d.%d", &vmajor, &vminor) < 2 )
 	 message(NULLI, NULLP, WARNING, INRVSN, hdr_p->vsn);
-      if( vmajor < 2 || vminor <= 17)
+      if( vmajor < 2 || vminor <= 22)
 	 message(NULLI, NULLP, WARNING, OLDVSN, hdr_p->vsn);
       else
 	 errflg = false;
@@ -408,7 +419,7 @@ int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_writ
        */
 #ifdef USE_XDR
       if( *xdr_write ) {
-	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo) )
+	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo, vmajor, vminor) )
 	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
 	 errflg = false;
       } else
@@ -427,6 +438,11 @@ void write_dump_header(FILE *dumpf, char *cur_file, dump_mt *dump_header,
 		      boolean xdr_write,
 		      int sysinfo_size, dump_sysinfo_mt *dump_sysinfo)
 {
+   int vmajor, vminor;
+
+   if( sscanf(dump_header->vsn, "%d.%d", &vmajor, &vminor) < 2 )
+      message(NULLI, NULLP, WARNING, INRVSN, dump_header->vsn);
+
    dump_setpos(dumpf, 0L, xdr_write);
 #ifdef USE_XDR
    if( xdr_write )
@@ -435,7 +451,7 @@ void write_dump_header(FILE *dumpf, char *cur_file, dump_mt *dump_header,
 	 message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
       if( dump_sysinfo ) 
       {
-	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo) )
+	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo, vmajor, vminor) )
 	    message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
       }
    }

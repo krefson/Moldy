@@ -201,7 +201,7 @@ int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_writ
        */
 #ifdef USE_XDR
       if( *xdr_write ) {
-	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo) )
+	 if( ! xdr_dump_sysinfo(&xdrs, dump_sysinfo, vmajor, vminor) )
 	    message(NULLI, NULLP, FATAL, DRERR, fname, strerror(errno));
 	 errflg = false;
       } else
@@ -269,7 +269,7 @@ extract(char *dump_name, int cpt_mask, list_mt *molecules, cpt_mt *cpt, int ncpt
 
 #ifdef USE_XDR
    if( xdr )
-      dump_base = XDR_DUMP_SIZE + XDR_SYSINFO_SIZE(dump_sysinfo->nspecies) 
+      dump_base = XDR_DUMP_SIZE + sysinfo_size
 	                        + tslice*header.dump_size*XDR_FLOAT_SIZE;
    else
 #endif
@@ -347,7 +347,16 @@ void	print_header(dump_mt *header, dump_sysinfo_mt *sysinfo)
    {
       printf("Species %d name\t\t\t= %s\n", ispec+1, sysinfo->mol[ispec].name);
       printf("  Number of molecules\t\t= %d\n",sysinfo->mol[ispec].nmols);
-      printf("  Rotational deg. of freedom\t= %d\n", sysinfo->mol[ispec].rdof);
+      if( sysinfo->mol[ispec].framework )
+	 printf("  Molecule is a framework\n");
+      else
+	 printf("  Rotational deg. of freedom\t= %d\n", sysinfo->mol[ispec].rdof);
+      printf("  Mass\t\t\t\t= %f\n", sysinfo->mol[ispec].mass);
+      if (sysinfo->mol[ispec].rdof > 0 )
+	 printf("  Moments of Inertia\t\t= %f  %f  %f\n", sysinfo->mol[ispec].inertia[0],
+		sysinfo->mol[ispec].inertia[1],sysinfo->mol[ispec].inertia[2]);
+      printf("  Charge\t\t\t= %f\n", sysinfo->mol[ispec].charge); 
+      printf("  Dipole Moment\t\t\t= %f\n", sysinfo->mol[ispec].dipole);
    }
 }
 

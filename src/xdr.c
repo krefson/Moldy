@@ -26,6 +26,15 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.24  2001/07/31 09:56:04  keith
+ *       Now prints both conserved hamiltonian and total system energy
+ *       (T+V) in the same vertical column.
+ *
+ *       Got rid of old code to read old restart files from moldy 2.
+ *       Added code to convert V2.19 and below restart files.
+ *
+ *       Corrected minor mistake in initialization of NPPR unit cell variables.
+ *
  *       Revision 2.23  2001/07/11 10:41:52  keith
  *       Fixed a couple of compilation problems caused by erroneous "protoize".
  *
@@ -145,7 +154,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.24 2001/07/26 17:30:18 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.24 2001/07/31 09:56:04 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -277,7 +286,22 @@ bool_t xdr_dump(XDR *xdrs, dump_mt *sp)
       xdr_vector(xdrs, (gptr*)&sp->timestamp, 4, sizeof(unsigned long), (xdrproc_t)xdr_u_long);
 }
 
-bool_t xdr_dump_sysinfo(XDR *xdrs, dump_sysinfo_mt *sp)
+bool_t xdr_dump_sysinfo_2_23(XDR *xdrs, dump_sysinfo_mt *sp)
+{
+   int i, ispec;
+   i = 
+      xdr_float(xdrs, &sp->deltat) &&
+      xdr_vector(xdrs, (gptr*)&sp->nmols, 3, sizeof(int), (xdrproc_t)xdr_int);
+   for(ispec = 0; ispec < sp->nspecies; ispec++)
+   {
+      i = i && xdr_vector(xdrs, (gptr*)&sp->mol[ispec].inertia, 6, sizeof(float), (xdrproc_t)xdr_float);
+      i = i && xdr_vector(xdrs, (gptr*)&sp->mol[ispec].nmols, 3, sizeof(int), (xdrproc_t)xdr_int);
+      i = i && xdr_opaque(xdrs, (gptr*)&sp->mol[ispec].name, L_spec);
+   }
+   return i;
+}
+
+bool_t xdr_dump_sysinfo_2_18(XDR *xdrs, dump_sysinfo_mt *sp)
 {
    int i, ispec;
    i = 
@@ -289,6 +313,19 @@ bool_t xdr_dump_sysinfo(XDR *xdrs, dump_sysinfo_mt *sp)
       i = i && xdr_vector(xdrs, (gptr*)&sp->mol[ispec].nmols, 2, sizeof(int), (xdrproc_t)xdr_int);
    }
    return i;
+}
+
+bool_t xdr_dump_sysinfo(XDR *xdrs, dump_sysinfo_mt *sp, 
+			     int vmajor, int vminor)
+{
+   if( vmajor >= 2 )
+   {
+      if(vminor >= 23) 
+	 return xdr_dump_sysinfo_2_23(xdrs, sp);
+      else if(vminor >= 18) 
+	 return xdr_dump_sysinfo_2_18(xdrs, sp);
+   }
+   return false;
 }
 
 static
@@ -361,7 +398,8 @@ bool_t xdr_contr(XDR *xdrs, contr_mt *cp){return 0;}
 /*ARGSUSED*/
 bool_t xdr_dump(XDR *xdrs, dump_mt *sp){return 0;}
 /*ARGSUSED*/
-bool_t xdr_dump_sysinfo(XDR *xdrs, dump_sysinfo_mt *sp){return 0;}
+bool_t xdr_dump_sysinfo(XDR *xdrs, dump_sysinfo_mt *sp, int vmajor, int vminor)
+{return 0;}
 /*ARGSUSED*/
 bool_t xdr_pot(XDR *xdrs, pot_mt *sp){return 0;}
 /*ARGSUSED*/
@@ -377,9 +415,9 @@ bool_t xdr_system(XDR *xdrs, system_mt *sp){return 0;}
 /*ARGSUSED*/
 bool_t xdr_system_2(XDR *xdrs, system_mt *sp){return 0;}
 /*ARGSUSED*/
-void   xdr_set_av_size_conv(size_mt size, int av_conv){return 0;}
+void   xdr_set_av_size_conv(size_mt size, int av_conv){return ;}
 /*ARGSUSED*/
-void   xdr_set_npotpar(int npotpar){return 0;}
+void   xdr_set_npotpar(int npotpar){return ;}
 
 /*ARGSUSED*/
 bool_t	xdr_bool (void) {return 0;}
