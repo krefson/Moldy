@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.14.2.4.2.2  2002/03/15 15:17:02  kr
+ *       Fixed some bugs in forces
+ *
  *       Revision 2.14.2.4.2.1  2002/03/13 10:27:52  kr
  *       Trial version incorporating reciprocal-space summation for r^-2 and r^-6
  *       interactions.  This version implements a new potential "genpot46" to activate.
@@ -200,7 +203,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/kernel.c,v 2.14.2.4.2.1 2002/03/13 10:27:52 kr Exp $";
+static char *RCSid = "$Header: /home/kr/CVS/moldy/src/kernel.c,v 2.14.2.4.2.2 2002/03/15 15:17:02 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -550,7 +553,7 @@ VECTORIZE
 
 	    ppe += t + exp_f1 + r_12_r - ((1.0+arfac)*r_4_r + (1.0+arfac+0.5*arfacsq)*r_6_r)*exp_f2 - r_8_r;
 	    forceij[jsite] = r_sqr_r*( 12.0*r_12_r 
-			   - ((4.0+2.0*arfac+2.0*arfacsq)*r_4_r+(6.0+6.0*arfac+3.0*arfacsq+arfacsq*arfac)*r_6_r)*exp_f2
+			   - ((4.0+4.0*arfac+2.0*arfacsq)*r_4_r+(6.0+6.0*arfac+3.0*arfacsq+arfacsq*arfac)*r_6_r)*exp_f2
 				      - 8.0*r_8_r + erfc_term)
 	                   + p1[jsite]*exp_f1 * r_r;
 	 }
