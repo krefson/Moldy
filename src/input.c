@@ -29,6 +29,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	input.c,v $
+ * Revision 2.4  94/01/25  10:56:58  keith
+ * Changed default for "xdr" parameter to "on".
+ * 
  * Revision 2.3  93/10/28  10:27:52  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -153,7 +156,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/input.c,v 2.5 94/01/18 13:32:35 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/input.c,v 2.4 94/01/25 10:56:58 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
