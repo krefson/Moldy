@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.27 92/09/18 14:57:36 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.27 92/09/18 14:57:47 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -103,7 +103,6 @@ double		det(); 			/* Determinant of 3x3 matrix	      */
 void    	message();              /* Send message to stderr             */
 void    	invert();               /* 3x3 matrix inverter                */
 void    	mat_vec_mul();          /* Matrix by vector multiplier        */
-void    	spaxpy();               /* Scattered vector add               */
 void    	spxpy();                /* Scattered vector add               */
 void    	transpose();            /* Generate 3x3 matrix transpose      */
 void    	zero_real();            /* Initialiser                        */
@@ -143,7 +142,7 @@ static          int nx = 0, ny = 0, nz = 0, onx = 0, ony = 0, onz = 0;
  * to increase this from 1, your system must be *highly* inhomogeneous
  * and may not make sense!
  */
-#define         NMULT 2.0
+#define         NMULT 4.0
 #define		NSHELL (2*NSH+1)
 #define         NREL(ix,iy,iz) ((iz)+NSH+NSHELL*((iy)+NSH+NSHELL*((ix)+NSH)))
 #define         CELLMAX 5
@@ -151,8 +150,8 @@ static          int nx = 0, ny = 0, nz = 0, onx = 0, ony = 0, onz = 0;
 #define		LOCATE(r,eps)	NCELL(cellbin(r[0], nx, eps), \
 				      cellbin(r[1], ny, eps), \
 				      cellbin(r[2], nz, eps))
-#define moda(hmat) (hmat[0][0])
-#define modb(hmat) sqrt(SQR(hmat[0][1]) + SQR(hmat[1][1]))
+#define moda(hmat) sqrt(SQR(hmat[0][0]) + SQR(hmat[1][0]) + SQR(hmat[2][0]))
+#define modb(hmat) sqrt(SQR(hmat[0][1]) + SQR(hmat[1][1]) + SQR(hmat[2][1]))
 #define modc(hmat) sqrt(SQR(hmat[0][2]) + SQR(hmat[1][2]) + SQR(hmat[2][2]))
 /*============================================================================*/
 /******************************************************************************
@@ -267,6 +266,195 @@ double  cutoff;
       note(NABORS,2 * inabor);
    onabor = inabor;
    *nnabor = inabor;
+   return(nabor);
+}
+/******************************************************************************
+ *  Strict_Neighbour_list.  Build the list of cells within cutoff radius      *
+ *  This is the strict version and includes every cell which has an interior  *
+ *  point at a distance less than the cutoff from any interior point of the   *
+ *  reference cell.  This ensures that all molecule pairs are included whose  *
+ *  separation is within the cutoff.					      *
+ *     The method used is based on the fact that the closest interior points  *
+ *  of a pair of parallelopiped cells are either at corners of both cells or  *
+ *  at the ends of a line perpendicular to the faces of both parallelopipeds. *
+ *  The face-face distance is always the shortest, if the perpendicular       *
+ *  projection of the faces onto a common plane intersect with each other     *
+ *  The goal is therefore to build a list containing all cells which have a   *
+ *  corner-corner or face-face distance to the reference cell which is less   *
+ *  than the cutoff.  							      *
+ *  Cells may be admitted to the list by multiple corner-corner or face-face  *
+ *  contact criteria but must only be recorded in the final list once.  The   *
+ *  easiest way to do this is to use a "map" of all the cells potentially     *
+ *  within the cutoff radius and to flag occupancy.			      *
+ *  It is easier to loop over all grid vectors within the cutoff and assign   *
+ *  cells which have that vector as some corner-corner vector with the        *
+ *  reference cell, rather than to loop over cells and calculate all corner   *
+ *  pair distances.  This method calculates each distance only once instead   *
+ *  of 27 times (the number of distinct corner-corner vectors between 2       *
+ *  cells).								      *
+ *  To exploit Newton's third law the list should contain only the positive   *
+ *  hemisphere (in the x direction).					      *
+ *									      *
+ *  The algorithm is as follows.  					      *
+ *  1) Set up an empty "map"						      *
+ *  2) Loop over all points on a grid with points at the link-cell corners    *	
+ *     choose only points which are closer to the origin than the cutoff.     *
+ *     Set the occupancy flag for all cells which have that as a corner-pair  *
+ *     vector to the reference cell.   This is a 3x3x3 block of cells centred *
+ *     on the cell whose index is the same as the gridpoint being considered. *
+ *     Because we only want the "positive x" cells 2x3x3 will suffice.	      *
+ *  3) Add cells which have a perpendicular face-face separation within the   *
+ *     cutoff.  Only the outermost cells need be considered since inner ones  *
+ *     are already admitted by corner-pair distance.  Thus		      *
+ *     3a) project the facing corner points of the reference cell onto the    *
+ *         plane just within the cutoff.  				      *
+ *     3b) add the cells with faces which overlap the projection.  Zero, two  *
+ *         or four cells are added depending on whether the projected points  *
+ *         coincide with the corner points, the edges or none of the faces.   *
+ *  4) The final list is built by scanning the map.			      *
+ ******************************************************************************/
+static ivec_t    *strict_neighbour_list(nnabor, h, cutoff)
+int  	*nnabor;
+mat_t   h;
+double  cutoff;
+{
+   double               dist;
+   int                  i, j, k, ix, iy, iz, mx, my, mz, inabor = 0, nnab;
+   static int		onabor=0;
+   int			***cellmap;
+   ivec_t		*nabor;
+   vec_t                s;
+   mat_t                G, htr, htrinv;
+   int			face_cells[4][3],mxyz[3], nxyz[3], ixyz, jxyz, kxyz;
+   double	        proj[3], modabc;
+
+   transpose(h, htr);
+   mat_mul(htr, h, G);
+   invert(htr, htrinv);
+
+   mx = ceil(cutoff*nx*moda(htrinv));
+   my = ceil(cutoff*ny*modb(htrinv));
+   mz = ceil(cutoff*nz*modc(htrinv));
+
+   /*
+    * Allocate and clear array for map of cells
+    */
+   nnab = 4*(mx+1)*(my+1)*(mz+1);
+   cellmap = (int***)arralloc(sizeof ***cellmap, 3, 0, mx, -my-1, my, -mz-1, mz);
+   (void)memset(cellmap[0][-my-1]-mz-1,0, nnab*sizeof ***cellmap);
+
+   /*
+    * Add cells with corner-pair distances < cutoff
+    */
+#ifdef DEBUG1
+   printf("  Distance    ix    iy    iz      sx        sy          sz\n");
+#endif
+   for(ix = 0; ix < mx; ix++)
+      for(iy = (ix == 0 ? 0 : -my); iy < my; iy++)
+         for(iz = (ix == 0 && iy == 0 ? 0 : -mz); iz < mz; iz++)
+         {
+            s[0] = (double)ix/nx;
+            s[1] = (double)iy/ny;
+            s[2] = (double)iz/nz;
+            dist = 0.0;
+            for(i = 0; i < 3; i++)
+               for(j = 0; j < 3; j++)
+                  dist += s[i]*G[i][j]*s[j];
+            if(dist < SQR(cutoff))
+            {
+	       for(i=0; i<=1; i++)
+		  for(j=-1; j<=1; j++)
+		     for(k=-1; k<=1; k++)
+			cellmap[ix+i][iy+j][iz+k] = 1;
+
+#ifdef DEBUG1
+               printf("%12f %4d %4d %4d %12f %12f %12f\n",
+                      dist,ix,iy,iz,s[0],s[1],s[2]);
+#endif
+            }
+         }
+   /*
+    * Add cells with face-face distance < cutoff.  Cells along x,y,z axes
+    * are added in +/- directions, but only +ve ix indices added to map.
+    */
+   nxyz[0] = nx; nxyz[1] = ny; nxyz[2] = nz;
+   mxyz[0] = mx; mxyz[1] = my; mxyz[2] = mz;
+   for( ixyz=0; ixyz < 3; ixyz++)	/* Loop over directions */
+   {
+      jxyz = (ixyz+1) % 3; kxyz = (jxyz+1) % 3;
+      proj[0] = proj[1] = proj[2] = 0.0;
+      modabc = 0.0;
+      for( i=0; i<3; i++ )
+      {
+	 modabc += htrinv[i][ixyz];
+	 proj[i] += htrinv[i][ixyz]*htrinv[i][(ixyz+i) % 3];
+      }
+      for( i=0; i<3; i++ )
+	 proj[i] *= (mxyz[ixyz]-1)*nxyz[i]/(nxyz[ixyz] * modabc);
+      /*
+       * proj now contains projection vector.  Construct 4 candidate
+       * cells.
+       */
+      for( i=0; i<3; i++ )
+	 face_cells[0][i] = face_cells[1][i] = face_cells[2][i] = 
+	    face_cells[3][i] = floor(proj[i]);
+   
+      face_cells[0][ixyz] = face_cells[1][ixyz] = face_cells[2][ixyz] = 
+	 face_cells[3][ixyz] = mxyz[ixyz];
+
+      face_cells[1][jxyz] = face_cells[3][jxyz] = ceil(proj[jxyz]);
+      face_cells[2][kxyz] = face_cells[3][kxyz] = ceil(proj[kxyz]);
+      /*
+       *  Now make sure we add only cells with +ve x index.  Add the
+       *  inverse cell if ix<0.
+       */
+      for( i=0; i < 4; i++)
+	 if( face_cells[i][0] < 0 )
+	    for( j=0; j<3; j++ )
+	       face_cells[i][j] = -face_cells[i][j];
+      /*
+       * Now add the cells to the map.
+       */
+      for(  i=0; i < 4; i++ )
+      {
+	 cellmap[face_cells[i][0]][face_cells[i][1]][face_cells[i][2]] = 1;
+#ifdef DEBUG1
+               printf("%12f %4d %4d %4d %12f %12f %12f\n",
+                      0.5,face_cells[i][0],face_cells[i][1],face_cells[i][2],
+		      0.0,0.0,0.0);
+#endif
+      }
+   }
+   /*
+    * Scan map and build list.  N.B.  Loop indices are 1 greater than when
+    * list built since we added cells outside original loop limits.
+    */   
+   nabor = aalloc(nnab, ivec_t);
+   for(ix = 0; ix <= mx; ix++)
+      for(iy = (ix == 0 ? 0 : -my-1); iy <= my; iy++)
+         for(iz = (ix == 0 && iy == 0 ? 0 : -mz-1); iz <= mz; iz++)
+         {
+            if( cellmap[ix][iy][iz] )
+            {
+               if( inabor >= nnab )
+		  message(NULLI, NULLP, FATAL,
+			  "Internal error in neighbour_list()");
+               nabor[inabor].i = ix;
+               nabor[inabor].j = iy;
+               nabor[inabor].k = iz;
+	       inabor++;
+#ifdef DEBUG1
+               printf("%12f %4d %4d %4d %12f %12f %12f\n",
+                      1.0,ix,iy,iz,0.0,0.0,0.0);
+#endif
+            }
+         }
+
+   if( inabor != onabor )
+      note(NABORS,2 * inabor);
+   onabor = inabor;
+   *nnabor = inabor;
+   xfree(cellmap);
    return(nabor);
 }
 /******************************************************************************
@@ -460,7 +648,11 @@ mat_t           stress;                 /* Stress virial                (out) */
 		 * least it scales with the cutoff radius.
 		 */
    int		n_nab_sites = nsites*		/* Max # sites in n'bor list  */
-                    NMULT*4.19*CUBE(control.cutoff)/det(system->h);
+#ifdef DEBUG2 
+                    MAX(1.0,NMULT*4.19*CUBE(control.cutoff)/det(system->h));
+#else
+                            NMULT*4.19*CUBE(control.cutoff)/det(system->h);
+#endif
    static	int n_cell_list = 1;
    cell_t       *c_ptr = aalloc(n_cell_list, cell_t );
    spec_p       spec;
@@ -478,9 +670,10 @@ mat_t           stress;                 /* Stress virial                (out) */
    real		***s_f_n;
 
 #ifdef DEBUG2
-   double ppe, rrx, rry, rrz;
-   int im, is;
+   double ppe, rr[3], ss[3];
+   int im, is, i;
    mat_p h = system->h;
+   mat_t hinv;
 #endif
   
    s_f_n = aalloc(nthreads, real**);
@@ -505,7 +698,7 @@ mat_t           stress;                 /* Stress virial                (out) */
       if(control.cutoff > NSH*MIN3(system->h[0][0],system->h[1][1],system->h[2][2]))
 	 message(NULLI, NULLP, FATAL, CUTOFF, NSH);
       if( reloc )
-	 (void)xfree((reloc-NSH*onx));
+	 xfree((reloc-NSH*onx));
       reloc = (reloc_t***)arralloc(sizeof(reloc_t),3,
             -NSH*nx, (NSH+1)*nx-1, -NSH*ny, (NSH+1)*ny-1, -NSH*nz, (NSH+1)*nz-1);
  
@@ -532,7 +725,10 @@ mat_t           stress;                 /* Stress virial                (out) */
       c_ptr = aalloc(n_cell_list, cell_t);
       init = false;
    }
-   nabor = neighbour_list(&n_nabors, system->h, control.cutoff);
+   if( control.strict_cutoff )
+      nabor = strict_neighbour_list(&n_nabors, system->h, control.cutoff);
+   else
+      nabor = neighbour_list(&n_nabors, system->h, control.cutoff);
    
    cell = aalloc(ncells, cell_t *);
    for( icell=0; icell < ncells; icell++)
@@ -567,6 +763,7 @@ NOVECTOR
 #ifdef DEBUG2
    ppe = 0;
    spec = species; isite = 0;
+   invert(h, hinv);
    for(imol = 0, im = 0; imol < system->nmols; imol++, im++)
    {
       if(im == spec->nmols)
@@ -578,14 +775,18 @@ NOVECTOR
       {
 	 for(jsite = 0; jsite < isite; jsite++)
 	 {
-	    rrx = site[0][jsite] - site[0][is];
-	    rry = site[1][jsite] - site[1][is];
-	    rrz = site[2][jsite] - site[2][is];
-	    rrx -= h[0][0]*floor(rrx/h[0][0]+0.5);
-	    rry -= h[1][1]*floor(rry/h[1][1]+0.5);
-	    rrz -= h[2][2]*floor(rrz/h[2][2]+0.5);
-	    r_sqr[jsite] = rrx*rrx+rry*rry+rrz*rrz;
+	    for( i=0; i<3; i++)
+	       rr[i] = site[i][jsite] - site[i][is];
+	    mat_vec_mul(hinv, rr, ss, 1);
+	    for( i=0; i<3; i++)
+	       ss[i] -= floor(ss[i]+0.5);
+	    mat_vec_mul(h, ss, rr, 1);
+
+	    r_sqr[jsite] = SUMSQ(rr);
+	    if( control.strict_cutoff && r_sqr[jsite] > cutoffsq )
+		  r_sqr[jsite] = cutoff100sq;
 	 }
+
 	 hist(0,isite,r_sqr);
 	 kernel(0,isite,forceij,&ppe,r_sqr,chg,chg[is],
 		norm,control.alpha,system->ptype,potp[id[is]]);
@@ -720,6 +921,8 @@ mat_t	stress;
    int		nfnab[2];
    cell_t       *cmol;
    double       norm = 2.0*control.alpha/sqrt(PI);	/* Coulombic prefactor*/
+   double	cutoffsq = SQR(control.cutoff),
+                cutoff100sq = 10000.0*cutoffsq;
    s00 = s01 = s02 = s11 = s12 = s22 = 0.0;	/* Accumulators for stress    */
    reloc_alloc(system->h, reloc_v);
 #ifdef DEBUG6
@@ -824,14 +1027,19 @@ VECTORIZE
                r_sqr[jsite] = rx[jsite]*rx[jsite] + ry[jsite]*ry[jsite]
                                                   + rz[jsite]*rz[jsite];
             }
-#ifdef DEBUG2
-	    hist(jmin, jmax, r_sqr);
-#endif
             if( (jsite = jmin+search_lt(jmax-jmin, r_sqr+jmin, 1, TOO_CLOSE))
 	       < jmax )
                message(NULLI, NULLP, WARNING, TOOCLS,
 		       isite, nab[jsite], sqrt(TOO_CLOSE));
 
+	    if( control.strict_cutoff )
+	       for(jsite = jmin; jsite < jmax; jsite++)
+		  if( r_sqr[jsite] > cutoffsq )
+		     r_sqr[jsite] = cutoff100sq;
+
+#ifdef DEBUG2
+	    hist(jmin, jmax, r_sqr);
+#endif
             /*  Call the potential function kernel                            */
             kernel(jmin, jmax, forceij, pe, r_sqr, nab_chg, chg[isite],
 		   norm, control.alpha, system->ptype, nab_pot);
