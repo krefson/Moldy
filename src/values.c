@@ -14,6 +14,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	values.c,v $
+ * Revision 1.11  92/03/19  15:45:42  keith
+ * Added support for dynamic allocation of rolling average arrays,
+ * conversion of existing restart files is done on fly.
+ * 
  * Revision 1.10  91/08/19  16:48:51  keith
  * Modifications for better ANSI/K&R compatibility and portability
  * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
@@ -55,7 +59,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.12 92/03/19 15:20:01 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.11 92/03/19 15:45:42 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -167,7 +171,8 @@ static  int	av_convert = 0;
 static  int     av_tmp_size;
 static  gptr    *av_tmp;
 /*========================== Macros ==========================================*/
-#define NPRINT			(int)end
+#define NAVT			(int)end
+#define INC(av_p)    (av_p = (av_t*)((char*)av_p + av_t_size))
 /*============================================================================*/
 /******************************************************************************
  *  init_averages  Allocate space for and initialise the averages database.   *
@@ -210,7 +215,7 @@ int	roll_interval, old_roll_interval;
       for(imult = 0; imult < av_info[i].mult; imult++)
       {
 	 av_info[i].p[imult] = av_p;
-	 av_p = (av_t*)((char*)av_p + av_t_size);
+	 INC(av_p);
       }
    } 
    /*
@@ -245,6 +250,7 @@ int	roll_interval, old_roll_interval;
 /******************************************************************************
  * convert_averages.  Update averages database if roll_interval changed or    *
  * if restart file written using old "static" scheme.			      *
+ * Also a convenient place to implement reset_averages.			      *
  ******************************************************************************/
 void	convert_averages(roll_interval, old_roll_interval)
 int	roll_interval, old_roll_interval;
@@ -280,7 +286,7 @@ int	roll_interval, old_roll_interval;
 	 (void)memcpy((gptr*)av_p->roll, 
 		      (gptr*)(old_av_p->av.roll+old_nroll-av_head->nroll+rbl),
 		      (av_head->nroll-rbl)*sizeof(double));
-	 av_p = (av_t*)((char*)av_p + av_t_size);
+	 INC(av_p);
 	 old_av_p++;
       }
       break;
@@ -307,12 +313,28 @@ int	roll_interval, old_roll_interval;
 		      (gptr*)(prev_av_p->roll+old_nroll-av_head->nroll+rbl),
 		      (av_head->nroll-rbl)*sizeof(double));
 
-	 av_p      = (av_t*)((char*)av_p + av_t_size);
+	 INC(av_p);
 	 prev_av_p = (av_t*)((char*)prev_av_p + prev_av_t_size);
       }
       break;
    }
    av_convert = 0;
+   /*
+    *  Reset averages and counters to zero if a) requested
+    *  or b) we have not yet reached begin_average. (The latter 
+    *  avoids the situation of non-contiguous averages).
+    *  Yes I know we just set them up, but this way is clearest.
+    */
+   if( control.reset_averages || control.istep+1 <= control.begin_average )
+   {
+      av_p = av_info[0].p[0];
+      for(iav = 0; iav < navs; iav++)
+      {
+	 av_p->sum = av_p->sum_sq = av_p->mean = av_p->sd = 0.0;
+	 INC(av_p);
+      }
+      av_head->nav = 0;
+   }
 }
 /******************************************************************************
  * av_ptr   Return a pointer to averages database and its size (for restart)  *
@@ -577,7 +599,7 @@ void	averages()
       return;
    }   
      
-   if(out_line + (int)end +4 > control.page_length)	/* If near end of page*/
+   if(out_line + NAVT +4 > control.page_length)	/* If near end of page*/
       new_page();
    else
       new_lins(2);
@@ -585,10 +607,11 @@ void	averages()
    new_line();
 
    av_p = av;
-   for(iav = 0; iav < (int)end; iav++)
+   for(iav = 0; iav < NAVT; iav++)
    {
       for(i = 0; i < av_info[iav].mult; i++)
       {
+	 av_p = av_info[iav].p[i];
 	 av_p->mean = av_p->sum / av_head->nav;
 	 variance = av_p->sum_sq/ av_head->nav - av_p->mean * av_p->mean;
 	 if(variance * av_head->nav  < av_p->sum_sq * bottom)
@@ -596,12 +619,11 @@ void	averages()
 		    av_info[(int)iav].name);
 	 av_p->sd   = variance > 0.0 ? sqrt(variance) : 0.0;
 	 av_p->sum = 0.0;  av_p->sum_sq = 0.0;
-	 av_p++;
       }
    }
    av_head->nav = 0;
 
-   for(iav = 0; iav < (int)end; iav++)
+   for(iav = 0; iav < NAVT; iav++)
    {
       col = 0;
       col += printf( "   %-16s= ",av_info[iav].name);
