@@ -74,7 +74,7 @@ SHAKOBJS= $(SHAKS:%=%.o)
 
 UTILS = moldyext dumpanal dumpconv dumpext  manalyze bdist
 
-UTILS2= mdshak msd mdavpos mdbond ransub mdvaf mdtraj
+UTILS2= mdshak msd mdavpos mdbond ransub mdvaf
 
 UTILC= $(UTILS:%=%.c) $(UTILS2:%=%.c)
 
@@ -132,8 +132,8 @@ dumpext:	dumpext.c xdr.o utlsup.o matrix.o $(LIBOBJS) $(HFILES)
 dumpconv:	dumpconv.c xdr.o $(HFILES)
 		$(CC) $(CFLAGS) -o dumpconv $(OPT) $(DEFS) $(LDFLAGS1) dumpconv.c xdr.o $(LDFLAGS) $(LIBS)
 
-mdtraj:		mdtraj.o $(SHAKOBJS) $(LIBOBJS) 
-		$(CC) -o mdtraj $(LDFLAGS) mdtraj.o $(SHAKOBJS) $(LIBOBJS) $(LIBS)
+#mdtraj:		mdtraj.o $(SHAKOBJS) $(LIBOBJS) 
+#		$(CC) -o mdtraj $(LDFLAGS) mdtraj.o $(SHAKOBJS) $(LIBOBJS) $(LIBS)
 
 mdshak:		mdshak.o $(SHAKOBJS) $(LIBOBJS) 
 		$(CC) -o mdshak $(LDFLAGS) mdshak.o $(SHAKOBJS) $(LIBOBJS) $(LIBS)
