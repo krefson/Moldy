@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.8 90/10/18 17:46:00 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.8 90/10/18 18:00:49 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -469,7 +469,7 @@ mat_t           stress;                 /* Stress virial                (out) */
 		 * 'nnab'. Nsites is certainly too big, but as 'ewald' uses
 		 * more store, it shouldn't increase total program use.
 		 */
-   int		n_nab_sites = nsites;		/* Max # sites in n'bor list  */
+   int		n_nab_sites = nsites*3/2;	/* Max # sites in n'bor list  */
    int		*id = ialloc(n_nab_sites);   	/* Array of site_id[nsites]   */
    real         ***potp				/* Expanded pot'l parameters  */
    		= (real***)arralloc(sizeof(real), 3,
