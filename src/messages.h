@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/messages.h,v 2.20.6.1 2000/10/16 09:31:33 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/messages.h,v 2.20.2.1 2000/12/11 12:33:30 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -51,7 +51,8 @@ what you give them.   Help stamp out software-hoarding!  */
 #define NOCGRG	"no charge specified for site id %d"
 #define NONAME	"no name specified for site id %d"
 #define NOTUSD	"unused site identifier %d"
-#define	UNKPOT	"unknown type of potential %s (lennard-jones, buckingham, mcy)"
+#define	UNKPOT	"unknown type of potential %s (lennard-jones, buckingham, \
+mcy, generic, hiw, morse)"
 #define NOPAIR	"site id pair is required"
 #define NOPOTP	"insufficient potential parameters supplied (%d needed)"
 #define IDOUTR	"site id %d out of range"
@@ -145,7 +146,7 @@ rotational degrees of freedom (%d vs %d)"
 correction of %g kJmol(-1) added to self energy"
 #define	FRACHG	"Framework has net electric charge of %.2g - \
 correction of %g kJmol(-1) added to self energy"
-#define WDPTR	"Arralloc called for object with size (%ul) not an integral\
+#define WDPTR	"Arralloc called for object with size (%lu) not an integral \
 number of words"
 #define NCNVRG  "Do_step: velocities failed to converge after %d iterations \
 - dist = %f"
