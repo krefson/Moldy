@@ -72,17 +72,19 @@ SHAKC= $(SHAKS:%=%.c)
 
 SHAKOBJS= $(SHAKS:%=%.o)
 
-UTILS = moldyext dumpanal dumpconv dumpext  manalyze
+UTILS = moldyext dumpanal dumpconv dumpext  manalyze bdist
 
-UTILS2= mdshak msd mdavpos 
+UTILS2= mdshak msd mdavpos mdbond ransub 
 
 UTILC= $(UTILS:%=%.c) $(UTILS2:%=%.c)
 
 UTILO= $(UTILC:%.c=%.o) ReadDCD.o
 
-EXTRA0 = $(UTILC) getopt.c ReadDCD.c ReadDCD.h ewald_parallel.c force_parallel.c configure.in config.h.in defconf.h aclocal.m4 config.guess config.sub 
+EXTRA0 = $(UTILC) getopt.c ReadDCD.c ReadDCD.h ewald_parallel.c \
+         force_parallel.c configure.in config.h.in defconf.h aclocal.m4 \
+         config.guess config.sub list.h plotrdf
 
-EXTRAS= $(EXTRA0) ewald-RIL.c configure Makefile.in install-sh
+EXTRAS= $(EXTRA0) ewald-RIL.c configure Makefile.in install-sh 
 
 HFILES=		structs.h defs.h messages.h xdr.h 
 AHFILES=        string-subst.h time-subst.h stddef-subst.h stdlib-subst.h 
@@ -138,6 +140,15 @@ msd:		msd.o $(SHAKOBJS) $(GETOPT)
 
 mdavpos:	mdavpos.o $(SHAKOBJS) $(GETOPT) 
 		$(CC) -o mdavpos $(LDFLAGS1) mdavpos.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS)  $(LIBS)
+
+mdbond:	mdbond.o $(SHAKOBJS) $(GETOPT) 
+		$(CC) -o mdbond $(LDFLAGS1) mdbond.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS)  $(LIBS)
+
+bdist:	bdist.c $(HFILES)
+		$(CC) $(CFLAGS)  -o bdist $(OPT) $(DEFS) $(LDFLAGS1) bdist.c $(GETOPT) $(LDFLAGS) $(LIBS)
+
+ransub:	ransub.o $(SHAKOBJS) $(GETOPT) convert.o
+		$(CC) -o ransub $(LDFLAGS1) ransub.o convert.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS)  $(LIBS)
 
 utilities:	$(UTILS) $(UTILS2)
 
@@ -248,7 +259,7 @@ lint-mdshak:
 		$(LINT) $(XDR) $(LFLAGS) mdshak.c $(SHAKC) -lm
 
 lint-utils:	lint-mdshak
-		for file in moldyext.c dumpanal.c dumpconv.c dumpext.c manalyze.c ;do\
+		for file in moldyext.c dumpanal.c dumpconv.c dumpext.c manalyze.c bdist.c;do\
 			$(LINT) $(XDR) $(LFLAGS) $$file\
                         ;done
 
@@ -371,6 +382,8 @@ algorith.o alloc.o matrix.o:	defs.h messages.h
 xdr.o restart.o dump.o:	structs.h defs.h messages.h xdr.h
 
 ReadDCD.o:	ReadDCD.h
+
+mdbond.o bdist:	list.h
 #
 #  Special options for performance-critical modules
 #
