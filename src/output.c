@@ -13,9 +13,13 @@
  * format_dbl()		 /		banner_page()			      *
  * format_vec()		/						      *
  * banner_page()	Write main startup banner and simulation parameters   *
+ * print_sysdef()	Print system specification readable by read_sysdef()  *
  ******************************************************************************
  *      Revision Log
  *       $Log:	output.c,v $
+ * Revision 1.3  89/06/01  21:25:07  keith
+ * Control.out eliminated, use printf and freopen instead to direct output.
+ * 
  * Revision 1.2  89/05/24  13:55:03  keith
  * Changed ifdef's to select on __STDC__ macro
  * Message() now prints to user specified output file after initial set up
@@ -25,7 +29,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: output.c,v 1.2 89/05/24 13:55:03 keith Exp $";
+static char *RCSid = "$Header: output.c,v 1.3 89/06/01 21:25:07 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
@@ -42,10 +46,13 @@ char	*cctime();			/* Convert long time to ASCII.	      */
 /*========================== External data references ========================*/
 extern  contr_t 	control;
 extern	restrt_t	restart_header;
+extern	char		*types[];
+extern	int		npotp[];
 /*========================== External data definitions  ======================*/
 int	out_page = 1;			/* Which page of output we are on     */
 int	out_line = 999999;	        /* Which line of output               */
 /*========================== Macros ==========================================*/
+#define		S_USED		0x01
 /******************************************************************************
  * new_line.   print a newline and update line counter                        *
  ******************************************************************************/
@@ -291,14 +298,17 @@ spec_t	species[];
    format_vec("b",h[0][1],h[1][1],h[2][1],LUNIT_N);
    format_vec("c",h[0][2],h[1][2],h[2][2],LUNIT_N);
    (void)printf(" Run parameters"); new_line();
-   format_int("Number of steps",control.nsteps);
    if(control.istep > 0)
       format_int("Initial step",control.istep); 
+   format_int("Final step",control.nsteps);
    format_dbl("Size of step",control.step,TUNIT_N);
    format_dbl("CPU limit",control.cpu_limit,"s");
    if(control.scale_interval > 0)
    {
-      (void)printf(" Velocities will be scaled"); new_line();
+      (void)printf(" Velocities will be scaled");
+      if( control.scale_separately )
+	 (void)printf(" (for each species individually)");
+      new_line();
       format_dbl("Applied Temperature",control.temp,"K");
       format_int("No. steps between scalings",control.scale_interval);
       format_int("End scaling at step",control.scale_end);
@@ -315,6 +325,25 @@ spec_t	species[];
    {
       format_dbl("Alpha parameter for Ewald sum",control.alpha,RLUNIT_N);
       format_dbl("Reciprocal space cut-off",control.k_cutoff,RLUNIT_N);
+   }
+
+   if( control.rdf_interval > 0 )
+   {
+      (void)printf(" Radial distribution functions will be calculated");
+      new_line();
+      format_int("Starting at timestep", control.begin_rdf);
+      format_int("No. steps between binnings", control.rdf_interval);
+      format_int("Calculate and print after", control.rdf_out);
+   }
+
+   if( control.dump_level > 0 && control.dump_interval > 0 )
+   {
+      (void)printf(" Configurational data will be dumped to file(s) %s",
+		   control.dump_file);
+      new_line();
+      format_int("Starting at timestep", control.begin_dump);
+      format_int("No. steps between dumps", control.dump_interval);
+      format_int("Dump level", control.dump_level);
    }
    
    if(control.restart_file[0] == '\0')
@@ -334,3 +363,46 @@ spec_t	species[];
    }
    (void)fflush(stdout);
 }
+/******************************************************************************
+ *  print sysdef   Print out the definition of the system, in the format that *
+ *  read_sysdef can interpret.                                                *
+ ******************************************************************************/
+void    print_sysdef(system, species, site_info, potpar)
+system_p        system;                 /* Pointer to system array (in main)  */
+spec_t          species[];              /* Pointer to species array           */
+site_p          site_info;              /* pointer to site_info array         */
+pot_t           potpar[];               /* Potential parameter array          */
+{
+   spec_p       spec;
+   int  ispec, isite, idi, idj, idij, ip;
+   int  n_potpar = npotp[system->ptype];
+   for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
+   {
+      (void)printf(" %-16s  %d\n", spec->name, spec->nmols);
+      for(isite=0; isite < spec->nsites; isite++)
+         (void)printf(" %6d %9g %9g %9g %9g %9g %s\n",
+                        spec->site_id[isite],
+                        spec->p_f_sites[isite][0],
+                        spec->p_f_sites[isite][1],
+                        spec->p_f_sites[isite][2],
+                        site_info[spec->site_id[isite]].mass,
+                        site_info[spec->site_id[isite]].charge,
+                        site_info[spec->site_id[isite]].name);
+   }
+   (void)printf(" end\n");
+   (void)printf(" %s potential parameters\n",types[system->ptype]);
+   for(idi = 1; idi < system->max_id; idi++)
+      for(idj = idi; idj < system->max_id; idj++)
+      {
+         idij = idj + idi * system->max_id;
+         if(potpar[idij].flag & S_USED)
+         {
+            (void)printf(" %6d %6d", idi, idj);
+            for(ip = 0; ip < n_potpar; ip++)
+               (void)printf("%9g",potpar[idij].p[ip]);
+            (void)printf("\n");
+         }
+      }
+   (void)printf(" end\n");
+}
+ 
