@@ -27,6 +27,9 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.1  1999/07/22 14:02:26  keith
+ *  Initial revision
+ *
  *  Revision 2.1  1999/06/24 16:05:44  craig
  *  Improved randomization of random number reseeder.
  *
@@ -591,9 +594,8 @@ char	*argv[];
    contr_mt	control_junk;
    int          av_convert;
    int          maxmol;
-   dopant       dop = {0, -1, -1.0, NULL, NULL, NULL};
-   
-#define MAXTRY 100
+   static dopant       dop = {0, -1, -1.0, NULL, NULL, NULL};
+
    control.page_length=1000000;
 
    while( (c = getopt(argc, argv, "cr:s:d:t:m:n:u:o:w:q:z:") ) != EOF )
