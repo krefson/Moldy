@@ -31,6 +31,15 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.22  2002/09/26 15:12:56  moldydv
+ *       Now scales RDF by data at each binning - should give correct
+ *       (or better) results for NPT/NPH ensemble.
+ *       Now stores RDF data in "float" type in restart file.
+ *
+ *       Revision 2.21  2002/09/19 09:26:30  kr
+ *       Tidied up header declarations.
+ *       Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *       Revision 2.20  2001/05/24 16:26:43  keith
  *       Updated program to store and use angular momenta, not velocities.
  *        - added conversion routines for old restart files and dump files.
@@ -205,7 +214,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/restart.c,v 2.20 2001/05/24 16:26:43 keith Exp $";
+static char *RCSid = "$Header: /usr/users/moldydv/CVS/moldy/src/restart.c,v 2.22 2002/09/26 15:12:56 moldydv Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -227,6 +236,7 @@ gptr		*av_ptr(size_mt *size, int av_convert);
 char		*atime(void);
 char		*cctime(time_mt *timeloc);
 gptr		*rdf_ptr(int *size);
+double          det(mat_mt );           /* Returns matrix determinant         */
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
 /*========================== External data references ========================*/
@@ -539,11 +549,19 @@ void	read_restart(FILE *restart,       /* Open file descriptor to read from*/
    boolean	rdf_flag;		/* Indicates whether file contains rdf*/
    int   	rdf_size;
    gptr		*rdf_base;
+   int	        *rdf_pi;
+   float        *rdf_pf;
+   int		irdf;
+   int		vmajor, vminor;		/* Version numbers		      */
+   double       inv_density;
 
    xfp_mt	xfp;
 
    xfp.xp= &xdrs;
    xfp.fp=restart;
+
+   if( sscanf(vsn, "%d.%d", &vmajor, &vminor) < 2 )
+     message(NULLI, NULLP, FATAL, INRVSN, vsn);
 
    cread(xfp,  (gptr*)system->c_of_m, lsizeof(real), 3*system->nmols, xdr_real);
    cread(xfp,  (gptr*)system->mom,    lsizeof(real), 3*system->nmols, xdr_real);
@@ -574,7 +592,19 @@ void	read_restart(FILE *restart,       /* Open file descriptor to read from*/
       control.begin_rdf <= control.istep)/* Only read if data there and needed*/
    {
       rdf_base = rdf_ptr(&rdf_size);
-      cread(xfp, rdf_base, lsizeof(int), rdf_size, xdr_int);
+      if(vmajor > 2 || vminor > 21) 
+	cread(xfp, rdf_base, lsizeof(float), rdf_size, xdr_float);
+      else if(lsizeof(float) == lsizeof(int))
+      {
+	inv_density = det(system->h)/system->nsites;
+	cread(xfp, rdf_base, lsizeof(int), rdf_size, xdr_int);
+	message(NULLI, NULLP, INFO, CNVRDF, vsn);
+	rdf_pi=rdf_base; rdf_pf = rdf_base;
+	for(irdf = 0; irdf < rdf_size; irdf++)
+	  rdf_pf[irdf] = rdf_pi[irdf] * inv_density;
+      }
+      else
+	message(NULLI, NULLP, WARNING, RDFFIS, vsn, lsizeof(float), lsizeof(int));	
    }
 #ifdef USE_XDR
    if( xdr_read )
@@ -605,7 +635,7 @@ void	write_restart(char *save_name,  /* Name of save file to be written    */
    XDR		xdrsw;
    xfp_mt	xfp;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.20 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.22 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    save = fopen(control.temp_file, "wb");
@@ -678,7 +708,7 @@ void	write_restart(char *save_name,  /* Name of save file to be written    */
    {
       cwrite(xfp,  (gptr*)&one, lsizeof(int), 1, xdr_bool);/* Flag rdf data   */
       rdf_base = rdf_ptr(&rdf_size);
-      cwrite(xfp, rdf_base, lsizeof(int), rdf_size, xdr_int);/* write data   */
+      cwrite(xfp, rdf_base, lsizeof(float), rdf_size, xdr_float);/* write data   */
    }
    else
       cwrite(xfp,  (gptr*)&zero, lsizeof(int), 1, xdr_bool);/*flag no rdf data*/
