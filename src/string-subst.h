@@ -1,7 +1,10 @@
 /*
- * $Header: /home/tigger/keith/md/RCS/string.h,v 1.3 89/11/20 12:05:01 keith Exp $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/string.h,v 1.5 90/03/26 18:05:18 keith Exp $
  *
  * $Log:	string.h,v $
+ * Revision 1.4  90/03/09  17:33:52  keith
+ * Modified conditionals for unicos.
+ * 
  * Revision 1.3  89/11/20  12:05:01  keith
  * Added 'strdup'.
  * 
@@ -14,23 +17,26 @@
  * 
  */
 #ifndef STRING_ALREADY
+#define STRING_ALREADY
+
+#include "defs.h"		/* Defs.h sets USG symbol for sysV	      */
 
 #ifdef unix
 
-#if USG || sysV || SysV || cray
-#include	<string.h>
-#include	<memory.h>
+#ifdef USG
+#	include	<string.h>
+#	include	<memory.h>
 #else  /* BSD */
-#define strchr(c,p) index(c,p)
-#include	<strings.h>
-char		*memcpy();
-char		*strdup();
+#	define strchr(c,p) index(c,p)
+#	include	<strings.h>
+	char		*memcpy();
+	char		*strdup();
 #endif
 
 #else	/* Not unix */
 
 #ifndef CRAY
-#include	<string.h>
+#	include	<string.h>
 #endif
 
 #endif /* unix      */
