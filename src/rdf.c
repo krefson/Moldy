@@ -8,12 +8,15 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.2  89/06/01  21:25:16  keith
+ * Control.out eliminated, use printf and freopen instead to direct output.
+ * 
  * Revision 1.1  89/04/20  16:00:53  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: rdf.c,v 1.1 89/04/20 16:00:53 keith Exp $";
+static char *RCSid = "$Header: rdf.c,v 1.2 89/06/01 21:25:16 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<math.h>
@@ -67,7 +70,7 @@ spec_t	species[];			/* Species info struct array  */
    spec_p	spec;
    register double	r, rx, ry, rz;
    double	rbin;				/* 1.0/bin width	      */
-   int		ispec, imol, isite, jsite;
+   int		imol, isite, jsite;
    int		*id = ialloc(system->nsites);
    int		*id_ptr;
    double	lx   = system->h[0][0],	/* Temporaries for unit cell vectors  */
@@ -84,7 +87,7 @@ spec_t	species[];			/* Species info struct array  */
    
 /*  Construct and fill expanded site-identifier array, id                     */
    id_ptr = id;
-   for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
+   for (spec = species; spec < &species[system->nspecies]; spec++)
       for(imol = 0; imol < spec->nmols; imol++)
       {
          (void)memcpy((char*)id_ptr, (char*)spec->site_id, 

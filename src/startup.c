@@ -17,13 +17,16 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	startup.c,v $
+ * Revision 1.2  89/06/14  17:57:48  keith
+ * Control.out eliminated, use printf and freopen instead to direct output.
+ * 
  * Revision 1.1  89/04/27  15:16:41  keith
  * Initial revision
  * 
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: startup.c,v 1.2 89/06/01 21:25:24 keith Exp $";
+static char *RCSid = "$Header: startup.c,v 1.2 89/06/14 17:57:48 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -123,20 +126,20 @@ int	n;				/* Number to be generated.       (in) */
 /******************************************************************************
  *  select_spec  Choose a species at random, weighted by proportion of whole  *
  ******************************************************************************/
-int	select_spec(system, species)
+spec_p	select_spec(system, species)
 system_p	system;
-spec_t	species[];
+spec_t		species[];
 {
    int		sel = mdrand() * system->nmols;
-   int		ispec;
+   spec_p	spec;
 
-   for(ispec = 0; ispec < system->nspecies; ispec++)
+   for (spec = species; spec < &species[system->nspecies]; spec++)
    {
-      if(sel < species[ispec].nmols)
-         return(ispec);
-      sel -= species[ispec].nmols;
+      if(sel < spec->nmols)
+         return(spec);
+      sel -= spec->nmols;
    }
-   return(-1);
+   return((spec_p)-1);
 }
 /******************************************************************************
  *  skew_start.  Make a starting configuration with all molecules arranged at *
@@ -148,7 +151,8 @@ void	skew_start(system, species)
 system_p	system;
 spec_t	species[];
 {
-   int	ispec, imol;			/* Counters for species, molecules etc*/
+   int		ispec, imol;		/* Counters for species, molecules etc*/
+   spec_p	spec;
    double	mass = 0.0;		/* Whole system mass		      */
    double	n_third = exp(log((double)system->nmols)/3.0);
    int		nz = 1, ny = (int)(n_third+0.5), nx = (int)(SQR(n_third)+0.5);
@@ -157,8 +161,8 @@ spec_t	species[];
                 delta_y = (double)ny / system->nmols,
                 delta_z = (double)nz / system->nmols;
 
-   for(ispec=0; ispec < system->nspecies; ispec++)
-      mass += species[ispec].mass * species[ispec].nmols;
+   for (spec = species; spec < &species[system->nspecies]; spec++)
+      mass += spec->mass * spec->nmols;
       
    system->h[0][0] = system->h[1][1] = system->h[2][2] 
                    = exp((log(mass) - log(control.density))/3.0);
@@ -166,13 +170,16 @@ spec_t	species[];
    for(imol = 0; imol < system->nmols; imol++)
    {
       do
-         ispec = select_spec(system, species);		/* Choose species     */
-      while(nmols[ispec] >= species[ispec].nmols);	/* Repeat if all set  */
+      {
+         spec = select_spec(system, species);		/* Choose species     */
+	 ispec = spec-species;
+      }
+      while(nmols[ispec] >= spec->nmols);	/* Repeat if all set  */
 
       nm = nmols[ispec];
-      species[ispec].c_of_m[nm][0] = imol*delta_x;
-      species[ispec].c_of_m[nm][1] = imol*delta_y;
-      species[ispec].c_of_m[nm][2] = imol*delta_z;
+      spec->c_of_m[nm][0] = imol*delta_x;
+      spec->c_of_m[nm][1] = imol*delta_y;
+      spec->c_of_m[nm][2] = imol*delta_z;
       nmols[ispec]++;
    }
 
@@ -189,11 +196,11 @@ void	random_start(system, species)
 system_p	system;
 spec_t	species[];
 {
-   int	ispec, imol, i;			/* Counters for species, molecules etc*/
+   int		imol, i;		/* Counters for species, molecules etc*/
    double	mass = 0.0;		/* Whole system mass		      */
 
-   for(ispec=0; ispec < system->nspecies; ispec++)
-      mass += species[ispec].mass * species[ispec].nmols;
+   for (spec = species; spec < &species[system->nspecies]; spec++)
+      mass += spec->mass * spec->nmols;
       
    system->h[0][0] = system->h[1][1] = system->h[2][2] 
                    = exp((log(mass) - log(control.density))/3.0);
@@ -212,7 +219,7 @@ void	thermalise(system, species)
 system_p	system;
 spec_t	species[];
 {
-   int	ispec, imol, i;			/* Counters for species, molecules etc*/
+   int		imol, i;		/* Counters for species, molecules etc*/
    spec_p	spec;			/* Pointer to species[ispec]	      */
    double	omega_sq;		/* |omega|squared / 4		      */
    double	root_ktm, root_kti[3];	/* Gaussian widths of MB distribution */
@@ -220,7 +227,7 @@ spec_t	species[];
    vec_t	momentum;	      	/* Whole system momentum	      */
 
    zero_real(momentum, 3);
-   for(ispec=0, spec = species; ispec < system->nspecies; ispec++, spec++)
+   for (spec = species; spec < &species[system->nspecies]; spec++)
    {
       root_ktm = sqrt(kB * control.temp / spec->mass) / system->h[0][0];
       total_mass += spec->mass*spec->nmols;
@@ -277,14 +284,14 @@ quat_t		qpf;			/* Quaternion rotation to princ.frame*/
    spec_p	spec;			/* Used for looping over species     */
    double	mass;			/* Temporary for site mass	     */
    int		nz;			/* Count of zero moments of inertia  */
-   int		i, j, ispec, isite, id; /* Various loop counters	     */
+   int		i, j, isite, id; 	/* Various loop counters	     */
    int		nrot;			/* Number of jacobi rotations        */
    boolean	flag;			/* Used to test for charges	     */
 
    system->nsites  = 0;  system->nmols  = 0;
    system->nmols_r = 0;  system->d_of_f = 0;
 
-   for(ispec=0, spec=species; ispec < system->nspecies; ispec++, spec++)
+   for (spec = species; spec < &species[system->nspecies]; spec++)
    {					/* Loop over molecular species       */
       system->nmols  += spec->nmols;
       system->nsites += spec->nmols * spec->nsites;
@@ -326,7 +333,7 @@ quat_t		qpf;			/* Quaternion rotation to princ.frame*/
          }
 #ifdef	DEBUG
          printf(" *D* Molecule type %d, mass = %g, C of M = (%g,%g,%g)\n",
-                ispec, spec->mass, c_of_m[0], c_of_m[1], c_of_m[2]);
+                spec-species, spec->mass, c_of_m[0], c_of_m[1], c_of_m[2]);
          print_mat(inertia, " *D* Inertia Tensor");
 #endif
          jacobi(inertia, 3, spec->inertia, v, &nrot);
@@ -368,7 +375,6 @@ static void	allocate_dynamics(system, species)
 system_p	system;
 spec_t	species[];
 {
-   int		ispec;			/* Counter for molecular species      */
    spec_p	spec;			/* Alias for species[ispec]           */
    int		nmol_cum = 0,		/* Cumulative number of molecules     */
    		nmolr_cum = 0;		/* As above excluding point atoms     */
@@ -410,7 +416,7 @@ spec_t	species[];
        "hddot",system->hddot,"hddoto",system->hddoto,"hddotvo",system->hddotvo);
 #endif
 
-   for(ispec=0, spec=species; ispec < system->nspecies; ispec++, spec++)
+   for (spec = species; spec < &species[system->nspecies]; spec++)
    {
       spec->c_of_m = system->c_of_m + nmol_cum;
       spec->vel    = system->vel    + nmol_cum;
@@ -419,8 +425,8 @@ spec_t	species[];
       spec->acco   = system->acco   + nmol_cum;
       spec->accvo  = system->accvo  + nmol_cum;
 #ifdef	DEBUG
-      printf(" *D* Species %d Dynamic variables (all %d x 3 reals)\n",ispec,
-                                                                  spec->nmols);
+      printf(" *D* Species %d Dynamic variables (all %d x 3 reals)\n",
+	     spec-species, spec->nmols);
       printf(afmt,"c_of_m",spec->c_of_m,"vel",spec->vel,"velp",spec->velp,
           "acc",spec->acc,"acco",spec->acco,"accvo",spec->accvo);
 #endif
@@ -434,8 +440,8 @@ spec_t	species[];
          spec->qddotvo = system->qddotvo + nmolr_cum;
          nmolr_cum += spec->nmols;
 #ifdef	DEBUG
-         printf(" *D* Species %d Dynamic variables (all %d x 4 reals)\n",ispec,
-                                                                  spec->nmols);
+         printf(" *D* Species %d Dynamic variables (all %d x 4 reals)\n",
+		spec-species, spec->nmols);
          printf(afmt,"quat",spec->quat, "qdot",spec->qdot, "qdotp",spec->qdotp,
              "qddot",spec->qddot,"qddoto",spec->qddoto,"qddotvo",spec->qddotvo);
 #endif
@@ -495,10 +501,9 @@ system_p	system;			/* NEW 'system' struct		      */
 spec_t	species[];		/* NEW 'species' struct array	      */
 {
    system_t	sys_tmp;		/* Local temporaries of system,       */
-   spec_p	spec_tmp;		/* species, site_info and potpar      */
+   spec_p	spec_tmp, spec;		/* species, site_info and potpar      */
    site_p	site_tmp;		/* used when overwriting restart      */
    pot_p	pot_tmp;		/* sysdef.			      */
-   int		ispec;			/* Species loop counter		      */
 
    re_re_sysdef(restart, &sys_tmp, &spec_tmp, &site_tmp, &pot_tmp);
 #ifdef	DEBUG
@@ -508,18 +513,18 @@ spec_t	species[];		/* NEW 'species' struct array	      */
 
    if(system->nspecies != sys_tmp.nspecies)
       message(NULLI, NULLP, FATAL, NSPCON, system->nspecies, sys_tmp.nspecies);
-   for(ispec = 0; ispec < system->nspecies; ispec++)
+   for (spec = species; spec < &species[system->nspecies]; spec++)
    {
-      if(species[ispec].nmols != spec_tmp[ispec].nmols)
-         message(NULLI, NULLP, FATAL, NMLCON, spec_tmp[ispec].name,
-                 species[ispec].nmols, spec_tmp[ispec].nmols);
-      if(species[ispec].rdof != spec_tmp[ispec].rdof)
-         message(NULLI, NULLP, FATAL, NDFCON, spec_tmp[ispec].name,
-                 species[ispec].rdof, spec_tmp[ispec].rdof);
-      cfree((char*)spec_tmp[ispec].p_f_sites);
-      cfree((char*)spec_tmp[ispec].site_id);
+      if(spec->nmols != spec_tmp->nmols)
+         message(NULLI, NULLP, FATAL, NMLCON, spec_tmp->name,
+                 spec->nmols, spec_tmp->nmols);
+      if(spec->rdof != spec_tmp->rdof)
+         message(NULLI, NULLP, FATAL, NDFCON, spec_tmp->name,
+                 spec->rdof, spec_tmp->rdof);
+      cfree((char*)spec_tmp->p_f_sites);
+      cfree((char*)spec_tmp->site_id);
    }
-   cfree((char*)spec_tmp);
+   cfree((char*)(spec_tmp-system->nspecies));
    cfree((char*)site_tmp);
    cfree((char*)pot_tmp);
 }	

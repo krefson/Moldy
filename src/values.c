@@ -14,6 +14,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	values.c,v $
+ * Revision 1.3  89/06/01  21:25:40  keith
+ * Control.out eliminated, use printf and freopen instead to direct output.
+ * 
  * Revision 1.2  89/05/19  10:35:28  keith
  * Fixed bug which printed to stdout rather than control.out.
  * 
@@ -22,7 +25,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: values.c,v 1.2 89/05/19 10:35:28 keith Exp $";
+static char *RCSid = "$Header: values.c,v 1.3 89/06/01 21:25:40 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -220,8 +223,9 @@ mat_t		stress_vir;	/* 'Potential' part of stress, or virial      */
       tot_pe += pe[ipe];
    }
 
-   for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
+   for (spec = species; spec < &species[system->nspecies]; spec++)
    {
+      ispec = spec-species;
       e = trans_ke(system->h, spec->vel, spec->mass, spec->nmols);
       add_average(CONV_E * e, tke_n, ispec);	/* c of m  kinetic energy     */
       tot_ke += e;
@@ -246,7 +250,7 @@ mat_t		stress_vir;	/* 'Potential' part of stress, or virial      */
    }
 
    zero_real(ke_dyad[0],9);
-   for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
+   for (spec = species; spec < &species[system->nspecies]; spec++)
       energy_dyad(ke_dyad, system->h, spec->vel, spec->mass, spec->nmols);
 
    k = 0;

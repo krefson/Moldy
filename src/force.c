@@ -10,6 +10,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	force.c,v $
+ * Revision 1.4  89/06/14  14:18:49  keith
+ * Fixed #ifdef s for CRAY to handle case of UNICOS
+ * Fix mistake in VCALLS conditional code.
+ * 
  * Revision 1.3  89/06/01  18:01:46  keith
  * Moved `vadd()' from aux.c to force.c for ease of vectorisation.
  * Now no need to compile aux.c with vectorisation.
@@ -23,7 +27,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: force.c,v 1.4 89/06/13 12:55:38 keith Exp $";
+static char *RCSid = "$Header: force.c,v 1.4 89/06/14 14:18:49 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -276,8 +280,7 @@ pot_t           potpar[];               /* Array of potential parameters (in) */
 double          *pe;                    /* Potential energy             (out) */
 mat_t           stress;                 /* Stress virial                (out) */
 {
-   int          ispec,                  /* Counter for species                */
-                imol,                   /* Counter for molecules i            */
+   int          imol,                   /* Counter for molecules i            */
                 icell,			/* Index for cells of molecule pair   */
                 nnab,	j0,		/* Number of sites in neighbour list  */
                 isite, jsite,           /* Site counter i,j                   */
@@ -370,7 +373,7 @@ mat_t           stress;                 /* Stress virial                (out) */
 
 /*  Construct and fill expanded site-identifier array, id                     */
    id_ptr = id;
-   for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
+   for (spec = species; spec < &species[system->nspecies]; spec++)
       for(imol = 0; imol < spec->nmols; imol++)
       {
          (void)memcpy((char*)id_ptr, (char*)spec->site_id, 

@@ -11,6 +11,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 1.3  89/05/22  14:05:43  keith
+ * Added rescale-separately option, changed 'contr_t' format.
+ * 
  * Revision 1.2  89/05/22  13:53:20  keith
  * Fixed to put correct RCS Revision into restart file header
  * 
@@ -20,7 +23,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: restart.c,v 1.2 89/05/22 13:53:20 keith Exp $";
+static char *RCSid = "$Header: restart.c,v 1.3 89/05/22 14:05:43 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -111,7 +114,6 @@ site_p		*site_info;		/* To be pointed at site_info array   */
 pot_p		*pot_ptr;		/* To be pointed at potpar array      */
 FILE		*file;			/* File pointer to read info from     */
 {
-   int		ispec;
    spec_p	spec;
 
    cread(file, (char*)system, sizeof(system_t), 1);/* Read in system structure*/
@@ -123,7 +125,7 @@ FILE		*file;			/* File pointer to read info from     */
    /*  read species array into allocated space				      */
    cread(file, (char*)*spec_ptr, sizeof(spec_t), system->nspecies);
    
-   for(ispec=0, spec= *spec_ptr; ispec < system->nspecies; ispec++, spec++)
+   for (spec = *spec_ptr; spec < &(*spec_ptr)[system->nspecies]; spec++)
    {
       spec->p_f_sites = ralloc(spec->nsites);	/* Allocate the species -     */
       spec->site_id   = ialloc(spec->nsites);	/* specific arrays	      */
@@ -186,7 +188,6 @@ spec_p		species;		/* Pointer to be set to species array */
 site_p		site_info;		/* To be pointed at site_info array   */
 pot_p		potpar;			/* To be pointed at potpar array      */
 {
-   int		ispec;
    spec_p	spec;
    char		*ap;			/* Pointer to averages database       */
    int		asize;			/* Size of averages database	      */
@@ -203,7 +204,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
    }
 
    (void)memcpy((char*)&save_header, (char*)&restart_header, sizeof(restrt_t));
-   (void)strncpy(save_header.vsn, "$Revision: 1.2 $"+11,
+   (void)strncpy(save_header.vsn, "$Revision: 1.3 $"+11,
 		                  sizeof save_header.vsn-1);
    save_header.prev_timestamp = restart_header.timestamp;
    save_header.timestamp = time((time_t*)0);		/* Update header      */
@@ -215,7 +216,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
    cwrite(save, (char*)system, sizeof(system_t), 1);/* write system structure */
    cwrite(save, (char*)species, sizeof(spec_t), system->nspecies);
    
-   for(ispec=0, spec=species; ispec < system->nspecies; ispec++, spec++)
+   for (spec = species; spec < &species[system->nspecies]; spec++)
    {
       cwrite(save, (char*)spec->p_f_sites, sizeof(vec_t), spec->nsites);
       cwrite(save, (char*)spec->site_id, sizeof(int), spec->nsites);
