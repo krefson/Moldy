@@ -19,9 +19,21 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/md/moldy/RCS/defs.h,v 2.8 1994/07/07 17:03:39 keith Exp $
+ * $Header: /home/eeyore_data/keith/md/moldy/RCS/defs.h,v 2.10 1995/12/22 14:00:52 keith Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.10  1995/12/22 14:00:52  keith
+ * Minor mods assuming ANSI behaviour on MS_DOS
+ * Removed all COS functionality.
+ *
+ * Nose-Hoover and Gaussian (Hoover constrained) thermostats added.
+ *
+ * Updated constants from CODATA 1986. Compile with -DOLDCONSTS for
+ * compatibility
+ *
+ * Revision 2.9  1995/01/05  09:56:35  keith
+ * Null update to increment version number
+ *
  * Revision 2.8  1994/07/07  17:03:39  keith
  * Fixed up missing xdr_vector to be compiled in only if NEED_XDR_VECTOR defined.
  *
@@ -188,21 +200,22 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  * Version ID strings
  */
-#define          REVISION         "$Revision: 2.8 $"
-#define		 REVISION_DATE    "$Date: 1994/07/07 17:03:39 $"
+#define          REVISION         "$Revision: 2.10 $"
+#define		 REVISION_DATE    "$Date: 1995/12/22 14:00:52 $"
 #define		 REVISION_STATE   "$State: Exp $"
 /******************************************************************************
  *  Configurational information.  Edit this to tailor to your machine	      *
  ******************************************************************************/
 /*
- * See if we can detect IBM RS6000. No preprocessor macro by default, so
- * user MUST define "-DRS6000" on command line".
+ * See if we can detect IBM RS6000.
  * _ALL_SOURCE is necessary to make XDR stuff work.
  */
-#ifdef RS6000
+#ifdef _AIX
 #   define __unix__
-#   define _ALL_SOURCE
 #   define ANSI_LIBS
+#   ifndef _ALL_SOURCE
+#      define _ALL_SOURCE
+#   endif
 #endif
 /*
  * To allow XDR stuff to work on HP.  Surely there's a more general
@@ -230,7 +243,7 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  * Define operating-system dependant default filenames
  */
-#ifdef __MSDOS__
+#if defined(__MSDOS__) || defined(__WATCOMC__)
 #   define BACKUP_FILE	"MDBCK"
 #   define TEMP_FILE	"MDTEMPX"
 #   define LOCKEX		"$LK"
@@ -258,7 +271,16 @@ what you give them.   Help stamp out software-hoarding!  */
 #   define CRAY
 #endif
 #endif
-#if defined(CRAY) && defined(__STDC__)	/* scc compiler comes with libraries*/
+#if defined(CRAY)	/* scc compiler comes with libraries*/
+#   define ANSI_LIBS
+#endif
+#ifdef __linux__
+#   define ANSI_LIBS
+#endif
+#ifdef __osf__
+#   define ANSI_LIBS
+#endif
+#ifdef __sgi__
 #   define ANSI_LIBS
 #endif
 /*
@@ -274,6 +296,10 @@ what you give them.   Help stamp out software-hoarding!  */
 #   endif
 #endif
 #if defined(vms)
+#   define ANSI
+#   define ANSI_LIBS
+#endif
+#if defined(__MSDOS__) || defined(__WATCOMC__)
 #   define ANSI
 #   define ANSI_LIBS
 #endif
@@ -300,8 +326,10 @@ what you give them.   Help stamp out software-hoarding!  */
  */
 #if defined(__STDC__) ||  defined(ANSI)
 #   define CONST const
+#   define VOLATILE volatile
 #else
 #   define CONST /* */
+#   define VOLATILE /* */
 #endif
 /* 
  * Vectorisation directive translation.  N.B. Most preprocessors munge 
@@ -380,18 +408,37 @@ what you give them.   Help stamp out software-hoarding!  */
 /* Fundamental constants '_' denotes MKS units.  SHOULD NEVER BE ALTERED      */
 #define	PI		3.14159265358979323846
 #define DTOR		(PI/180.0)
+#ifdef OLDCONSTS
 #define	_kB		1.380662e-23
 #define _kcal		4184.0
 #define	_EPS0		8.85418782e-12
 #define	_ELCHG		1.6021892e-19
+#define ECSTR           "1.6021892e-19"
 #define	_ROOT_4_PI_EPS	1.0548222865e-5
 #define AVOGAD		6.022045e23
+#define AMU		1.6605655e-27
+#define AMUSTR          "1.6605655e-27"
+#define RTAMU           4.0745e-14		/*sqrt(amu) */
+#else
+/* Values from CODATA 1986 */
+#define	_kB		1.380658e-23
+#define _kcal		4184.0
+#define	_EPS0		8.854187817e-12
+#define	_ELCHG		1.60217733e-19
+#define ECSTR           "1.60217733e-19"
+#define	_ROOT_4_PI_EPS	1.05482230112e-05
+#define AVOGAD		6.0221367e23
+#define AMU		1.6605402e-27
+#define AMUSTR          "1.6605402e-27"
+#define RTAMU           4.07497263794495e-14	/*sqrt(amu) */
+#endif
+#define RGAS		(AVOGAD*_kB)
 /* Program units relative to MKS units ONLY M, L, T, Q UNIT SHOULD BE CHANGED */
-#define MUNIT		1.6605655e-27			/* atomic mass units  */
+#define MUNIT		AMU				/* atomic mass units  */
 #define	LUNIT		1.0e-10				/* Angstrom	      */
 #define	TUNIT		1.0e-12				/* Picosecond	      */
 #define	EUNIT		(MUNIT * (LUNIT/TUNIT) * (LUNIT/TUNIT))
-#define	QUNIT		/*sqrt(EUNIT*LUNIT)*/ (4.075e-17*_ROOT_4_PI_EPS)
+#define	QUNIT		/*sqrt(EUNIT*LUNIT)*/ (RTAMU*1.e-3*_ROOT_4_PI_EPS)
 #define MUNIT_N		"amu"
 #define LUNIT_N		"A"
 #define RLUNIT_N	"A(-1)"
@@ -410,6 +457,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #define	CONV_N		(CONV_F*LUNIT)				/* Nm/mol     */
 #define	CONV_D		(QUNIT*LUNIT*4.8e10/_ELCHG)
 #define CONV_Q		(QUNIT/_ELCHG)
+#define CONV_TM		0.01
 #define	CONV_E_N	"kJ/mol"
 #define	CONV_T_N	"K"
 #define	CONV_P_N	"Mpa"
@@ -417,6 +465,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #define	CONV_N_N	"(Nm)**2/mol"
 #define	CONV_D_N	"D"
 #define CONV_Q_N	"Qe"
+#define CONV_TM_N	"kJ/mol*ps**2"
 
 
 #define	false			0
