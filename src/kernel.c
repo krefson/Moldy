@@ -14,6 +14,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 1.10  90/09/28  13:29:39  keith
+ * Inserted braces around VECTORIZE directives and changed include files
+ * for STARDtardent 3000 series (via cond. comp symbol "ardent").
+ * 
  * Revision 1.9  90/05/21  15:29:00  keith
  * Moved definition of struct pot_dim[][] from convert.c to kernel.c.
  * 
@@ -47,7 +51,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/data/keith/moldy/RCS/kernel.c,v 1.9 90/05/21 15:29:00 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.10 90/09/28 13:29:39 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -116,6 +120,7 @@ int	ptype;				/* Potential type selector	      */
       else
          return( 0.0 );
    }
+   return 0.0;				/* Turn of annoying warnings.  */
 }
 /******************************************************************************
  *  kernel   Innermost loop of force calculation.  Takes a vector of squared  *

@@ -23,6 +23,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.11  90/05/16  18:40:01  keith
+ * Renamed own freer from cfree to tfree.
+ * 
  * Revision 1.10  90/05/16  14:10:18  keith
  * Modified so that mutates always apply to rest of run.
  * 
@@ -58,7 +61,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.10 90/05/16 14:10:18 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.11 90/05/16 18:40:01 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -174,7 +177,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 1.10 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 1.11 $"+11,
 		                     sizeof dump_header.vsn-1);
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;
@@ -212,7 +215,7 @@ double		pe;
    dump_header.restart_timestamp = restart_header.timestamp;
 
    (void)fseek(dumpf, file_pos, SEEK_SET);		/* Write data at end */
-   if( fwrite((char*)dump_buf, dump_size, sizeof(float), dumpf) == 0 )
+   if( fwrite((char*)dump_buf,(unsigned)dump_size, sizeof(float), dumpf) == 0 )
       	message(NULLI, NULLP, FATAL, DWFAIL, cur_file);
 
    (void)fseek(dumpf, 0L, SEEK_SET);			/* Write header      */
