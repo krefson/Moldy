@@ -35,6 +35,16 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: leapfrog.c,v $
+ *       Revision 2.4  2000/11/06 16:02:06  keith
+ *       First working version with a Nose-Poincare thermostat for rigid molecules.
+ *
+ *       System header updated to include H_0.
+ *       Dump performs correct scaling  of angular velocities, but dumpext still
+ *          needs to be updated to read this.
+ *       XDR functions corrected to work with new structs.
+ *       Parallel broadcast of config also updated.
+ *       Some unneccessary functions and code deleted.
+ *
  *       Revision 2.3  2000/05/23 15:23:08  keith
  *       First attempt at a thermostatted version of the Leapfrog code
  *       using either a Nose or a Nose-Poincare thermostat
@@ -47,7 +57,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.3 2000/05/23 15:23:08 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/leapfrog.c,v 2.4 2000/11/06 16:02:06 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -83,6 +93,10 @@ extern	contr_mt	control;            /* Main simulation control parms. */
 #ifndef FLT_MIN
 #   define FLT_MIN 1.0e-37
 #endif
+#ifndef DBL_MIN
+#   define DBL_MIN 1.0e-37
+#endif
+#define REAL_MIN   (sizeof(real) == sizeof(double)?DBL_MIN:FLT_MIN)
 /*============================================================================*/
 /******************************************************************************
  *   Normalise the new quaternions                                            *
@@ -227,7 +241,7 @@ void make_rot_amom(double step, quat_mt (*amom), real rinertia, quat_mt (*rot), 
    for(imol = 0; imol < nmols; imol++)
    {
       samom=sqrt(SUMSQ2(amom[imol]));
-      ramom = 1.0/(samom + FLT_MIN);	/* Don't fail is amom == 0           */
+      ramom = 1.0/(samom + (8*DBL_MIN));	/* Don't fail is amom == 0           */
       angle = 0.5*step*rinertia*samom;
       ca = cos(angle); sa = sin(angle);
       rot[imol][0] = ca;
