@@ -156,7 +156,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.25.2.1 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.25.2.2 $ $}
 \newcommand{\moldyversion}{2.14}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -5641,6 +5641,45 @@ At present, ransub can only introduce monatomic solute species, but
 polyatomic species can easily be added manually by modifying the system
 specification file created by ransub. It is also possible to introduce
 randomly distributed vacancies by prefixing the solute name with ``\#''.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Plotrdf}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Plotrdf is a \emph{perl} script which reads "Moldy" output files and
+extracts RDF information, skipping page breaks.  It produces output
+suitable for reading into most graphics programs, but most notably
+\emph{gnuplot}.  Obviously you must have \emph{perl} installed on your
+computer to use it.
+
+\begin{center}
+  \Lit{plotrdf}
+ \Lit{[-a]} 
+ \Lit{[-g]}
+ \Lit{[-gg]}
+ \Lit{[-ps]}
+ \Lit{[-eps]}
+ \Lit{[-m} \textit{REGEXP}\Lit{]} 
+ \textit{moldy-output-file} ...
+\end{center}
+
+\begin{Argdescription}  
+      \item[-a]         Take average of multiple RDF blocks
+      \item[-g]         Write a GNUPLOT script to plot data
+      \item[-gg]        Write a script and invoke GNUPLOT to plot data
+      \item[-ps]        Invoke GNUPLOT to plot data and write as a PostScript file
+      \item[-eps]       Invoke GNUPLOT to plot data and write as an
+        encapsulated  PostScript (EPS) file
+      \item[-m]  output/plot only columns which match the (perl) regular expression REGEXP. (no '//' needed)    
+\end{Argdescription}
+
+The output format is in columns with different components laid out
+across the page "r rdf1 rdf2 rdf3 ...".  Multiple RDF blocks in one or
+multiple files are processed and output sequentially except if the \Lit{-a}
+flag is given, whereupon they are averaged.
+
+Columns may be selected by matching with a PERL regular expression
+(without the usual delimiters) given as the argument to the \Lit{-m}
+option.
 
 \bibliography{abbrevjn,simulation,mypubs}
 \bibliographystyle{amsplain}

@@ -7,7 +7,15 @@ eval 'exec perl -S $0 ${1+"$@"}'
 # Plotrdf.  This script reads "Moldy" output files and extracts RDF information
 # skipping page breaks.
 #
-# Usage: plotrdf [-a] [-m REGEXP] -g moldy-output-file ...
+#  Usage: plotrdf [-a] [-m REGEXP] [-g] moldy-output-file ...
+#      -a         Take average of multiple RDF blocks
+#      -g         Write a GNUPLOT script to plot data
+#      -gg        Write a script and invoke GNUPLOT to plot data
+#      -ps        Invoke GNUPLOT to plot data and write as a PostScript file
+#      -eps       Invoke GNUPLOT to plot data and write as an encapsulated 
+#                 PostScript (EPS) file
+#      -m REGEXP  output/plot only columns which match the (perl) regular 
+#                 expression REGEXP. (no '//' needed)    
 #
 # Output format is in columns with different components laid out
 # across the page "r rdf1 rdf2 rdf3 ..."
