@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 2.5 1994/01/18 13:32:42 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/mdshak.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -39,10 +39,14 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 2.5 1994
 #ifdef USE_XDR
 #   include	"xdr.h"
 #endif
+#if defined(ANSI) || defined(__STDC__)
+gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
+#else
+gptr	*arralloc();	        	/* Array allocator		      */
+#endif
 
 void	invert();
 void	mat_vec_mul();
-char	*arralloc();
 void	make_sites();
 char	*strlower();
 void	read_sysdef();
@@ -60,8 +64,11 @@ gptr	*talloc();
  ******************************************************************************/
 void 	init_rdf()
 {}
-int	***rdf;
+gptr *rdf_ptr()
+{}
 void new_lins()
+{}
+int lines_left()
 {}
 void new_page()
 {}
@@ -77,7 +84,6 @@ void	conv_potentials()
 {}
 void	conv_control()
 {}
-int     out_line,out_page;
 /******************************************************************************
  *  message.   Deliver error message to possibly exiting. 		      *
  ******************************************************************************/
@@ -497,9 +503,7 @@ char		*insert;
  * neither specified on command line, user is interrogated.		      *
  ******************************************************************************/
 contr_mt		control;
-unit_mt		input_unit;
-char		backup_lockfile[L_name];
-char		dump_lockfile[L_name];
+
 int
 main(argc, argv)
 int	argc;
@@ -531,6 +535,7 @@ char	*argv[];
    quat_mt	*qpf;
    contr_mt	control_junk;
    int		xdr = 0;
+   int		av_convert;
 #ifdef USE_XDR
    XDR          xdrs;
 #endif
@@ -666,8 +671,9 @@ char	*argv[];
       break;
     case 'r':				/* Restart file			      */
 	init_averages(system.nspecies, restart_header.vsn,
-		      control_junk.roll_interval, control_junk.roll_interval);
-	read_restart(Fp, &system);
+		      control_junk.roll_interval, control_junk.roll_interval,
+		      &av_convert);
+	read_restart(Fp, &system, av_convert);
 	moldy_out(1, &system, species, site_info, atom_sel, outsw, insert);
       break;
     case 'd':				/* Dump dataset			      */

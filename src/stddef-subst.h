@@ -29,37 +29,10 @@ what you give them.   Help stamp out software-hoarding!  */
 #ifdef ANSI_LIBS
 #   include <stddef.h>
 #else
-#   ifndef __SIZE_T
-#      ifndef __SIZE_T__
-#         ifndef _SIZE_T
-#            ifndef _SIZE_T_
-#		ifndef _GCC_SIZE_T
-#		   define  _GCC_SIZE_T
-#                  define  __SIZE_T
-#                  define  __SIZE_T__
-#                  define  _SIZE_T
-#                  define  _SIZE_T_
-#                  if defined(unix) && (!defined(__GNUC__))
-                      typedef unsigned size_t;
-#                  else
-                      typedef unsigned long size_t;
-#                  endif
-#		endif
-#            endif
-#         endif
-#      endif
-#   endif
 #   ifndef NULL
 #      define NULL 0
 #   endif
 #endif
-
-#define __stddef_h
-#define _STDDEF_H
-#define _STDDEF_H_
-#define __STDDEF_H
-#define __STDDEF_H__
-#define _STDDEF_INCLUDED
 
 #endif
 #endif

@@ -19,11 +19,14 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 2.4 94/01/21 12:35:03 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 
 /*
- * $Log:	dumpconvert.c,v $
+ * $Log: dumpconvert.c,v $
+ * Revision 2.5  94/01/21  12:51:04  keith
+ * Corrected declaration of main()
+ * 
  * Revision 2.4  94/01/21  12:35:03  keith
  * Incorporated all portability experience to multiple platforms since 2.2.
  * Rewrote varargs functions to use stdargs conditionally on __STDC__
@@ -104,14 +107,12 @@ char *strstr(cs, ct)
 char *cs, *ct;
 {
    char *end = cs+strlen(cs)-strlen(ct);
-   for(; cs < end; cs++)
+   for(; cs <= end; cs++)
       if( !strcmp(cs,ct) )
 	 return cs;
    return 0;      
 }
 #endif
-
-int av_convert;
 
 #if defined(CRAY) && ! defined(unix)
 int     vfprintf (file, fmt, args)

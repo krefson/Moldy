@@ -25,7 +25,14 @@ what you give them.   Help stamp out software-hoarding!  */
  *      formats, strings are stored as fixed-length opaque data.	      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	xdr.h,v $
+ *       $Log: xdr.h,v $
+ * Revision 2.5.1.1  1994/02/03  18:36:12  keith
+ * Tidied up and got rid of most of the global data items.
+ *
+ * Revision 2.5  94/01/18  17:35:45  keith
+ * Incorporated all portability experience to multiple platforms since 2.2.
+ * Including ports to VAX/VMS and Open VMS on Alpha AXP and Solaris.
+ * 
  * Revision 2.5  94/01/18  13:33:08  keith
  * Null update for XDR portability release
  * 
@@ -90,9 +97,7 @@ void   xdr_set_npotpar();
 bool_t xdr_pot();
 bool_t xdr_restrt();
 bool_t xdr_dump();
-bool_t xdr_av_head_t();
-bool_t xdr_old_av_u_t();
-void   xdr_set_av_size();
+void   xdr_set_av_size_conv();
 bool_t xdr_averages();
 
 #ifndef USE_XDR

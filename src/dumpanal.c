@@ -19,11 +19,15 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpanalyze.c,v 2.5 1994/01/21 12:33:06 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpanalyze.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 
 /*
  * $Log: dumpanalyze.c,v $
+ * Revision 2.5  94/01/26  11:55:39  keith
+ * Tidied up lint/gcc warnings.
+ * Fixed def'n of main to "int" coz it failed on broken (?) VMS compiler.
+ * 
  * Revision 2.4  94/01/18  13:23:12  keith
  * Incorporated all portability experience to multiple platforms since 2.2.
  * Including ports to VAX/VMS and Open VMS on Alpha AXP and Solaris.
@@ -71,14 +75,12 @@ char *strstr(cs, ct)
 char *cs, *ct;
 {
    char *end = cs+strlen(cs)-strlen(ct);
-   for(; cs < end; cs++)
+   for(; cs <= end; cs++)
       if( !strcmp(cs,ct) )
 	 return cs;
    return 0;      
 }
 #endif
-
-int av_convert; /* Dummy for xdr. */
 
 char	*ctime();
 void	analyze();

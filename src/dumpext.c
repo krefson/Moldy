@@ -44,7 +44,7 @@ char *strstr(cs, ct)
 char *cs, *ct;
 {
    char *end = cs+strlen(cs)-strlen(ct);
-   for(; cs < end; cs++)
+   for(; cs <= end; cs++)
       if( !strcmp(cs,ct) )
 	 return cs;
    return 0;      

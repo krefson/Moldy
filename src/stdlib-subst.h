@@ -23,6 +23,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #ifndef _STDLIB_H_
 #ifndef __STDLIB_H
 #ifndef __STDLIB_H__
+#ifndef _H_STDLIB
 #ifndef _STDLIB_INCLUDED
 #ifdef ANSI_LIBS
 #   include <stdlib.h>
@@ -46,10 +47,12 @@ what you give them.   Help stamp out software-hoarding!  */
 #define __STDLIB_H
 #define _STDLIB_H_
 #define _STDLIB_H
+#define  _H_STDLIB
 #define _STDLIB_INCLUDED
 
 #endif /* __STDLIB_H__ */
 #endif /* __STDLIB_H__ */
+#endif /* _STDLIB_H_ */
 #endif /* _STDLIB_H_ */
 #endif /* _STDLIB_H_ */
 #endif /* _STDLIB_H_ */

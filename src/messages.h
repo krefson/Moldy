@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore/keith/md/moldy/RCS/messages.h,v 2.5 94/01/18 13:32:45 keith Stab $
+ * $Header: /home/eeyore/keith/md/moldy/RCS/messages.h,v 2.5 1994/02/01 17:16:39 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -153,3 +153,4 @@ number of words"
 #define XDRFL	"XDR call failed"
 #define GPFAIL  "Get file position failed on file  \"%s\"\n    -  %s"
 #endif
+#define SYSEOF	"Unexpected end of file encountered while reading %s"
