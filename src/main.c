@@ -7,6 +7,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.9  89/11/20  12:02:09  keith
+ * Changed interface to print_rdf.  cf rdf.c 1.6
+ * Modified write of restart and backup files - added 'purge' call.
+ * 
  * Revision 1.8  89/09/04  18:48:31  keith
  * Chhanged initialisation of 'control' commensurate with structs 1.6.1.2
  * 
@@ -37,7 +41,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/main.c,v 1.8 89/09/04 18:48:31 keith Exp Locker: keith $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/main.c,v 1.9 89/11/20 12:02:09 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -58,73 +62,8 @@ double	cpu();
 void	write_restart();
 void	purge();
 /*========================== External data definition ========================*/
-/*
- * Control struct with default values for the parameters 
- */
-contr_t	control = {
-	"Test Simulation",	/* Job title				      */
-	0,			/* Current timestep - used as loop counter    */
-	0,			/* Number of timesteps to execute	      */
-	0.005,			/* Value of timestep in program units	      */
-	false,			/* Flag to print out system specification file*/
-	false,			/* Read new sysdef instead of restart file one*/
-	false,			/* Flag to turn on P&R CP method	      */
-	false,			/* Flag to set average counters to zero       */
-	false,			/* Whether to scale each species separately   */
-	false,			/* Flag surface dipole term in Ewald sum      */
-	false,			/* Flag to read initial state from sysdef file*/
-	"",			/* Name of system specification file	      */
-	"",			/* Name of file to read restart conf. from    */
-	"",			/* Name of file to write restart conf. to     */
-	"",			/* Name of file 'dump' writes to              */
-#ifdef vms
-	"MDBACKUP.DAT",
-#else
-	"MDBACKUP",		/* Name of file for periodic save of state    */
-#endif
-#ifdef CMS
-	"MDTEMP XXXXXXXX A1",	/* Temporary file name for restart to write   */
-#else
-#ifdef vms
-	"MDTEMPXXXX.DAT",
-#else
-	"MDTEMPX",
-#endif
-#endif
-	"",			/* Name of main output file		      */
-	100,			/* Number of bins for rdf calculation	      */
-	1234567,		/* Seed for random number generator	      */
-	132,			/* Line width for output file		      */
-	44,			/* Length of page on output file	      */
-	10,			/* Number of timesteps between scales	      */
-	1000000,		/* Stop scaling after n timesteps	      */
-	1001,			/* Number of 'equilibration' steps	      */
-	100,			/* Frequency of averages calculation	      */
-	1,			/* Start of configuration dumps		      */
-	0,			/* Dump filename offset (internal use only)   */
-	20,			/* Frequency of configuration dumps	      */
-	0,			/* Level of dump to perform		      */
-	10,			/* How many dump records in a dump file	      */
-	100,			/* Frequency to write save configuration      */
-	10,			/* Number of timesteps for rolling avgs       */
-	10,			/* Number of timesteps between printouts      */
-        1001,			/* When to start accumulating rdf data        */
-	20,			/* How frequently to perform binning          */
-	1000,			/* How frequently to calculate & print rdf    */
-	0,			/* Required temperature 		      */
-	0.0,			/* Required pressure			      */
-	50,			/* Parinello and Rahman W parameter	      */
-	10.0,			/* Cut off radius			      */
-	0.0,			/* Size of side of interaction cells	      */
-        1.0,			/* Density 1g/cc			      */
-	0.3,			/* Convergence parameter for Ewald sum	      */
-        2.0,			/* K space cutoff for Ewald sum		      */
-	10.0,			/* Limiting distance for RDF calculation      */
-	1.0e20};		/* Default CPU limit - very large	      */
-	
-
-unit_t		input_unit = {MUNIT, LUNIT, TUNIT/10, _ELCHG};
-				/* amu, A, ps/10 => energy unit = kJ/mol      */
+contr_t		control;
+unit_t		input_unit;
 /*============================================================================*/
 main(argc, argv)
 int	argc;
@@ -140,7 +79,8 @@ char	*argv[];
    vec_t	(*meansq_f_t)[2];
    vec_t	dip_mom;
 
-   start_up((argc>1)?argv[1]:"", &system, &species, &site_info, &potpar);
+   start_up((argc>1)?argv[1]:"", (argc>2)?argv[2]:"",
+	    &system, &species, &site_info, &potpar);
    meansq_f_t = (vec_t (*)[2])ralloc(2*system.nspecies);
    
    while( control.istep < control.nsteps &&
