@@ -25,9 +25,9 @@ what you give them.   Help stamp out software-hoarding!  */
 #include <varargs.h>
 #endif
 #include <math.h>
+#include "stdlib.h"
 #include "stddef.h"
 #include "string.h"
-#include "stdlib.h"
 #include <stdio.h>
 #define error(str, args) message(NULLI, NULLP, FATAL, str, args)
 #include "structs.h"
@@ -48,13 +48,18 @@ void	re_re_sysdef();
 void	allocate_dynamics();
 void	lattice_start();
 void	read_restart();
+void	init_averages();
+int	getopt();
+gptr	*talloc();
 /******************************************************************************
  * Dummies of 'moldy' routines so that mdshak may be linked with moldy library*
  ******************************************************************************/
 void 	init_rdf()
 {}
 int	***rdf;
-void	init_averages()
+void new_lins()
+{}
+void new_page()
 {}
 void	new_line()
 {
@@ -68,9 +73,7 @@ void	conv_potentials()
 {}
 void	conv_control()
 {}
-void	convert_averages()
-{}
-int	av_convert;
+int     out_line,out_page;
 /******************************************************************************
  *  message.   Deliver error message to possibly exiting. 		      *
  ******************************************************************************/
@@ -190,12 +193,6 @@ char	*prompt;
 }
 /******************************************************************************
  ******************************************************************************/
-char *av_ptr(size_p)
-int *size_p;
-{
-   *size_p = 0;
-   return NULL;
-}
 /******************************************************************************
  * forstr.  Parse string str of format s-f:n  (final 2 parts optional),       *
  *          returning integer values of s,f,n. f defaults to s and n to 1     *
@@ -355,6 +352,49 @@ char		*insert;
    (void)printf("END %d\n", n);
 }
 /******************************************************************************
+ * atoms_out().  Write a system configuration to stdout in the form of an     *
+ * binary atomic co-ordinates.						      *
+ ******************************************************************************/
+void
+atoms_out(n, system, species, site_info, atom_sel)
+int	n;
+system_mt	*system;
+spec_mt		species[];
+site_mt		site_info[];
+char		*atom_sel;
+{
+   double	**site = (double**)arralloc(sizeof(double),2,
+					    0,2,0,system->nsites-1);
+   spec_mt	*spec;
+   float	fsite[3];
+   mat_mp	h = system->h;
+   mat_mt	hinv;
+   int		imol, isite, is,i;
+
+   invert(h,hinv);
+
+   for(spec = species; spec < species+system->nspecies; spec++)
+   {
+      make_sites(system->h, spec->c_of_m, spec->quat, spec->p_f_sites,
+		 spec->framework, site, spec->nmols, spec->nsites);
+
+      mat_vec_mul3(hinv, site, spec->nsites*spec->nmols);
+
+      isite = 0;
+      for(imol = 0; imol < spec->nmols; imol++)
+      {
+	 for(is = 0; is < spec->nsites; is++)
+	 {
+	    for(i=0; i<3; i++)
+	       fsite[i]=site[i][isite];
+            fwrite((char*)fsite, sizeof fsite, 1, stdout);
+	    isite++;
+	 }
+      }
+   }
+
+}
+ /******************************************************************************
  * Centre_mass.  Shift system centre of mass to origin (in discrete steps),   *
  ******************************************************************************/
 void
@@ -409,11 +449,13 @@ vec_mt	s;
  * Translate system relative to either centre of mass of posn of framework.   *
  ******************************************************************************/
 void
-moldy_out(n, system, species, site_info, insert)
+moldy_out(n, system, species, site_info, atom_sel, outsw, insert)
 int	n;
 system_mt	*system;
 spec_mt		species[];
 site_mt		site_info[];
+char		*atom_sel;
+int		outsw;
 char		*insert;
 {
    spec_mp	spec, frame_spec  = NULL;
@@ -430,7 +472,15 @@ char		*insert;
       centre_mass(species, system->nspecies, c_of_m);
       shift(system->c_of_m, system->nmols, c_of_m);
    }
-   schakal_out(n, system, species, site_info, insert);
+   switch (outsw)
+   {
+    case 0:
+      schakal_out(n, system, species, site_info, insert);
+      break;
+    case 1:
+      atoms_out(n, system, species, site_info, atom_sel);
+      break;
+   }
 }
 /******************************************************************************
  * main().   Driver program for generating SCHAKAL input files from MOLDY     *
@@ -456,8 +506,9 @@ char	*argv[];
    int		rflag;
    int		idump, idump0, jdump, irec;
    int		iout = 0;
+   int		outsw=0;
    char		*filename = NULL, *dump_name = NULL;
-   char		*dumplims = NULL;
+   char		*dumplims = NULL, *atom_sel = NULL;
    char		*insert = NULL;
    char		cur_dump[256];
    int		dump_size;
@@ -479,9 +530,15 @@ char	*argv[];
 #define MAXTRY 100
    control.page_length=1000000;
 
-   while( (c = getopt(argc, argv, "o:cr:s:d:n:i:") ) != EOF )
+   while( (c = getopt(argc, argv, "a:bo:cr:s:d:n:i:") ) != EOF )
       switch(c)
       {
+       case 'a': 
+	 atom_sel = optarg;
+	 break;
+       case 'b':
+	 outsw++;
+	 break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error("failed to open file \"%s\" for output", optarg);
@@ -597,11 +654,13 @@ char	*argv[];
    {
     case 's':				/* Lattice_start file		      */
 	lattice_start(Fp, &system, species, qpf);
-	moldy_out(1, &system, species, site_info, insert);
+	moldy_out(1, &system, species, site_info, atom_sel, outsw, insert);
       break;
     case 'r':				/* Restart file			      */
+	init_averages(system.nspecies, restart_header.vsn,
+		      control_junk.roll_interval, control_junk.roll_interval);
 	read_restart(Fp, &system);
-	moldy_out(1, &system, species, site_info, insert);
+	moldy_out(1, &system, species, site_info, atom_sel, outsw, insert);
       break;
     case 'd':				/* Dump dataset			      */
 	if( dump_name == 0 )
@@ -733,7 +792,7 @@ char	*argv[];
 
 	   dump_to_moldy(dump_buf, &system);
 
-	   moldy_out(iout++, &system, species, site_info, insert);
+	   moldy_out(iout++, &system, species, site_info, atom_sel, outsw, insert);
 #ifdef DEBUG
 	   fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
 		   irec%header.maxdumps, cur_dump);
