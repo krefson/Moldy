@@ -648,6 +648,21 @@ EOF
 	    ;;
 	  esac
 	  # Determine whether the default compiler is a.out or elf
+
+	  cat >dummy.c <<EOF
+#include <features.h>
+main(argc, argv)
+     int argc;
+     char *argv[];
+{
+}
+EOF
+	  if ${CC-cc} dummy.c -o dummy >/dev/null 2>&1 && file dummy | grep ELF > /dev/null ; then 
+              kr_cppflags="-D__ELF__"
+          else 
+              kr_cppflags=""
+          fi
+    
 	  cat >dummy.c <<EOF
 #include <features.h>
 main(argc, argv)
@@ -670,7 +685,7 @@ main(argc, argv)
   return 0;
 }
 EOF
-	  ${CC-cc} dummy.c -o dummy 2>/dev/null && ./dummy "${UNAME_MACHINE}" && rm dummy.c dummy && exit 0
+	  ${CC-cc} $kr_cppflags dummy.c -o dummy 2>/dev/null 1>&2 && ./dummy "${UNAME_MACHINE}" && rm dummy.c dummy && exit 0
 	  rm -f dummy.c dummy
 	fi ;;
 # ptx 4.0 does uname -s correctly, with DYNIX/ptx in there.  earlier versions
