@@ -428,7 +428,7 @@ $(CFILES) $(HFILES) $(AHFILES) $(EXTRA0) $(DOCCI):
 	co $@
 
 ewald-RIL.c:
-	co -pRIL ewald.c > ewald-RIL.c
+	 cvs co -p -r RIL moldy/src/ewald.c > ewald-RIL.c
 
 .SUFFIXES:	.c .o
 
