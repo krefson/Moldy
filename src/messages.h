@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/md/moldy/RCS/messages.h,v 2.10 1995/12/04 11:51:32 keith Exp keith $
+ * $Header: /home/eeyore_data/keith/md/moldy/RCS/messages.h,v 2.11 1996/01/03 12:04:13 keith Exp keith $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -93,6 +93,8 @@ rotational degrees of freedom (%d vs %d)"
 #define TONAB	"Too many sites (%d) for neighbour list arrays (%d slots) \n\
   -  Increase NMULT in \"force.c\""
 #define CUTOFF  "Cutoff radius > %d * cell dimension.\n\
+  -  Increase NSH in \"force.c\""
+#define CUTRDF  "RDF limit > %d * cell dimension.\n\
   -  Increase NSH in \"force.c\""
 #define TOOCLS	"Sites %d and %d closer than %fA."
 #define TOODIM  "Arralloc request for %d dimensions - max %d"
