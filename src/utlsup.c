@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/utlsup.c,v 1.18 2004/12/07 13:00:01 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/utlsup.c,v 1.19 2005/02/04 14:54:23 cf Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -334,6 +334,28 @@ char    *get_line(char *line, int len, FILE *file, int skip)
       *line = '\0';                             /* Return null at eof         */
    return(line);
 }
+
+/* vdotf.  Dot product between two vector floats */
+double vdotf(int n, float *x, int ix, float *y, int iy)
+{
+   register double      dot=0.0;
+   register int i, j;
+   if( ix == iy && ix == 1)
+   {
+      for(i = 0; i < n; i++)
+         dot += x[i] * y[i];
+   }
+   else
+   {
+      for(i = j = 0; i < n*ix; i += ix)
+      {
+         dot += x[i] * y[j];
+         j += iy;
+      }
+   }
+   return(dot);
+}
+
 /******************************************************************************
  * dump_to_moldy.  Fill the 'system' arrays with the dump data in 'buf' (see  *
  * dump.c for format), expanding floats to doubles if necessary.              *
