@@ -23,6 +23,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.19.2.1  2000/12/11 12:33:25  keith
+ *       Incorporated site-pbc branch "bekker" into main "Beeman" branch.
+ *
  *       Revision 2.19.4.1  2000/12/07 15:58:34  keith
  *       Mainly cosmetic minor modifications and added special comments to
  *       shut lint up.
@@ -238,7 +241,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.19.4.1 2000/12/07 15:58:34 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.19.2.1 2000/12/11 12:33:25 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -314,14 +317,14 @@ extern int		ithread, nthreads;
 /*   static int hits=0, misses=0;*/
 static
 void      qsincos(coshx, sinhx, cosky, sinky, coslz, sinlz,
-		  qcoskr, qsinkr, coshxky, sinhxky, h, k,l, nsites)
+		  qcoskr, qsinkr, coshxky, sinhxky, h, k, l, 
+		  hlast, klast, nsites)
 real coshx[], sinhx[], cosky[], sinky[], coslz[], sinlz[],
      qcoskr[], qsinkr[], coshxky[], sinhxky[];
-int  h, k,l,nsites;
+int  h, k,l,hlast,klast,nsites;
 {
    int is;
    real qckr, chxky;
-   static int hlast=-1000000,klast=-1000000;
    
    if( h != hlast || k != klast ) 
    {
@@ -533,6 +536,10 @@ mat_mt		stress;			/* Stress virial		(out) */
                 kmax = floor(control.k_cutoff/(2*PI)*modb(system->h)),
                 lmax = floor(control.k_cutoff/(2*PI)*modc(system->h));
    /*
+    * Saved previous h and k to signal validity of coshxky, sinhxky caches.
+    */
+   int		hlast=-1000000,klast=-1000000;
+   /*
     * lower and upper limits for parallel loops.   
     */
 #if defined(SPMD) && defined(MPPMANY)
@@ -742,7 +749,7 @@ mat_mt		stress;			/* Stress virial		(out) */
        * efficiency & vectorisation there is a loop for each case.
        */
       qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,
-	      qcoskr,qsinkr,sinhxky, coshxky, h, k, l, nsites);
+	      qcoskr,qsinkr,sinhxky, coshxky, h, k, l, hlast, klast, nsites);
       sqcoskrn = sum(nsitesxf, qcoskr, 1);
       sqsinkrn = sum(nsitesxf, qsinkr, 1);
       sqcoskrf = sum(nsites-nsitesxf, qcoskr+nsitesxf, 1);
