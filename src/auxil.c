@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	aux.c,v $
+ * Revision 2.4  94/01/18  13:23:04  keith
+ * Incorporated all portability experience to multiple platforms since 2.2.
+ * Including ports to VAX/VMS and Open VMS on Alpha AXP and Solaris.
+ * 
  * Revision 2.3  93/10/28  10:27:38  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -190,7 +194,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/aux.c,v 2.3 93/10/28 10:27:38 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/aux.c,v 2.5 94/01/18 13:32:11 keith Stab $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -895,7 +899,7 @@ char *strstr(cs, ct)
 char *cs, *ct;
 {
    char *end = cs+strlen(cs)-strlen(ct);
-   for(; cs < end; cs++)
+   for(; cs <= end; cs++)
       if( !strcmp(cs,ct) )
 	 return cs;
    return 0;      
