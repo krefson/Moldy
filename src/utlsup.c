@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/utlsup.c,v 1.18 2004/12/07 13:00:01 cf Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -300,6 +300,41 @@ forstr(char *instr, int *start, int *finish, int *inc)
    return -1;
 }
 /******************************************************************************
+ *  get_line  read an input line with or without skipping blank/comment lines *
+ ******************************************************************************/
+char    *get_line(char *line, int len, FILE *file, int skip)
+{
+   char *s;
+   int  i;
+
+   if( skip )
+   {
+      do
+      {
+         s = fgets(line, len, file);               /* Read one line of input     */
+         if(s == NULL) break;                      /* exit if end of file        */
+         i = strlen(s) - 1;
+         while(i >= 0 && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
+            s[i--] = '\0';                         /* Strip trailing white space */
+      }
+      while(*s == '\0' || *s == '#');              /* Repeat if blank or comment */
+   }
+   else
+   {
+      s = fgets(line, len, file);               /* Read one line of input     */
+      if(s != NULL)                             /* ignore if end of file        */
+      {
+         i = strlen(s) - 1;
+         while(i >= 0 && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
+            s[i--] = '\0';                         /* Strip trailing white space */
+      }
+   }
+
+   if(s == NULL)
+      *line = '\0';                             /* Return null at eof         */
+   return(line);
+}
+/******************************************************************************
  * dump_to_moldy.  Fill the 'system' arrays with the dump data in 'buf' (see  *
  * dump.c for format), expanding floats to doubles if necessary.              *
  ******************************************************************************/
@@ -336,6 +371,28 @@ dump_to_moldy(float *buf, system_mt *system)
    }
    invert(system->h, hinv);
    mat_vec_mul(hinv, system->c_of_m, system->c_of_m, system->nmols);
+}
+/******************************************************************************
+ *  dump_info. Extract no of slices and dump level from header info file.     *
+ ******************************************************************************/
+int dump_info(FILE *Fp, int *level)
+{
+   int      numslice=0, idata;
+   char     line[LLEN];
+
+   while( !feof(Fp) )
+   {
+     get_line(line,LLEN,Fp,1);
+
+     if( sscanf(line, "Dump level\t\t\t= %d", &idata) > 0)
+       *level = idata;
+     if( sscanf(line, "Number of dumps\t\t\t= %d", &idata) > 0)
+       numslice += idata;
+   }
+
+   numslice--;
+
+   return numslice;
 }
 /******************************************************************************
  * traj_con().  Connect molecular c_of_m`s into continuous trajectories      *
@@ -431,41 +488,6 @@ int	xi, yi, zi;
        return 1;   /* Molecule c_of_m lies within selected region */
     else
        return 0;   /* Molecule c_of_m isn't within selected region */ 
-}
-/******************************************************************************
- *  get_line  read an input line with or without skipping blank/comment lines *
- ******************************************************************************/
-char    *get_line(char *line, int len, FILE *file, int skip)
-{
-   char *s;
-   int  i;
-
-   if( skip )
-   {
-      do
-      {
-         s = fgets(line, len, file);               /* Read one line of input     */
-         if(s == NULL) break;                      /* exit if end of file        */
-         i = strlen(s) - 1;
-         while(i >= 0 && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
-            s[i--] = '\0';                         /* Strip trailing white space */
-      }
-      while(*s == '\0' || *s == '#');              /* Repeat if blank or comment */
-   }
-   else
-   {
-      s = fgets(line, len, file);               /* Read one line of input     */
-      if(s != NULL)                             /* ignore if end of file        */
-      {
-         i = strlen(s) - 1;
-         while(i >= 0 && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
-            s[i--] = '\0';                         /* Strip trailing white space */
-      }
-   }
-
-   if(s == NULL)
-      *line = '\0';                             /* Return null at eof         */
-   return(line);
 }
 /******************************************************************************
  *  open_dump(). Open a moldy dump file for read or write.                    *
