@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.34  2004/11/23 15:40:59  kr
+ *      Corrected minor compiler warnings.
+ *
  *      Revision 2.33  2004/11/22 18:21:10  kr
  *      Merget "util_updates" branch into main
  *
@@ -334,7 +337,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/startup.c,v 2.33 2004/11/22 18:21:10 kr Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/startup.c,v 2.34 2004/11/23 15:40:59 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -381,7 +384,7 @@ void		mat_vec_mul(real (*m)[3], vec_mp in_vec, vec_mp out_vec,
 double          det(mat_mt);
 double		trace_sqr(mat_mt);
 void		q_mul(quat_mp p, quat_mp q, quat_mp r, int n);
-void		rot_to_q(mat_mt rot, real *quat);
+void		rot_to_q(mat_mp rot, real *quat);
 char		*atime(void);
 double		mdrand(void);
 double		precision(void);
@@ -398,9 +401,25 @@ const   unit_mt	prog_unit = {MUNIT, LUNIT, TUNIT, QUNIT};
 	unit_mt	input_unit;		/* Unit specification (see Convert.c) */
 static	char		backup_lockname[L_name];
 static	char		dump_lockname[L_name];
+#define LTR(i,j) (((i)*(i)+(i))/2+(j))
 #ifdef	DEBUG
-static	char	afmt[] = "    %8s = %8X %8s = %8X %8s = %8X %8s = %8X\
- %8s = %8X %8s = %8X\n";
+static	char	afmt[] = "    %8s = %8X %8s = %8X\n";
+void print_mat(mat_mp m, char*str)
+{
+  int i;
+  printf("%s\n",str);
+  for (i=0; i<3; i++)
+    printf("%20.15f  %20.15f  %20.15f\n", m[i][0],m[i][1],m[i][2]);
+
+}
+void print_symm(real *s, char*str)
+{
+  printf("%s\n",str);
+
+  printf("%20.15f  %20.15f  %20.15f\n", s[0],s[1],s[3]);
+  printf("%20.15f  %20.15f  %20.15f\n", s[1],s[2],s[4]);
+  printf("%20.15f  %20.15f  %20.15f\n", s[3],s[4],s[5]);
+}
 #endif
 /*
  *  Default backup and temporary file names if not set in "defs.h"
@@ -725,7 +744,6 @@ void	thermalise(system_mp system, spec_mt *species)
  *  tensor is diagonalised and the site co-ordinates rotated to the principal *
  *  frame.								      *
  ******************************************************************************/
-#define LTR(i,j) (((i)*(i)+(i))/2+(j))
 void	initialise_sysdef(system_mp system, spec_mt *species, 
 			  site_mt *site_info, quat_mt (*qpf))
 {
@@ -797,9 +815,13 @@ void	initialise_sysdef(system_mp system, spec_mt *species,
 #ifdef	DEBUG
          printf(" *D* Molecule type %d, mass = %g, C of M = (%g,%g,%g)\n",
                 spec-species, spec->mass, c_of_m[0], c_of_m[1], c_of_m[2]);
-         print_mat(inertia, " *D* Inertia Tensor");
+         print_symm(inertia, " *D* Inertia Tensor");
 #endif
 	 eigens(inertia, v[0], spec->inertia, 3);
+#ifdef	DEBUG
+         print_symm(inertia, " *D* Diagonalized Inertia Tensor");
+         print_mat(v, " *D* Rotation matrix");
+#endif
 	 eigensort(v[0], spec->inertia, 3, mult);
 	 imax = spec->inertia[0];
 	 nz = 0;
@@ -816,10 +838,12 @@ void	initialise_sysdef(system_mp system, spec_mt *species,
            zero_real(v[0],9);
            v[0][0] = 1.0; v[1][1] = 1.0; v[2][2] = 1.0;
          }
-	 rot_to_q(v, qpf[spec-species]);	/* make equivalent quaternion*/
 #ifdef	DEBUG
-         print_mat(v," *D* Rotation Mat.");
+	 printf(" *D* Moments of inertia after sort %8.3f  %8.3f  %8.3f\n",
+		spec->inertia[0],  spec->inertia[1],  spec->inertia[2]);
+         print_mat(v," *D* Rotation Matrix after sort");
 #endif
+	 rot_to_q(v, qpf[spec-species]);	/* make equivalent quaternion*/
 
          spec->rdof = 3-nz;			/* Rotational deg. of freedom*/
 	 if( spec->framework )			/* Frameworks can't rotate   */
