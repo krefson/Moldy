@@ -20,3 +20,4 @@ extern void mat_vec_mul ();
 extern void traj_con (); 
 extern void traj_con2 (); 
 extern int range_in (); 
+extern char *comm;
