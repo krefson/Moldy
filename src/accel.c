@@ -5,6 +5,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	accel.c,v $
+ * Revision 1.6  89/07/03  18:17:25  keith
+ * Made code to add dipole energy and force conditional, like Ewald.
+ * 
  * Revision 1.5  89/06/22  15:42:17  keith
  * Tidied up loops over species to use one pointer as countes
  * 
@@ -22,7 +25,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: accel.c,v 1.5 89/06/22 15:42:17 keith Exp $";
+static char *RCSid = "$Header: accel.c,v 1.6 89/07/03 18:17:25 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<math.h>
@@ -442,7 +445,7 @@ mat_t           stress;		       /* Virial part of stress	(out) */
 /*
  * Accumulate radial distribution functions
  */
-   if (control.rdf_interval > 0 && control.istep > control.begin_rdf &&
+   if (control.rdf_interval > 0 && control.istep >= control.begin_rdf &&
 	 control.istep % control.rdf_interval == 0)
       rdf_calc(site_base, sys, species);
 

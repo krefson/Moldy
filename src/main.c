@@ -7,6 +7,11 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	main.c,v $
+ * Revision 1.6  89/07/05  18:19:37  keith
+ * Code to support the portable text mode save configuration added.
+ * Calculation of when to output averages and rdf data fixed to print
+ * when (istep-start+1) % interval == 0. 
+ * 
  * Revision 1.5  89/06/01  21:24:38  keith
  * Control.out eliminated, use printf and freopen instead to direct output.
  * 
@@ -26,7 +31,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: main.c,v 1.7 89/07/04 18:46:55 keith Exp $";
+static char *RCSid = "$Header: main.c,v 1.6 89/07/05 18:19:37 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -158,7 +163,7 @@ char	*argv[];
             averages();
       }
 
-      if(control.rdf_interval > 0 && control.istep > control.begin_rdf && 
+      if(control.rdf_interval > 0 && control.istep >= control.begin_rdf && 
         (control.istep-control.begin_rdf+1) % control.rdf_out == 0)
          print_rdf(&system, site_info);
 
