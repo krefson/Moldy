@@ -22,6 +22,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.30  2002/09/19 09:26:29  kr
+ *       Tidied up header declarations.
+ *       Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *       Revision 2.29  2001/05/24 16:26:43  keith
  *       Updated program to store and use angular momenta, not velocities.
  *        - added conversion routines for old restart files and dump files.
@@ -120,7 +124,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/parallel.c,v 2.29 2001/05/24 16:26:43 keith Exp $";
+static char *RCSid = "$Header: /usr/users/moldydv/CVS/moldy/src/parallel.c,v 2.30 2002/09/19 09:26:29 kr Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -430,17 +434,27 @@ par_isum(int *buf, int n)
  ******************************************************************************/
 #ifdef TCGMSG
 void
+par_fsum(float *buf, int n)
+{
+   DGOP_(ADDR(MSGFLT), buf, &n, "+");
+}
 par_rsum(real *buf, int n)
 {
    DGOP_(ADDR(MSGDBL), buf, &n, "+");
 }
 void
-par_dsum(real *buf, int n)
+par_dsum(dsum *buf, int n)
 {
    DGOP_(ADDR(MSGDBL), buf, &n, "+");
 }
 #endif
 #ifdef BSP
+static void vfadd(float *res, float *x, float *y, int *nb)
+{
+   int i, n=*nb/sizeof(float);
+   for(i = 0; i < n; i++)
+      res[i] = x[i] + y[i];
+}
 static void vradd(real *res, real *x, real *y, int *nb)
 {
    int i, n=*nb/sizeof(real);
@@ -455,6 +469,11 @@ static void vdadd(double *res, double *x, double *y, int *nb)
 }
 
 void
+par_fsum(float *buf, int n)
+{
+   bsp_fold(vfadd, buf, buf, n*sizeof(float));
+}
+void
 par_rsum(real *buf, int n)
 {
    bsp_fold(vradd, buf, buf, n*sizeof(real));
@@ -462,7 +481,7 @@ par_rsum(real *buf, int n)
 void
 par_dsum(double *buf, int n)
 {
-   bsp_fold(vradd, buf, buf, n*sizeof(double));
+   bsp_fold(vdadd, buf, buf, n*sizeof(double));
 }
 #endif
 #ifdef BSP0
@@ -479,6 +498,26 @@ static void vdadd(double *res, double *x, double *y, int nb)
       res[i] = x[i] + y[i];
 }
 
+void
+par_fsum(float *buf, int n)
+{
+   int m;
+   
+   /*
+    * BSP only allows operations on statically allocated buffers. *sigh*
+    * Use loop to perform general operation copying in and out of a
+    * fixed-size, static buffer.
+    */
+   while( n > 0 )
+   {
+      m = MIN(n, NBUFMAX/sizeof(float));
+      memcp(tmpbuf, buf, m*sizeof(float));
+      bspreduce(vradd, tmpbuf, tmpbuf, m*sizeof(float));
+      memcp(buf, tmpbuf, m*sizeof(float));
+      buf += m;
+      n -= m;
+   }
+}
 void
 par_rsum(real *buf, int n)
 {
@@ -522,48 +561,38 @@ par_dsum(double *buf, int n)
 #endif
 #ifdef SHMEM
 void
+par_fsum(float *buf, int n)
+{
+   int m;
+   
+   /*
+    * Use loop to perform general operation copying in and out of a
+    * fixed-size, static buffer.
+    */
+   while( n > 0 )
+   {
+      m = MIN(n, NBUFMAX/sizeof(float));
+      memcp(tmpbuf, buf, m*sizeof(float));
+      shmem_float_sum_to_all((float*)tmpbuf, (float*)tmpbuf, m, 0, 0, 
+			      nthreads, (float*)pWrk[psi], pSync[psi]);
+      memcp(buf, tmpbuf, m*sizeof(float));
+      psi = ! psi;
+      buf += m;
+      n -= m;
+#ifdef SHMEM_BARRIER
+      shmem_barrier_all();
+#endif
+   }
+}
+void
 par_rsum(real *buf, int n)
 {
    int m;
    
    if( sizeof(real) == sizeof(float))
-   {
-      /*
-       * Use loop to perform general operation copying in and out of a
-       * fixed-size, static buffer.
-       */
-      while( n > 0 )
-      {
-         m = MIN(n, NBUFMAX/sizeof(real));
-         memcp(tmpbuf, buf, m*sizeof(real));
-         shmem_float_sum_to_all((float*)tmpbuf, (float*)tmpbuf, m,0,0, 
-				nthreads, (float*)pWrk[psi], pSync[psi]);
-         memcp(buf, tmpbuf, m*sizeof(real));
-	 psi = ! psi;
-         buf += m;
-         n -= m;
-#ifdef SHMEM_BARRIER
-	 shmem_barrier_all();
-#endif
-      }
-    }
-    else if ( sizeof(real) == sizeof(double))
-    {
-      while( n > 0 )
-      {
-         m = MIN(n, NBUFMAX/sizeof(real));
-         memcp(tmpbuf, buf, m*sizeof(real));
-         shmem_double_sum_to_all((double*)tmpbuf, (double*)tmpbuf, m,0,0, 
-				 nthreads, (double*)pWrk[psi], pSync[psi]);
-         memcp(buf, tmpbuf, m*sizeof(real));
-	 psi = ! psi;
-         buf += m;
-         n -= m;
-#ifdef SHMEM_BARRIER
-	 shmem_barrier_all();
-#endif
-      }
-    }      
+     par_fsum(buf, n);
+   else if ( sizeof(real) == sizeof(double))
+     par_dsum(buf, n);
 }
 void
 par_dsum(double *buf, int n)
@@ -601,6 +630,26 @@ par_dsum(double *buf, int n)
  * in case it isn't. The test on accel.c will trap if results differ,
  * in which case recompile with -DUNSYMM.
  */
+void
+par_fsum(float *buf, int n)
+{
+   static float *tmpbuf = 0;
+   static int  tmpsize = 0;
+   if(n > tmpsize)
+   {
+      if( tmpbuf )
+	 xfree(tmpbuf);
+      tmpbuf = aalloc(n, float);
+      tmpsize = n;
+   }
+#ifdef UNSYMM
+   MPI_Reduce(buf, tmpbuf, n, MPI_FLOAT, MPI_SUM, 0, MPI_COMM_WORLD);
+   MPI_Bcast(tmpbuf, n, MPI_FLOAT, 0, MPI_COMM_WORLD);
+#else
+   MPI_Allreduce(buf, tmpbuf, n, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+#endif
+   memcp(buf, tmpbuf, n*sizeof(float));
+}
 void
 par_rsum(real *buf, int n)
 {

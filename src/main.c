@@ -27,6 +27,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  * $Log: main.c,v $
+ * Revision 2.22  2002/09/19 09:26:28  kr
+ * Tidied up header declarations.
+ * Changed old includes of string,stdlib,stddef and time to <> form
+ *
  * Revision 2.21  2001/07/31 14:14:12  keith
  * Added check to make sure that the save file doesn't overwrite the
  * run's own input file.
@@ -207,7 +211,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/kr/CVS/moldy/src/main.c,v 2.21 2001/07/31 14:14:12 keith Exp $";
+static char *RCSid = "$Header: /usr/users/moldydv/CVS/moldy/src/main.c,v 2.22 2002/09/19 09:26:28 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -251,7 +255,7 @@ void	save_version_inc(char *save_file, int namesize);
 void    par_begin(int *argc, char ***argv, int *ithread, int *nthreads);
 void    par_sigintreset(void);
 void    par_finish(void);
-void    par_isum(int *buf, int n);
+void    par_fsum(float *buf, int n);
 void    par_imax(int *idat);
 void    par_broadcast(gptr *buf, int n, size_mt size, int ifrom);
 void    replicate(contr_mt *control, system_mt *system, spec_mt **spec_ptr, 
@@ -308,7 +312,7 @@ int main(int argc, char **argv)
    double	rt = rt_clock();
    vec_mt	(*meansq_f_t)[2];
    vec_mt	dip_mom;
-   int          *rdf_base;
+   float        *rdf_base;
    int          rdf_size;
 
 #ifdef SPMD
@@ -332,7 +336,7 @@ int main(int argc, char **argv)
 	     &restart_header);
    par_broadcast( &init_H_0, 1, sizeof(boolean), 0);
 #endif
-   rdf_base = (int*)rdf_ptr(&rdf_size);
+   rdf_base = (float*)rdf_ptr(&rdf_size);
 
    meansq_f_t = (vec_mt (*)[2])ralloc(2*system.nspecies);
    
@@ -371,7 +375,7 @@ int main(int argc, char **argv)
       control.istep++;
 
       if((control.istep-control.begin_rdf) % control.rdf_out == 0) 
-	 memst((gptr*)rdf_base, 0, rdf_size*sizeof(int));
+	 memst((gptr*)rdf_base, 0.0, rdf_size*sizeof(float));
 
       do_step(&system, species, site_info, potpar,
 	      meansq_f_t, pe, dip_mom, stress_vir, 
@@ -414,7 +418,7 @@ int main(int argc, char **argv)
 	 (control.istep-control.begin_rdf+1) % control.rdf_out == 0)
       {
 #if defined(SPMD) && ! defined OLDRDF
-	 par_isum(rdf_base, rdf_size);
+	 par_fsum(rdf_base, rdf_size);
 #endif
 	 if( ithread == 0 )
 	    print_rdf(&system, species, site_info);
@@ -424,7 +428,7 @@ int main(int argc, char **argv)
 	 control.istep % control.backup_interval == 0)
       {
 #if defined(SPMD) && ! defined OLDRDF
-	 par_isum(rdf_base, rdf_size);
+	 par_fsum(rdf_base, rdf_size);
 	 if( ithread != 0 )
 	    memst((gptr*)rdf_base, 0, rdf_size*sizeof(int));
 #endif
@@ -458,7 +462,7 @@ int main(int argc, char **argv)
    }					/* End of main MD timestep loop	      */
    
 #if defined(SPMD) && ! defined OLDRDF
-   par_isum(rdf_base, rdf_size);
+   par_fsum(rdf_base, rdf_size);
 #endif
    if( ithread == 0 )
    {
