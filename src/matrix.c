@@ -11,12 +11,15 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	matrix.c,v $
+ * Revision 1.2  89/10/24  17:16:21  keith
+ * Modified transpose() so as not to vectorise under '-va' option on convex.
+ * 
  * Revision 1.1  89/04/20  16:00:50  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/matrix.c,v 1.1 89/04/20 16:00:50 keith Stab $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/matrix.c,v 1.2 89/10/24 17:16:21 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -45,6 +48,7 @@ vec_p		in_vec,		/* Input vector, [number][3]          (in/out)*/
     * and trying to re-use the 'old' values.
     */
    if(in_vec == out_vec)	/* ie parameters point to the same array      */
+VECTORIZE
       for(i = 0; i < number; i++)
       {
          a0 = in_vec[i][0];  a1 = in_vec[i][1];  a2 = in_vec[i][2];
@@ -54,6 +58,7 @@ vec_p		in_vec,		/* Input vector, [number][3]          (in/out)*/
          in_vec[i][2] = m[2][0]*a0 + m[2][1]*a1 + m[2][2]*a2;
       }
    else if(ABS(in_vec-out_vec) >= number) /* parameters are distinct arrays  */
+VECTORIZE
       for(i = 0; i < number; i++)
       {
          a0 = in_vec[i][0];  a1 = in_vec[i][1];  a2 = in_vec[i][2];
