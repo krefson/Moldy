@@ -17,6 +17,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	algorith.c,v $
+ * Revision 1.1.1.8  90/10/22  16:41:43  keith
+ * Make vec_dist() robust in case of all-zero vectors.
+ * 
  * Revision 1.1.1.7  90/09/28  13:28:09  keith
  * Inserted braces around VECTORIZE directives and changed include files
  * for STARDtardent 3000 series (via cond. comp symbol "ardent").
@@ -45,7 +48,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 1.1.1.7 90/09/28 13:28:09 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 1.1.1.8 90/10/22 16:41:43 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include 	<math.h>
@@ -54,7 +57,8 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/algorith.c,v 1.1.
 #include 	"defs.h"
 #include 	"messages.h"
 /*========================== External function declarations ==================*/
-void	tfree();
+char            *talloc();	       /* Interface to memory allocator       */
+void            tfree();	       /* Free allocated memory	      	      */
 void	mat_vec_mul();			/* 3 x 3 Matrix by Vector multiplier  */
 void	mat_mul();	          	/* 3 x 3 matrix multiplier	      */
 void	mat_add();			/* Add 2 3x3 matrices                 */
