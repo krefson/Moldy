@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/molout.c,v 1.4.4.1 2000/12/07 15:51:21 keith Exp $";
+static char *RCSid = "$Header: /earth/users/jfcc/fisher/moldy-2.16/source/RCS/molout.c,v 1.5 2000/06/15 07:51:54 fisher Exp $";
 #endif
 
 #include "defs.h"
@@ -36,6 +36,7 @@ extern contr_mt		control;
 #define DCD 3
 #define PDB 4
 #define CSSR 5
+#define ARC 6
 /******************************************************************************
  ******************************************************************************/
 void 
@@ -140,7 +141,7 @@ char		*insert;
    for(spec = species; spec < species+system->nspecies; spec++)
    {
       make_sites(system->h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 site, spec->nmols, spec->nsites, MOLPBC);
+                 site, spec->nmols, spec->nsites, MOLPBC);
 
       mat_vec_mul3(hinv, site, spec->nsites*spec->nmols);
 
@@ -162,7 +163,8 @@ char		*insert;
    if( insert != NULL)
       (void)printf("%s\n", insert);
 
-   (void)printf("END %d\n", n);
+   (void)printf("END %d\n",n);
+
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
    afree((gptr*) site);
@@ -218,7 +220,7 @@ int		intyp;
    for(spec = species; spec < species+system->nspecies; ispec++, spec++)
    {
      make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		site, spec->nmols, spec->nsites, MOLPBC);
+                site, spec->nmols, spec->nsites, MOLPBC);
 
      isite = 0;
      for(imol = 0; imol < spec->nmols; imol++)
@@ -228,10 +230,17 @@ int		intyp;
          atom_name = site_info[spec->site_id[is]].name;
 	 atom_charge = site_info[spec->site_id[is]].charge*qconv;
          if(fabs(site_info[spec->site_id[is]].mass) != 0)
+         {
             (void)printf("HETATM%5d %2s%-2d NON A   1     %7.3f %7.3f %7.3f\
- %5.2f %5.2f          %2s%1.0f%c\n",
+ %5.2f %5.2f          %2s",
 			 itot, atom_name, ispec, site[0][isite], site[1][isite], site[2][isite],
-			 1.0,0.0, atom_name, fabs(atom_charge),atom_charge<0?'-':'+');
+			 1.0,0.0, atom_name);
+
+            if( atom_charge != 0.0 )
+               (void)printf("%1.0f%c\n", fabs(atom_charge),atom_charge<0?'-':'+');
+            else
+               (void)printf("\n");
+         }
          isite++;
          itot++;
        }
@@ -246,7 +255,7 @@ int		intyp;
       error("Error writing output - \n%s\n", strerror(errno));
 }
 /******************************************************************************
- * xyz_out().  Write a system configuration to stdout in the form of an    *
+ * xyz_out().  Write a system configuration to stdout in the form of an       *
  * input data file for the graphics program XYZ (rasmol -xyz file)	      *
  ******************************************************************************/
 static void
@@ -283,7 +292,7 @@ char		*insert;
    for(spec = species; spec < species+system->nspecies; spec++)
    {
       make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 site, spec->nmols, spec->nsites, MOLPBC);
+                 site, spec->nmols, spec->nsites, MOLPBC);
 
       isite = 0;
       for(imol = 0; imol < spec->nmols; imol++)
@@ -306,10 +315,10 @@ char		*insert;
       error("Error writing output - \n%s\n", strerror(errno));
    afree((gptr*) site);
 }
-/******************************************************************************
- * dcd_out().  Write a system configuration to stdout in the form of an    *
- * DCD data file for the graphics program VMD                              *
- ******************************************************************************/
+/****************************************************************************
+ * dcd_out().  Write a system configuration to stdout in the form of a      *
+ * DCD data file for the graphics program VMD                               *
+ ****************************************************************************/
 static void
 dcd_out(system, h, species, site_info, n, irec, inc)
 int	n, irec, inc;
@@ -329,7 +338,7 @@ site_mt		site_info[];
    for(spec = species; spec < species+system->nspecies; spec++)
    {
       make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 site, spec->nmols, spec->nsites, MOLPBC);
+                 site, spec->nmols, spec->nsites, MOLPBC);
 
       isite = 0;
       for(imol = 0; imol < spec->nmols; imol++)
@@ -379,7 +388,7 @@ spec_mt		species[];
    for(spec = species; spec < species+system->nspecies; spec++)
    {
       make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 site, spec->nmols, spec->nsites, MOLPBC);
+                 site, spec->nmols, spec->nsites, MOLPBC);
 
       mat_vec_mul3(hinv, site, spec->nsites*spec->nmols);
 
@@ -445,7 +454,7 @@ int		intyp;
                 isite++;
 
 /* Write the cssr header */
-   (void)printf("%37c %7.3f %7.3f %7.3f\n",' ',a,b,c);
+   (void)printf("%38c %7.3f %7.3f %7.3f\n",' ',a,b,c);
    (void)printf("%21c %7.3f %7.3f %7.3f    SPGR =  1 P 1\n",' ',alpha,beta,gamma);
    (void)printf("%4d   0 %60s\n", isite, control.title);
 
@@ -457,7 +466,7 @@ int		intyp;
    for(spec = species; spec < species+system->nspecies; ispec++, spec++)
    {
      make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		site, spec->nmols, spec->nsites, MOLPBC);
+                site, spec->nmols, spec->nsites, MOLPBC);
 
      mat_vec_mul3(hinv, site, spec->nsites*spec->nmols);
 
@@ -486,7 +495,89 @@ int		intyp;
       error("Error writing output - \n%s\n", strerror(errno));
 }
 /******************************************************************************
- * moldy_out.  Select output routine and handle file open/close		      *
+ * arc_out().  Write multiple system configurations to stdout in the form of  *
+ * an Insight II ARC data file.                                               *
+ ******************************************************************************/
+static void
+arc_out(system, h, species, site_info, intyp, n)
+system_mt       *system;
+mat_mp          h;
+spec_mt         species[];
+site_mt         site_info[];
+int             n, intyp;
+{
+   double       **site = (double**)arralloc(sizeof(double),2,
+                                            0,2,0,system->nsites-1);
+   spec_mt      *spec;
+   double       a,b,c, alpha, beta, gamma;
+   double       qconv;  /* Variable for converting charge from program units */
+   char         atom_name[5], name_charge[7], *elem_sym;
+   double       atom_charge;
+   int          imol, isite, divd;
+   int          i, is, ispec=1;
+
+   a = sqrt(SQR(h[0][0]) + SQR(h[1][0]) + SQR(h[2][0]));
+   b = sqrt(SQR(h[0][1]) + SQR(h[1][1]) + SQR(h[2][1]));
+   c = sqrt(SQR(h[0][2]) + SQR(h[1][2]) + SQR(h[2][2]));
+   alpha = 180/PI*acos((h[0][1]*h[0][2]+h[1][1]*h[1][2]+h[2][1]*h[2][2])/b/c);
+   beta  = 180/PI*acos((h[0][0]*h[0][2]+h[1][0]*h[1][2]+h[2][0]*h[2][2])/a/c);
+   gamma = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/a/b);
+
+   if( intyp == 'r' )
+      qconv = CONV_Q;
+   else
+      qconv = 1.0;
+
+/* First we write the ARC header */
+   if( n == 0)
+      (void)printf("!BIOSYM archive 3\nPBC=ON\n");
+
+   (void)printf("Frame %d\n",n);
+   (void)printf("!DATE %10s\n", atime());
+
+/* Next we write the cell size parameters and space group (P 1 by default) */
+   (void)printf("PBC%10.4f%10.4f%10.4f%10.4f%10.4f%10.4f (P1)\n",
+          a,b,c,alpha,beta,gamma);
+
+   for(spec = species; spec < species+system->nspecies; spec++)
+   {
+     make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
+           site, spec->nmols, spec->nsites);
+
+     isite = 0;
+     for(imol = 0; imol < spec->nmols; imol++)
+     {
+         for(is = 0; is < spec->nsites; is++)
+         {
+            elem_sym = site_info[spec->site_id[is]].name;
+            atom_charge = site_info[spec->site_id[is]].charge*qconv;
+            divd = pow(10, 5-strlen(elem_sym));
+            if( divd > 1)
+            {
+               sprintf(atom_name,"%s%d",elem_sym,(imol+1)%divd);
+               sprintf(name_charge,"%s%-5.0f",elem_sym,fabs(atom_charge));
+            }
+            else
+            {
+               strncpy(atom_name, site_info[spec->site_id[is]].name, 5);
+               strncpy(name_charge, site_info[spec->site_id[is]].name, 5);
+            }
+            if(fabs(site_info[spec->site_id[is]].mass) != 0)
+               (void)printf("%-5s %14.9f %14.9f %14.9f XXX  %-2d     %-7s %-2s %6.3f\n",
+                    atom_name, site[0][isite], site[1][isite], site[2][isite],
+                    ispec, name_charge, elem_sym, atom_charge);
+            isite++;
+         }
+     }
+   }
+   (void)printf("end\nend\n");
+
+   if( ferror(stdout) )
+      error("Error writing output - \n%s\n", strerror(errno));
+   afree((gptr*) site);
+}
+/******************************************************************************
+ * moldy_out.  Select output routine and handle file open/close.	      *
  * Translate system relative to either centre of mass of posn of framework.   *
  ******************************************************************************/
 void
@@ -531,6 +622,9 @@ char		*insert;
       break;
     case XYZ:
       xyz_out(system, h, species, site_info, insert);
+      break;
+    case ARC:
+      arc_out(system, h, species, site_info, intyp, n);
       break;
     case OUTBIN:
       atoms_out(system, h, species);
