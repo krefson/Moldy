@@ -28,8 +28,13 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdbond.c,v $
- *  Revision 1.6  1999/11/12 12:24:04  keith
- *  Bug fixes by Craig Fisher
+ *  Revision 1.8  1999/12/08 15:52:36  craig
+ *  Reduced blim and alim arrays to two elements each , viz. min and max.
+ *  Replaced unnecessary blim[2] / alim[2] elements with dummy variable in call to forstr.
+ *  Fixed remaining bug in assignment of default values to sp_range[].
+ *
+ *  Revision 1.7  1999/12/07 13:24:29  keith
+ *  Fixed a couple of bugs re validity and setup of species range sp_range[]
  *
  *  Revision 1.6  1999/11/12 11:05:41  craig
  *  Tidied up usage of NULL pointers which was causing crashes on some machines.
@@ -75,7 +80,7 @@ what you give them.   Help stamp out software-hoarding! */
  */
 
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 1.6 1999/11/12 12:24:04 keith Exp keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 1.8 1999/12/07 13:24:29 keith Exp $";
 #endif
 #include "defs.h"
 #ifdef HAVE_STDARG_H
@@ -533,7 +538,7 @@ char	*argv[];
    int          av_convert;
 
    int		sp_range[3];              /* Range and increment for species selection */
-   int          blim[3], alim[3];         /* Min and max values for bonds and angles */
+   int          blim[2], alim[2];         /* Min and max values for bonds and angles */
    ROOT         *root_bond = NULL;        /* Root of bond linked list */
    ROOT         *root_angle = NULL;       /* Root of angle linked list */
 
@@ -668,7 +673,7 @@ char	*argv[];
       if( !sflag )
       {
          sp_range[0] = 0;
-         sp_range[1] = sys.nspecies;
+         sp_range[1] = sys.nspecies-1;
          sp_range[2] = 1;
          (void)free(speclims);
          speclims = NULL;
@@ -687,7 +692,7 @@ char	*argv[];
    /* Input and check bond length limits where necessary */
    while( !bflag)
    {
-      if( forstr(bondlims, &(blim[0]), &(blim[1]), &(blim[2])) )
+      if( forstr(bondlims, &(blim[0]), &(blim[1]), &inc) )
       {
          fputs("Invalid range for bond lengths \"", stderr);
          fputs(bondlims, stderr);
@@ -730,7 +735,7 @@ char	*argv[];
    /* Input and check angle limits where necessary */
    while (!aflag)
    {
-      if( forstr(anglims, &(alim[0]), &(alim[1]), &(alim[2])) )
+      if( forstr(anglims, &(alim[0]), &(alim[1]), &inc) )
       {
          fputs("Invalid range for angles \"", stderr);
          fputs(anglims, stderr);
