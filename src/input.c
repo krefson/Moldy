@@ -9,6 +9,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	input.c,v $
+ * Revision 1.7  89/07/07  10:49:56  keith
+ * Fixed lattice_start() so as not to test quaternion normalisation for
+ * monatomic sopecies.
+ * 
  * Revision 1.6  89/06/26  13:55:34  keith
  * Tidied up loops over species to use one pointer as counter.
  * Incorrect code to print control params removed from read_control()
@@ -33,7 +37,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: input.c,v 1.6 89/06/26 13:55:34 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/input.c,v 1.8 89/08/30 12:34:42 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<ctype.h>
@@ -183,7 +187,8 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
    int		flag;			/* Used to test 'fseek' result        */
    long		start_pos = ftell(file);/* Rewind marker for second pass      */
    char		name[LLEN],		/* Species name temporary             */
-   		line[LLEN];		/* Store for input line from file     */
+   		line[LLEN],		/* Store for input line from file     */
+   		pline[LLEN];		/* Used in pot'l paramater parsing    */
    double	mass, charge, p_tmp;	/* Local temporaries		      */
    double	p_f_sites[3];		/* Local temporary		      */
    pot_p	pp1;			/* Used for acces to potpar ij and ji */
@@ -223,7 +228,7 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
       message(NULLI, NULLP, FATAL, SEFAIL, "control file");
    nsites = &nsites_base;
    /* Pass 2.  read system definition and set up species and site_info arrays */
-   for (spec = species; spec < &species[system->nspecies]; spec++)
+   for (spec = species; spec < species+system->nspecies; spec++)
    {						/* Loop over all species.     */
       n_items = sscanf(get_line(line,LLEN,file),"%s %d", name, &spec->nmols);
       name[sizeof spec->name-1] = '\0';		/* Truncate before copying    */
@@ -324,12 +329,12 @@ pot_p		*pot_ptr;		/* To be pointed at potpar array      */
                     && strcmp(strlower(name), "end") != 0)
    {
       n_items = 0;
-      if(sscanf(line,"%d %d %[^#]",&idi,&idj,line) <= 2) /* Not enough values */
+      if(sscanf(line,"%d %d %[^#]",&idi,&idj,pline) <= 2)/* Not enough values */
          message(&nerrs,line,ERROR,NOPAIR);
       else
       {						/* Parse potential parameters */
-	 (void)strcat(line, "$");		/* Add marker to end	      */
-         while( n_items < NPOTP && sscanf(line,"%lf %[^#]", &p_tmp, line) > 1 )
+	 (void)strcat(pline, "$");		/* Add marker to end	      */
+         while(n_items < NPOTP && sscanf(pline,"%lf %[^#]", &p_tmp, pline) > 1 )
 	    pot.p[n_items++] = p_tmp;
       }
       if (n_items < n_potpar)
@@ -379,7 +384,7 @@ void	lattice_start(file, system, species, qpf)
 FILE	*file; 				/* File to read info from	      */
 system_p system;			/* System info struct		      */
 spec_p	species;			/* Array of species info structs      */
-quat_t	qpf;				/* Princ frame rotation quaternion    */
+quat_t	qpf[];				/* Princ frame rotation quaternion    */
 {
    typedef struct init_s {int species;  struct init_s *next;
                   double r[3], q[4];} init_t; 	/* For linked list of coords  */
@@ -422,10 +427,10 @@ quat_t	qpf;				/* Princ frame rotation quaternion    */
 		       &cur->q[0], &cur->q[1], &cur->q[2], &cur->q[3]);
       if(n_items > 1)				/* Have name of molecule      */
       {
-	 for (spec = species; spec < &species[system->nspecies]; spec++)
+	 for (spec = species; spec < species+system->nspecies; spec++)
 	    if(strcmp(strlower(name),strlower(spec->name)) == 0)
 	       break;
-	 if(spec >= &species[system->nspecies])	/* Didn't find it	      */
+	 if(spec >= species+system->nspecies)	/* Didn't find it	      */
 	    message(&nerrs,NULLP,ERROR,UNKSPE,name);
 	 else					/* Found it - check values    */
 	 {
@@ -450,7 +455,7 @@ quat_t	qpf;				/* Princ frame rotation quaternion    */
 	 }
       }
    }
-   for (spec = species; spec < &species[system->nspecies]; spec++)
+   for (spec = species; spec < species+system->nspecies; spec++)
    {
       ispec = spec-species;
       if(nmols[ispec] != spec->nmols)
@@ -477,7 +482,7 @@ quat_t	qpf;				/* Princ frame rotation quaternion    */
 	       {
 		  for( i = 0; i < 4; i++ )
 		     q[i] = cur->q[i];		/* Convert type to 'real'     */
-		  q_mul_1(q, qpf, spec->quat[imol]);
+		  q_mul_1(q, qpf[cur->species], spec->quat[imol]);
 	       }
 	       nmols[cur->species]++;
 	    }
