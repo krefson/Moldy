@@ -17,6 +17,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	startup.c,v $
+ * Revision 1.4  89/06/23  15:35:10  keith
+ * print-control option deleted.
+ * 
  * Revision 1.3  89/06/22  15:45:19  keith
  * Tidied up loops over species to use one pointer as counter.
  * 
@@ -29,7 +32,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: startup.c,v 1.3 89/06/22 15:45:19 keith Exp $";
+static char *RCSid = "$Header: startup.c,v 1.5 89/07/05 18:41:16 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -548,7 +551,6 @@ pot_p		*potpar;		/* Pointer to pot'l parameter array   */
    double	old_step;		/* Timestep read from restart file    */
    int		old_dump_interval;	/* To check if altered on restart     */
    int		old_max_dumps;		/* To check if altered on restart     */
-   int		old_begin_dump;		/* To check if altered on restart     */
    boolean	flag;			/* Used to test 'fseek'		      */
    long		pos;			/* Where control info starts on input */
    restrt_t	backup_header;		/* To read backup file header into    */
@@ -665,7 +667,6 @@ pot_p		*potpar;		/* Pointer to pot'l parameter array   */
       old_step = control.step;				/* Needed for scaling */
       old_dump_interval	     = control.dump_interval;	/* Check if these par */
       old_max_dumps	     = control.maxdumps;	/* -amaters altered.  */
-      old_begin_dump	     = control.begin_dump;
       conv_control(&prog_unit, false);
       control.scale_end     -= control.istep;		/* These parameters   */
       control.begin_average -= control.istep;		/* are respecified    */
@@ -687,8 +688,6 @@ pot_p		*potpar;		/* Pointer to pot'l parameter array   */
       if( control.maxdumps != old_max_dumps ||		/* Need to restart    */
 	  control.dump_interval != old_dump_interval )	/* dump seq if changed*/
       {
-	 control.dump_offset = (control.istep - old_begin_dump) /
-	 		       (old_dump_interval * old_max_dumps) + 1;
          control.begin_dump = control.istep + 1;	/* Set new beginning  */
       }
 
