@@ -27,15 +27,10 @@ what you give them.   Help stamp out software-hoarding!  */
 #ifdef USE_XDR
 #   include	"xdr.h"
 #endif
+#include        "utlsup.h"
 
 int		getopt();
 
-static char * mystrdup(s)
-char *s;
-{
-   char * t=malloc(strlen(s)+1);
-   return t?strcpy(t,s):0;
-}
 /******************************************************************************
  * strstr replacement for pre-ANSI machines which don't have it.              *
  ******************************************************************************/
@@ -78,36 +73,6 @@ typedef struct cpt_mt
 } cpt_mt;
 
 /******************************************************************************
- * get_int().  Read an integer from stdin, issuing a prompt and checking      *
- * validity and range.  Loop until satisfied, returning EOF if appropriate.   *
- ******************************************************************************/
-int get_int(prompt, lo, hi)
-char    *prompt;
-int     lo, hi;
-{
-   char         ans_str[80];
-   int          ans_i, ans_flag;
-
-   ans_flag = 0;
-   while( ! feof(stdin) && ! ans_flag )
-   {
-      fputs(prompt, stderr);
-      fflush(stderr);
-      fgets(ans_str, sizeof ans_str, stdin);
-      if( sscanf(ans_str, "%d", &ans_i) == 1 && ans_i >= lo && ans_i <= hi)
-         ans_flag++;
-   }
-   if( feof(stdin) )
-   {
-      fprintf(stderr,"\nExit requested\n");
-      exit(3);
-   }
-   if( ans_flag )
-      return(ans_i);
-   else
-      return(EOF);
-}
-/******************************************************************************
  * List manipulation procedures						      *
  ******************************************************************************/
 void
@@ -131,46 +96,6 @@ list_mt	*head;
    print_list(head->next);
 }
 
-/******************************************************************************
- * forstr.  Parse string str of format s-f:n  (final 2 parts optional),       *
- *          returning integer values of s,f,n. f defaults to s and n to 1     *
- ******************************************************************************/
-int
-forstr(str, start, finish, inc)
-char	*str;
-int	*start, *finish, *inc;
-{
-   char	*p, *pp;
-   
-   if( (p = strchr(str,':')) != NULL)
-   {
-      *inc = strtol(p+1, &pp, 0);
-      if( pp == p+1 )
-	 goto limerr;
-      *p = 0;
-   }
-   else
-      *inc = 1;
-   if( (p = strchr(str,'-')) != NULL)
-   {
-      *p = 0;
-      *start = strtol(str, &pp, 0);
-      if( pp == str )
-	 goto limerr;
-      *finish = strtol(p+1, &pp, 0);
-      if( pp == p+1 )
-	 goto limerr;
-   }
-   else
-   {
-      *start = *finish = strtol(str, &pp, 0);
-      if( pp == str )
-	 goto limerr;
-   }
-   return 0;
- limerr:
-   return -1;
-}
 /******************************************************************************
  * Put.  Write data in text or binary form.				      *
  ******************************************************************************/
@@ -389,6 +314,11 @@ char	*argv[];
 	    errflg++;
 	 else
 	 {
+	    if( inc != 1 )
+	    {
+	       fprintf(stderr,"\":%d\" modifier not allowed for molecule ranges\n",inc);
+	       errflg++;
+	    }
 	    cur = (list_mt *)calloc(1, sizeof(list_mt));
 	    cur->i = start;  cur->num=finish-start+1;
 	    insert(cur, &mol_head);
@@ -427,7 +357,18 @@ char	*argv[];
 	 fprintf(stderr,"\t%-32s %d\n",cpt[icpt].name,icpt+1);
       xcpt=get_int("Quantity index (0-13)? ",0,NCPT);
    }
-
+   /*
+    * Check molecule selections are in range.
+    */
+   for(cur=mol_head.next; cur; cur = cur->next)
+   {
+      if( cur->i < 0 || cur->i+cur->num > nmols)
+      {
+	 fprintf(stderr, "Error in molecule selection: \"%d-%d\" out of range.\n",
+		cur->i, cur->i+cur->num-1);
+	 exit(2);
+      }
+   }
    /*
     *  Molecule mask
     */
