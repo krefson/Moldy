@@ -35,6 +35,9 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.8 
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 1.8  1997/10/13  11:16:10  craig
+ *  Removed unused variable declarations
+ *
  *  Revision 1.8  1997/10/09  11:21:40  craig
  *  Option for renaming program "mdtraj" added for default trajectory calculation
  *  Option 'c' added to parameter list to skip control information
@@ -159,7 +162,7 @@ va_dcl
    sev   = va_arg(ap, int);
    format= va_arg(ap, char *);
 
-   (void)fprintf(stderr, "msd: ");
+   (void)fprintf(stderr, "%s: ", comm);
    (void)vfprintf(stderr, format, ap);
    va_end(ap);
    fputc('\n',stderr);
@@ -321,7 +324,7 @@ char	*instr;
 int	*start, *finish, *inc;
 {
    char	*p, *pp, *str = mystrdup(instr);
-   long strtol();
+   /* long strtol(); */
    
    if( (p = strchr(str,':')) != NULL)
    {
@@ -467,8 +470,7 @@ vec_mt          *vec;           /* Output vector.  CAN BE SAME AS INPUT  (out)*/
  * traj_con().  Connect molecular c_of_m`s into continuous trajectories       * 
  ******************************************************************************/
 void
-traj_con(system, species, prev_cofm, traj_cofm, sp_range)
-system_mt	*system;
+traj_con(species, prev_cofm, traj_cofm, sp_range)
 spec_mt		species[];
 vec_mt		*prev_cofm;
 vec_mt		*traj_cofm;
@@ -493,8 +495,7 @@ int		sp_range[3];
  *		- coords vs time for each species/atom for GNUplot            * 
  ******************************************************************************/
 void
-traj_gnu(system, species, traj_cofm, nslices, range, sp_range)
-system_mt       *system;
+traj_gnu(species, traj_cofm, nslices, range, sp_range)
 spec_mt         species[];
 vec_mt          **traj_cofm;
 real            range[3][2];
@@ -528,8 +529,7 @@ int             nslices, sp_range[3];
  *		- simple columnar format e.g. for IDL		              * 
  ******************************************************************************/
 void
-traj_idl(system, species, traj_cofm, nslices, range, sp_range)
-system_mt	*system;
+traj_idl(species, traj_cofm, nslices, range, sp_range)
 spec_mt		species[];
 vec_mt		**traj_cofm;
 real		range[3][2];
@@ -661,10 +661,9 @@ char	*argv[];
    int		nslices;
    int		sp_range[3];
    int		dflag, iflag, sflag, mflag;
-   int		irec, it_inc=1;
+   int		irec, it_inc = 1;
    char		*filename = NULL, *dump_name = NULL;
-   char		*dumplims = NULL, *atom_sel = NULL;
-   char		*insert = NULL, *speclims = NULL;
+   char		*dumplims = NULL, *speclims = NULL;
    char		*msdlims = NULL;
    char		*tempname;
    char		dumpcommand[256];
@@ -673,19 +672,18 @@ char	*argv[];
    FILE		*Fp, *Dp;
    restrt_mt	restart_header;
    system_mt	sys;
-   spec_mt	*species, *spec;
+   spec_mt	*species;
    vec_mt 	**traj_cofm;
    mat_mt	*hmat;
    real		range[3][2];
-   int		range_flag[3]={0,0,0};
+   int		range_flag[3] = {0,0,0};
    site_mt	*site_info;
    pot_mt	*potpar;
    quat_mt	*qpf;
    contr_mt	control_junk;
    int          nmsd, max_av;
    real         ***msd;
-   int		imsd, it;
-   int		totmol, i, ispec, imol;
+   int		it;
 
 #define MAXTRY 100
    control.page_length=1000000;
@@ -976,10 +974,10 @@ char	*argv[];
         if( irec == 0)
 	{
           range_in(&sys, range, range_flag);
-          traj_con(&sys, species, 0, traj_cofm[irec/inc], sp_range);
+          traj_con(species, 0, traj_cofm[irec/inc], sp_range);
 	}
 	else
-          traj_con(&sys, species, traj_cofm[irec/inc-1], traj_cofm[irec/inc], sp_range);
+          traj_con(species, traj_cofm[irec/inc-1], traj_cofm[irec/inc], sp_range);
 
 #ifdef DEBUG
         fprintf(stderr,"Sucessfully read dump record %d from file  \"%s\"\n",
@@ -1020,11 +1018,11 @@ char	*argv[];
      switch(trajsw)
      {
        case IDL:
-          traj_idl(&sys, species, traj_cofm, nslices, range, sp_range);
+          traj_idl(species, traj_cofm, nslices, range, sp_range);
           break;
        case GNUP:
        default:
-	  traj_gnu(&sys, species, traj_cofm, nslices, range, sp_range);
+	  traj_gnu(species, traj_cofm, nslices, range, sp_range);
      }
    return 0;    
 }
