@@ -1,0 +1,50 @@
+\begin{picture}(0,0)%
+\includegraphics{fig_startup-a}%
+\end{picture}%
+\setlength{\unitlength}{0.00057700in}%
+%
+\begingroup\makeatletter\ifx\SetFigFont\undefined%
+\gdef\SetFigFont#1#2#3#4#5{%
+  \reset@font\fontsize{#1}{#2pt}%
+  \fontfamily{#3}\fontseries{#4}\fontshape{#5}%
+  \selectfont}%
+\fi\endgroup%
+\begin{picture}(6096,10374)(438,-9748)
+\put(1351,-4046){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}restart?}}}
+\put(2246,-3886){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}
+\put(1131,-4686){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}
+\put(1351,-5346){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}exist?}}}
+\put(2246,-4991){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}
+\put(3491,-5176){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Abort}}}
+\put(1131,-5636){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}
+\put(1346,-7081){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}backup}}}
+\put(1346,-7261){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}file exists?}}}
+\put(2251,-7026){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}
+\put(2246,-8156){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}
+\put(1581,-7711){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}
+\put(1576,-8836){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}
+\put(1356,-9446){\makebox(0,0)[b]{\smash{\SetFigFont{11}{13.2}{\rmdefault}{\bfdefault}{\updefault}A}}}
+\put(3826,-8361){\makebox(0,0)[b]{\smash{\SetFigFont{11}{13.2}{\rmdefault}{\bfdefault}{\updefault}B}}}
+\put(3826,-7236){\makebox(0,0)[b]{\smash{\SetFigFont{11}{13.2}{\rmdefault}{\bfdefault}{\updefault}C}}}
+\put(1346,336){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}start\_up()}}}
+\put(616,-6086){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Create backup \&}}}
+\put(616,-6266){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}dump lock files}}}
+\put(3856,-1433){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}get saved params}}}
+\put(3856,-3218){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}get new params}}}
+\put(3833,-2347){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}to "input" units}}}
+\put(3818,-4163){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}to prog units}}}
+\put(1351,-4986){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault} dump}}}
+\put(1351,-5166){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}/backup lockfiles}}}
+\put(3826,-1230){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}re\_re\_header()}}}
+\put(3826,-2123){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}conv\_control()}}}
+\put(3831,-3028){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}read\_control()}}}
+\put(3826,-3924){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}conv\_control()}}}
+\put(1356,-632){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}default\_control()}}}
+\put(1351,-1741){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}read\_control()}}}
+\put(1346,-2885){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}conv\_control()}}}
+\put(5626,-7466){\makebox(0,0)[b]{\smash{\SetFigFont{11}{13.2}{\rmdefault}{\bfdefault}{\updefault}D}}}
+\put(5631,-8438){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}banner\_page()}}}
+\put(5626,-8645){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}write output file}}}
+\put(5648,-9529){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}return}}}
+\put(1351,-8309){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}restart?}}}
+\end{picture}

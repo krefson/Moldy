@@ -1,0 +1,180 @@
+\setlength{\unitlength}{0.00057743in}
+%
+\begingroup\makeatletter\ifx\SetFigFont\undefined%
+\gdef\SetFigFont#1#2#3#4#5{%
+  \reset@font\fontsize{#1}{#2pt}%
+  \fontfamily{#3}\fontseries{#4}\fontshape{#5}%
+  \selectfont}%
+\fi\endgroup%
+{\renewcommand{\dashlinestretch}{30}
+\begin{picture}(10599,10585)(0,-10)
+\path(1267,10558)(1942,10558)
+\path(1267,10108)(1942,10108)
+\spline(1267,10558)
+(817,10558)(817,10108)(1267,10108)
+\spline(1942,10558)
+(2392,10558)(2392,10108)(1942,10108)
+\put(8337,9838){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}Calculation of molecular}}}}}
+\put(8337,9635){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}centre-of-mass forces}}}}}
+\put(8337,9432){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}and torques.}}}}}
+\put(1587,4603){\ellipse{1800}{630}}
+\put(7212,343){\ellipse{670}{670}}
+\put(1587,3470){\ellipse{1800}{630}}
+\put(7212,5248){\ellipse{1800}{630}}
+\put(7212,9703){\ellipse{1800}{630}}
+\put(9469,8582){\ellipse{1800}{630}}
+\put(9469,2777){\ellipse{1800}{630}}
+\put(9469,3902){\ellipse{1800}{630}}
+\put(9469,1652){\ellipse{1800}{630}}
+\put(1582,5833){\ellipse{2520}{900}}
+\put(3844,2327){\ellipse{1800}{630}}
+\path(1582,9680)(1582,10108)
+\blacken\path(1552.000,9800.000)(1582.000,9680.000)(1612.000,9800.000)(1552.000,9800.000)
+\path(1587,4285)(1587,3778)
+\blacken\path(1557.000,3898.000)(1587.000,3778.000)(1617.000,3898.000)(1557.000,3898.000)
+\path(1587,6733)(1587,6268)
+\blacken\path(1557.000,6388.000)(1587.000,6268.000)(1617.000,6388.000)(1557.000,6388.000)
+\path(1587,7408)(1587,7858)
+\blacken\path(1557.000,7528.000)(1587.000,7408.000)(1617.000,7528.000)(1557.000,7528.000)
+\path(817,8533)(2392,8533)(2392,7858)
+	(817,7858)(817,8533)
+\path(817,7408)(2392,7408)(2392,6733)
+	(817,6733)(817,7408)
+\path(2937,9665)(4512,9665)(4512,8990)
+	(2937,8990)(2937,9665)
+\path(1587,5383)(1587,4918)
+\blacken\path(1557.000,5038.000)(1587.000,4918.000)(1617.000,5038.000)(1557.000,5038.000)
+\drawline(1587,2948)(1587,2948)
+\path(3842,877)(3842,652)(1592,652)
+\blacken\path(1712.000,682.000)(1592.000,652.000)(1712.000,622.000)(1712.000,682.000)
+\path(2944,1559)(4519,1559)(4519,884)
+	(2944,884)(2944,1559)
+\path(2487,1212)(2942,1212)
+\blacken\path(2822.000,1182.000)(2942.000,1212.000)(2822.000,1242.000)(2822.000,1182.000)
+\path(1587,853)(1587,208)(5412,208)
+	(5412,10558)(7212,10558)(7212,10018)
+\blacken\path(7182.000,10138.000)(7212.000,10018.000)(7242.000,10138.000)(7182.000,10138.000)
+\path(1587,2683)(1587,3151)
+\blacken\path(1557.000,2803.000)(1587.000,2683.000)(1617.000,2803.000)(1557.000,2803.000)
+\path(7217,4933)(7217,4258)
+\blacken\path(7187.000,4378.000)(7217.000,4258.000)(7247.000,4378.000)(7187.000,4378.000)
+\path(7217,3531)(7217,675)
+\blacken\path(7187.000,795.000)(7217.000,675.000)(7247.000,795.000)(7187.000,795.000)
+\path(9467,1332)(9467,1108)(7217,1108)
+\blacken\path(7337.000,1138.000)(7217.000,1108.000)(7337.000,1078.000)(7337.000,1138.000)
+\path(2494,9321)(2929,9321)
+\blacken\path(2809.000,9291.000)(2929.000,9321.000)(2809.000,9351.000)(2809.000,9291.000)
+\dashline{90.000}(5862,10333)(10587,10333)(10587,4708)
+	(5862,4708)(5862,10333)
+\path(7211,6013)(7211,5562)
+\blacken\path(7181.000,5682.000)(7211.000,5562.000)(7241.000,5682.000)(7181.000,5682.000)
+\path(6427,7813)(8002,7813)(8002,7138)
+	(6427,7138)(6427,7813)
+\path(6427,6688)(8002,6688)(8002,6013)
+	(6427,6013)(6427,6688)
+\path(7212,9388)(7212,8938)
+\blacken\path(7182.000,9058.000)(7212.000,8938.000)(7242.000,9058.000)(7182.000,9058.000)
+\path(8117,8578)(7217,8938)(6317,8578)
+	(7217,8218)(8117,8578)
+\path(7217,8218)(7217,7813)
+\blacken\path(7187.000,7933.000)(7217.000,7813.000)(7247.000,7933.000)(7187.000,7933.000)
+\path(7212,7138)(7212,6688)
+\blacken\path(7182.000,6808.000)(7212.000,6688.000)(7242.000,6808.000)(7182.000,6808.000)
+\path(9462,8263)(9462,8038)(7222,8038)
+\blacken\path(7342.000,8068.000)(7222.000,8038.000)(7342.000,8008.000)(7342.000,8068.000)
+\dashline{90.000}(12,5158)(4962,5158)(4962,433)
+	(12,433)(12,5158)
+\path(8122,3892)(8567,3892)
+\blacken\path(8447.000,3862.000)(8567.000,3892.000)(8447.000,3922.000)(8447.000,3862.000)
+\path(9462,3583)(9462,3088)
+\blacken\path(9432.000,3208.000)(9462.000,3088.000)(9492.000,3208.000)(9432.000,3208.000)
+\path(9462,2458)(9462,1963)
+\blacken\path(9432.000,2083.000)(9462.000,1963.000)(9492.000,2083.000)(9432.000,2083.000)
+\dashline{90.000}(5862,4483)(5862,883)(7887,883)
+	(10587,890)(10587,4483)(5862,4483)
+\path(3747,8983)(3747,8758)(1587,8758)
+\blacken\path(1707.000,8788.000)(1587.000,8758.000)(1707.000,8728.000)(1707.000,8788.000)
+\path(2482,9320)(1582,9680)(682,9320)
+	(1582,8960)(2482,9320)
+\path(1581,8960)(1581,8533)
+\blacken\path(1551.000,8653.000)(1581.000,8533.000)(1611.000,8653.000)(1551.000,8653.000)
+\path(2497,2317)(2942,2317)
+\blacken\path(2822.000,2287.000)(2942.000,2317.000)(2822.000,2347.000)(2822.000,2287.000)
+\path(3842,2007)(3842,1777)(1592,1777)
+\blacken\path(1712.000,1807.000)(1592.000,1777.000)(1712.000,1747.000)(1712.000,1807.000)
+\path(1587,1957)(1587,1572)
+\blacken\path(1557.000,1692.000)(1587.000,1572.000)(1617.000,1692.000)(1557.000,1692.000)
+\path(2487,2323)(1587,2683)(687,2323)
+	(1587,1963)(2487,2323)
+\path(2487,1214)(1587,1574)(687,1214)
+	(1587,854)(2487,1214)
+\path(8117,3898)(7217,4258)(6317,3898)
+	(7217,3538)(8117,3898)
+\path(8119,8579)(8564,8579)
+\blacken\path(8444.000,8549.000)(8564.000,8579.000)(8444.000,8609.000)(8444.000,8549.000)
+\put(1587,9253){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}first call?}}}}}
+\put(957,8308){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Allocate arrays}}}}}
+\put(957,8105){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}for sites and}}}}}
+\put(957,7902){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}site forces}}}}}
+\put(957,7138){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Set up array of}}}}}
+\put(957,6935){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}site charges}}}}}
+\put(1587,6013){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}step\_1()}}}}}
+\put(3072,9433){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Calc. distant}}}}}
+\put(3072,9253){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}pot'l \& pressure}}}}}
+\put(3072,9073){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}correction}}}}}
+\put(1587,4663){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}make\_sites()}}}}}
+\put(1587,4483){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Calc. site co-ords.}}}}}
+\put(3837,2413){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}ewald()}}}}}
+\put(3837,2188){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}recip-space forces}}}}}
+\put(2487,2458){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}}}
+\put(1362,1783){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}}}
+\put(1362,8758){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}}}
+\put(2487,9433){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}}}
+\put(1587,3523){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}force\_calc()}}}}}
+\put(1587,2263){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}coulomb forces?}}}}}
+\put(1587,1228){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}surface-dipole}}}}}
+\put(8115,4031){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}}}
+\put(6990,3364){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}}}
+\put(7215,297){\makebox(0,0)[b]{\smash{{{\SetFigFont{11}{13.2}{\rmdefault}{\bfdefault}{\updefault}A}}}}}
+\put(9462,8623){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}mol\_torque()}}}}}
+\put(7257,5338){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}newton()}}}}}
+\put(7212,9763){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}mol\_force()}}}}}
+\put(7222,8683){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}any}}}}}
+\put(7222,8480){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}polyatomics?}}}}}
+\put(6532,7400){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}molecular virial}}}}}
+\put(6532,7197){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}correction term.}}}}}
+\put(6537,6305){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}last timestep in}}}}}
+\put(6537,6102){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}"old" arrays etc.}}}}}
+\put(8112,8758){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}}}
+\put(6987,8083){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}}}
+\put(9462,2878){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}rahman()}}}}}
+\put(9462,1738){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}beeman\_2()}}}}}
+\put(1587,5826){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Apply Beeman steps \textit{i, ii} to}}}}}
+\put(2764,4731){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}(b)}}}}}
+\put(1587,3320){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}real-space forces}}}}}
+\put(1587,2465){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}need}}}}}
+\put(1587,1062){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}switch on?}}}}}
+\put(3027,1085){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}forces \& energy.}}}}}
+\put(3027,1288){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Get surf. dipole}}}}}
+\put(8195,9892){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}(c)}}}}}
+\put(7207,9576){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Get C of M forces.}}}}}
+\put(9465,8428){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Get torques.}}}}}
+\put(6537,6508){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Store acc's from}}}}}
+\put(6532,7603){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Get atomic,}}}}}
+\put(7207,3851){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Const stress?}}}}}
+\put(6097,4244){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}(d)}}}}}
+\put(7215,5134){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}New C of M acc's}}}}}
+\put(462,6274){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}(a)}}}}}
+\put(9462,1539){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\updefault}Step cell velocities}}}}}
+\put(9457,2690){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Get unit cell acc's}}}}}
+\put(2952,4723){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}Calculation of atomic}}}}}
+\put(2952,4520){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}site forces and}}}}}
+\put(2952,4317){\makebox(0,0)[lb]{\smash{{{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}potential energy.}}}}}
+\put(1587,5660){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}update dynamic variables}}}}}
+\put(1587,10259){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}do\_step()}}}}}
+\put(2487,1318){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}}}
+\put(1362,666){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}}}
+\put(9462,3973){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}energy\_dyad()}}}}}
+\put(9447,3778){\makebox(0,0)[b]{\smash{{{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault} kinetic stress term}}}}}
+\end{picture}
+}

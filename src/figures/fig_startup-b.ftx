@@ -1,0 +1,75 @@
+\begin{picture}(0,0)%
+\includegraphics{fig_startup-b}%
+\end{picture}%
+\setlength{\unitlength}{0.00057700in}%
+%
+\begingroup\makeatletter\ifx\SetFigFont\undefined%
+\gdef\SetFigFont#1#2#3#4#5{%
+  \reset@font\fontsize{#1}{#2pt}%
+  \fontfamily{#3}\fontseries{#4}\fontshape{#5}%
+  \selectfont}%
+\fi\endgroup%
+\begin{picture}(10612,10829)(443,-10207)
+\put(2483,-3209){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}allocate\_}}}
+\put(2483,-3374){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}dynamics()}}}
+\put(2476,-2353){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}initialise\_}}}
+\put(2476,-2518){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}sysdef()}}}
+\put(10134,-2543){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}allocate\_}}}
+\put(10134,-2708){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}dynamics()}}}
+\put(5626,-4128){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}allocate\_}}}
+\put(5626,-4293){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}dynamics()}}}
+\put(7919,-3230){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}initialise\_}}}
+\put(7919,-3395){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}sysdef()}}}
+\put(2491,164){\makebox(0,0)[b]{\smash{\SetFigFont{11}{13.2}{\rmdefault}{\bfdefault}{\updefault}A}}}
+\put(5626,149){\makebox(0,0)[b]{\smash{\SetFigFont{11}{13.2}{\rmdefault}{\bfdefault}{\updefault}B}}}
+\put(10156,164){\makebox(0,0)[b]{\smash{\SetFigFont{11}{13.2}{\rmdefault}{\bfdefault}{\updefault}C}}}
+\put(2476,-9968){\makebox(0,0)[b]{\smash{\SetFigFont{11}{13.2}{\rmdefault}{\bfdefault}{\updefault}D}}}
+\put(10126,-7493){\makebox(0,0)[b]{\smash{\SetFigFont{11}{13.2}{\rmdefault}{\bfdefault}{\updefault}D}}}
+\put(2476,-569){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}read\_sysdef()}}}
+\put(2476,-4281){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}lattice start?}}}
+\put(3368,-4109){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}
+\put(1576,-4116){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}
+\put(10126,-3511){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}init\_averages()}}}
+\put(2468,-1544){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}conv\_potentials()}}}
+\put(2476,-7126){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}init\_averages()}}}
+\put(2468,-6232){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}thermalise()}}}
+\put(3593,-5093){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}lattice\_start()}}}
+\put(1343,-5093){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}skew\_start()}}}
+\put(2476,-8025){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}init\_rdf()}}}
+\put(2483,-8932){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}init\_cutoffs()}}}
+\put(10116,-817){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}re\_re\_header()}}}
+\put(10131,-1725){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}re\_re\_sysdef()}}}
+\put(10096,-4425){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}init\_rdf()}}}
+\put(10126,-5326){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}read\_restart()}}}
+\put(4831,-494){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Adjust timestep-}}}
+\put(4831,-854){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}parameters}}}
+\put(4831,-674){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}related control}}}
+\put(2476,-787){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}from sys-spec file}}}
+\put(10129,-1927){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}from backup}}}
+\put(10129,-5516){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}from backup}}}
+\put(10148,-6291){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}convert\_averages()}}}
+\put(10129,-1020){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault} from backup}}}
+\put(5611,-9968){\makebox(0,0)[b]{\smash{\SetFigFont{11}{13.2}{\rmdefault}{\bfdefault}{\updefault}D}}}
+\put(5626,-1476){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}replace}}}
+\put(5626,-1656){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}system spec?}}}
+\put(6526,-1431){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}
+\put(5858,-2099){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}
+\put(6526,-8618){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}
+\put(5408,-9308){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}
+\put(7874,-8678){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}interpolate\_}}}
+\put(7874,-8843){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}derivatives()}}}
+\put(5626,-2631){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}re\_re\_sysdef()}}}
+\put(5671,-5108){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}init\_averages()}}}
+\put(5626,-6014){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}init\_rdf()}}}
+\put(5633,-6907){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}read\_restart()}}}
+\put(7874,-1502){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}read\_sysdef()}}}
+\put(7881,-4210){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}check\_sysdef()}}}
+\put(7875,-1717){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}from sys-spec file}}}
+\put(5625,-2842){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}from restart file}}}
+\put(7882,-4437){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}abort if failed}}}
+\put(5625,-7107){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}dyamic vars etc.}}}
+\put(7881,-2485){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}conv\_potentials()}}}
+\put(5641,-8715){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}timestep}}}
+\put(5641,-8895){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}changed?}}}
+\put(5633,-7891){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}convert\_averages()}}}
+\end{picture}

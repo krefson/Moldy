@@ -1,0 +1,80 @@
+\begin{picture}(0,0)%
+\includegraphics{fig_dostep-a}%
+\end{picture}%
+\setlength{\unitlength}{0.00057700in}%
+%
+\begingroup\makeatletter\ifx\SetFigFont\undefined%
+\gdef\SetFigFont#1#2#3#4#5{%
+  \reset@font\fontsize{#1}{#2pt}%
+  \fontfamily{#3}\fontseries{#4}\fontshape{#5}%
+  \selectfont}%
+\fi\endgroup%
+\begin{picture}(10599,10570)(214,-9944)
+\put(8551,-106){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}Calculation of molecular}}}
+\put(8551,-309){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}centre-of-mass forces}}}
+\put(8551,-512){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}and torques.}}}
+\put(1801,-691){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}first call?}}}
+\put(1171,-1636){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Allocate arrays}}}
+\put(1171,-1839){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}for sites and}}}
+\put(1171,-2042){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}site forces}}}
+\put(1171,-2806){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Set up array of}}}
+\put(1171,-3009){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}site charges}}}
+\put(1801,-3931){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}step\_1()}}}
+\put(3286,-511){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Calc. distant}}}
+\put(3286,-691){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}pot'l \& pressure}}}
+\put(3286,-871){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}correction}}}
+\put(1801,-5281){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}make\_sites()}}}
+\put(1801,-5461){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Calc. site co-ords.}}}
+\put(4051,-7531){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}ewald()}}}
+\put(4051,-7756){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}recip-space forces}}}
+\put(2701,-7486){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}
+\put(1576,-8161){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}
+\put(1576,-1186){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}
+\put(2701,-511){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}
+\put(1801,-6421){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}force\_calc()}}}
+\put(1801,-7681){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}coulomb forces?}}}
+\put(1801,-8716){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}surface-dipole}}}
+\put(8329,-5913){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}
+\put(7204,-6580){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}
+\put(7429,-9647){\makebox(0,0)[b]{\smash{\SetFigFont{11}{13.2}{\rmdefault}{\bfdefault}{\updefault}A}}}
+\put(9676,-1321){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}mol\_torque()}}}
+\put(7471,-4606){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}newton()}}}
+\put(7426,-181){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}mol\_force()}}}
+\put(7436,-1261){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}any}}}
+\put(7436,-1464){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}polyatomics?}}}
+\put(6746,-2544){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}molecular virial}}}
+\put(6746,-2747){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}correction term.}}}
+\put(6751,-3639){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}last timestep in}}}
+\put(6751,-3842){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}"old" arrays etc.}}}
+\put(8326,-1186){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}
+\put(7201,-1861){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}
+\put(9676,-7066){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}rahman()}}}
+\put(9676,-8206){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}beeman\_2()}}}
+\put(1801,-4118){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Apply Beeman steps \textit{i, ii} to}}}
+\put(2978,-5213){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}(b)}}}
+\put(1801,-6624){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}real-space forces}}}
+\put(1801,-7479){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}need}}}
+\put(1801,-8882){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}switch on?}}}
+\put(3241,-8859){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}forces \& energy.}}}
+\put(3241,-8656){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Get surf. dipole}}}
+\put(8409,-52){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}(c)}}}
+\put(7421,-368){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Get C of M forces.}}}
+\put(9679,-1516){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Get torques.}}}
+\put(6751,-3436){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Store acc's from}}}
+\put(6746,-2341){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Get atomic,}}}
+\put(7421,-6093){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Const stress?}}}
+\put(6311,-5700){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}(d)}}}
+\put(7429,-4810){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}New C of M acc's}}}
+\put(676,-3670){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}(a)}}}
+\put(9676,-8405){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\updefault}Step cell velocities}}}
+\put(9671,-7254){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Get unit cell acc's}}}
+\put(3166,-5221){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}Calculation of atomic}}}
+\put(3166,-5424){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}site forces and}}}
+\put(3166,-5627){\makebox(0,0)[lb]{\smash{\SetFigFont{8}{9.6}{\rmdefault}{\mddefault}{\itdefault}potential energy.}}}
+\put(1801,-4284){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}update dynamic variables}}}
+\put(1801,315){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}do\_step()}}}
+\put(2701,-8626){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}Y}}}
+\put(1576,-9278){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault}N}}}
+\put(9676,-5971){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\ttdefault}{\mddefault}{\updefault}energy\_dyad()}}}
+\put(9661,-6166){\makebox(0,0)[b]{\smash{\SetFigFont{8}{9.6}{\familydefault}{\mddefault}{\updefault} kinetic stress term}}}
+\end{picture}
