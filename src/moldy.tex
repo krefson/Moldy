@@ -985,16 +985,6 @@ arrangement, the list of neighbouring subcells is fixed and may be
 precomputed.  Its construction takes only $O(N)$ operations and only
 $O(N)$ pair interactions need be calculated.
 
-% Molecular nature of cutoffs.
-
-When the system consists of polyatomic molecules it is important that
-all sites belonging to a particular molecule are assigned to the same
-cell.  Otherwise it is impossible to calculate the stress and pressure
-(equation~\ref{eqn:ewald-stress}) correctly as MD cell vectors are
-added to some intra-molecular distances.  Therefore all sites of any
-molecule are assigned to a cell if the molecular centre-of-mass lies
-inside it.
-
 One drawback of the link cell method has been the difficulty of
 implementing it efficiently for vector processors.  The linked list of
 ``neighbour'' particles is not stored in the regular-stride array
@@ -1006,6 +996,87 @@ interaction potential and forces could be evaluated in vector mode.  A
 the total force array.  This is the technique used in \moldy.  Almost
 all modern vector machines have scatter/gather hardware which means
 these operations are fairly cheap.
+
+\subsection{Molecular Aspects}
+
+The treatment of molecules as rigid bodies adds an additional
+complication to link-cell and neighbour-list algorithms.  If atomic
+sites are assigned to link-cells, then there is no obvious way of
+determining in the innermost force loop whether two sites belong to
+the same, or to different molecules.  It is therefore not possible to
+exclude intra-molecular site-site interactions from the force and
+potential energy calculation.  Furthermore molecules may be
+``split'' by the periodic boundaries, for example half of the sites of
+some molecule may reside near the bottom of the MD box and the
+remainder near the top.  This means that there is no longer a unique
+molecular centre of mass and equations~\ref{eqn:stress-sr}
+and~\ref{eqn:ewald-stress} can no longer be used to compute the internal
+stress or pressure.
+
+On the other hand, entire molecules may be assigned to subcells on the
+basis of their centre-of-mass co-ordinates. All atomic sites belonging
+to a molecule are placed in the list belonging to the particular cell
+containing the molecular centre of mass.  This enables intramolecular
+interactions to be excluded from the calculation and
+equations~\ref{eqn:stress-sr} and~\ref{eqn:ewald-stress} can be used to
+compute the internal stress.  There is however a computational
+disadvantage, which arises because sites belonging to a large molecule
+may lie outside the subcell.  In order to correctly include site-site
+interactions within the cutoff, the list of neighbour cells must be
+extended to include all cells where any parts are closer than $r_c + 2
+r_\textnormal{mol}$ where $r_\textnormal{mol}$ is the molecular
+radius.  There is an inevitable increase in computer time required to
+process the lists, and in the case of a ``strict cutoff'' many
+unnecessary intra-site interactions must be evaluated.  In the case of
+a system containing a mixture of (perhaps a few) very large molecules
+and other, small molecules the computer-time penalty may be very large
+indeed.
+
+Versions of \moldy\ prior to 2.16 used this ``molecular
+binning'' approach and suffered from the associated computational
+penalty. Versions 2.16 and later adopt the former ``site binning''
+approach, which is much more efficient.  The intra-molecular potential
+energy (which is necessarily included in the site-site interactions)
+is computed separately and subtracted from the total, to yield just
+the inter-molecular part.  Intra-molecular \emph{forces} sum to zero
+in the calculation of the centre-of-mass forces and molecular torques,
+just as with the reciprocal-space contribution to the forces.  
+
+The internal stress is computed using a novel approach, inspired by
+the extension of the Verlet neighbour list algorithm developed by
+Bekker \emph{et al.}\cite{bekker:95}.  Bekker showed that the (tensor)
+virial may be written
+\begin{eqnarray}
+  \label{eqn:bekker-virial}
+  \bm{W} &=& \sum_{\bm{n}}\sum_{i=1}^{N} \sum_{j=i+1}^{N}
+  \bm{r}_{i(j.\bm{n})}\bm{f}_{i(j.\bm{n})} \nonumber\\
+         &=& \sum_{i=1}^{N} \sum_{j=i+1}^{N}
+  \bm{r}_{i}\bm{f}_{i} + \sum_{\bm{n}} \bm{n}\bm{g}_{\bm{n}}
+\end{eqnarray}
+where $\bm{n}$ is the lattice vector between the central MD cell and
+its periodic images and is also used as an index to represent a sum
+over all image cells and the expression $(j.\bm{n})$ refers to
+the periodic image of particle $j$ in image cell $\bm{n}$.  The
+quantity $\bm{g}_{\bm{n}}$
+\begin{equation}
+  \label{eqn:bekker-g}
+  \bm{g}_{\bm{n}} = \sum_{i=1}^{N} \sum_{j=i+1}^{N}\bm{f}_{(j.\bm{n})i} = 
+  \frac{1}{2} \sum_{i=1}^{N} \sum_{j=1}^{N}\bm{f}_{(j.\bm{n})i}
+\end{equation}
+is half the total force exerted by all particles in the central MD
+cell on all particles in image cell $\bm{n}$.  This is easily
+evaluated in the inner loops of the link-cell force calculation by
+summing separately the pair forces on all particles in each image cell. The
+image-cell translation vector $\bm{n}_{ij}$ has already been computed in
+order to evaluate the site-site vector $\bm{r}_{ij} +\bm{n}_{ij}$.
+
+Using equation~\ref{eqn:bekker-virial} to compute the virial has
+another advantage. It is not necessary to perform the sum of
+contributions within the inner loop of the force calculation (c.f.
+equation~\ref{eqn:stress-sr}) since it depends only on the site
+co-ordinates and the total force acting on each site.  This gives a
+considerable reduction in the number of computations in the costliest
+part of the whole calculation.
 
 \subsection{No minimum-image convention}
 One notable feature of the implementation of the link cell method in
@@ -1027,20 +1098,19 @@ by the \Lit{strict-cutoff} control parameter.
 In cell-based mode (\Lit{strict-cutoff=0}) the neighbour cell list is
 built to include only those cells whose centre is within the cutoff
 radius of the centre of the reference cell.  All interactions between
-sites belonging to molecules in the neighbouring cell list are
-computed.  This is a ``quick and dirty'' method as some interactions
-between sites closer than the cutoff will inevitably be excluded
-whereas some outside the cutoff range will be included.
+sites in the neighbouring cell list are computed.  This is a ``quick
+and dirty'' method as some interactions between sites closer than the
+cutoff will inevitably be excluded whereas some outside the cutoff
+range will be included.
 
 In strict mode (\Lit{strict-cutoff=1}) all interactions between pairs
-of \emph{sites} within the cutoff are included.  The neighbouring cell
-list contains all pairs of cells with any parts closer than the cutoff
-plus twice the greatest molecular radius.  This ensures that all
-appropriate interactions are included.  Furthermore, all interactions
-between sites further apart than the cutoff are excluded (by the
-expedient of setting their separation to a large value in the
-potential calculation).  This means that large and asymmetric
-molecules are handled correctly.  
+of sites within the cutoff are included.  The neighbouring cell list
+contains all pairs of cells with any parts closer than the cutoff
+radius.  This ensures that all appropriate interactions are included.
+Furthermore, all interactions between sites further apart than the
+cutoff are excluded (by the expedient of setting their separation to a
+large value in the potential calculation).  This means that large and
+asymmetric molecules are handled correctly.
 
 For a given cutoff radius the cell-based mode is rather quicker than
 the strict mode since the neighbouring cell list is much smaller and
@@ -2163,7 +2233,7 @@ specified in the standard form.
 \item[Buckingham] This includes potentials of the Born-Mayer type and
 has formula \[\phi(r_{ij}) = -A_{ij}/r^{6}_{ij} + B_{ij}\exp(-C_{ij}r_{ij}).\]
 The three parameters appear on each line in the order $A, B, C$.
-\item[MCY] This type supports potentials of the same form as the water
+\item[MCY] This type supports potentials of the form of the water
 model of Matsuoka, Clementi and Yoshimine\cite{matsuoka:75}, 
 \[\phi(r_{ij}) = A_{ij}\exp(-B_{ij}r_{ij}) - C_{ij}\exp(-D_{ij}r_{ij}),\]
 and the four parameters appear on the line in the order $A, B, C, D$.
@@ -2193,7 +2263,10 @@ themselves specified in SI units). All potential parameters, site
 masses and charges, but not co-ordinates are taken to be in those
 units. Their default values are amu, {\AA}, 0.1ps and $q_{e}$, which means
 that the unit of energy is kJ\,mol$^{-1}$.  So to read in {\AA}, amu and
-kcal mol$^{-1}$, specify \Lit{time-unit=4.8888213e-14}.
+kcal mol$^{-1}$, specify \Lit{time-unit=4.8888213e-14}, for  {\AA}, amu
+and eV use \Lit{time-unit=1.0181e-14}, and for Lennard-Jones
+potentials specified in  {\AA}, amu and $\epsilon$ in K (ie  $E/k_B$) use
+\Lit{time-unit=0.548343e-12}, which includes the extra factor of 4.
 
 Once the system specification has been read in, all quantities are
 converted to `internal' units: a.m.u., {\AA}, ps, and $\insqrt (
@@ -3923,13 +3996,13 @@ int    i, j;\\
 \}
 \end{quote}}\\
 \noindent
-since the underlying pointer arrays contain all the necessary shape
-information to access it. Function \Lit{arralloc()} is implemented so
-as to lay out the individual pointer and data arrays as part of a
-single block of memory which is allocated by a single call to
-\Lit{talloc()}. It then sets up the values of the pointers to emulate
-the requested array. The memory can be freed with a single call to
-\Lit{tfree().}
+since the underlying pointer arrays contain all the necessary
+information to access indivual elements. Function \Lit{arralloc()} is
+implemented so as to lay out the individual pointer and data arrays as
+part of a single block of memory which is allocated by a single call
+to \Lit{talloc()}. It then sets up the values of the pointers to
+emulate the requested array. The memory can be freed with a single
+call to \Lit{tfree().}
 
 The \Lit{arralloc()} mechanism is unnecessary for 2D arrays where
 the innermost dimensions are fixed, such as for an array of position
@@ -5187,30 +5260,35 @@ each record.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Mdshak/Mdxyz}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\emph{Mdshak} was written as an interface between \moldy\ 
+\emph{Mdshak} was originally written as an interface between \moldy\ 
 configurations and a molecular graphics program called
-SCHAKAL\cite{schakal:88}.  It will also, optionally, write the output
-in PDB or XYZ form, suitable for input to the freely available viewers
-\emph{Xmol} and \emph{RasMol}.  The output format is sufficiently
-transparent that it should not be hard to modify it for any other
-molecular graphics package, but note that the \emph{babel} package,
-also freely available on the Internet will convert between the XYZ
-file format and many others. There is also a SCHAKAL file viewer
-called ``read\_shak'' written by the author for use with AVS, the
-general purpose visualization program, and available free from the
-International AVS Center.\footnote{It may be obtained using anonymous
-  ftp from \Lit{avs.ncsc.org} or by writing to The International AVS
-  Center, PO Box 12889, 3021 Cornwallis Road, RTP, NC 27709, USA.}
+SCHAKAL\cite{schakal:88}.  The current version can write the output in
+additional formats: Brookhaven PDB, Cambridge CSSR, or XYZ form, suitable
+for input to the freely available viewers such as
+\emph{VMD}\footnote{Available from
+  \url{http://www.ks.uiuc.edu/Research/vmd/}.}, \emph{Xmol} and
+\emph{RasMol}.  There is also a file viewer called
+``crystal'' written by the author for use with AVS, the general
+purpose visualization program, and available free from the
+International AVS Centre.\footnote{\url{http://www.iavsc.org/}.}
 
-\emph{Mdshak} writes a SCHAKAL file containing the co-ordinates of a
+\emph{Mdshak} writes a file containing the co-ordinates of a
 single or of multiple time slices during a MD run.  It can read
 configurations from (\emph{a}) a system specification file plus
 lattice start, (\emph{b}) a system specification file plus dump file
 (\emph{c}) a restart file or (\emph{d}) a restart file plus dump file.
 It can be driven either interactively or using command-line arguments.
 If the executable file is named \Fname{mdshak} then the default output
-is in SCHAKAL file format. If it is renamed to \Fname{mdxyz} or
-\Fname{mdpdb} then the default is XYZ or PDB file format respectively.
+is in SCHAKAL file format. If it is renamed to \Fname{mdxyz},
+\Fname{mdpdb}, \Fname{mdcssr}  or \Fname{mddcd} then the default
+output format is of the corresponding type.
+
+To assist in making animations of a simulation, the trajectory from
+many timesteps can be written to a file in the  CHARMM and Xplor DCD
+format, using the \Lit{[-v]} option.  In conjunction with a PDB file
+this may be used as input to the VMD visualization program.  Tools for
+manipulating DCD files and converting to other formats are also
+available from \url{http://www.ks.uiuc.edu/Development/MDTools/}.
 
 In interactive mode you are prompted for the source of the system
 specification (sys-spec or restart file) and the configurational
@@ -5226,7 +5304,8 @@ Alternatively, the command line options are
 \Lit{[-d} \textit{dump-file-format} \Lit{]}
 \Lit{[-t} \textit{dump-range} \Lit{]} \\
 \Lit{[-c]}
-\Lit{[-x]|[-b]}
+\Lit{[-x|-v|-h|-p|-g|-b]}
+\Lit{[-y]}
 \Lit{[-i} \textit{extra-text} \Lit{]}
 \Lit{[-o} \textit{output-file} \Lit{]}
 \end{center}
@@ -5246,17 +5325,24 @@ format.
 to add extra SCHAKAL commands, such as BOX.
 \item[-x] Write an output file in XYZ format suitable for \emph{Xmol}
   or \emph{RasMol}
+\item[-v] Write co-ordinates from multiple dump files to an output
+  file in DCD format suitable for animation by \emph{VMD}.
+\item[-h] Write an output file in SCHAKAL format.
 \item[-p] Write an output file in Brookhaven PDB format suitable for
   \emph{VMD}, \emph{Xmol}  or \emph{RasMol}
-\item[-b] Write the atom co-ordinates in raw binary (unformatted) format.
+\item[-g] Write an output file in Cambridge CSSR format suitable for
+  reading by, \eg\ Cerius2.
+\item[-b] Write the atom co-ordinates in raw binary (unformatted)
+  format.
+\item[-y] Join up trajectory fragments to eliminate jumps when a
+  molecule exits from one side of the MD cell and re-enters the
+  opposite side.
 \end{Argdescription}
 
 \emph{Mdshak} may be useful for more than just visualization purposes
 as it extracts atomic co-ordinates from the system specification,
-positions and quaternions.  It is written so that only the output routine
-(called \Lit{schakal\_out()}) is SCHAKAL specific.  This is quite
-short and can easily be replaced with one tailored to a different
-purpose.
+positions and quaternions.  It is written in a modular fashion
+to make it easy to add a new output routine (in file \Fname{molout.c}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Msd}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -5403,7 +5489,8 @@ be calculated directly from the VTF via:
 where $V$ is the volume of the simulation box, $k_{B}$ is Boltzmann's
 constant and $T$ is temperature.
 
-The command line options are:\\
+The command line options are:
+
 \begin{center}
 \Lit{mdvaf}
 \Lit{[-s} \textit{system-specification} \Lit{]|}
@@ -5645,42 +5732,52 @@ randomly distributed vacancies by prefixing the solute name with ``\#''.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Plotrdf}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Plotrdf is a \emph{perl} script which reads \moldy output files and
+Plotrdf is a \emph{perl} script which reads \moldy\ output files and
 extracts RDF information, skipping page breaks.  It produces output
 suitable for reading into most graphics programs, but most notably
-\emph{gnuplot} and \emph{xmgrace}.  It can also write a command script
+\emph{gnuplot} and \emph{xmgrace}%
+\footnote{\emph{Gnuplot} can be downloaded from
+  \url{http://www.gnuplot.org} and
+\emph{Xmgrace} may be obtained from
+\url{http://plasma-gate.weizmann.ac.il/Grace/}.}.
+It can also write a command script
 for either of these two programs if requested.  Obviously you must
 have \emph{perl} installed on your computer to use it.
 
 \begin{center}
   \Lit{plotrdf}
  \Lit{[-a]} 
- \Lit{[-g]}
- \Lit{[-gg]}
- \Lit{[-ps]}
- \Lit{[-eps]}
- \Lit{[-xg]}
- \Lit{[-xgg]}
+ \Lit{[-gp|-xg]}
+ \Lit{[-ps|-eps]}
+ \Lit{[-np]}
  \Lit{[-m} \textit{REGEXP}\Lit{]} 
  \textit{moldy-output-file} ...
 \end{center}
 
 \begin{Argdescription}  
-      \item[-a]         Take average of multiple RDF blocks
-      \item[-g]         Write a GNUPLOT script to plot data
-      \item[-gg]        Write a script and invoke GNUPLOT to plot data
-      \item[-ps]        Invoke GNUPLOT to plot data and write as a PostScript file
-      \item[-eps]       Invoke GNUPLOT to plot data and write as an
-        encapsulated  PostScript (EPS) file
-      \item[-xg]        Write a GRACE script to plot data
-      \item[-xgg]       Write a script and invoke XMGRACE to plot data
-      \item[-m]  output/plot only columns which match the (perl) regular expression REGEXP. (no '//' needed)    
+      \item[-a]         Take average of multiple RDF blocks.
+      \item[-gp]        Write a script and invoke GNUPLOT to plot data.
+      \item[-xg]        Write a script and invoke GRACE to plot data.
+      \item[-ps]        Invoke GNUPLOT or GRACE to plot data and write as a PostScript file.
+      \item[-eps]       Invoke GNUPLOT or GRACE to plot data and write as an encapsulated PostScript (EPS) file.
+      \item[-np]        Do not plot data, write a GNUPLOT or GRACE script.                                      \item[-m]  output/plot only columns which match the (perl) regular expression REGEXP. (no '//' needed)    
 \end{Argdescription}
 
 The output format is in columns with different components laid out
 across the page "r rdf1 rdf2 rdf3 ...".  Multiple RDF blocks in one or
 multiple files are processed and output sequentially except if the \Lit{-a}
 flag is given, whereupon they are averaged.
+
+If no options or only \Lit{-a} or \Lit{-m} are given, columnar data is
+written to standard output.  If either of the plot program commands
+\Lit{-pg} or \Lit{-xg} is given, the selected plotting program is
+invoked to display the plot. The columnar RDF data  is left in a file
+named according to the input file with \Lit{.data} appended.
+If either of the \Lit{-ps} or \Lit{-eps} options is given the selected
+plot program is used to create a PostScript (or encapsulated
+PostScript) file containing the plot.  The \Lit{-np} option modifies
+all of the above actions by stopping the invocation of the plot
+program and writing the script to standard output instead.
 
 Columns may be selected by matching with a PERL regular expression
 (without the usual delimiters) given as the argument to the \Lit{-m}
@@ -5693,7 +5790,7 @@ option.
 % LocalWords:  Fndescription Litdescription erf erfc subfig superfig Refson MCY
 % LocalWords:  Parrinello Rahman Lennard Buckingham Stardent Alliant cray XMP
 % LocalWords:  MFlop SGI SP Tildesley Pawley Powles Sonnenschein Rodger Nos co
-% LocalWords:  Fincham Beeman's Perram Tildesley's subcells subcell Heyes 
+% LocalWords:  Fincham Beeman's Perram Tildesley's subcells subcell Heyes  CSSR
 % LocalWords:  Rahman's RDF dat const Matsuoka Clementi Yoshimine MDBACKUP KE
 % LocalWords:  Microsystems RDFs Leuuw Coulombic Leeuw unix DUSE TCGMSG BSP MPI
 % LocalWords:  SPMD SHMEM defs struct structs auxil beeman ewald eigens rdf xdr
@@ -5704,3 +5801,4 @@ option.
 % LocalWords:  aalloc alloc arralloc talloc tfree nspecies nsites nmols NPOTP
 % LocalWords:  algorith ansi pre Pappalardo mdavpos bdist Murashov mdbond
 % LocalWords:  ransub mdshak Fernandez Wentzcovitch wentzcovitch characterizing
+% LocalWords:  visualization Cerius CHARMM Plotrdf gnuplot Bekker

@@ -46,6 +46,11 @@ RELEASE_2.16
   unless velocities really will be scaled in this run.  Same applies
   to RDF computation.
 
+* Plotrdf script revised and improved.  Command options rationalised. 
+  Can now write scripts for "xmgrace" as well as "gnuplot".
+
+* Manual updated.
+
 RELEASE 2.15e
 -------------
  * 2.15d introduced a major bug in the dump-file headers
