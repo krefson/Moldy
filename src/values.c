@@ -14,6 +14,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	values.c,v $
+ * Revision 1.5  90/04/16  18:17:19  keith
+ * Rearranged expression as workaround for CRAY CC4.1 bug.
+ * 
  * Revision 1.4  89/06/22  15:45:29  keith
  * Tidied up loops over species to use one pointer as counter.
  * 
@@ -28,7 +31,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/values.c,v 1.4 89/06/22 15:45:29 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.5 90/04/16 18:17:19 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -418,15 +421,20 @@ void	averages()
    (void)printf( "   Averages over last %d timesteps",*av_cnt);
    new_line();
 
-   for(iav = 0, av_p = av; iav < navs; iav++, av_p++)
+   av_p = av;
+   for(iav = 0; iav < (int)end; iav++)
    {
-      av_p->mean = av_p->sum / *av_cnt;
-      variance = av_p->sum_sq/ *av_cnt - av_p->mean * av_p->mean;
-      if(variance * *av_cnt  < av_p->sum_sq * bottom)
-         message(NULLI, NULLP, WARNING, NEGVAR, "averages", variance,
-		 av_info[(int)iav].name);
-      av_p->sd   = variance > 0.0 ? sqrt(variance) : 0.0;
-      av_p->sum = 0.0;  av_p->sum_sq = 0.0;
+      for(i = 0; i < av_info[iav].mult; i++)
+      {
+	 av_p->mean = av_p->sum / *av_cnt;
+	 variance = av_p->sum_sq/ *av_cnt - av_p->mean * av_p->mean;
+	 if(variance * *av_cnt  < av_p->sum_sq * bottom)
+	    message(NULLI, NULLP, WARNING, NEGVAR, "averages", variance,
+		    av_info[(int)iav].name);
+	 av_p->sd   = variance > 0.0 ? sqrt(variance) : 0.0;
+	 av_p->sum = 0.0;  av_p->sum_sq = 0.0;
+	 av_p++;
+      }
    }
    *av_cnt = 0;
 
