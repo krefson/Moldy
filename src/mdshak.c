@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/mdshak.c,v 2.7 1994/06/08 11:58:35 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/mdshak.c,v 2.8 1994/10/17 10:55:22 keith stab $";
 #endif
 
 #include "defs.h"
@@ -712,7 +712,7 @@ char	*argv[];
 	init_averages(sys.nspecies, restart_header.vsn,
 		      control_junk.roll_interval, control_junk.roll_interval,
 		      &av_convert);
-	read_restart(Fp, &sys, av_convert);
+	read_restart(Fp, restart_header.vsn, &sys, av_convert);
 	moldy_out(1, &sys, species, site_info, atom_sel, outsw, insert);
       break;
     case 'd':				/* Dump dataset			      */
