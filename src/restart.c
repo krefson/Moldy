@@ -31,6 +31,15 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 2.3  93/10/28  12:25:07  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
+ * Revision 2.3  93/10/28  10:28:11  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
+ * Revision 2.2  1993/10/22  12:44:23  keith
+ * Fixed initialization bug which caused XDR write to fail on 64-bit Alphas.
+ *
  * Revision 2.1  93/07/19  13:28:11  keith
  * Added XDR capability for backup and dump files.
  * 
@@ -109,7 +118,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 2.1 93/07/19 13:28:11 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 2.3 93/10/28 12:25:07 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -126,11 +135,16 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 2.1 9
 gptr            *talloc();	       /* Interface to memory allocator       */
 void            tfree();	       /* Free allocated memory	      	      */
 int		replace();
-void		message();
-void		note();
 gptr		*av_ptr();
 char		*atime();
 char		*cctime();
+#if defined(ANSI) || defined(__STDC__)
+void		note(char *, ...);	/* Write a message to the output file */
+void		message(int *, ...);	/* Write a warning or error message   */
+#else
+void		note();			/* Write a message to the output file */
+void		message();		/* Write a warning or error message   */
+#endif
 /*========================== External data references ========================*/
 extern  contr_mt control;
 extern	int	***rdf;				/* Accumulated RDF bins       */
@@ -158,7 +172,6 @@ FILE 	*fp;
 unsigned long cnext(xfp)
 xfp_mt	xfp;
 {
-   bool_t status;
    (void)fread((gptr*)&stored_size, sizeof stored_size, 1, xfp.fp);
    if(ferror(xfp.fp))
       message(NULLI,NULLP,FATAL,REREAD,ftell(xfp.fp),strerror(errno));
@@ -507,9 +520,9 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
    int		zero = 0, one = 1;
    restrt_mt	save_header;
    FILE		*save;
-   XDR		xdrs;
+   XDR		xdrsw;
    xfp_mt	xfp;
-   char		*vsn = "$Revision: 2.1 $"+11;
+   char		*vsn = "$Revision: 2.3 $"+11;
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)
@@ -517,7 +530,7 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
       message(NULLI, NULLP, ERROR, OSFAIL, control.temp_file);
       return;
    }
-   xfp.xp = &xdrs;
+   xfp.xp = &xdrsw;
    xfp.fp = save;
 #ifdef USE_XDR
    if( control.xdr_write )
