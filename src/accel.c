@@ -5,13 +5,18 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	accel.c,v $
+ * Revision 1.2  89/04/20  17:49:08  keith
+ * Added code for surface dipole part of Ewald sum (After De Leeuw et al).
+ * 
  * Revision 1.1  89/04/20  15:58:41  keith
  * Initial revision
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: accel.c,v 1.1 89/04/20 15:58:41 keith Exp $";
+static char *RCSid = "$Header: accel.c,v 1.3 89/05/22 14:04:42 keith Exp $";
 #endif
+/*========================== Library include files ===========================*/
+#include	<math.h>
 /*========================== program include files ===========================*/
 #include "structs.h"
 /*========================== Library declarations ============================*/
@@ -39,6 +44,7 @@ double          det();		       /* Returns matrix determinant	      */
 void            mat_vec_mul();	       /* 3 x 3 Matrix by Vector multiplier   */
 void            mean_square();	       /* Caluculates mean square of args     */
 void            rdf_calc();	       /* Accumulate and bin rdf	      */
+double 		value();	       /* Return thermodynamic average	      */
 void            vcopy();	       /* Vector copy.			      */
 double          vdot();		       /* Fast vector dot product	      */
 void            vscale();	       /* Vector by constant multiply	      */
@@ -50,21 +56,41 @@ extern contr_t  control;
 #define	CONVRG	1.0e-7
 /*============================================================================*/
 /******************************************************************************
- *   rescale    rescale velocities and quaternion derivatives to desired temp.*
+ *   Scale_spec	rescale for an individual species			      *
  ******************************************************************************/
 void 
-rescale(temp, des_temp, system)
-double          temp,		       /* Current 'temperature'		 (in) */
-                des_temp;	       /* Desired temperature	         (in) */
-system_p        system;		       /* System info struct 	     (in/out) */
+scale_spec(scale, spec)
+double		scale;		       	/* Scaling factor		 (in) */
+spec_p		spec;		      	/* System info struct 	     (in/out) */
 {
-   extern double   sqrt();
-   double          scalesq = des_temp / temp, scale = sqrt(scalesq);
+   int		nmols   = spec->nmols,
+   		nmols_r = (spec->rdof ? spec->nmols : 0);
+   vscale(3 * nmols,   scale, spec->vel[0], 1);
+   vscale(4 * nmols_r, scale, spec->qdot[0], 1);
+   vscale(4 * nmols_r, scale*scale, spec->qddot[0], 1);
+   vscale(4 * nmols_r, scale*scale, spec->qddoto[0], 1);
+}
+/******************************************************************************
+ *   rescale    rescale velocities and quaternion derivatives to desired temp.*
+ ******************************************************************************/
+void
+rescale(system, species)
+system_p	system;
+spec_p		species;
+{
+   spec_p	spec;
+   double scale_factor;
 
-   vscale(3 * system->nmols, scale, system->vel[0], 1);
-   vscale(4 * system->nmols_r, scale, system->qdot[0], 1);
-   vscale(4 * system->nmols_r, scalesq, system->qddot[0], 1);
-   vscale(4 * system->nmols_r, scalesq, system->qddoto[0], 1);
+   scale_factor = control.temp / value(t_n, 0);	/* `Global' scale factor      */
+
+   for(spec = species; spec < &species[system->nspecies]; spec++)
+   {
+      if ( control.scale_separately )		/* Per-species scale factor   */
+         scale_factor = (3+spec->rdof) * control.temp / 
+                        (  3.0 *      value(tt_n, spec-species)
+		         + spec->rdof*value(rt_n, spec-species));
+      scale_spec(sqrt(scale_factor), spec);
+   }
 }
 /******************************************************************************
  *  distant_const     Return the constant part of the distant-potential term  *
