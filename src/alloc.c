@@ -18,6 +18,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.8  90/05/16  14:19:23  keith
+ * *** empty log message ***
+ * 
  * Revision 1.7  90/05/02  17:51:09  keith
  * Include of stddef.h added to get size_t (removed from defs.h)
  * 
@@ -42,7 +45,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.7 90/05/02 17:51:09 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.8 90/05/16 14:19:23 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
@@ -51,12 +54,10 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.7 90/
 #   include <varargs.h>
 #endif
 #include "stddef.h"
+#include "stdlib.h"
 /*========================== program include files ===========================*/
 #include "defs.h"
 #include "messages.h"
-/*========================== Library declarations ============================*/
-char	*calloc();
-int	free();
 /*========================== External function declarations ==================*/
 void	message();				/* Error handling routine     */
 #ifdef	DEBUG
@@ -82,7 +83,7 @@ char	*file;
 /******************************************************************************
  * Cfree - synonym to free()						      *
  ******************************************************************************/
-void	cfree(p)
+void	tfree(p)
 char	*p;
 {
 #ifdef DEBUG
@@ -98,7 +99,7 @@ char	*p;
  *  fashion ie last index varies most rapidly.  All storage is got in one     *
  *  block, and so can be freed in one go.  				      *
  *  array = (double*) arralloc(sizeof(double), 3, 0, 10, -10, 10, 0, 5);      *
- *  cfree((char*) array);					     	      *
+ *  tfree((char*) array);					     	      *
  *  (N.B. if lower bound of 1st dimension != 0 then free array+l.b.           *
  ******************************************************************************/
 #if ANSI || __STDC__

@@ -14,6 +14,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	values.c,v $
+ * Revision 1.7  90/05/16  14:20:40  keith
+ * *** empty log message ***
+ * 
  * Revision 1.6  90/05/08  17:19:09  keith
  * Fixed bug which got indexing of av_info[] wrong in test for -ve variance.
  * 
@@ -34,7 +37,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.6 90/05/08 17:19:09 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 1.7 90/05/16 14:20:40 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"structs.h"
@@ -337,7 +340,7 @@ int	comp;
  *  info from struct to be printed in the same format.  av_info contains      *
  *  the field width and format to use for each data type.                     *
  ******************************************************************************/
-int print_frame(header_sym, header_text, f)
+void print_frame(header_sym, header_text, f)
 char	header_sym;
 char	*header_text;
 double	(*f)();

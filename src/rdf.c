@@ -8,6 +8,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	rdf.c,v $
+ * Revision 1.9  90/05/01  12:51:19  keith
+ * Corrected line-breaking algorithm in print_rdf() to never exceed line length.
+ * 
  * Revision 1.8  90/02/02  15:30:19  keith
  * Split inner loop in rdf_calc() into one large, vectorisable loop and
  * one smaller, unvectorisable binning loop. 
@@ -37,7 +40,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.8 90/02/02 15:30:19 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.9 90/05/01 12:51:19 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -49,9 +52,8 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 1.8 90/02
 #include 	"string.h"
 /*========================== Program include files ===========================*/
 #include	"structs.h"
-/*========================== Library declarations ============================*/
-void    cfree();
 /*========================== External function declarations ==================*/
+void    tfree();
 double	det();
 void	invert();
 void	new_line();
@@ -149,7 +151,7 @@ NOVECTOR
 	  if( bind[jsite] < control.nbins )
              rdf[id[isite]][id[jsite]][bind[jsite]]++;
     }
-    cfree((char*)id);    cfree((char*)bind);
+    tfree((char*)id);    tfree((char*)bind);
 }
 /******************************************************************************
  * print_rdf.  Calculate the radial distribution function from the binned pair*
@@ -206,5 +208,5 @@ site_t		site_info[];
 	 new_line();
       }
    put_line('_');
-   cfree((char*)nfrac);
+   tfree((char*)nfrac);
 }

@@ -23,6 +23,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.10  90/05/16  14:10:18  keith
+ * Modified so that mutates always apply to rest of run.
+ * 
  * Revision 1.9  90/05/02  15:28:52  keith
  * Removed references to size_t and time_t typedefs, no longer in "defs.h"
  * 
@@ -55,7 +58,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.9 90/05/02 15:28:52 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.10 90/05/16 14:10:18 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -65,9 +68,8 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.9 90/0
 /*========================== program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
-/*========================== Library declarations ============================*/
-void	cfree();			/* Free allocated memory	      */
 /*========================== External function declarations ==================*/
+void	        tfree();		/* Free allocated memory	      */
 static char	*mutate();
 double		mdrand();
 void		mat_vec_mul();
@@ -92,7 +94,7 @@ vec_t		force[], torque[];
 mat_t		stress;
 double		pe;
 {
-   FILE		*dumpf;			/* File pointer to dump files	      */
+   FILE		*dumpf=NULL;		/* File pointer to dump files	      */
    dump_t	dump_header;		/* Header record proforma	      */
    char		cur_file[L_name],	/* Names of current and previous      */
    		prev_file[L_name],	/* dump files.			      */
@@ -104,7 +106,7 @@ double		pe;
    int		dump_size = DUMP_SIZE(control.dump_level);
                                         /* Size in floats of each dump record */
    float	*dump_buf = aalloc(dump_size, float);	/* For converted data */
-   long		file_pos,		/* Offset within file of current rec. */
+   long		file_pos=0,		/* Offset within file of current rec. */
    		file_len;		/* Length of file		      */
    		boolean errflg = false;
 #define		NMUTATES 10   		/* Max number of mutation attempts.   */
@@ -172,7 +174,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 1.9 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 1.10 $"+11,
 		                     sizeof dump_header.vsn-1);
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;
@@ -218,7 +220,7 @@ double		pe;
       	message(NULLI, NULLP, FATAL, DWFAIL, cur_file);
 
    (void)fclose(dumpf);
-   cfree((char*)dump_buf);
+   tfree((char*)dump_buf);
 }
 /******************************************************************************
  *  mutate  Take a string defining a file name and randomly alter characters  *
@@ -295,7 +297,7 @@ double		pe;
       real_to_float(torque[0], buf, 3*nmols_r);	buf += 3*nmols_r;
       real_to_float(stress[0], buf, 9);		buf += 9;
    }
-   cfree((char*)scale_buf);
+   tfree((char*)scale_buf);
 }
 /******************************************************************************
  *  real_to_float  Copy data from one array to another, converting from       *

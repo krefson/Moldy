@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.11  90/05/02  15:33:27  keith
+ * Make declaration of saxpy() conditional along with use.
+ * 
  * Revision 1.10  90/01/15  12:24:05  keith
  * Corrected declaration of arralloc from void* to char* to keep lint happy.
  * 
@@ -47,7 +50,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.10 90/01/15 12:24:05 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.11 90/05/02 15:33:27 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -55,13 +58,12 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.10 90
 #else
 #include <math.h>
 #endif
+#include "stdlib.h"
 /*========================== Program include files ===========================*/
 #include "structs.h"
 #include "messages.h"
-/*========================== Library declarations ============================*/
-int	abs();
-void	cfree();
 /*========================== External function declarations ==================*/
+void	tfree();
 double	err_fn();			/* Error function		      */
 double	det();				/* Determinant of 3x3 matrix	      */
 void	invert();			/* Inverts a 3x3 matrix		      */
@@ -416,13 +418,13 @@ VECTORIZE
  */
    *pe += pe_local;
    
-   cfree((char*)chx); cfree((char*)cky); cfree((char*)clz); 
-   cfree((char*)shx); cfree((char*)sky); cfree((char*)slz);
-   cfree((char*)qcoskr); cfree((char*)qsinkr);
+   tfree((char*)chx); tfree((char*)cky); tfree((char*)clz); 
+   tfree((char*)shx); tfree((char*)sky); tfree((char*)slz);
+   tfree((char*)qcoskr); tfree((char*)qsinkr);
 #ifdef OLDEWALD
-   cfree((char*)chxky);	 cfree((char*)shxky); 
+   tfree((char*)chxky);	 tfree((char*)shxky); 
 #endif
 #ifdef VCALLS
-   cfree((char*)temp);
+   tfree((char*)temp);
 #endif
 }

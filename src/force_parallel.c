@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.4 90/05/02 15:36:18 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.5 90/05/16 14:20:52 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef  convexvc
@@ -84,9 +84,8 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,
 /*========================== Program include files ===========================*/
 #include "structs.h"
 #include "messages.h"
-/*========================== Library declarations ============================*/
-void    cfree();
 /*========================== External function declarations ==================*/
+void    tfree();
 void    note();                         /* Make a note in output file         */
 char    *arralloc();                    /* General purpose array allocator    */
 int     search_lt();			/* Search a vector for el. < scalar   */
@@ -356,7 +355,7 @@ reloc_t	***reloc;			/* Relocation index array	(in) */
       nfnab[ftype] = nnab += c;
    }
 
-   cfree((char*)reloc_if);
+   tfree((char*)reloc_if);
    
    return nnab;
 }
@@ -505,7 +504,7 @@ mat_t           stress;                 /* Stress virial                (out) */
 	    n_cell_list += spec->nmols*spec->nsites;
 	 else 
 	    n_cell_list += spec->nmols;
-      (void)cfree((char*)c_ptr);
+      tfree((char*)c_ptr);
       c_ptr = aalloc(n_cell_list, cell_t);
       init = false;
    }
@@ -597,11 +596,11 @@ VECTORIZE
 #ifdef DEBUG2
    histout();
 #endif
-   cfree((char*)(potp+1));  cfree((char*)c_ptr); 
-   cfree((char*)cell);        cfree((char*)id); 
-   cfree((char*)pe_n);   cfree((char*)stress_n);
+   tfree((char*)(potp+1));  tfree((char*)c_ptr); 
+   tfree((char*)cell);        tfree((char*)id); 
+   tfree((char*)pe_n);   tfree((char*)stress_n);
    if( nthreads > 1)
-      cfree((char*)s_f_n);
+      tfree((char*)s_f_n);
 }
 /******************************************************************************
  *  Force_inner() Paralellised inner loops of force_calc.  Loops over cells   *
@@ -823,13 +822,13 @@ VECTORIZE
    stress[1][2]  += s12;
    stress[2][2]  += s22;
 
-   cfree((char*)nab_pot);   
-   cfree((char*)nab);     cfree((char*)reloc_i);  cfree((char*)nab_chg);
-   cfree((char*)r_sqr);   cfree((char*)R);       cfree((char*)forceij);
-   cfree((char*)rx);      cfree((char*)ry);      cfree((char*)rz);
-   cfree((char*)forcejx); cfree((char*)forcejy); cfree((char*)forcejz);
-   cfree((char*)nab_sx);  cfree((char*)nab_sy);  cfree((char*)nab_sz);
+   tfree((char*)nab_pot);   
+   tfree((char*)nab);     tfree((char*)reloc_i);  tfree((char*)nab_chg);
+   tfree((char*)r_sqr);   tfree((char*)R);       tfree((char*)forceij);
+   tfree((char*)rx);      tfree((char*)ry);      tfree((char*)rz);
+   tfree((char*)forcejx); tfree((char*)forcejy); tfree((char*)forcejz);
+   tfree((char*)nab_sx);  tfree((char*)nab_sy);  tfree((char*)nab_sz);
 #ifdef VCALLS
-   cfree((char*)force_comp);
+   tfree((char*)force_comp);
 #endif
 }

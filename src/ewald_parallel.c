@@ -3,6 +3,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.5  90/05/16  14:20:47  keith
+ * *** empty log message ***
+ * 
  * Revision 1.4  90/05/02  15:37:31  keith
  * Removed references to size_t and time_t typedefs, no longer in "defs.h"
  * 
@@ -45,7 +48,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.4 90/05/02 15:37:31 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.5 90/05/16 14:20:47 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -53,13 +56,12 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,
 #else
 #include <math.h>
 #endif
+#include "stdlib.h"
 /*========================== Program include files ===========================*/
 #include "structs.h"
 #include "messages.h"
-/*========================== Library declarations ============================*/
-int	abs();
-void	cfree();
 /*========================== External function declarations ==================*/
+void	tfree();
 double	err_fn();			/* Error function		      */
 double	det();				/* Determinant of 3x3 matrix	      */
 void	invert();			/* Inverts a 3x3 matrix		      */
@@ -290,12 +292,12 @@ VECTORIZE
       }
 
    
-   cfree((char*)chx); cfree((char*)cky); cfree((char*)clz); 
-   cfree((char*)shx); cfree((char*)sky); cfree((char*)slz);
-   cfree((char*)pe_n);   cfree((char*)stress_n);
-   cfree((char*)hkl);
+   tfree((char*)chx); tfree((char*)cky); tfree((char*)clz); 
+   tfree((char*)shx); tfree((char*)sky); tfree((char*)slz);
+   tfree((char*)pe_n);   tfree((char*)stress_n);
+   tfree((char*)hkl);
    if( nthreads > 1)
-      cfree((char*)s_f_n);
+      tfree((char*)s_f_n);
 }
 /*****************************************************************************
  * qsincos().  Evaluate q sin(k.r) and q cos(k.r).  This is in a separate    *
@@ -496,12 +498,12 @@ VECTORIZE
  * End of loop over K vectors.
  */
     }
-(void)cfree((char*)qcoskr); (void)cfree((char*)qsinkr);
+tfree((char*)qcoskr); tfree((char*)qsinkr);
 #ifdef OLDEWALD
-   cfree((char*)chxky);	 cfree((char*)shxky); 
+   tfree((char*)chxky);	 tfree((char*)shxky); 
 #endif
 #ifdef VCALLS
-   cfree((char*)temp);
+   tfree((char*)temp);
 #endif
 }
 
