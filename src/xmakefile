@@ -1,3 +1,4 @@
+SHELL=/bin/sh
 #
 #  Compilation Options  - choose a suitable set for your machine
 #     
@@ -9,7 +10,8 @@
 #INLINE=
 #  **** Sun (unbundled) CC -- fastest options & getter than gcc 2.0
 CFLAGS=	-O2 -dalign $(CFLAGS0)
-LDFLAGS=  /usr/lib/libm.il $(LDFLAGS0)
+CFLAGS2= /usr/lib/libm.il 
+LDFLAGS= $(LDFLAGS0)
 #INLINE=
 #  **** Scalar machines using gcc - can compile with -g ****
 #CC=	gcc
@@ -22,7 +24,7 @@ LDFLAGS=  /usr/lib/libm.il $(LDFLAGS0)
 #LDFLAGS= $(LDFLAGS0) -g -z 
 #INLINE=
 #  **** Titan ****
-#CFLAGS= -O2 -vector_c -vreport -fast $(CFLAGS0)
+#CFLAGS= -O2 -vector_c -vreport $(CFLAGS0)
 #CFLAGS2=  -safe=ptrs
 #LDFLAGS= $(LDFLAGS0) 
 #INLINE= -inline -Npaths=aux.in
@@ -115,10 +117,10 @@ proto-mdshak:	mdshak.c $(SHAKC)
 		protoize mdshak.c $(SHAKC)
 
 install:	moldy $(UTILS) mdshak
-		install $?  $? $(HOME)/bin
+		for file in $?; do install $$file $$HOME/bin; done
 
 install2:	moldy $(UTILS) mdshak
-		install $?  $? $(HOME)/bin.$(HOSTTYPE)
+		for file in $?; do install $$file $$HOME/bin.$$HOSTTYPE; done
 
 Makefile:	xmakefile
 		@PATH=/usr/5bin:${PATH};\
@@ -162,8 +164,8 @@ spotless:
 annihilate:
 		$(MAKE) spotless
 		if ( [ -r RCS ] ) then\
-                    /bin/rm -f $(CFILES) $(HFILES)  moldy.tex Makefile\
-		    $(EXTRAS) ;\
+                    /bin/rm -f $(DOC) $(CFILES) $(HFILES)  Makefile moldy.tex\
+				      $(EXTRAS) $(INFILES);\
                 else \
                    echo "RCS directory not present."\
                         "You don't REALLY want to delete the sources do you?";\
