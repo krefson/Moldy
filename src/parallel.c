@@ -22,6 +22,17 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.18  1996/09/03 15:04:51  keith
+ *       Added optional code for MPI global sums to guarantee identical
+ *       results on all processors. Compile with -DUNSYMM to activate.
+ *
+ *       Revision 2.17  1996/03/19 12:33:50  keith
+ *       Optimised T3D par_collect_all.  Now does not call barrier()
+ *       within loop, but uses pt-to-pt synchronization.
+ *       (b) Works "in-place" in memory rather than in static buffers.
+ *       This may well not be robust because of sbreak() call which
+ *       may break malloc().
+ *
  *       Revision 2.14  1996/01/17 17:08:42  keith
  *       Added "par_isum()" for rdf calculation.
  *       Added security "exit()" call to par_abort().
@@ -53,6 +64,9 @@ what you give them.   Help stamp out software-hoarding!  */
  * Initial revision
  *
  */
+#ifndef lint
+static char *RCSid = "$Header: /home/rahman/keith/moldy/src/RCS/parallel.c,v 2.18 1996/09/03 15:04:51 keith Exp $";
+#endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
 #include	"structs.h"
@@ -469,6 +483,12 @@ int  n;
 /*
  * MPI demands seperate send and receive buffers.  Malloc one and keep
  * it around.  Extend if necessary.
+ *
+ * The MPI standard recommends but does not guarantee that the results 
+ * of an Allreduce operation are identical on all threads.  For
+ * efficiency we assume that it is here, but provide conditional code
+ * in case it isn't. The test on accel.c will trap if results differ,
+ * in which case recompile with -DUNSYMM.
  */
 void
 par_rsum(buf, n)
@@ -484,7 +504,12 @@ int  n;
       tmpbuf = dalloc(n);
       tmpsize = n;
    }
+#ifdef UNSYMM
+   MPI_Reduce(buf, tmpbuf, n, M_REAL, MPI_SUM, 0, MPI_COMM_WORLD);
+   MPI_Bcast(tmpbuf, n, M_REAL, 0, MPI_COMM_WORLD);
+#else
    MPI_Allreduce(buf, tmpbuf, n, M_REAL, MPI_SUM, MPI_COMM_WORLD);
+#endif
    memcp(buf, tmpbuf, n*sizeof(real));
 }
 void
@@ -501,7 +526,12 @@ int  n;
       tmpbuf = aalloc(n, double);
       tmpsize = n;
    }
+#ifdef UNSYMM
+   MPI_Reduce(buf, tmpbuf, n, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+   MPI_Bcast(tmpbuf, n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+#else
    MPI_Allreduce(buf, tmpbuf, n, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#endif
    memcp(buf, tmpbuf, n*sizeof(double));
 }
 #endif
