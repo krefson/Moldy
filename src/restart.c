@@ -31,6 +31,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 2.1  93/07/19  13:28:11  keith
+ * Added XDR capability for backup and dump files.
+ * 
  * Revision 2.0  93/03/15  14:49:20  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
@@ -106,7 +109,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 2.0 93/03/15 14:49:20 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 2.1 93/07/19 13:28:11 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -283,7 +286,7 @@ size_t	size;
 int	nitems;
 xdrproc_t proc;
 {
-   unsigned long       length;
+   unsigned long       length=0;
    unsigned int	       begin_length, begin_data, end_data;
    if( control.xdr_write ) {   
       /* 
@@ -506,7 +509,7 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
    FILE		*save;
    XDR		xdrs;
    xfp_mt	xfp;
-   char		*vsn = "$Revision: 2.0 $"+11;
+   char		*vsn = "$Revision: 2.1 $"+11;
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)
