@@ -72,7 +72,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.29 92/10/01 18:07:19 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.30 92/10/28 14:09:58 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -802,15 +802,22 @@ NOVECTOR
 /*
  *   Start of main loop over processors
  */
+#ifdef PARALLEL
 #ifdef stellar
 /*$dir parallel*/
-#endif
+#endif /* stellar */
 #ifdef titan
 #pragma ipdep
-#endif
+#endif /* titan */
 #ifdef __convexc__
 #pragma _CNX force_parallel
-#endif
+#endif /* --convexc__ */
+#ifdef CRAY
+#pragma _CRI taskloop private(ithread) shared(nthreads,site,chg, potp, id,\
+		  n_nab_sites, n_nabors, nabor, cell, reloc, n_frame_types, \
+		  system, stress_n, pe_n, s_f_n)
+#endif /* CRAY */
+#endif /*PARALLEL */
    for(ithread = 0; ithread < nthreads; ithread++)
       force_inner(ithread, nthreads, site, chg, potp, id,
 		  n_nab_sites, n_nabors, nabor, cell, reloc, n_frame_types, 
@@ -846,6 +853,9 @@ VECTORIZE
 #pragma _CNX vstrip (32)
 #pragma _CNX force_vector
 #pragma _CNX force_parallel_ext
+#endif
+#ifdef CRAY
+#pragma _CRI ivdep
 #endif
       for(isite = 0; isite < nsites; isite++)
       {

@@ -3,6 +3,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 1.19  92/08/13  17:56:58  keith
+ * Modified nprocessors to limit execution to 1 proc
+ * unless env var THREADS explicitly set.
+ * 
  * Revision 1.18  92/06/26  17:03:02  keith
  * Got rid of assumption that memory returned by talloc() or
  * arralloc() is zeroed.  This enhances ANSI compatibility.
@@ -99,7 +103,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.18 92/06/26 17:03:02 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.19 92/08/13 17:56:58 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -107,7 +111,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,
 #if  defined(convexvc) || defined(stellar)
 #   include 	<fastmath.h>
 #else
-#ifdef ardent
+#ifdef titan
 #   include 	<vmath.h>
 #else
 #   include 	<math.h>
@@ -148,7 +152,7 @@ extern	contr_t	control;		/* Main simulation control record     */
  *  Ewald  Calculate reciprocal-space part of coulombic forces		      *
  ******************************************************************************/
 void ewald_inner();
-#ifdef ardent
+#ifdef titan
 #ifdef PARALLEL
 #pragma opt_level 3
 #pragma pproc ewald_inner
@@ -245,7 +249,7 @@ mat_t		stress;			/* Stress virial		(out) */
       nsitesxf = ssite;
       frame_flag = (spec != species+system->nspecies);
 
-#ifdef ardent
+#ifdef titan
 #pragma no_parallel
 #endif
       for(is = 0; is < nsitesxf; is++)
@@ -258,7 +262,7 @@ mat_t		stress;			/* Stress virial		(out) */
        * Sqxf is total non-framework charge.  Calculate grand total in sq.
        */
       sqxf = sq;
-#ifdef ardent
+#ifdef titan
 #pragma no_parallel
 #endif
       for(; is < nsites; is++)
@@ -322,7 +326,7 @@ mat_t		stress;			/* Stress virial		(out) */
  */
    coshx = chx[0]; cosky = cky[0]; coslz = clz[0];
    sinhx = shx[0]; sinky = sky[0]; sinlz = slz[0];
-#ifdef ardent
+#ifdef titan
 #pragma no_parallel
 #endif
 VECTORIZE
@@ -335,7 +339,7 @@ VECTORIZE
    coshx = chx[1]; cosky = cky[1]; coslz = clz[1];
    sinhx = shx[1]; sinky = sky[1]; sinlz = slz[1];
    site0 = site[0]; site1 = site[1]; site2 = site[2];
-#ifdef ardent
+#ifdef titan
 #pragma no_parallel
 #endif
 VECTORIZE
@@ -360,7 +364,7 @@ VECTORIZE
       sinhx = shx[h];
       cm1 = chx[h-1]; sm1 = shx[h-1];
       c1  = chx[1];   s1  = shx[1];
-#ifdef ardent
+#ifdef titan
 #pragma no_parallel
 #endif
 VECTORIZE
@@ -376,7 +380,7 @@ VECTORIZE
       sinky = sky[k];
       cm1 = cky[k-1]; sm1 = sky[k-1];
       c1  = cky[1];   s1  = sky[1];
-#ifdef ardent
+#ifdef titan
 #pragma no_parallel
 #endif
 VECTORIZE
@@ -392,7 +396,7 @@ VECTORIZE
       sinlz = slz[l];
       cm1 = clz[l-1]; sm1 = slz[l-1];
       c1  = clz[1];   s1  = slz[1];
-#ifdef ardent
+#ifdef titan
 #pragma no_parallel
 #endif
 VECTORIZE
@@ -407,16 +411,23 @@ VECTORIZE
  * To avoid calculating K and -K, only half of the K-space box is covered. 
  * Points on the axes are included once and only once. (0,0,0) is omitted.
  */
+#ifdef PARALLEL
 #ifdef stellar
 /*$dir parallel*/
-#endif
-#ifdef ardent
+#endif /* stellar */
+#ifdef titan
 #pragma ipdep
 #pragma pproc ewald_inner
-#endif
+#endif titan
 #ifdef __convexc__
 #pragma _CNX force_parallel
-#endif
+#endif /* --convexc__ */
+#ifdef CRAY
+#pragma _CRI taskloop private(ithread) shared(nthreads, nhkl, hkl, nsites, \
+		  nsitesxf, chx, cky, clz, shx, sky, slz, chg, vol, r_4_alpha, \
+		  stress_n, pe_n, s_f_n)
+#endif /* CRAY */
+#endif /*PARALLEL */
    for(ithread = 0; ithread < nthreads; ithread++)
       ewald_inner(ithread, nthreads, nhkl, hkl, nsites, nsitesxf, 
 		  chx, cky, clz, shx, sky, slz, chg, &vol, &r_4_alpha,
@@ -427,7 +438,7 @@ VECTORIZE
    for(ithread = 0; ithread < nthreads; ithread++)
    {
       *pe += pe_n[ithread];
-#ifdef ardent
+#ifdef titan
 #pragma asis
 #endif
       for(i = 0; i < 3; i++)
@@ -440,7 +451,7 @@ VECTORIZE
       ssf0 = s_f_n[ithread][0];
       ssf1 = s_f_n[ithread][1];
       ssf2 = s_f_n[ithread][2];
-#ifdef ardent
+#ifdef titan
 #pragma ipdep
 #endif
 #ifdef __convexc__
@@ -448,7 +459,9 @@ VECTORIZE
 #pragma _CNX force_vector
 #pragma _CNX force_parallel_ext
 #endif
-VECTORIZE
+#ifdef CRAY
+#pragma _CRI ivdep
+#endif
       for(is = 0; is < nsites; is++)
       {
 	 sf0[is] += ssf0[is];
@@ -465,7 +478,7 @@ VECTORIZE
       xfree(s_f_n[ithread]);
    xfree(s_f_n);
 }
-#ifdef ardent
+#ifdef titan
 #ifdef PARALLEL
 #pragma opt_level 2
 #endif
@@ -692,6 +705,27 @@ int nprocessors()
    }
    return n;
 }
+#else
+#ifdef CRAY
+int nprocessors()
+{
+   char *env;
+   static int n = 0;
+   int nphys = 8;
+
+   if( n <= 0 )
+   {
+      if( ( env = getenv("NCPUS") ) == NULL )
+	 n = 1;
+      else
+      {
+	 n = atoi(env);
+	 if ( n <= 0 || n > nphys)
+	    n = nphys;
+      }
+   }
+   return n;
+}
 #else			/* GS1000/2000 but should compile on any unix */
 int nprocessors()
 {
@@ -712,4 +746,5 @@ int nprocessors()
    }
    return n;
 }
+#endif
 #endif
