@@ -1,8 +1,25 @@
+RELEASE_2.16e
+-------------
+* Fixed bug whereby scaling and thermostat adjusted temperature to old
+  (release 2.15) values and was not updateed in terms of 3N-3
+  translational degrees of freedom.
+
+* Added two new output formats to "mdshak" and "mdavpos", Insight XTL
+  and Biosym ARC.
+
+* Changed arguments of mdshak and mdavpos to use "-f out-type" instead
+  of separate flags.  Allowed types are shak, pdb, xyz, dcd, cssr, arc,
+  xtl, bin.
+
+*  Functionality changes in ransub.
+
 RELEASE_2.16d
 -------------
 * Fixed bug in Ewald sum on parallel machines which could cause crash.
 
 * Fixed bug in force.c which crashed on constant-pressure run.
+
+* Fixed memory allocation so mdshak works on Cray T3E
 
 * Retrofitted molecular cutoff capability, selected by control parameter
   "molecular-cutoff".  Updated some of the example files.
