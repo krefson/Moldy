@@ -23,6 +23,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.16  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.15  1998/01/27 15:46:45  keith
  *       Got rid of __MSDOS__ and "unix" macros.
  *       Replaced with ALLOC_SEPARATELY and ALLOC_ALIGN.
@@ -213,7 +218,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/ewald.c,v 2.15 1998/01/27 15:46:45 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/ewald.c,v 2.16 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -289,66 +294,58 @@ real coshx[], sinhx[], cosky[], sinky[], coslz[], sinlz[],
 int  k,l,nsites;
 {
    int is;
-   real qckr;
+   real qckr, chxky, shxky;
    
    if( k >= 0 )
       if( l >= 0 )
       {
-VECTORIZE
 	 for(is = 0; is < nsites; is++)
-	 {
-	    qckr = chg[is]*(
-		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
-                - (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
-	    qsinkr[is] = chg[is]*(
-                  (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
-		+ (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
+	 {	
+	    chxky = coshx[is]*cosky[is] - sinhx[is]*sinky[is];
+	    shxky = sinhx[is]*cosky[is] + coshx[is]*sinky[is];
+	    
+	    qckr =       chg[is]*(chxky*coslz[is] - shxky*sinlz[is]);
+	    qsinkr[is] = chg[is]*(shxky*coslz[is] + chxky*sinlz[is]);
 	    qcoskr[is] = qckr;
 	 }
       }
       else
       {
-VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    qckr = chg[is]*(
-		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
-                + (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
-	    qsinkr[is] = chg[is]*(
-                  (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
-		- (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
+	    chxky = coshx[is]*cosky[is] - sinhx[is]*sinky[is];
+	    shxky = sinhx[is]*cosky[is] + coshx[is]*sinky[is];
+	    
+	    qckr =       chg[is]*(chxky*coslz[is] + shxky*sinlz[is]);
+	    qsinkr[is] = chg[is]*(shxky*coslz[is] - chxky*sinlz[is]);
 	    qcoskr[is] = qckr;
 	 }
       }
    else
       if( l >= 0 )
       {
-VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    qckr = chg[is]*(
-		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
-                - (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
-	    qsinkr[is] = chg[is]*(
-                  (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
-		+ (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
+	    chxky = coshx[is]*cosky[is] + sinhx[is]*sinky[is];
+	    shxky = sinhx[is]*cosky[is] - coshx[is]*sinky[is];
+	    
+	    qckr =       chg[is]*(chxky*coslz[is] - shxky*sinlz[is]);
+	    qsinkr[is] = chg[is]*(shxky*coslz[is] + chxky*sinlz[is]);
 	    qcoskr[is] = qckr;
 	 }
       }
       else
       {
-VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    qckr = chg[is]*(
-		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
-                + (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
-	    qsinkr[is] = chg[is]*(
-                  (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
-		- (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
+	    chxky = coshx[is]*cosky[is] + sinhx[is]*sinky[is];
+	    shxky = sinhx[is]*cosky[is] - coshx[is]*sinky[is];
+	    
+	    qckr =       chg[is]*(chxky*coslz[is] + shxky*sinlz[is]);
+	    qsinkr[is] = chg[is]*(shxky*coslz[is] - chxky*sinlz[is]);
 	    qcoskr[is] = qckr;
 	 }
-     }
+      }
 }
 
 /******************************************************************************
