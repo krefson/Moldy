@@ -3,14 +3,10 @@ TODO
 Port to new Autoconf.
 Get Configure to select options better, eg mpicc where underlying
 compiler is Portland.
-
+Get rid of system header -subst files?
 
 Eliminate extra args for kernel.
 Take DEBUG_THERMOSTAT out of accel.c
-Get rid of system header -subst files?
-
-Zap value of save-file when written to avoid overwriting?  Or test for
-restart-file and save-file being identical and handle?
 
 Need to document the -c option if msd and  delete the last sentence
 in the explanation of mdvaf.
@@ -21,6 +17,8 @@ Fix error handling in mdshak, mdavpos in case the call to "dumpext" failed.
 
 Update DCD writer to a machine-independent format?
 
+Incorporate Craig's configuration generator.
+
 In fact rework all utilities to rationalise options and better document use.
 
 Update manual to document leapfrog algorithms and molecular-cutoff option. 
@@ -28,7 +26,6 @@ Update manual to document leapfrog algorithms and molecular-cutoff option.
   "On another note, the user manual states that when you decompress the 
    moldy.zip file you'll have two directories called "cygwin" and "mingw"
 
-Incorporate Craig's configuration generator.
 
 NOTYET
 ======
@@ -42,6 +39,9 @@ Fix T3E version - don't use MPI_ABORT as it dumps core
 
 DONE
 ====
+Zap value of save-file when written to avoid overwriting?  Or test for
+restart-file and save-file being identical and handle?
+
 RRP's suggestion for the dump header is to include the masses and charges.
 
 Fix reader to handle DOS linebreaks.
