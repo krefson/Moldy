@@ -39,8 +39,6 @@ void	banner_page()
 {}
 void	note()
 {}
-int	npott;
-pots_t	potspec[1];
 void	conv_potentials()
 {}
 void	conv_control()
@@ -295,9 +293,9 @@ site_t		site_info[];
    a = sqrt(SQR(h[0][0]) + SQR(h[1][0]) + SQR(h[2][0]));
    b = sqrt(SQR(h[0][1]) + SQR(h[1][1]) + SQR(h[2][1]));
    c = sqrt(SQR(h[0][2]) + SQR(h[1][2]) + SQR(h[2][2]));
-   alpha = 180/PI*acos(h[0][1]*h[0][2] + h[1][1]*h[1][2] + h[2][1]*h[2][2]);
-   beta  = 180/PI*acos(h[0][0]*h[0][2] + h[1][0]*h[1][2] + h[2][0]*h[2][2]);
-   gamma = 180/PI*acos(h[0][0]*h[0][1] + h[1][0]*h[1][1] + h[2][0]*h[2][1]);
+   alpha = 180/PI*acos((h[0][1]*h[0][2]+h[1][1]*h[1][2]+h[2][1]*h[2][2])/b/c);
+   beta  = 180/PI*acos((h[0][0]*h[0][2]+h[1][0]*h[1][2]+h[2][0]*h[2][2])/a/c);
+   gamma = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/a/b);
 
    printf("CELL %f %f %f %f %f %f\n", a, b, c, alpha, beta, gamma);
    for(spec = species; spec < species+system->nspecies; spec++)
@@ -325,7 +323,7 @@ site_t		site_info[];
    (void)printf("END %d\n", n);
 }
 /******************************************************************************
- * Centre_mass.  Shift system centre of mass to origin.			      *
+ * Centre_mass.  Shift system centre of mass to origin (in discrete steps),   *
  ******************************************************************************/
 void
 centre_mass(system, species)
@@ -352,6 +350,9 @@ spec_t		species[];
    c_of_m[0] /= mass;
    c_of_m[1] /= mass;
    c_of_m[2] /= mass;
+   c_of_m[0] = floor(c_of_m[0]+0.5);
+   c_of_m[1] = floor(c_of_m[1]+0.5);
+   c_of_m[2] = floor(c_of_m[2]+0.5);
    for(imol = 0; imol < system->nmols; imol++)
    {
       system->c_of_m[imol][0] -= c_of_m[0];
