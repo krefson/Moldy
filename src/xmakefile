@@ -13,7 +13,7 @@ XDR=-DUSE_XDR
 #PARLIBC=-DSPMD -DTCGMSG -I/usr/local/include/tcgmsg
 #PARLIBL=-L/usr/local/lib -ltcgmsg
 # BSP library
-#CC=mpicc
+#CC=bspcc
 #PARLIBC=-DSPMD -DBSP
 #PARLIBL=-L/usr/local/lib -lbsp
 # MPI library
@@ -43,7 +43,7 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #INLINE=
 #  **** IBM RS6000 ****
 #CC=cc
-#CFLAGS=   -qansialias -O3 $(XDR) $(PARLIBC) $(CFLAGS0)
+#CFLAGS=   -DRS6000 -qansialias -O3 $(XDR) $(PARLIBC) $(CFLAGS0)
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #INLINE=
 #  **** MIPS for SGI, IRIX 5 ****
@@ -55,6 +55,7 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #INLINE=
 #  **** Sun C 3.0.1
+#CC=acc
 #CFLAGS= -libmil -dalign  -O4 $(XDR) $(PARLIBC) $(CFLAGS0)
 #CFLAGS2= -fsimple
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
@@ -76,8 +77,8 @@ LDFLAGS= $(LDFLAGS0) $(PARLIBL)
 #CFLAGS2=
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #  **** HP 700 ****
-#CFLAGS=	+O3 +Om1 -J $(XDR) $(PARLIBC) $(CFLAGS0)
-#CFLAGS2=
+#CFLAGS=	+O3  +Olibcalls $(XDR) $(PARLIBC) $(CFLAGS0)
+#CFLAGS2=       +Onoparmsoverlap 
 #LDFLAGS= $(PARLIBL) $(LDFLAGS0)
 #  **** Stellar ****
 #CFLAGS= -g -O2 -va -na -nv $(XDR) $(CFLAGS0)
@@ -241,7 +242,7 @@ print:		$(CFILES) $(HFILES)
 
 lint:		
 		$(LINT) $(XDR) $(LFLAGS) $(CFILES) -lm
-				
+
 lint-mdshak:		
 		$(LINT) $(XDR) $(LFLAGS) mdshak.c $(SHAKC) -lm
 
@@ -341,7 +342,7 @@ $(LFILES):	$(HFILES)
 #
 eigens.o quaterns.o:	defs.h
 
-accel.o beeman.o convert.o input.o main.o output.o startup.o values.o:	\
+accel.o beeman.o convert.o input.o main.o output.o startup.o values.o parallel.o:	\
 	structs.h defs.h messages.h
 
 algorith.o alloc.o matrix.o:	defs.h messages.h
