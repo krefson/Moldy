@@ -3,6 +3,10 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.8  89/12/22  19:31:53  keith
+ * New version of arralloc() orders memory so that pointers come FIRST.
+ * This means you can simply free() the pointer returned (if l.b. = 0).
+ * 
  * Revision 1.7  89/12/21  16:29:47  keith
  * Reversed indices in 'site' and 'site_force' to allow stride of 1 in ewald.
  * 
@@ -35,7 +39,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/ewald.c,v 1.7 89/12/21 16:29:47 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/ewald.c,v 1.8 89/12/22 19:31:53 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -69,7 +73,60 @@ extern	contr_t	control;		/* Main simulation control record     */
 #define modb(hmat) sqrt(SQR(hmat[0][1]) + SQR(hmat[1][1]))
 #define modc(hmat) sqrt(SQR(hmat[0][2]) + SQR(hmat[1][2]) + SQR(hmat[2][2]))
 /*============================================================================*/
+/*****************************************************************************
+ * qsincos().  Evaluate q sin(k.r) and q cos(k.r).  This is in a separate    *
+ * function because some compilers (notably Stellar's) generate MUCH better  *
+ * vector code this way. 						     *
+ *****************************************************************************/
+void      qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,chg,
+		  qcoskr,qsinkr,k,l,nsites)
+real coshx[], sinhx[], cosky[], sinky[], coslz[], sinlz[],
+     chg[], qcoskr[], qsinkr[];
+int  k,l,nsites;
+{
+   int is;
+   real chxky, shxky;
+   
+   if( k >= 0 )
+      if( l >= 0 )
+VECTORIZE
+	 for(is = 0; is < nsites; is++)
+	 {
+	    chxky = coshx[is]*cosky[is] - sinhx[is]*sinky[is];
+	    shxky = sinhx[is]*cosky[is] + coshx[is]*sinky[is];
+	    qcoskr[is] = chg[is]*(chxky*coslz[is] - shxky*sinlz[is]);
+	    qsinkr[is] = chg[is]*(shxky*coslz[is] + chxky*sinlz[is]);
+	 }
+      else
+VECTORIZE
+	 for(is = 0; is < nsites; is++)
+	 {
+	    chxky = coshx[is]*cosky[is] - sinhx[is]*sinky[is];
+	    shxky = sinhx[is]*cosky[is] + coshx[is]*sinky[is];
+	    qcoskr[is] = chg[is]*(chxky*coslz[is] +shxky*sinlz[is]);
+	    qsinkr[is] = chg[is]*(shxky*coslz[is] - chxky*sinlz[is]);
+	 }
+   else
+      if( l >= 0 )
+VECTORIZE
+	 for(is = 0; is < nsites; is++)
+	 {
+	    chxky = coshx[is]*cosky[is] + sinhx[is]*sinky[is];
+	    shxky = sinhx[is]*cosky[is] - coshx[is]*sinky[is];
+	    qcoskr[is] = chg[is]*(chxky*coslz[is] - shxky*sinlz[is]);
+	    qsinkr[is] = chg[is]*(shxky*coslz[is] + chxky*sinlz[is]);
+	 }
+      else
+VECTORIZE
+	 for(is = 0; is < nsites; is++)
+	 {
+	    chxky = coshx[is]*cosky[is] + sinhx[is]*sinky[is];
+	    shxky = sinhx[is]*cosky[is] - coshx[is]*sinky[is];
+	    qcoskr[is] = chg[is]*(chxky*coslz[is] + shxky*sinlz[is]);
+	    qsinkr[is] = chg[is]*(shxky*coslz[is] - chxky*sinlz[is]);
+	 }
 
+}
 /******************************************************************************
  *  Ewald  Calculate reciprocal-space part of coulombic forces		      *
  ******************************************************************************/
@@ -98,9 +155,10 @@ mat_t		stress;			/* Stress virial		(out) */
 #ifdef OLDEWALD
    real		*chxky	= dalloc(nsites),
 		*shxky	= dalloc(nsites);
-#else
-   		real	chxky, shxky;	/* Temporaries for sin(hx+ky) etc     */
 #endif
+   real		*site_fx = site_force[0],
+   		*site_fy = site_force[1],
+   		*site_fz = site_force[2];
 /*
  * Maximum values of h, k, l  s.t. |k| < k_cutoff
  */
@@ -294,44 +352,8 @@ VECTORIZE
 	    qsinkr[is] = chg[is]*(shxky[is]*coslz[is] - chxky[is]*sinlz[is]);
 	 }
 #else			/* Use of scalar temps is faster if compiler up to it*/
-      if( k >= 0 )
-         if( l >= 0 )
-VECTORIZE
-            for(is = 0; is < nsites; is++)
-	    {
-	       chxky = coshx[is]*cosky[is] - sinhx[is]*sinky[is];
-	       shxky = sinhx[is]*cosky[is] + coshx[is]*sinky[is];
-	       qcoskr[is] = chg[is]*(chxky*coslz[is] - shxky*sinlz[is]);
-	       qsinkr[is] = chg[is]*(shxky*coslz[is] + chxky*sinlz[is]);
-	    }
-	 else
-VECTORIZE
-            for(is = 0; is < nsites; is++)
-	    {
-	       chxky = coshx[is]*cosky[is] - sinhx[is]*sinky[is];
-	       shxky = sinhx[is]*cosky[is] + coshx[is]*sinky[is];
-	       qcoskr[is] = chg[is]*(chxky*coslz[is] +shxky*sinlz[is]);
-	       qsinkr[is] = chg[is]*(shxky*coslz[is] - chxky*sinlz[is]);
-	    }
-      else
-         if( l >= 0 )
-VECTORIZE
-            for(is = 0; is < nsites; is++)
-	    {
-	       chxky = coshx[is]*cosky[is] + sinhx[is]*sinky[is];
-	       shxky = sinhx[is]*cosky[is] - coshx[is]*sinky[is];
-	       qcoskr[is] = chg[is]*(chxky*coslz[is] - shxky*sinlz[is]);
-	       qsinkr[is] = chg[is]*(shxky*coslz[is] + chxky*sinlz[is]);
-	    }
-	 else
-VECTORIZE
-            for(is = 0; is < nsites; is++)
-	    {
-	       chxky = coshx[is]*cosky[is] + sinhx[is]*sinky[is];
-	       shxky = sinhx[is]*cosky[is] - coshx[is]*sinky[is];
-	       qcoskr[is] = chg[is]*(chxky*coslz[is] + shxky*sinlz[is]);
-	       qsinkr[is] = chg[is]*(shxky*coslz[is] - chxky*sinlz[is]);
-	    }
+      qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,chg,
+	      qcoskr,qsinkr,k,l,nsites);
 #endif
       sqcoskr = sum(nsites, qcoskr, 1);	 sqsinkr = sum(nsites, qsinkr, 1);
       
@@ -372,9 +394,9 @@ VECTORIZE
       for(is = 0; is < nsites; is++)
       {
 	 force_comp = qsinkr[is]*sqcoskr - qcoskr[is]*sqsinkr;
-	 site_force[0][is] += kv[0] * force_comp;
-	 site_force[1][is] += kv[1] * force_comp;
-	 site_force[2][is] += kv[2] * force_comp;
+	 site_fx[is] += kv[0] * force_comp;
+	 site_fy[is] += kv[1] * force_comp;
+	 site_fz[is] += kv[2] * force_comp;
       }
 #endif
    }
