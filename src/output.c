@@ -37,6 +37,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.12  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.11  1996/03/05 18:48:00  keith
  *       Removed a couplt of const declarations because IBL xlc compiler
  *       complained about them.
@@ -176,7 +181,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/output.c,v 2.11 1996/03/05 18:48:00 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/output.c,v 2.12 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -322,6 +327,7 @@ va_dcl
       rmlockfiles();
    if(abs(sev) == FATAL)
    {
+     (void)fflush(stdout);
 #ifdef SPMD
       par_abort(3);
 #endif
