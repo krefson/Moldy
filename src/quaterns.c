@@ -22,7 +22,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * quaterns	Functions for manipulating quaternions			      *
  ******************************************************************************
  *      Revision Log
- *       $Log$
+ *       $Log: quaterns.c,v $
+ *       Revision 2.13  2004/11/22 18:21:10  kr
+ *       Merget "util_updates" branch into main
+ *
  *       Revision 2.12.4.1  2004/03/01 04:53:56  moldydv
  *       Syswrite now treats non-periodic data (from XYZ and some CSSR files) as single species with initial configuration to be set using skew start.
  *       Options -n and -l added for no of particles and species label, respectively, for such systems.
@@ -72,14 +75,16 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/quaterns.c,v 2.13 2004/11/22 18:21:10 kr Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include <math.h>
 /*========================== Program include files ===========================*/
 #include "defs.h"
+#include "messages.h"
 /*========================== External function declarations ==================*/
 double precision(void);
+void   message(int *, ...);    /* Write a warning or error message   */
 /*============================================================================*/
 /******************************************************************************
  * Quaternion multiplier.  Multiplies arrays of quaternions p by q to give r  *
@@ -205,14 +210,37 @@ void q_to_rot(real *quat,               /* Input quaternion              (in) */
 /******************************************************************************
  * rot_to_q. Inverse of above.  Will fall over badly If rot is not orthogonal.*
  ******************************************************************************/
-void	rot_to_q(mat_mt rot,            /* Rotation matrix               (in) */ 
+void	rot_to_q(mat_mp rot,            /* Rotation matrix               (in) */ 
 		 real *quat)            /* Input quaternion             (out) */
 {
    int i, j, k;
+   int iter;
    real sign;
-   double eps = 100*precision();	/* Safety margin for square roots     */
+   double eps = 64*precision();	/* Safety margin for square roots     */
+   double delta, delmax, aimj, v[3];
+
+   v[0] = rot[0][0]; v[1] = rot[1][1]; v[2] = rot[2][2];
+   /* 
+    * Ensure v is correctly normalized to ensure sqrt args +ve.
+    * Iteratively enforce condition |v[i]-v[j]| <= 1 - v[k].
+    */  
+
+   delmax=2.0*eps;
+   iter = 0;
+   while( delmax > eps ) {
+     if (iter++  > 10 ) message(NULLI, NULLP, FATAL, BADR2Q, v[0],v[1],v[2]);
+     delmax = 0.0;
+     for( i = 0, j = 1, k = 2; i < 3; i++, j=(i+1)%3, k=(j+1)%3 ) {
+       aimj = fabs(v[i]-v[j]);
+       delta = MIN(0.0,v[k]+aimj-1.0);
+       delmax = MAX(delta, delmax);
+       if (aimj > 1.0-v[k]) {
+	 v[k]=1.0-aimj;
+       }
+     }
+   }
    
-   quat[0] = 0.5 * sqrt(1.0 + eps + rot[0][0] + rot[1][1] + rot[2][2]);
+   quat[0] = 0.5 * sqrt(1.0 + eps + v[0] + v[1] + v[2]);
 
    for( i = 0, j = 1, k = 2; i < 3; i++, j=(i+1)%3, k=(j+1)%3 )
    {
@@ -222,6 +250,7 @@ void	rot_to_q(mat_mt rot,            /* Rotation matrix               (in) */
          sign = (rot[i][j] + rot[j][i] >= 0) ^ (rot[i][k] + rot[k][i] >= 0)
 	        ? -1.0 : 1.0;
 
-      quat[i+1] = sign*0.5*sqrt(1.0+eps + rot[i][i] - rot[j][j] - rot[k][k]);
+      quat[i+1] = sign*0.5*sqrt(1.0 + eps + v[i] - v[j] - v[k]);
+
    }
 }
