@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/molout.c,v 1.7 2000/12/06 17:45:32 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/molout.c,v 1.8 2001/05/18 17:10:56 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -198,7 +198,7 @@ static void xtl_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site
 	 for(is = 0; is < spec->nsites; is++)
 	 {
 	    if(fabs(site_info[spec->site_id[is]].mass) != 0)
-	       (void)printf("%8-s %12.8f %12.8f %12.8f %12.8f\n",
+	       (void)printf("%-8s %12.8f %12.8f %12.8f %12.8f\n",
 			    site_info[spec->site_id[is]].name,
 			    site[0][isite], site[1][isite], site[2][isite],
 			    site_info[spec->site_id[is]].charge*qconv);
