@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	startup.c,v $
+ * 
+ * Revision 2.3  93/10/28  10:28:13  keith
+ * Corrected declarations of stdargs functions to be standard-conforming
+ * 
  * Revision 2.0  93/03/15  14:49:22  keith
  * Added copyright notice and disclaimer to apply GPL
  * to all modules. (Previous versions licensed by explicit 
@@ -171,7 +175,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 2.0 93/03/15 14:49:22 keith Rel $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 2.5 94/01/21 12:24:07 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -225,7 +229,8 @@ extern	match_mt		match[];
 extern	int		nmatch;
 extern	char		backup_lockfile[];
 extern	char		dump_lockfile[];
-/*========================== Global variables ================================*/
+int			backup_restart = 0;
+/*========================== GLOBAL variables ================================*/
 static	unit_mt	prog_unit = {MUNIT, LUNIT, TUNIT, QUNIT};
 #ifdef	DEBUG
 static	char	afmt[] = "    %8s = %8X %8s = %8X %8s = %8X %8s = %8X\
@@ -480,7 +485,6 @@ quat_mt		qpf[];			/* Quaternion rotation to princ.frame*/
    double	mass;			/* Temporary for site mass	     */
    int		nz;			/* Count of zero moments of inertia  */
    int		i, j, isite, id; 	/* Various loop counters	     */
-   int		nrot;			/* Number of jacobi rotations        */
    boolean	flag;			/* Used to test for charges	     */
 
    system->nsites  = 0;  system->nmols  = 0;
@@ -535,9 +539,7 @@ quat_mt		qpf[];			/* Quaternion rotation to princ.frame*/
                 spec-species, spec->mass, c_of_m[0], c_of_m[1], c_of_m[2]);
          print_mat(inertia, " *D* Inertia Tensor");
 #endif
-/*         jacobi(inertia, 3, spec->inertia, v, &nrot);*/
 	 eigens(inertia,v[0],spec->inertia,3);
-/*         transpose(v,v);			/* Rotation matrix to pr. fr.*/
 	 rot_to_q(v, qpf[spec-species]);	/* make equivalent quaternion*/
 #ifdef	DEBUG
          print_mat(v," *D* Rotation Mat.");
@@ -893,6 +895,7 @@ pot_mp		*potpar;		/* Pointer to pot'l parameter array   */
       read_restart(backup, system);	/* Saved dynamic vars and averages    */
       convert_averages(control.roll_interval, control.roll_interval);
       (void)fclose(backup);
+      backup_restart++;
       message(NULLI, NULLP, INFO, BACKUP, control.backup_file);
    }
    else if( !restart )			
