@@ -26,11 +26,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * N.B.         Portability.						      *
  *    These functions make some assumptions which are not guaranteed by the   *
  * ANSI standard.							      *
- * 1)   Various other modules rely on talloc() setting the store to floating- *
- *      point zero.  This may not be the same as binary zero.  In that case   *
- *      the macros "ralloc" etc in "defs.h" will have to be converted into    *
- *      functions here which do type-dependant initialisation to zero.        *
- * 2)   arralloc() relies on a common format for pointers to different data   *
+ * 1)   arralloc() relies on a common format for pointers to different data   *
  *      types, and assumes that the representation of a "data" pointer is the *
  *      same as of an integer pointer.  (N.B.  it can not be used to allocate *
  *      character data). It will not work (and cannot be made to work) on     *
@@ -38,6 +34,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: alloc.c,v $
+ *       Revision 2.8  1994/06/08 13:08:08  keith
+ *       New version of array allocator which breaks up requests for DOS.
+ *       Now must use specific "afree()" paired with arralloc().
+ *
  * Revision 2.6  1994/02/21  16:55:58  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -145,7 +145,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /tmp_mnt/home/eeyore/keith/md/moldy/RCS/alloc.c,v 2.6 1994/02/21 16:55:58 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/alloc.c,v 2.8 1994/06/08 13:08:08 keith stab $";
 #endif
 /*========================== program include files ===========================*/
 #include "defs.h"
@@ -161,15 +161,6 @@ static char *RCSid = "$Header: /tmp_mnt/home/eeyore/keith/md/moldy/RCS/alloc.c,v
 #include "string.h"
 #ifdef DEBUGX
 #include <stdio.h>
-#endif
-#ifdef PARALLEL
-# ifdef ardent
-#  include <thread.h>
-#  define THREADED
-# endif
-#endif
-#ifndef THREADED
-# define THREAD_SYS(S) S;
 #endif
 #ifdef DBMALLOC
 typedef size_mt size_t;
@@ -226,14 +217,14 @@ char	*file;
       message(NULLI, NULLP, FATAL, NOMEM, line, file,
 	       (int)n, (unsigned long)size);
 #endif
-   THREAD_SYS(p = malloc(n*size))
+   p = malloc(n*size);
 #ifdef DEBUGX
    fprintf(stderr,"Alloc: %16s line %3d: %d x %lu bytes (%p to %p)\n", 
 	   file, line, n, size, p, p+n*size);
 #endif
    if(p == NULL && (n*size != 0))
-     THREAD_SYS(message(NULLI, NULLP, FATAL, NOMEM, line, file,
-	       (int)n, (unsigned long)size))
+     message(NULLI, NULLP, FATAL, NOMEM, line, file,
+	     (int)n, (unsigned long)size);
 #ifdef DEBUGZ
    (void)memset((gptr*)p,0x10,n*size);
 #endif
@@ -249,7 +240,7 @@ gptr	*p;
    if( ! malloc_verify() )
       message(NULLI, NULLP, FATAL, "Internal Error: Heap corrupt");
 #endif
-   THREAD_SYS(free((gptr*)p))
+   free((gptr*)p);
 }
 
 #ifdef __MSDOS__
