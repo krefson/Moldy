@@ -28,6 +28,12 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdavpos.c,v
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 3.1  1999/06/03 10:11:55  craig
+ *  Corrected memory freeing of dump limits
+ *
+ *  Revision 3.0b  1999/05/17 14:47:25  craig
+ *  Minor changes to cssr output format.
+ *
  *  Revision 3.0  1999/03/23 18:41:26  craig
  *  Added option for cssr output format.
  *  Removed unnecessary variable 'hinv' from pdb_out.
@@ -236,7 +242,8 @@ va_dcl
 static char * mystrdup(s)
 char *s;
 {
-   char * t=malloc(strlen(s)+1);
+   char * t = NULL;
+   if(s) t=malloc(strlen(s)+1);
    return t?strcpy(t,s):0;
 }
 /******************************************************************************
@@ -660,11 +667,11 @@ int		intyp;
 
 /* Write the cssr header */
    (void)printf("%37c %7.3f %7.3f %7.3f\n",' ',a,b,c);
-   (void)printf("%21c %7.3f %7.3f %7.3f    SPGR=   1 P 1\n",' ',alpha,beta,gamma);
+   (void)printf("%21c %7.3f %7.3f %7.3f    SPGR =  1 P 1\n",' ',alpha,beta,gamma);
    (void)printf("%4d   0 %60s\n", isite, control.title);
 
    if( insert != NULL)
-      (void)printf("%53s\n", insert);
+      (void)printf("       %53s\n", insert);
    else
       (void)printf("\n");
 
@@ -978,7 +985,7 @@ char	*argv[];
 	 dump_name = optarg;
 	 break;
        case 't':
-	 dumplims = optarg;
+	 dumplims = mystrdup(optarg);
 	 break;
        case 'h':
 	 outsw = SHAK;
@@ -1088,6 +1095,7 @@ char	*argv[];
        }
        if( rflag)
        {
+          (void)free(dumplims);
           dumplims = NULL;
        } 
    } while(rflag);
