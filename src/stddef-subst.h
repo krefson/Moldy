@@ -8,15 +8,18 @@
 #      ifndef __SIZE_T__
 #         ifndef _SIZE_T
 #            ifndef _SIZE_T_
-#               define  __SIZE_T
-#               define  __SIZE_T__
-#               define  _SIZE_T
-#               define  _SIZE_T_
-#               if defined(unix) && (!defined(__GNUC__))
-                   typedef unsigned size_t;
-#               else
-                   typedef unsigned long size_t;
-#               endif
+#		ifndef _GCC_SIZE_T
+#		   define _GCC_SIZE_T
+#                  define  __SIZE_T
+#                  define  __SIZE_T__
+#                  define  _SIZE_T
+#                  define  _SIZE_T_
+#                  if defined(unix) && (!defined(__GNUC__))
+                      typedef unsigned size_t;
+#                  else
+                      typedef unsigned long size_t;
+#                  endif
+#		endif
 #            endif
 #         endif
 #      endif
