@@ -26,6 +26,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.15  1998/12/07 14:48:52  keith
+ *       Optimized search_lt() for stride 1.
+ *
  *       Revision 2.14  1998/11/26 17:09:18  keith
  *       Added #pragma for cache suppression in gather on T3E
  *
@@ -268,7 +271,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header$";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/auxil.c,v 2.15 1998/12/07 14:48:52 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -308,6 +311,8 @@ static char *RCSid = "$Header$";
 #if !defined(CLOCKS_PER_SEC) && defined(CLK_TCK)
 #   define  CLOCKS_PER_SEC CLK_TCK
 #endif
+#else /* We assume ANSI behaviour for non-unix systems */
+#   include <time.h>
 #endif /* unix */
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
