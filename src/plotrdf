@@ -25,6 +25,28 @@
 # (sans //) given as the argument to the "-m" option.
 #
 
+
+sub runint {  # Calculate running integration numbers
+    my ($rdflist, $runlist, $binw) = @_;
+    my ($hdr, $nrdf, $nr);
+    my $pi = 3.14159265358979;
+    
+    $nrdf=$#{$$rdflist{(keys %$rdflist)[0]}}+1;
+    foreach $hdr ( keys %$rdflist ) {
+      $r = 0.5*$binw;
+      $nr = 0.5*4*$pi*$r*$r*$binw*$$rdflist{$hdr}[0];
+      $$runlist{$hdr}[0] = $nr;
+      for( $j=1; $j < $nrdf-1 ; $j++) {
+	$r += $binw;
+	$nr += $$rdflist{$hdr}[$j]*4*$pi*$r*$r*$binw;
+	$$runlist{$hdr}[$j] = $nr;
+      }      
+      $r += $binw;
+      $nr += 0.5*4*$pi*$r*$r*$binw*$$rdflist{$hdr}[$nrdf-1];
+      $$runlist{$hdr}[$nrdf-1] = $nr;
+    }
+}
+
 sub rdfout  {
     my ($rdflist, $binw, $plotfd, $scale) = @_;
     my ($nrdf, $r);
@@ -157,7 +179,7 @@ $plotfd=*STDOUT;
 $match = ".";
 
 use Getopt::Long;
-&GetOptions("gp", "xg", "np", "ps", "eps", "a", "m=s")|| &usage();
+&GetOptions("gp", "xg", "np", "ps", "eps", "a", "m=s", "n")|| &usage();
 
 if ($opt_gp && $opt_xg) {&usage()};
 if ($opt_ps && $opt_eps) {&usage()};
@@ -169,6 +191,7 @@ $plotflag= 0 if $opt_np;
 $psflag= 1 if $opt_ps;
 $psflag= 2 if $opt_eps;
 $aflag = $opt_a if $opt_a;
+$runflag=1 if $opt_n;
 
 $filebody=$ARGV[0];
 if ( ($gpflag || $grflag) && $aflag ) {
@@ -176,6 +199,12 @@ if ( ($gpflag || $grflag) && $aflag ) {
     open PLOTFILE, ">$plotfile" || die "Failed to open plot file $plotfile for writing\n";
     $plotfd=*PLOTFILE;
     $| = 1;
+}
+
+if ( $runflag ) {
+    $runfile = $filebody.".run";
+    open RUNFILE, ">$runfile" || die "Failed to open running co-ordination file $runfile for writing\n";
+    $runfd=*RUNFILE;
 }
 
 if( $plotflag ) {
@@ -204,6 +233,12 @@ while ( <> ) {
      $newrun = 1;
     }
     $title = $1 if (/^ This is restart No \d+ of run "([^"]*)" started/);
+    if ( /^ MD cell vectors/) {
+      $_ = <>; ($junk, $junk, $a1, $a2, $a3, $junk) = split;
+      $_ = <>; ($junk, $junk, $b1, $b2, $b3, $junk) = split;
+      $_ = <>; ($junk, $junk, $c1, $c2, $c3, $junk) = split;
+      $vol = $a1*($b2*$c3-$b3*$c2)+$a2*($b3*$c1-$b1*$c3)+$a3*($b1*$c2-$ab*$c1);
+    }
     if ( /^_+$/ ... /^_+$/ ) {
 	#
 	# Store rdfs and column heads at end of "A-B RDF" block or and of RDFs
@@ -264,6 +299,10 @@ while ( <> ) {
                        $plotfd=*PLOTFILE;
                        $| = 1;
                    }
+		   if ($runflag) {
+		      runint(\%rdflist, \%runlist, $binw);
+		      rdfout(\%runlist, $binw, $runfd, 1.0/$vol); 
+		   }
 		    rdfout(\%rdflist, $binw, $plotfd, 1.0);
 		    pfout([keys %rdflist], $plotfile, $psflag, $title) if ($gpflag || $grflag);
                     close PLOTFILE
@@ -274,7 +313,11 @@ while ( <> ) {
     }
 }
 if( $aflag ) {
-    rdfout(\%rdflist, $binw, $plotfd, 1.0/$nrdfblocks);
-    pfout([keys %rdflist], $plotfile, $psflag, $title) if ($gpflag || $grflag);
+  if ($runflag) {
+      runint(\%rdflist, \%runlist, $binw);
+      rdfout(\%runlist, $binw, $runfd, 1.0/($vol*$nrdfblocks)); 
+  }
+  rdfout(\%rdflist, $binw, $plotfd, 1.0/$nrdfblocks);
+  pfout([keys %rdflist], $plotfile, $psflag, $title) if ($gpflag || $grflag);
 }
 	
