@@ -19,11 +19,15 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconv.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 
 /*
- * $Log: dumpconvert.c,v $
+ * $Log: dumpconv.c,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
  * Revision 2.5  94/01/21  12:51:04  keith
  * Corrected declaration of main()
  * 
@@ -97,6 +101,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dumpconvert.c,v 2
 #include "xdr.h"
 XDR	 xdrsr;
 XDR	 xdrsw;
+bool_t xdr_dump();
 #endif
 
 /******************************************************************************
@@ -155,7 +160,7 @@ int    buflen;
    int i;
 
    for( i = 0; i < buflen; i++ )
-      scanf("%g", &buf[i]);
+      scanf("%f", &buf[i]);
    if( ferror(stdin) )
       error("Read error on input file (Error code %d).",ferror(stdin));
 }
