@@ -19,11 +19,16 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/dumpconv.c,v 2.8 1995/12/05 20:55:10 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/dumpconv.c,v 2.9 1998/05/07 17:06:11 keith Exp $";
 #endif
 
 /*
  * $Log: dumpconv.c,v $
+ * Revision 2.9  1998/05/07 17:06:11  keith
+ * Reworked all conditional compliation macros to be
+ * feature-specific rather than OS specific.
+ * This is for use with GNU autoconf.
+ *
  * Revision 2.8  1995/12/05 20:55:10  keith
  * Separated ANSI replacement routines from Auxil.c into Ansi.c
  * Removed all COS functionality.
@@ -130,6 +135,9 @@ char *cs, *ct;
 #ifdef HAVE_STDARG_H
 #undef  va_alist
 #define	va_alist char *format, ...
+#ifdef va_dcl
+#   undef va_dcl
+#endif
 #define va_dcl /* */
 #endif
 /*VARARGS*/
