@@ -6,6 +6,9 @@ Copyright (C) 1999 Craig Fisher */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: bdist.c,v $
+ *  Revision 1.4  1999/09/24 10:51:54  keith
+ *  Minor changes to Usage message.
+ *
  *  Revision 1.4  1999/09/24 16:44:30  craig
  *  Minor changes to Usage message.
  *
@@ -22,6 +25,7 @@ Copyright (C) 1999 Craig Fisher */
  *  Initial revision
  *
  */
+#include "defs.h"
 #include <errno.h>
 #include <math.h>
 #include <stdio.h>
@@ -518,7 +522,7 @@ char	*argv[];
    while ( !feof(Fp))
    { 
       fscanf(Fp,"%s - %s %d - %s %d - %s %lf %lf %lf\n",
-             &a,&atom1,&b,atom2,&c,&atom3,&alpha,&r1,&r2);
+             a,atom1,&b,atom2,&c,atom3,&alpha,&r1,&r2);
 
       u = floor((alpha - astart)/ainc);
 
