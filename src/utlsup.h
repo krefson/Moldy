@@ -24,6 +24,11 @@ extern void traj_con (system_mt *system, vec_mt (*prev_cofm), int n);
 extern void traj_con2 (spec_mt *species, vec_mt (*prev_cofm), vec_mt (*traj_cofm), int *sp_range); 
 extern int range_in (system_mt *system, real (*range)[3]); 
 extern char *comm;
+extern FILE  *open_dump(char *fname, char *mode);
+extern int close_dump(FILE *dumpf);
+extern int rewind_dump(FILE *dumpf, int xdr);
+extern int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_write,
+		     size_mt sysinfo_size, dump_sysinfo_mt *dump_sysinfo);
 /*
  * Moldy functions
  */

@@ -108,39 +108,6 @@ put(float *buf, int n, int bflg)
 	 fprintf(stdout,"%7g ",*buf++);
 
 }
-FILE  *open_dump(char *fname, char *mode)
-{
-   FILE *dumpf;
-
-   dumpf = fopen(fname, mode);
-   
-#ifdef USE_XDR
-   if( dumpf )
-   {
-      if( mode[0] == 'w' || (mode[0] && mode[1] == '+') ||  (mode[1] && mode[2] == '+'))
-	 xdrstdio_create(&xdrs, dumpf, XDR_ENCODE);
-      else
-	 xdrstdio_create(&xdrs, dumpf, XDR_DECODE);
-   }
-#endif
-    return dumpf;
-}
-
-int close_dump(FILE *dumpf)
-{
-#ifdef USE_XDR
-   xdr_destroy(&xdrs);
-#endif
-   return fclose(dumpf);
-}
-int rewind_dump(FILE *dumpf, int xdr)
-{
-#ifdef USE_XDR
-   if( xdr )
-      xdr_setpos(&xdrs, 0);
-#endif
-   return fseek(dumpf, 0L, SEEK_SET);
-}
 
 static
 int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_write,
