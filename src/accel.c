@@ -25,6 +25,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.19.2.3  2001/01/25 16:26:25  keith
+ *       Added Wentzcovitch/Cleveland constant-pressure dynamics
+ *       and univorm (Andersen) variant.
+ *
+ *       Fixed bug in uniform(P-R) case which effectively made the mass
+ *       parameter W 3 times too small.
+ *
  *       Revision 2.19.2.2  2000/12/11 12:33:20  keith
  *       Incorporated site-pbc branch "bekker" into main "Beeman" branch.
  *
@@ -251,7 +258,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.19.2.2 2000/12/11 12:33:20 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.19.2.3 2001/01/25 16:26:25 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -615,7 +622,7 @@ vec_mp		torque[];
    vec_mp	   vel_tmp = ralloc(sys->nmols);
    quat_mp         qd_tmp;             /* Temporary for velocities   	      */
    double 	   *temp_value = dalloc(2*nspecies);
-   double          ttemp = 0.0, rtemp = 0.0, alphat = 0.0, alphar = 0.0;
+   double          ttemp, rtemp, alphat = 0.0, alphar = 0.0;
 
       mat_vec_mul(sys->h, sys->velp, vel_tmp, sys->nmols);
       for(ispec = 0, spec = species, j = 0; ispec < nspecies; ispec++, spec++)
