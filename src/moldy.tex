@@ -157,7 +157,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.29.4.4 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.29.4.5 $ $}
 \newcommand{\moldyversion}{2.16}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1566,17 +1566,17 @@ the principle in 2 dimensions.
 \setlength{\unitlength}{0.012500in}%
 \input{fig_skewstart.ftx}
 \caption[The Skew Start method]{The Skew Start method.  $N$ molecules
-  are placed at evenly-spaced intervals, $a$ on a line joining a
+  are placed at evenly-spaced intervals, $a$, on a line joining a
   corner of the MD cell to its image $k$ cells away (5 in this
   illustration).  When mapped back into the original cell this
   guarantees a minimum separation of $min(d,a)$.}
 \label{fig:skewstart}
 \end{figure}
 
-The $N$ molecules are placed at some suitable interval $a$ on a line
+The $N$ molecules are placed at some suitable interval, $a$, on a line
 drawn between one corner of the MD cell (of side $L$) and one of its
 periodic images.  Clearly the index $(h,k)$ of the image cell corner
-should be chosen so that the molecule spacing, $a$ is close to the
+should be chosen so that the molecule spacing, $a$, is close to the
 spacing of the line's images, $d$. For simplicity, choose $k=1$ which
 leads to the condition:
 \begin{eqnarray}
@@ -2557,7 +2557,7 @@ various thermodynamic variables, their rolling averages and associated
 standard deviations. The \emph{rolling average} is just the mean over
 the preceding $n$ timesteps where $n$ is set by the control parameter
 \Lit{roll-interval}.  An annotated example is given in
-figure~\ref{fig:output}.  The frequency of periodic output may be
+Figure~\ref{fig:output}.  The frequency of periodic output may be
 altered by setting the control parameter \Lit{print-interval} to
 the interval required.  (This may be necessary to constrain the size
 of the output file which can grow to be very large indeed with the
@@ -2678,7 +2678,7 @@ calculated from the binned distances and printed out, and the counters
 are reset to zero to begin accumulation again.  Distances are binned
 and RDFs $g_{\alpha \beta}(r)$ calculated separately for each distinct
 type of atom-atom (or site-site) pair.  An explanation of the output
-format is given in figure~\ref{fig:rdf-output}.  Note that each number
+format is given in Figure~\ref{fig:rdf-output}.  Note that each number
 should be considered as the value at the \emph{centre} of its bin, so
 that entry $i$ in each list is the value of
 $g_{\alpha\beta}((i+1/2)b)$ where $b$ is the bin width.
@@ -2964,11 +2964,11 @@ cutoff is applied and whether to include the De Leuuw surface dipole
 term.
 
 By default $\alpha$, $r_c$ and $k_c$ are chosen automatically, using
-equations~\ref{eqn:ewald-cut} to give a default accuracy of $\epsilon
+equations~\ref{eqn:ewald-alpha}-~\ref{eqn:ewald-cut} to give a default accuracy of $\epsilon
 = \exp(-p) = 10^{-5}$ (\ie\ $p = 11.5$) in the Coulombic potential energy
 evaluation.  An empirically determined value of $t_R/t_F = 5.5$ is
 used.  If a different accuracy is desired the cutoffs may be adjusted
-using equations~\ref{eqn:ewald-cut}.  The $\alpha$ parameter is
+using equations~\ref{eqn:ewald-alpha}-~\ref{eqn:ewald-cut}.  The $\alpha$ parameter is
 specified by \Lit{alpha} in units of {\AA}$^{-1}$ and the direct and
 reciprocal space cutoff distances $r_{c}$ and $k_{c}$ by
 \Lit{cutoff} and \Lit{k-cutoff} in units of {\AA}\ and {\AA}$^{-1}$
@@ -2993,7 +2993,7 @@ As an example of manual determination of the parameters, for a
 simulation of 512 MCY water molecules the values $\alpha =
 0.3${\AA}$^{-1}$, $r_{c} = 9${\AA}\ and $k_{c} = 1.9${\AA}$^{-1}$ give
 potential energies correct to approximately 1 part in $10^{5}$.  For a
-simulation including ions - 1.1 Molal Magnesium Chloride solution -
+simulation including ions - 1.1 Molal magnesium chloride solution -
 the same accuracy is attained with $\alpha = 0.45${\AA}$^{-1}$, $r_{c} =
 9${\AA}\ and $k_{c} = 3${\AA}$^{-1}$.
 
@@ -4522,7 +4522,7 @@ function \Lit{do\_step()}.  The conceptually simple calculation of
 forces and stepping of co-ordinates is made lengthy and less
 transparent by the need to handle the rigid-molecule equations of
 motion and the constant-pressure and -temperature extended system
-equations.  The procedure is set out in figures~\ref{fig:dostep-a}
+equations.  The procedure is set out in Figures~\ref{fig:dostep-a}
 and~\ref{fig:dostep-b}.  The main stages of the calculation are
 \begin{enumerate}
 \renewcommand{\theenumi}{\emph{\alph{enumi}}}
@@ -4635,7 +4635,7 @@ Otherwise a (very slow) cache load would be necessary on every loop
 iteration. 
 
 The link cell functions are all in \Fname{force.c}
-(figure~\ref{fig:link-cell}).  The outer-level function is
+(Figure~\ref{fig:link-cell}).  The outer-level function is
 \Lit{force\_calc()}.  Function \Lit{neighbour\_list()}
 constructs a list of subcells within the cutoff radius of a reference
 cell.  By adding an offset and applying periodic boundary conditions
@@ -4683,7 +4683,7 @@ separate function allows the use of a larger cutoff than for the force
 and potential evaluation.
 
 The reciprocal-space part of the Ewald sum is evaluated in function
-\Lit{ewald()}, shown in figure~\ref{fig:ewald}.  This is a fairly
+\Lit{ewald()}, shown in Figure~\ref{fig:ewald}.  This is a fairly
 straightforward implementation of the \emph{k}-space terms of
 equations~\ref{eqn:ewald}, \ref{eqn:ewald-force}
 and~\ref{eqn:ewald-stress}, and differs from common implementations
@@ -4906,7 +4906,7 @@ The two parts of the forces calculation which must be parallelized are
 the short-ranged forces calculation and the reciprocal-space part of
 the Ewald sum.  The outermost loop of the link cell forces calculation
 in function \Lit{force\_inner()} runs over all subcells within the
-simulation cell (see figure~\ref{fig:link-cell}).  In the serial case, 
+simulation cell (see Figure~\ref{fig:link-cell}).  In the serial case, 
 it has the form\\
 \parbox{\textwidth}{%
 \begin{quote}
@@ -4949,7 +4949,7 @@ strategy the ``reduced k-vector list'' (RKL) method and the latter the
 ``reduced ion list'' (RIL) method.  \moldy\ contains implementations
 of both methods.  In the RKL method, it is necessary to pre-compute a
 list of \emph{k}-vectors within the cutoff sphere (see
-figure~\ref{fig:ewald}) which is stored in the array \Lit{hkl[]}.
+Figure~\ref{fig:ewald}) which is stored in the array \Lit{hkl[]}.
 (Each element of \Lit{hkl[]} is a struct containing the values of $h$,
 $k$, $l$ and the vector components of $\bm{k}$.) The loop over
 \emph{k}-vectors then takes the form of a single loop over this list,
@@ -5346,7 +5346,7 @@ where the arguments have the following meanings:
   containing a \Lit{printf()} format string - see section~\ref{sec:dumping}. 
 \item[-t] range of records in the dump file, specified in selector
   format, to average positions over.
-\item[-b] bond limits in tenths of Angstroms entered in form
+\item[-b] bond limits in tenths of {\AA}ngstroms entered in form
   ``minimum-maximum''. Limits may be entered as integers only, so
   smallest difference is 0.1{\AA}. Defaults to 0.2 to 2{\AA}.
 \item[-a] angle limits in degrees entered in form ``minimum-maximum''.
@@ -5399,7 +5399,7 @@ utility is invoked on the command line by:
 where the options are:
 \begin{Argdescription}
 \item[-i] name of the input file.
-\item[-b] bond interval limits in tenths of Angstroms entered in form
+\item[-b] bond interval limits in tenths of {\AA}ngstroms entered in form
   ``minimum-maximum:increment''. Limits may be entered as integers
   only, so smallest increment is 0.1{\AA}. Defaults to 0.2 to 2{\AA} with
   a 0.5{\AA} increment.
@@ -5583,7 +5583,7 @@ tabular form for input into plotting programs.  The command is
 \end{center}
 where \emph{fields} is a list in the selector format above.  The
 numbering runs from left to right, ignoring newlines and blank columns
-so that the translational KE's in figure~\ref{fig:output} are fields 1
+so that the translational KE's in Figure~\ref{fig:output} are fields 1
 and 14 and the $\sigma_{zz}$ component of the stress tensor is 30.
 
 \emph{Moldyext} can currently only extract information from the
