@@ -72,6 +72,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #ifdef SHMEM
 #include	<malloc.h>
 #include	<mpp/shmem.h>
+#include        <unistd.h>
 #endif
 static long	lval;
 #define		ADDR(expr) (lval=(expr),&lval)
@@ -639,55 +640,91 @@ int	n, nblk, stride;
 }
 #endif
 #ifdef SHMEM
+#define NSYNC 16
 void
 par_collect_all(send, recv, n, stride, nblk)
 real	*send, *recv;
 int	n, nblk, stride;
 {
-   int  i, right, left, iblk, ibeg;
-   static long *recvbuf = 0;
-   static int  recvsize = 0;
-
-   if(sizeof(real) != sizeof(long) )
-      message(NULLI, NULLP, FATAL, "Par_collect_all - not implemented for single precision");
-   if(nblk*stride > recvsize)
-   {
-      if( recvbuf )
-	 shfree(recvbuf);
-      recvbuf = shmalloc(nblk*stride*sizeof(real));
-      if( recvbuf == 0)
-	 message(NULLI, NULLP, FATAL, "par_collect_all: Shmalloc failed");
-      recvsize = nblk*stride;
-   }
-   barrier();		/* Ensure all PEs ready to receive data */
+   int  i, right, left, iblk, ibeg, iSync;
+   static long *recvs;
+   long        *recvbuf;
+   static volatile long SyncB[NSYNC];
+                   long Sync0 = ithread;
+   long        *cur_break;
    
-   for(iblk = 0; iblk < nblk; iblk++)
-      memcp(recvbuf+ithread*n+iblk*stride, send+iblk*stride, n*sizeof(real));
+   for(iSync=0; iSync < NSYNC; iSync++)
+      SyncB[iSync] =  _SHMEM_SYNC_VALUE;
+   iSync = 0;
 
+   recvs = (long*)recv;
+   /*
+    * Copy send data to proper place in receive buffer unless it is
+    * already there.
+    */
+   if( recv+ithread*n != send )
+   {
+      for(iblk = 0; iblk < nblk; iblk++)
+	 memcp(recv+ithread*n+iblk*stride, send+iblk*stride, n*sizeof(real));
+   }
+
+   barrier();		/* Ensure all PEs ready to receive data */
+   shmem_set_cache_inv();
+   
+   /*
+    * This version lives dangerously and works "in-place" with
+    * the existing receive buffers.  
+    */
    for (i=1; i<nthreads; i*=2) 
    {
       left  = (nthreads + ithread - i) % nthreads;
       right = (ithread + i) % nthreads;
       ibeg = ithread + 1 - i;
+      /* 
+       * Get Addr of receive buffer on remote PE 
+       */
+      shmem_get((long*)&recvbuf, (long*)&recvs, 1, right);
+      /*
+       * The documentation warns that the REMOTE address must not
+       * extend beyond allocated memory on the LOCAL PE. Therefore
+       * we extend the break if necessary and pray that malloc() can
+       * cope. (Actually, we _could_ store it and reset on exit.)
+       */
+      cur_break = sbreak(0); 
+      if( recvbuf+nblk*stride > cur_break )
+      {
+	 if( sbreak(recvbuf+nblk*stride - cur_break) == 0)
+	    message(NULLI, NULLP, FATAL, 
+		    "Par_collect_all (%d): sbreak() failed\n");
+      }
 
       if( ibeg >= 0 )
 	 for(iblk = 0; iblk < nblk; iblk++)
 	    shmem_put(recvbuf+ibeg*n+iblk*stride, 
-		      recvbuf+ibeg*n+iblk*stride, i*n, right);
+		      recvs+ibeg*n+iblk*stride, i*n, right);
       else
 	 for(iblk = 0; iblk < nblk; iblk++)
 	 {
 	    shmem_put(recvbuf+(ibeg+nthreads)*n+iblk*stride, 
-		      recvbuf+(ibeg+nthreads)*n+iblk*stride, -ibeg*n, right);
+		      recvs+(ibeg+nthreads)*n+iblk*stride, -ibeg*n, right);
 	    shmem_put(recvbuf+iblk*stride, 
-		      recvbuf+iblk*stride, (ithread+1)*n, right);
+		      recvs+iblk*stride, (ithread+1)*n, right);
 	 }
-      barrier();	/* Synchronize before passing received data onwards */
-                        /* The shmem_quiet(3) man page assures us that      */
-      			/* it also waits for oustanding data to arrive.     */
-      shmem_udcflush();
+      shmem_quiet();	                   /* Wait for puts to complete  */
+      shmem_put((long*)&SyncB[iSync], &Sync0, 1, right); 
+                                           /* Signal to "right" its done */
+      while( SyncB[iSync] == _SHMEM_SYNC_VALUE )
+	 ;			/* Spin wait until data has arrived here */
+#ifdef DEBUG
+      if( SyncB[iSync] != left )
+	 message(NULLI, NULLP, FATAL, 
+		 "Par Collect: (%d) Sync out of order. Expected %d, got %d\n",
+		 ithread, left, SyncB[iSync]);
+#endif
+      SyncB[iSync] = _SHMEM_SYNC_VALUE;
+      iSync++;
    }
-   memcp(recv, recvbuf, nblk*stride*sizeof(real));
+   shmem_clear_cache_inv();
 }
 #endif
 #ifdef MPI
