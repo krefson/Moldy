@@ -86,7 +86,7 @@ UTILO= $(UTILC:%.c=%.o) ReadDCD.o utlsup.o molout.o
 
 EXTRA0 = $(UTILC) getopt.c ReadDCD.c ReadDCD.h configure.in config.h.in \
 	 defconf.h aclocal.m4 config.guess config.sub list.h \
-	 utlsup.c utlsup.h molout.c elem.h $(UTILS3)
+	 utlsup.c utlsup.h molout.c specdata.h $(UTILS3)
 
 EXTRAS= $(EXTRA0) ewald-RIL.c configure Makefile.in install-sh 
 
@@ -376,7 +376,7 @@ ReadDCD.o:	ReadDCD.h
 
 dumpext.o mdavpos.o mdbond.o mdshak.o mdvaf.o msd.o ransub.o: utlsup.h
 
-ransub.o:	elem.h
+ransub.o:	specdata.h
 
 mdbond.o bdist:	list.h
 #
