@@ -11,6 +11,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	restart.c,v $
+ * Revision 1.4  89/06/22  15:45:14  keith
+ * Tidied up loops over species to use one pointer as counter.
+ * 
  * Revision 1.3  89/05/22  14:05:43  keith
  * Added rescale-separately option, changed 'contr_t' format.
  * 
@@ -23,7 +26,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: restart.c,v 1.3 89/05/22 14:05:43 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/restart.c,v 1.4 89/06/22 15:45:14 keith Stab $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -69,6 +72,25 @@ int	nitems;
       message(NULLI,NULLP,FATAL,REFORM, ftell(file),
               stored_size, (unsigned long)size * nitems);
    (void)fread(ptr, size, nitems, file);
+   if(ferror(file))
+      message(NULLI,NULLP,FATAL,REREAD,ferror(file),ftell(file));
+   else if(feof(file))
+      message(NULLI,NULLP,FATAL,REEOF);
+}
+/******************************************************************************
+ *   cskip.  Skip over  the next record in the file.			      *
+ ******************************************************************************/
+void	cskip(file)
+FILE	*file;
+{
+   unsigned long	stored_size = 0;
+
+   (void)fread((char*)&stored_size, sizeof stored_size, 1, file); 
+   if(ferror(file))
+      message(NULLI,NULLP,FATAL,REREAD,ferror(file),ftell(file));
+   else if(feof(file))
+      message(NULLI,NULLP,FATAL,REEOF);
+   fseek(file, stored_size, 1);
    if(ferror(file))
       message(NULLI,NULLP,FATAL,REREAD,ferror(file),ftell(file));
    else if(feof(file))
@@ -170,7 +192,10 @@ system_p	system;
    cread(restart, (char*)system->hddotvo, sizeof(vec_t), 3);
 
    ap = av_ptr(&asize);			/* get addr and size of database      */
-   cread(restart, ap, asize, 1);
+   if( asize == 0 )			/* Don't read in any data	      */
+      cskip(restart);
+   else
+      cread(restart, ap, asize, 1);
 
    cread(restart, (char*)&rdf_flag, sizeof rdf_flag, 1); /* Stored RDF data?  */
    if(rdf_flag && control.rdf_interval>0)/* Only read if data there and needed*/
@@ -204,7 +229,7 @@ pot_p		potpar;			/* To be pointed at potpar array      */
    }
 
    (void)memcpy((char*)&save_header, (char*)&restart_header, sizeof(restrt_t));
-   (void)strncpy(save_header.vsn, "$Revision: 1.3 $"+11,
+   (void)strncpy(save_header.vsn, "$Revision: 1.4 $"+11,
 		                  sizeof save_header.vsn-1);
    save_header.prev_timestamp = restart_header.timestamp;
    save_header.timestamp = time((time_t*)0);		/* Update header      */
