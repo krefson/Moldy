@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/eeyore_data/keith/moldy/src/RCS/messages.h,v 2.15 1998/05/07 17:06:11 keith Exp $
+ * $Header: /home/eeyore_data/keith/moldy/src/RCS/messages.h,v 2.16 1999/07/22 13:14:45 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -69,6 +69,8 @@ what you give them.   Help stamp out software-hoarding!  */
 #define	NOVAL	"no value associated with name \"%s\""
 #define	NOTFND	"keyword \"%s\" not found"
 #define	BADVAL	"value \"%s\" is wrong type for keyword \"%s\""
+#define	INVVAL	"value \"%d\" for keyword \"%s\" is invalid or out of range"
+#define	INVVLF	"value \"%g\" for keyword \"%s\" is invalid or out of range"
 #define	ERRCON	"control file contains %d error%c"
 #define SUCCON  "control file read in successfully"
 #define	BADUNI	"Overflow during conversion of units - ln(scale) = %f"
@@ -165,3 +167,5 @@ Gaussian thermostat would interfere with each other."
 #define BODGUP  "Reading bad 2.10 restart file - thermostat parameters invalid.\
 \n     Setting ttmass and rtmass to %f and const-temp=0"
 #define DESYNC  "Trajectories on parallel threads are diverging.\n     Thread %d: %20.17g != %20.17g"
+#define RDFALT  "Sampling interval for RDF changed on restart\n     stored RDF data has been discarded"
+#define RDFDIS  "RDF output frequency parameters changed on restart\n     Excess stored RDF data may be discarded"

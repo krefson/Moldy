@@ -37,6 +37,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.13  1998/05/07 17:06:11  keith
+ *      Reworked all conditional compliation macros to be
+ *      feature-specific rather than OS specific.
+ *      This is for use with GNU autoconf.
+ *
  *      Revision 2.12  1996/08/15 14:35:39  keith
  *      Fixed restart structure correctly - broken in prev version.
  *      Thermostat parameters may not be properly read.
@@ -236,7 +241,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/startup.c,v 2.12 1996/08/15 14:35:39 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/startup.c,v 2.13 1998/05/07 17:06:11 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -289,7 +294,7 @@ extern	contr_mt	control;       /* Main simulation control parms. */
 extern int 		ithread, nthreads;
 /*========================== GLOBAL variables ================================*/
 const   unit_mt	prog_unit = {MUNIT, LUNIT, TUNIT, QUNIT};
-static	unit_mt	input_unit;		/* Unit specification (see Convert.c) */
+	unit_mt	input_unit;		/* Unit specification (see Convert.c) */
 static	char		backup_lockname[L_name];
 static	char		dump_lockname[L_name];
 #ifdef	DEBUG
@@ -995,6 +1000,73 @@ int      nsites;
       message(NULLI, NULLP, FATAL, NOCUT, *cutoff);
 }
 /******************************************************************************
+ * validate_control.  Determine whether control parameters are sensible.      *
+ ******************************************************************************/
+void validate_control()
+{   
+   int nerrs = 0;
+   if( control.nsteps < 0 )
+      message(&nerrs, NULLP, ERROR, INVVAL, control.nsteps, "nsteps");
+   if( control.nbins <= 0 )
+      message(&nerrs, NULLP, ERROR, INVVAL, control.nbins, "nbins");
+   if( control.begin_average < 0 )
+      message(&nerrs, NULLP, ERROR, INVVAL, control.begin_average, "begin-averages");
+   if( control.begin_rdf < 0 )
+      message(&nerrs, NULLP, ERROR, INVVAL, control.begin_rdf, "begin-rdf");
+   if( control.begin_dump < 0 )
+      message(&nerrs, NULLP, ERROR, INVVAL, control.begin_dump, "begin-dump");
+   if( control.dump_interval < 0 )
+      message(&nerrs, NULLP, ERROR, INVVAL, control.dump_interval, "dump-interval");
+   if( control.rdf_interval < 0 )
+      message(&nerrs, NULLP, ERROR, INVVAL, control.rdf_interval, "rdf-interval");
+   if( control.rdf_out < 0 || (control.rdf_interval > 0 && control.rdf_out % control.rdf_interval != 0))
+      message(&nerrs, NULLP, ERROR, INVVAL, control.rdf_out, "rdf-out");
+   if( control.average_interval < 0 )
+      message(&nerrs, NULLP, ERROR, INVVAL, control.average_interval, "average-interval");
+   if( control.scale_interval < 0 )
+      message(&nerrs, NULLP, ERROR, INVVAL, control.scale_interval, "scale-interval");
+   if( control.print_interval <= 0 )
+      message(&nerrs, NULLP, ERROR, INVVAL, control.print_interval, "print-interval");
+   if( control.roll_interval <= 0 )
+      message(&nerrs, NULLP, ERROR, INVVAL, control.roll_interval, "roll-interval");
+   if( control.backup_interval < 0 )
+      message(&nerrs, NULLP, ERROR, INVVAL, control.backup_interval, "backup-interval");
+   if( control.cpu_limit < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, control.cpu_limit, "cpu-limit");
+   if( control.density < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, control.density, "density");
+   if( control.pressure < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, control.pressure, "pressure");
+   if( control.temp < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, control.temp, "temperature");
+   if( control.k_cutoff < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, control.k_cutoff, "k-cutoff");
+   if( control.cutoff < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, control.cutoff, "cutoff");
+   if( control.limit <= 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, control.limit, "rdf-limit");
+   if( control.subcell < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, control.subcell, "subcell");
+   if( control.const_temp < 0 || control.const_temp > 2 )
+      message(&nerrs, NULLP, ERROR, INVVAL, control.const_temp, "const-temp");
+   if( control.rtmass < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, control.rtmass, "rtmass");
+   if( control.ttmass < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, control.ttmass, "ttmass");
+   if( control.pmass < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, control.pmass, "w");
+   if( input_unit.m < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, input_unit.m, "mass-unit");
+   if( input_unit.l < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, input_unit.l, "length-unit");
+   if( input_unit.t < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, input_unit.t, "time-unit");
+   if( input_unit.q < 0.0 )
+      message(&nerrs, NULLP, ERROR, INVVLF, input_unit.q, "charge-unit");
+   if( nerrs > 0 )
+      message(&nerrs,NULLP,FATAL,ERRCON,nerrs,(nerrs>1)?'s':' ');
+}
+/******************************************************************************
  *  startup	This function sets up everything that is needed to start a    *
  *  run.  It controls the reading in of the control, system specification and *
  *  restart files, conversions to program units, calculation of molecular     *
@@ -1021,12 +1093,17 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
    long		old_dump_interval;	/* To check if altered on restart     */
    int		old_max_dumps;		/* To check if altered on restart     */
    long		old_roll_interval;	/* To check if altered on restart     */
+   long		old_rdf_interval;	/* To check if altered on restart     */
+   long		old_rdf_out;		/* To check if altered on restart     */
+   long		old_begin_rdf;		/* To check if altered on restart     */
    boolean	flag;			/* Used to test 'fseek'		      */
    long		pos;			/* Where control info starts on input */
    restrt_mt	backup_header;		/* To read backup file header into    */
    contr_mt	backup_control;		/* Control struct from backup file    */
    quat_mt	*qpf=0;			/* Quat of rotation to princ. frame   */
    int		av_convert;		/* Flag for old-fmt averages in restrt*/
+   int          *rdf_base;
+   int          rdf_size;
    int		i;
    *backup_restart = 0;
    (void)memst(restart_header,0,sizeof(*restart_header));
@@ -1043,6 +1120,7 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
    default_control();			/* Set up default values of params    */
    read_control(contr_file, match);	/* Do keyword read of control params  */
    conv_control(&prog_unit,true);	/* Convert to program units           */
+   validate_control();
 
    if(control.restart_file[0] != '\0')	/* Open restart file, get backup name */
    {
@@ -1058,6 +1136,9 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
       old_roll_interval	     = control.roll_interval;   /* In case it changed */
       old_dump_interval	     = control.dump_interval;	/* Check if these par */
       old_max_dumps	     = control.maxdumps;	/* -amaters altered.  */
+      old_rdf_interval	     = control.rdf_interval;
+      old_begin_rdf	     = control.begin_rdf;
+      old_rdf_out	     = control.rdf_out;
       conv_control(&prog_unit, false);
       control.scale_end     -= control.istep;		/* These parameters   */
       control.begin_average -= control.istep;		/* are respecified    */
@@ -1253,12 +1334,21 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
          if(sysdef != contr_file)
             (void)fclose(sysdef);
          control.reset_averages = 1;	/* Averages invalid if sysdef changed */
+	 control.new_sysdef = 0;        /* Don't store new-sys-spec in restart*/
       }
       allocate_dynamics(system, *species);/* Memory for dynamic variables     */
       init_averages(system->nspecies, restart_header->vsn,
 		    control.roll_interval, old_roll_interval, &av_convert);
       if(control.rdf_interval > 0)
          init_rdf(system);		/* Prepare to calculate rdf	      */
+      if( control.rdf_interval != old_rdf_interval && control.istep > control.begin_rdf) 
+      {  
+	 message(NULLI, NULLP, WARNING, RDFALT);
+	 control.begin_rdf = control.istep + 1;
+      }
+      if((control.istep-old_begin_rdf) % old_rdf_out > control.rdf_out) 
+	 message(NULLI, NULLP, WARNING, RDFDIS);
+
       read_restart(restart, restart_header->vsn, system, av_convert);  
                                         /* Saved dynamic vars etc             */
       convert_averages(control.roll_interval, old_roll_interval, av_convert);
