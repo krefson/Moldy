@@ -26,6 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.8  1995/12/05 20:55:10  keith
+ *       Separated ANSI replacement routines from Auxil.c into Ansi.c
+ *       Removed all COS functionality.
+ *
  *       Revision 2.7  1994/06/08 13:09:00  keith
  *       Added "zero_dbls()" function.
  *
@@ -235,7 +239,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/auxil.c,v 2.7 1994/06/08 13:09:00 keith stab keith $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/auxil.c,v 2.8 1995/12/05 20:55:10 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -285,7 +289,7 @@ void            tfree();	       /* Free allocated memory	      	      */
  *  library versions.  Other machines do it the hard way.		      *
  *  CRAY versions.							      *
  ******************************************************************************/
-#if defined(_CRAY) && ! defined(_CRAYMPP)
+#if defined(_CRAY)
 #define VECTS_DEFINED
 
 double vdot(n,x,ix,y,iy)
@@ -323,6 +327,7 @@ double	sx[], sy[];
    SAXPY(&n, &sa, sx, &ix, sy, &iy);
 }
 #endif
+#ifndef _CRAYMPP
 int	search_lt(n, x, ix, s)
 int	n;
 real	x[];
@@ -334,6 +339,22 @@ double	s;
       return(0);
    return( ISRCHFLT(&n, x, &ix, &s) - 1);
 }
+#else
+int	search_lt(n, x, ix, s)
+int	n;
+real	x[];
+int	ix;
+double	s;
+{
+   int i, im=n*ix;
+VECTORIZE
+   for( i = (n-1)*ix; i >= 0; i -= ix )
+      if( x[i] < s )
+	 im = i;
+   return(im/ix);
+}
+#endif
+#ifndef _CRAYMPP
                             /*ARGSUSED*/
 void	gather(n, a, b, ix, lim)
 int	n;
@@ -351,6 +372,35 @@ int     ix[];
    void GATHER();
    GATHER(&n, a, b+1, ix);
 }
+#else
+                            /*ARGSUSED*/
+void	gather(n, a, b, ix, lim)
+int	n, lim;
+real	a[], b[];
+int	ix[];
+{
+   int i;
+VECTORIZE
+   for( i = 0; i < n; i++)
+   {
+#ifdef DEBUG
+      if(ix[i] < 0 || ix[i] >= lim )
+	 message(0,0,2, "Gather index out of bounds %d %d\n", i, ix[i]);
+#endif
+      a[i] = b[ix[i]];
+   }
+}
+void	gatheri(n, a, b, ix)
+int	n;
+int	a[], b[];
+int	ix[];
+{
+   int i;
+VECTORIZE
+   for( i = 0; i < n; i++)
+      a[i] = b[ix[i]];
+}
+#endif
 #ifdef NOT_FOR_NOW
 void	scatter(n, a, ix, b)
 int	n;
@@ -361,6 +411,7 @@ int	ix[];
    SCATTER(&n, a+1, ix, b);
 }
 #endif
+#ifndef _CRAYMPP
 int wheneq(n, x, ix, s, idx)
 int n, ix, idx[];
 int x[], s;
@@ -373,6 +424,22 @@ int x[], s;
      idx[i]--;
   return( nval );
 }
+#else
+int wheneq(n, x, ix, s, idx)
+int n, ix, idx[];
+int x[], s;
+{
+  int nval = 0, i;
+ 
+  for(i = 0; i != n*ix; i += ix)
+    if(x[i] == s)
+    {
+      idx[nval] = i;
+      nval++;
+   }
+  return( nval );
+}
+#endif
 
 #endif
 /******************************************************************************
@@ -756,7 +823,8 @@ double	precision()
 {
    static	int	first=1;
    static	double	eps = 0.5;
-   double  		eps2, *eps1 = &eps2;	/* Use pointer to force store */
+   double VOLATILE	eps2, *eps1 = &eps2;	/* Use pointer to force store */
+   double VOLATILE      junk, *ptr = &junk;
    
    if(first)
    {
@@ -765,6 +833,7 @@ double	precision()
       {
          eps = eps * 0.5;
          *eps1 = 1.0 + eps;
+	 *ptr  = 1.0;		/* This prevents optimization of *eps1 */
       }   while(*eps1 > 1.0);
       eps *= 2.0;
    }
