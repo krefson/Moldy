@@ -1,7 +1,7 @@
 #ifndef MOLDY_STDDEF_H
 #define MOLDY_STDDEF_H
 
-#ifdef __STDC__
+#ifdef ANSI_LIBS
 #   include <stddef.h>
 #else
 #   ifdef unix

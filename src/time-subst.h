@@ -3,7 +3,7 @@
  */
 #ifndef MOLDY_TIME_H_INCLUDED
 #define MOLDY_TIME_H_INCLUDED
-#ifndef __STDC__
+#ifndef ANSI_LIBS
 #   ifdef unix
 #      ifndef SYS_TYPES_INCLUDED
 #         define SYS_TYPES_INCLUDED

@@ -1,7 +1,7 @@
 #ifndef _MOLDY_STDLIB_H_
 #define _MOLDY_STDLIB_H_
 
-#ifdef __STDC__
+#ifdef ANSI_LIBS
 #   include <stdlib.h>
 #else
    extern int atoi ();
