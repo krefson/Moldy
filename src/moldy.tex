@@ -157,7 +157,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.29.4.9 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.29.4.10 $ $}
 \newcommand{\moldyversion}{2.16}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -5165,6 +5165,7 @@ reading by other programs.  It is invoked with the command:
 \Lit{-c} \textit{components}
 \Lit{[-t} \textit{timeslices}\Lit{]} \\
 \Lit{[-m} \textit{molecules}\Lit{]}
+\Lit{[-v]} 
 \Lit{[-o} \textit{output-file}\Lit{]}
 \Lit{[-b]} 
 \textit{dump-file1 dump-file2} \ldots
@@ -5200,6 +5201,7 @@ numbered in the dump files from 1.  Defaults to all timeslices.
 \item[-m] extract information for selected molecules.  This is a
 selector list specifying the molecule index.  Defaults to all
 molecules.
+\item[-v] give more verbose information while processing dump files.
 \item[-o] name of optional output file.  Defaults to standard output.
 \item[-b] selects binary output in single-precision floating point
 numbers. Defaults to ASCII formatted numbers.
@@ -5533,10 +5535,11 @@ The command line options are:
 \Lit{mdvaf}
 \Lit{[-d} \textit{dump-file-format}\Lit{]}
 \Lit{[-t} \textit{dump-range}\Lit{]} \\
-\Lit{[-v} \textit{vaf-range}\Lit{]}
+\Lit{[-l} \textit{vaf-range}\Lit{]}
 \Lit{[-g} \textit{species-range}\Lit{]}
 \Lit{[-a]}
 \Lit{[-q]}
+\Lit{[-v]} 
 \Lit{[-o} \textit{output-file}\Lit{]}
 \end{center}
 
@@ -5546,13 +5549,14 @@ where the arguments have the following meanings:
 $>= 2$) given as a prototype name containing a \Lit{printf()} format
 string -- see section~\ref{sec:dumping} .
 \item[-t] range of records in dump file, specified in selector format.
-\item[-v] time intervals to calculate the VACF or VTF values for, specified
+\item[-l] time intervals to calculate the VACF or VTF values for, specified
 in selector format. Default is 0 to half the number of dump
 records selected, with an increment of 1.
 \item[-g] range of species to be included, given in selector format
 where \Lit{1} represents the \emph{first} species. Defaults to all species.
 \item[-a] calculate the autocorrelation function for \emph{angular} velocities rather than C of M velocities.
 \item[-q] calculate the VTF instead of the VACF if VACF is default, and vice versa.
+\item[-v] give more verbose information while processing dump files.
 \item[-o] name of optional output file. Defaults to standard output.
 \end{Argdescription}
 
@@ -5624,6 +5628,7 @@ specified in command line mode:
 \Lit{[-g} \textit{species-range}\Lit{]}
 \Lit{[-w} \textit{trajectory-output-format}\Lit{]} \\
 \Lit{[-x|-X]} \Lit{[-y|-Y]} \Lit{[-z|-Z]}
+\Lit{[-v]} 
 \Lit{[-o} \textit{output-file} \Lit{]}
 \end{center}
 
@@ -5656,6 +5661,7 @@ Type \Lit{gnu} for format readable by GNUPlot (default) or \Lit{gen} for the gen
   \Lit{-x} and \Lit{-X}) are used, priority will be given to the
   latter option entered on the command line. The user is prompted for
   the limits at run time. The default is to include all particles.
+\item[-v] give more verbose information while processing dump files.
 \item[-o] name of optional output file. Defaults to standard output.
 \end{Argdescription}
 
