@@ -17,6 +17,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	algorith.c,v $
+ * Revision 1.1.1.3  89/12/21  16:29:43  keith
+ * Reversed indices in 'site' and 'site_force' to allow stride of 1 in ewald.
+ * 
  * Revision 1.1.1.2  89/10/24  17:17:25  keith
  * Modified pbc algorithm to use floor() library function.
  * Now works with non-orthorhombic cell.
@@ -29,7 +32,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/algorith.c,v 1.1.1.2 89/10/24 17:17:25 keith Exp $";
+static char *RCSid = "$Header: /home/tigger/keith/md/moldy/RCS/algorith.c,v 1.1.1.3 89/12/21 16:29:43 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include 	<math.h>
@@ -392,13 +395,14 @@ int	nmols;				/* Number of molecules		(in)  */
 /******************************************************************************
  * Rahman   Calculate the unit cell matrix accelerations                      *
  ******************************************************************************/
-void rahman(stress_vir, h, hddot, ke_dyad, press, W)
+void rahman(stress_vir, h, hddot, ke_dyad, press, W, mask)
 mat_t	stress_vir,			/* Stress virial		      */
 	h,				/* Unit cell matrix		      */
 	hddot,				/* Unit cell accelerations            */
 	ke_dyad;			/* Translational kinetic energy dyad  */
 double	press,				/* Externally applied pressure	      */
 	W;				/* Piston mass parameter	      */
+int	mask;				/* Mask constrained el's of h matrix  */
 {
    double	vol = det(h);		/* Unit cell volume		      */
    mat_t	stress,			/* Stress tensor		      */
@@ -421,6 +425,13 @@ double	press,				/* Externally applied pressure	      */
    mat_mul(stress, sigma, hddot);	/* Calculate unit cell accelerations  */
    mat_sca_mul(1.0/W, hddot, hddot);
 
-   hddot[1][0] = hddot[2][0] = hddot[2][1] = 0.0;
-   	/* Zero unwanted degrees of freedom. Refson PhD Thesis (1986)         */
+   /* 
+    * Zero unwanted degrees of freedom. Refson PhD Thesis (1986)
+    */   
+   for(i = 0; i < 9; i++)
+   {
+      if( mask & 1 )
+	 hddot[0][i] = 0.0;		/* Access as [9] rather than [3][3]   */
+      mask >>= 1;
+   }
 }
