@@ -29,6 +29,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *              module (kernel.c) for ease of modification.                   *
  ******************************************************************************
  *       $Log: force.c,v $
+ *       Revision 2.27.2.3  2002/09/19 10:56:32  kr
+ *       Tidied up header declarations.
+ *       Changed old includes of string,stdlib,stddef and time to <> form
+ *
  *       Revision 2.27.2.2  2002/06/20 17:50:59  kr
  *       Patrick's mods to do 1/r**7 terms with an Ewald sum
  *       (very slightly tidied up).
@@ -252,7 +256,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/kr/CVS/moldy/src/force.c,v 2.27.2.2 2002/06/20 17:50:59 kr Exp $";
+static char *RCSid = "$Header: /usr/users/moldydv/CVS/moldy/src/force.c,v 2.27.2.3 2002/09/19 10:56:32 kr Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include        "defs.h"
@@ -1265,6 +1269,7 @@ void rdf_inner(int ithread,
    int          nfnab[2];               /* Number of non-fw and fw neighbours */
    int          k;
    cell_mt      *cmol;                  /* Loop counter for link cells.       */
+   double density = system->nsites/det(system->h);
 /******************************************************************************
  *  Start of main loop over subcells.                                         *
  ******************************************************************************/
@@ -1320,7 +1325,7 @@ void rdf_inner(int ithread,
             /*
              * Accumulate radial distribution functions
              */
-            rdf_accum(jmin, jmax, r_sqr, id[isite], id, nab);
+            rdf_accum(density, jmin, jmax, r_sqr, id[isite], id, nab);
          }
       }
    }
