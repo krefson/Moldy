@@ -48,8 +48,6 @@ extern char *comm;
 extern FILE  *open_dump(char *fname, char *mode);
 extern int close_dump(FILE *dumpf);
 extern int rewind_dump(FILE *dumpf, int xdr);
-/* int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_write,
-		     size_mt sysinfo_size, dump_sysinfo_mt *dump_sysinfo); */
 extern int     tokenise(char *fields, char *mask, int len);
 extern int	get_tokens(char *buf, char **linev, char *sep);
 extern char    *get_line(char *line, int len, FILE *file, int skip);
