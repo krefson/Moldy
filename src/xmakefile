@@ -110,7 +110,7 @@ VMSBUILD=	compile_moldy.com link_moldy.com defcomm.com\
 
 DOSBUILD=	Makefile.mak OFILES.RSP SHAKOBJS.RSP Makefile.w32
 
-all:		moldy utilities
+all:		moldy utilities Makefile
 
 moldy:		$(OFILES) $(EXTRA_OBJ) $(HFILES)
 		$(CC) -o moldy $(LDFLAGS) $(OFILES) $(EXTRA_OBJ)  $(LIBS)
@@ -140,6 +140,12 @@ mdavpos:	mdavpos.o $(SHAKOBJS) $(GETOPT)
 		$(CC) -o mdavpos $(LDFLAGS1) mdavpos.o $(SHAKOBJS) $(GETOPT) $(LDFLAGS)  $(LIBS)
 
 utilities:	$(UTILS) $(UTILS2)
+
+Makefile:	Makefile.in configure config.guess config.sub
+		./configure
+
+configure:	configure.in aclocal.m4
+		autoconf
 
 $(FIGS):	
 		(set -x;cd figures; \
@@ -174,6 +180,7 @@ Makefile.in:	xmakefile
 				'\n}\n/^%\.[a-z][a-z]*:	/,/^$$/ d\n'\
 				'/^moldy.bbl:	/,/^$$/ d\n' \
 				'/^moldy.aux:	/,/^$$/ d\n' \
+				'/^Makefile.in:	/,/^$$/ d\n' \
 				 > make.sed 
 		sed -f make.sed ./xmakefile > Makefile.in
 		@ $(RM) make.sed
@@ -182,13 +189,11 @@ Makefile.w32:	Makefile.in
 		@PATH=/usr/5bin:${PATH};\
 		echo	's/ -\<lm\>//\n'\
 			's/@\(CC\)@/gcc/\n'\
-			's/@\(CPPFLAGS\)@//\n'\
 			's/@\(CFLAGS\)@/-g/\n'\
 			's/@\(OPT\)@/-O2 -ffast-math -mcpu=pentium -malign-double/\n'\
 			's/@\(OPT2\)@/-O2 -ffast-math -mcpu=pentium -malign-double/\n'\
 			's/@\(OPTAUX\)@/-funroll-loops/\n'\
-			's/@\(LDFLAGS\)@//\n'\
-			's/@\(LIBS\)@//\n'\
+			's/@\([A-Z][A-Z]*\)@//\n'\
 			'/$$(CFILES).*:/,/	co/d\n'\
 			'/^.SUFFIXES/d' > makew32.sed
 		sed -f makew32.sed ./Makefile.in > Makefile.w32
@@ -215,10 +220,10 @@ Makefile.mak:	Makefile.in
 		sed -f makedos.sed ./Makefile.in > Makefile.mak
 		@$(RM) makedos.sed
 
-OFILES.RSP:	xmakefile
+OFILES.RSP:	
 		echo $(OFILES)   | sed -e 's/\.\<o\>/.obj/g'  > OFILES.RSP
 
-SHAKOBJS.RSP:	xmakefile
+SHAKOBJS.RSP:	
 		echo $(SHAKOBJS) | sed -e 's/\.\<o\>/.obj/g'  > SHAKOBJS.RSP
 
 cflow:		$(CFILES)
@@ -270,7 +275,7 @@ maintainer-clean:	distclean
                    echo "RCS directory not present."\
                         "You don't REALLY want to delete the sources do you?";\
 		fi;\
-		$(RM) Makefile.in       
+		$(RM) Makefile.in configure   
 #
 #  Export options
 #
@@ -318,7 +323,7 @@ defcomm.com:
 		done
 
 compile.com:
-		/bin/echo >compile.com \
+		@/bin/echo >compile.com \
 	'$$ write sys$$output "===========Building Moldy============"\n'\
 	'$$ @compile_moldy\n'\
 	'$$ @link_moldy\n'\
@@ -387,7 +392,7 @@ force.o:	force.c structs.h defs.h
 #
 #  Rule for checking out source under RCS
 #
-$(CFILES) $(HFILES) $(AHFILES) $(EXTRA0) $(DOCCI) xmakefile:
+$(CFILES) $(HFILES) $(AHFILES) $(EXTRA0) $(DOCCI):
 	co $@
 
 ewald-RIL.c:
