@@ -3,6 +3,16 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 1.5  89/10/26  11:29:26  keith
+ * Sin and cos loop vectorised - mat_vec_mul extracted from loop.
+ * 'Uniform charge sheet' term added in case of electrically charged layer.
+ * 
+ * Revision 1.5  89/10/26  11:27:31  keith
+ * Sin and cos loop vectorised - mat_vec_mul extracted from loop.
+ * 
+ * Revision 1.4  89/10/02  11:39:14  keith
+ * Fixed error in *star macros which assumed rlv's were cols of h(-1) r.t. rows.
+ * 
  * Revision 1.3  89/06/09  13:38:17  keith
  * Older code for computation of q cos/sin k.r restored conditionally by
  * use of macro OLDEWALD.  This is for more primitive vectorising compilers.
@@ -15,7 +25,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/tigger/keith/md/RCS/ewald.c,v 1.3 89/06/09 13:38:17 keith Stab $";
+static char *RCSid = "$Header: /home/tigger/keith/md/RCS/ewald.c,v 1.5 89/10/26 11:29:26 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #ifdef	convexvc
@@ -25,6 +35,7 @@ static char *RCSid = "$Header: /home/tigger/keith/md/RCS/ewald.c,v 1.3 89/06/09 
 #endif
 /*========================== Program include files ===========================*/
 #include "structs.h"
+#include "messages.h"
 /*========================== Library declarations ============================*/
 int	abs();
 void	cfree();
@@ -37,6 +48,7 @@ double	sum();				/* Sum of elements of 'real' vector   */
 void	saxpy();			/* A*x+y, x, y are long vectors	      */
 void	*arralloc();			/* Allocates a dope vector array      */
 void	note();				/* Write a message to the output file */
+void	message();			/* Write a warning or error message   */
 /*========================== External data references ========================*/
 extern	contr_t	control;		/* Main simulation control record     */
 /*========================== Macros ==========================================*/
@@ -71,7 +83,7 @@ mat_t		stress;			/* Stress virial		(out) */
    register	real	sqcoskr,sqsinkr;/* Sum q(i) sin/cos(K.r(i))          */
 		double	ksq;		/* Squared magnitude of K vector     */
 		double	pe_local = 0.0;	/* Local accumulator for pot. energy */
-   		vec_t	kr, kv;		/* (hx(i),ky(i),lz(i)) & (Kx,Ky,Kz)  */
+   		vec_t	kv;		/* (Kx,Ky,Kz)  			     */
 #ifdef OLDEWALD
    real		*chxky	= dalloc(nsites),
 		*shxky	= dalloc(nsites);
@@ -95,8 +107,9 @@ mat_t		stress;			/* Stress virial		(out) */
 		**sky = (real**)arralloc(sizeof(real),2, 0, kmax, 0, nsites-1),
 		**slz = (real**)arralloc(sizeof(real),2, 0, lmax, 0, nsites-1);
    real		*coshx, *cosky, *coslz, *sinhx, *sinky, *sinlz;
-   real		*qcoskr = dalloc(nsites),	/* q(i) cos(K.R(i))	      */
-		*qsinkr = dalloc(nsites);	/* q(i) sin(K.R(i))	      */
+   vec_t	*kr = ralloc(nsites);		/* K.Ri			      */
+   real		*qcoskr,			/* q(i) cos(K.R(i))	      */
+		*qsinkr;			/* q(i) sin(K.R(i))	      */
 #ifdef VCALLS
    real		*temp	= dalloc(nsites);
 #else
@@ -112,11 +125,21 @@ mat_t		stress;			/* Stress virial		(out) */
  */
    if(init)
    {
-      double	sqsq = 0, intra, r;
+      double	sqsq = 0, sq = 0, intra, r;
       int	js;
+      self_energy = 0;
       for(is = 0; is < nsites; is++)
+      {
+	 sq += chg[is];
 	 sqsq += SQR(chg[is]);
-      self_energy = control.alpha / sqrt(PI) * sqsq;
+      }
+      if( fabs(sq)*CONV_Q > 1.0e-5)
+      {
+	 self_energy += PI*SQR(sq) / (2.0*vol*SQR(control.alpha));
+	 message(NULLI, NULLP, WARNING, SYSCHG, sq*CONV_Q, self_energy*CONV_E);
+      }
+
+      self_energy += control.alpha / sqrt(PI) * sqsq;
       ssite = 0;
       for(ispec = 0, spec = species; ispec < system->nspecies; ispec++, spec++)
       {
@@ -142,17 +165,24 @@ mat_t		stress;			/* Stress virial		(out) */
  * Calculate cos and sin of astar*x, bstar*y & cstar*z for each charged site
  */
    for(is = 0; is < nsites; is++)
-   {
-      chx[0][is] = 1.0; cky[0][is] = 1.0; clz[0][is] = 1.0;
-      mat_vec_mul(hinv, site+is, (vec_p)kr, 1);
-      chx[1][is] = cos(2.0 * PI * kr[0]);
-      cky[1][is] = cos(2.0 * PI * kr[1]);
-      clz[1][is] = cos(2.0 * PI * kr[2]);
-      shx[1][is] = sin(2.0 * PI * kr[0]);
-      sky[1][is] = sin(2.0 * PI * kr[1]);
-      slz[1][is] = sin(2.0 * PI * kr[2]);
-   }
+      chx[0][is] = cky[0][is] = clz[0][is] = 1.0;
 
+   mat_vec_mul(hinv, site, kr, nsites);
+VECTORIZE
+   for(is = 0; is < nsites; is++)
+   {
+      chx[1][is] = cos(2.0 * PI * kr[is][0]);
+      shx[1][is] = sin(2.0 * PI * kr[is][0]);
+      cky[1][is] = cos(2.0 * PI * kr[is][1]);
+      sky[1][is] = sin(2.0 * PI * kr[is][1]);
+      clz[1][is] = cos(2.0 * PI * kr[is][2]);
+      slz[1][is] = sin(2.0 * PI * kr[is][2]);
+   }
+/*
+ *  Finished with kr[].  Re-assign space to qcoskr/qsinkr
+ */
+   qcoskr = kr[0];
+   qsinkr = qcoskr + nsites;
 /*
  * Use addition formulae to get sin(h*astar*x)=sin(Kx*x) etc for each site
  */
@@ -348,7 +378,7 @@ VECTORIZE
    
    cfree((char*)chx[0]); cfree((char*)cky[0]); cfree((char*)clz[0]); 
    cfree((char*)shx[0]); cfree((char*)sky[0]); cfree((char*)slz[0]);
-   cfree((char*)qcoskr); cfree((char*)qsinkr);
+   cfree((char*)kr);
 #ifdef OLDEWALD
    cfree((char*)chxky);	 cfree((char*)shxky); 
 #endif
