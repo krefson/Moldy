@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /usr/users/moldydv/CVS/moldy/src/messages.h,v 2.30 2002/03/04 16:08:12 kr Exp $
+ * $Header: /usr/users/moldy/CVS//moldy/src/messages.h,v 2.31 2002/09/26 14:03:08 moldydv Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -182,3 +182,4 @@ Gaussian thermostat would interfere with each other."
 #define IVEWAC "Ewald Sum accuracy parameter (%g) invalid.  Should be > 0"
 #define ERFACC "Error function approximation for real-space Ewald Sum can not meet requested level of accuracy (%g)\n     Algorithm changes in kernel.c would be needed.  See Abramowitz and Stegun p299."
 #define EWINAC "Explicitly specified Ewald sum parameters give accuracy parameter of %g, not %g as requested"
+#define EW46WR "Neither r^-n Ewald nor analytical energy correction performed. Hope it's OK, or set %s to non-zero value"
