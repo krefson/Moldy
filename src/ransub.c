@@ -27,6 +27,9 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.17.10.2  2003/08/01 00:45:02  moldydv
+ *  Added afree and sgexpand to function declarations.
+ *
  *  Revision 1.17.10.1  2003/07/29 09:36:04  moldydv
  *  Polyatomic dopants can now be read in xtl and xyz formats.
  *  Options -f,-t,-p added for specifying Euler angles phi, theta and psi of all polyatomic dopant molecules.
@@ -143,7 +146,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/ransub.c,v 1.17.10.1 2003/07/29 09:36:04 moldydv Exp $";
+static char *RCSid = "$Header: /usr/users/moldy/CVS/moldy/src/ransub.c,v 1.17.10.2 2003/08/01 00:45:02 moldydv Exp $";
 #endif  
 
 #include "defs.h"
@@ -649,10 +652,7 @@ create_total_sites(int max_id, int new_sites, site_mt site_info[], site_mt dopan
    {
       strcpy(totsites[i].name, site_info[i].name);
       totsites[i].mass = site_info[i].mass;
-      if( site_info[i].charge < 0 )    /* Remove errors from unit conversion */
-         totsites[i].charge = floor(site_info[i].charge)*1e10/1e10;
-      else
-         totsites[i].charge = ceil(site_info[i].charge)*1e10/1e10;
+      totsites[i].charge = site_info[i].charge;
       totsites[i].pad = site_info[i].pad;
    }
 
