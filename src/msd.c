@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.13 1998/01/28 09:55:05 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 1.16 1998/05/07 17:06:11 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,7 +35,17 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.13
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
- *  Revision 1.13  1998/01/28 09:55:05  keith
+ *  Revision 1.16  1998/10/23  10:31:23  craig
+ *  Removed initialization of range_flag[3] since ANSI feature
+ *  Removed unnecessary linking with lattice_start
+ *  Corrected bug in get_real subroutine
+ *
+ *  Revision 1.15  1998/05/07 17:06:11  keith
+ *  Reworked all conditional compliation macros to be
+ *  feature-specific rather than OS specific.
+ *  This is for use with GNU autoconf.
+ *
+ *  Revision 1.14  1998/01/28 09:55:05  keith
  *  Changes HAS_POPEN to more natural HAVE_POPEN.
  *  Fixed minor portability problem with struct initialization.
  *
@@ -55,7 +65,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/msd.c,v 1.13
  *  Made -r and -s options mutually exclusive.
  *
  *  Revision 1.9  1997/10/15 13:13:09  keith
- *  Minor tirying up by CF.
+ *  Minor tidying up by CF.
  *
  *  Revision 1.8  1997/10/13  11:16:10  craig
  *  Removed unused variable declarations
@@ -113,7 +123,6 @@ void	initialise_sysdef();
 void	re_re_header();
 void	re_re_sysdef();
 void	allocate_dynamics();
-void	lattice_start();
 void	read_restart();
 void	init_averages();
 int	getopt();
@@ -264,15 +273,15 @@ int	lo, hi;
       return(EOF);
 }
 /******************************************************************************
- * get_real().  Read an int from stdin, issuing a prompt and checking         *
+ * get_real().  Read a real from stdin, issuing a prompt and checking         *
  * validity and range.  Loop until satisfied, returning EOF if appropriate.   *
  ******************************************************************************/
-int get_real(prompt, lo, hi)
+real get_real(prompt, lo, hi)
 char	*prompt;
 real 	lo, hi;
 {
    char		ans_str[80];
-   int	ans_r; 
+   real		ans_r; 
    int		ans_flag;
    ans_flag = 0;
    while( ! feof(stdin) && ! ans_flag )
@@ -280,7 +289,7 @@ real 	lo, hi;
       fputs(prompt, stderr);
       fflush(stderr);
       fgets(ans_str, sizeof ans_str, stdin);
-      if( sscanf(ans_str, "%d", &ans_r) == 1 && ans_r >= lo && ans_r <= hi)
+      if( sscanf(ans_str, "%lf", &ans_r) == 1 && ans_r >= lo && ans_r <= hi)
 	 ans_flag++;
    }
    if( ans_flag )
@@ -709,7 +718,6 @@ char	*argv[];
 
 #define MAXTRY 100
    control.page_length=1000000;
-   range_flag[0] = range_flag[1] = range_flag[2] = 0;
 
    comm = argv[0];
    if( strstr(comm, "msd") )
