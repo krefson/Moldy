@@ -22,16 +22,23 @@ what you give them.   Help stamp out software-hoarding! */
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
  *              of molecules from MolDy dump files.				      *
- *		Output in columnar form "x y z total" for each time interval.	      *
+ *		Output in columnar form "x y z total" for successive time intervals.  *
  *		Selection of species using -g: 0 = species 1, 1 = species 2, etc.     *
  *		Default msd time intervals:					      *
- *                             1 to (total no. of dump slices)/2, step size 1         *
+ *                             1 to (total no. of dump slices-1)/2, step size 1       *
  *		Option -u outputs trajectory coordinates in columnar format	      *
  *		"x y z" against time for each atom of selected species. 	      *
  *		nb. msd time intervals taken relative to extracted dump slices.	      *
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 1.2  1997/07/16 14:20:47  craig
+ *  Option for various output formats trajectory coords
+ *
+ *  Revision 1.1  1997/07/14 15:36:24  keith
+ *  Modified by KR.  MSD calc put into separate function and optimised
+ *  for roughly 4x speedup.
+ *
  *  Revision 1.0  1997/07/11 16:55:26  craig
  *  Initial revision
  *
@@ -75,6 +82,8 @@ FILE	*popen();
 int ithread=0, nthreads=1;
 #define MSD  0
 #define TRAJ 1
+#define GNUP 0
+#define IDL  1
 /******************************************************************************
  * Dummies of 'moldy' routines so that msd may be linked with moldy library*
  ******************************************************************************/
@@ -463,18 +472,19 @@ int		sp_range[3];
 		 floor(spec->c_of_m[imol][i]-prev_cofm[totmol][i]+0.5);
 }
 /******************************************************************************
- * traj_out().  Output routine for displaying trajectories                    * 
+ * traj_gnu().  Output routine for displaying trajectories                    *
+ *		- coords vs time for each species/atom for GNUplot            * 
  ******************************************************************************/
 void
-traj_out(system, species, traj_cofm, nslices, range, sp_range)
-system_mt	*system;
-spec_mt		species[];
-vec_mt		**traj_cofm;
-real		range[3][2];
-int		nslices, sp_range[3];
+traj_gnu(system, species, traj_cofm, nslices, range, sp_range)
+system_mt       *system;
+spec_mt         species[];
+vec_mt          **traj_cofm;
+real            range[3][2];
+int             nslices, sp_range[3];
 {
-   int		totmol=0, imol, i, itime;
-   spec_mp	spec;
+   int          totmol=0, imol, i, itime;
+   spec_mp      spec;
 
    for( spec = species+sp_range[0]; spec <= species+sp_range[1]; spec+=sp_range[2])
    {
@@ -496,8 +506,42 @@ int		nslices, sp_range[3];
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
 }
+/******************************************************************************
+ * traj_idl().  Output routine for displaying trajectories                    *
+ *		- simple columnar format e.g. for IDL		              * 
+ ******************************************************************************/
+void
+traj_idl(system, species, traj_cofm, nslices, range, sp_range)
+system_mt	*system;
+spec_mt		species[];
+vec_mt		**traj_cofm;
+real		range[3][2];
+int		nslices, sp_range[3];
+{
+   int		totmol, imol, i, itime;
+   spec_mp	spec;
+
+   for( itime = 0; itime < nslices; itime++)
+   {
+     totmol = 0;
+     for( spec = species+sp_range[0]; spec <= species+sp_range[1]; spec+=sp_range[2])
+     {
+       for( imol = 0; imol < spec->nmols; totmol++, imol++)
+         if( traj_cofm[0][totmol][0] >= range[0][0] && traj_cofm[0][totmol][0] <= range[0][1] &&
+            traj_cofm[0][totmol][1] >= range[1][0] && traj_cofm[0][totmol][1] <= range[1][1] &&
+               traj_cofm[0][totmol][2] >= range[2][0] && traj_cofm[0][totmol][2] <= range[2][1])
+         {
+           for( i = 0; i < 3; i++)
+               (void)printf("%f ",traj_cofm[itime][totmol][i]);
+         }
+     }
+     (void)printf("\n");
+   }
+   if( ferror(stdout) )
+      error("Error writing output - \n%s\n", strerror(errno));
+}
 /***********************************************************************
- * msd_calc. Calculate msd					       *
+ * msd_calc. Calculate msds from trajectory array		       *
  ***********************************************************************/    
 msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, traj_cofm, msd)
 spec_mt		species[];
@@ -510,6 +554,7 @@ int             mstart, mfinish, minc, max_av, it_inc;
    spec_mp      spec;
    double       msdtmp, stmp;
    vec_mt	*tct0, *tct1;
+
    /* Outer loop for selecting initial time slice */
    for(it = 0; it <= (max_av-1)*it_inc; it+=it_inc)
 
@@ -536,7 +581,6 @@ int             mstart, mfinish, minc, max_av, it_inc;
 	    }
 	 }
       }
-
 }
 /******************************************************************************
  * msd_out().  Output routine for displaying msd results                      *
@@ -593,7 +637,7 @@ char	*argv[];
    extern char	*optarg;
    int		errflg = 0;
    int		intyp = 0;
-   int		outsw = MSD;
+   int		outsw = MSD, trajsw = GNUP;
    int		start, finish, inc;
    int		mstart, mfinish, minc;
    int		nslices;
@@ -628,7 +672,7 @@ char	*argv[];
 #define MAXTRY 100
    control.page_length=1000000;
 
-   while( (c = getopt(argc, argv, "r:s:d:t:m:i:g:o:uxyz") ) != EOF )
+   while( (c = getopt(argc, argv, "r:s:d:t:m:i:g:o:w:uxyz") ) != EOF )
       switch(c)
       {
        case 'r':
@@ -668,6 +712,9 @@ char	*argv[];
          break;
        case 'z':
          range_flag[2] = 1;
+         break;
+       case 'w':
+         trajsw = atoi(optarg);
          break;
        default:
        case '?':
@@ -858,7 +905,7 @@ char	*argv[];
    */
    dump_size = DUMP_SIZE(~0)*sizeof(float);
 
-   nslices = (finish-start)/inc+1; /* no. of time slices in traj_cofm*/
+   nslices = (finish-start)/inc+1; /* no. of time slices in traj_cofm */
 
   /* Allocate memory for trajectory data and zero */
    traj_cofm = arralloc(sizeof(vec_mt),2,0,nslices-1,0,sys.nmols-1);
@@ -866,17 +913,6 @@ char	*argv[];
 
   /* Allocate array to store unit cell matrices */
    hmat = arralloc(sizeof(mat_mt),1,0,nslices-1);
-
-   if( outsw == MSD)
-   {
-  /* Calculate msd parameters */
-     nmsd = (mfinish-mstart)/minc+1; /* No of msd time intervals */
-     max_av = (nslices - mfinish)/it_inc; /* Max no of msd calcs to average over */
-
-  /* Allocate memory for msd array and zero */
-     msd = arralloc(sizeof(real),3,0,nmsd-1,0,sys.nspecies-1,0,2);
-     zero_real(msd[0][0],nmsd*sys.nspecies*3);
-   }
 
    if( (dump_buf = (float*)malloc(dump_size)) == 0)
       error("malloc failed to allocate dump record buffer (%d bytes)",
@@ -934,15 +970,31 @@ char	*argv[];
       mat_vec_mul3(hmat[it], traj_cofm[it], sys.nmols);
 
 /*
- * Calculate and print msd values
+ * Output either msd values or trajectory coords
  */
    if( outsw == MSD)
    {
+  /* Calculate msd parameters */
+     nmsd = (mfinish-mstart)/minc+1; /* No of msd time intervals */
+     max_av = (nslices - mfinish)/it_inc; /* Max no of msd calcs to average over */
+
+  /* Allocate memory for msd array and zero */
+     msd = arralloc(sizeof(real),3,0,nmsd-1,0,sys.nspecies-1,0,2);
+     zero_real(msd[0][0],nmsd*sys.nspecies*3);
+
+  /* Calculate and print msd values */
      msd_calc(species, sp_range, mstart, mfinish, minc, max_av, it_inc, traj_cofm, msd);
      msd_out(species, msd, max_av, nmsd, sp_range);
    }
-   else /* Otherwise output trajectories */
-     traj_out(&sys, species, traj_cofm, nslices, range, sp_range);
-
+   else /* Otherwise output trajectories in selected format */
+     switch( trajsw)
+     {
+       case IDL:
+          traj_idl(&sys, species, traj_cofm, nslices, range, sp_range);
+          break;
+       case GNUP:
+       default:
+	  traj_gnu(&sys, species, traj_cofm, nslices, range, sp_range);
+     }
    return 0;    
 }
