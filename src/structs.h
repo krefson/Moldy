@@ -19,9 +19,19 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.13 2000/11/09 16:28:02 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/structs.h,v 2.14 2000/11/15 17:52:00 keith Exp $
  *
  * $Log: structs.h,v $
+ * Revision 2.14  2000/11/15 17:52:00  keith
+ * Changed format of dump files.
+ * Added second struct with sufficient information
+ * about the simulation that most utility programs
+ * (namely those which do not need site co-ordinates)
+ * should not need to read sys-spec or restart files.
+ *
+ * New options "-c -1" to dumpext prints header info.
+ * -- dumpanal removed.
+ *
  * Revision 2.13  2000/11/09 16:28:02  keith
  * Updated dump file format for new Leapfrog dynamics\nAdded #molecules etc to dump header format
  *
@@ -353,7 +363,7 @@ typedef struct                  /* Dump file header format                    */
    size_mt	sysinfo_size;
 }       dump_mt;
 
-struct mol_mt
+typedef struct mol_mt
 {
    char name[L_spec];
    int nmols;
@@ -365,7 +375,7 @@ typedef struct dump_sysinfo_mt  /* Dump file system info format               */
    float      deltat;		/* Timestep*dump-interval		      */
    int	      nmols, nmols_r;   /* Number of molecules and rotations          */
    int	      nspecies;         /* Number of species in system.		      */
-   struct     mol_mt mol[1]; /* Number of molecules per species         1   */
+   struct     mol_mt mol[1];   /* Number of molecules per species         1   */
 }       dump_sysinfo_mt;
 
 #define MAX_ROLL_INTERVAL       100

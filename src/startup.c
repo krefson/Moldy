@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.22  2000/11/13 11:57:40  keith
+ *      Fixed bug in initialization of thermostat dynamic variables, which resulted
+ *       in a failure to restart on a multiprocessor.
+ *
  *      Revision 2.21  2000/11/08 18:38:43  keith
  *      Adjusted degrees of freedom to be 3N_t + N_r - 3 because total momentum
  *      is conserved.
@@ -280,7 +284,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.21 2000/11/08 18:38:43 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.22 2000/11/13 11:57:40 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -845,54 +849,6 @@ void	allocate_dynamics(system_mp system, spec_mt *species)
    }
 }
 /******************************************************************************
- *  Interpolate_derivatives & interp.    Interp is a quadratic interpolation  *
- *  routine for scaling derivatives for a new timestep.                       *
- *  Interpolate_derivatives calls it for all the dynamic variables.	      *
- ******************************************************************************/
-static
-void	interp(double ratio, real *x, real *xo, real *xvo, int n)
-      	      				/* Between old and new timesteps      */
-    	              			/* Pointers to 1st dynamic variable   */
-   	  				/* Size of arrays x, xo, xvo          */
-{
-   double	c1 = 1.0 - 1.5*ratio + 0.5*SQR(ratio),
-   		c2 = 2.0*ratio - SQR(ratio),
-   		c3 = -0.5*ratio + 0.5*SQR(ratio),
-   		c4 = 1.0 - 3.0*ratio + 2.0*SQR(ratio),
-   		c5 = 4.0*ratio - 4.0*SQR(ratio),
-   		c6 = -1.0*ratio + 2.0*SQR(ratio);
-   double	tmp;
-   
-   while(n-- > 0)
-   {
-      tmp	= *xo;
-      *xo	= c1 * *x + c2 * *xo + c3 * *xvo;
-      *xvo	= c4 * *x + c5 * tmp + c6 * *xvo;
-      x++; xo++; xvo++;
-   }
-}
-static
-void	interpolate_derivatives(system_mp sys, double step, double step1)
-{
-   double	ratio;
-   if( step == 0.0 )
-   {
-      message(NULLI, NULLP, WARNING, ZEROTS, step1);
-      return;
-   }
-   ratio = step1/step;
-   message(NULLI, NULLP, INFO, NEWTS, step, step1);
-#ifdef BEEMAN
-   interp(ratio, sys->acc[0],   sys->acco[0],  sys->accvo[0],   3*sys->nmols);
-   if( sys->nmols_r > 0 )
-      interp(ratio, sys->qddot[0], sys->qddoto[0],sys->qddotvo[0], 
-	     4*sys->nmols_r);
-   interp(ratio, sys->hddot[0], sys->hddoto[0],sys->hddotvo[0], 9);
-   interp(ratio, sys->tadot, sys->tadoto, sys->tadotvo, sys->nspecies);
-   interp(ratio, sys->radot, sys->radoto, sys->radotvo, sys->nspecies);
-#endif
-}
-/******************************************************************************
  *  check_sysdef.   		Read in system specification from the restart *
  *  file and check its consistency with the previously defined spec.  This is *
  *  for use when replacing the system spec in the middle of a run.  The system*
@@ -1333,7 +1289,7 @@ void	start_up(char *contr_name, char *out_name, system_mp system, spec_mp *speci
       control.reset_averages = 0;                /* This flag never propagated.*/
 
       if(control.step != old_step)
-         interpolate_derivatives(system, old_step, control.step);
+	 message(NULLI, NULLP, INFO, NEWTS, old_step, control.step);
 #ifdef BEEMAN
       for(i = 0; i < 9; i++)		/* Zap cell velocities if constrained */
 	 if( (control.strain_mask >> i) & 1 )

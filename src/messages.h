@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/messages.h,v 2.21 2000/10/20 15:15:47 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/messages.h,v 2.22 2000/11/15 17:51:59 keith Exp $
  */
 
 #ifndef SYSRD   /* Skip if already defined				      */
@@ -82,8 +82,7 @@ what you give them.   Help stamp out software-hoarding!  */
 #define	OOFAIL	"Failed to open file \"%s\" as main output file\n    -  %s"
 #define SEFAIL  "Rewind or seek failed on file  \"%s\"\n    -  %s"
 #define	RESUCC	"restart file \"%s\" successfully read in"
-#define	NEWTS	"Interpolating accelerations from old timestep %g to new %g"
-#define ZEROTS  "Cannot interpolate from old timestep of 0 (to new of %gps)"
+#define	NEWTS	"Changing from old timestep %g to new %g"
 #define	NSPCON	"Number of species in sysdef file (%d) and restart file (%d)\
 must be the same"
 #define	NMLCON	"Number of molecules of %s in sysdef and restart files must\
