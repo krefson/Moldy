@@ -23,6 +23,16 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.14  91/08/15  18:11:51  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
  * Revision 1.13  91/03/12  15:42:24  keith
  * Tidied up typedefs size_t and include file <sys/types.h>
  * Added explicit function declarations.
@@ -68,7 +78,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.15 91/08/14 14:23:26 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.14 91/08/15 18:11:51 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -136,20 +146,15 @@ double		pe;
       if( ndumps == 0 )		fname = prev_file;
                         else    fname = cur_file;
 
+      errflg = true;					/* Provisionally !!   */
       if( (dumpf = fopen(fname, "r+b")) == NULL)	/* Open dump file     */
-         	errflg = true;
-
-      if( !errflg &&
-	   fread((gptr*)&dump_header, sizeof(dump_t), 1, dumpf) == 0 ) 
-        	errflg = true;
-
-      if( errflg )
-	 message(NULLI, NULLP, WARNING, DUMPFI, fname);
+	 message(NULLI, NULLP, WARNING, DOERRR, fname, strerror(errno));
+      else if( fread((gptr*)&dump_header, sizeof(dump_t), 1, dumpf) == 0 )
+	 message(NULLI, NULLP, WARNING, DRERR, fname, strerror(errno));
       else if( control.dump_level != dump_header.dump_level )
-      {
-	 errflg = true;
          message(NULLI, NULLP, INFO, DMPALT);
-      }
+      else
+	 errflg = false;
 
       if( !errflg )
       {
@@ -166,7 +171,8 @@ double		pe;
 
 	 dump_header.ndumps = ndumps;
       
-	 (void)fseek(dumpf, 0L, SEEK_END);
+	 if( fseek(dumpf, 0L, SEEK_END) )
+	    message(NULLI, NULLP, FATAL, SEFAIL, fname, strerror(errno));
 	 file_len = ftell(dumpf);		/* Get length of file	      */
 	 file_pos = sizeof(dump_t)
 	            + ndumps*dump_size*sizeof(float);	/* Expected length    */
@@ -188,7 +194,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 1.15 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 1.14 $"+11,
 		                     sizeof dump_header.vsn-1);
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;
@@ -215,9 +221,9 @@ double		pe;
       dump_header.timestamp = time((time_t *)0);
 
       if( (dumpf = fopen(cur_file, "w+b")) == 0)
-         	message(NULLI, NULLP, FATAL, DOFAIL, cur_file);
+         	message(NULLI, NULLP, FATAL, DOERRW, cur_file, strerror(errno));
       if( fwrite((gptr*)&dump_header, sizeof(dump_t), 1, dumpf) == 0)
-         	message(NULLI, NULLP, FATAL, DWFAIL, cur_file);
+         	message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
       file_pos = ftell(dumpf);
    }
 
@@ -225,15 +231,18 @@ double		pe;
    dump_header.ndumps++;
    dump_header.restart_timestamp = restart_header.timestamp;
 
-   (void)fseek(dumpf, file_pos, SEEK_SET);		/* Write data at end */
-   if( fwrite((gptr*)dump_buf, sizeof(float), dump_size, dumpf) == 0 )
-      	message(NULLI, NULLP, FATAL, DWFAIL, cur_file);
+   if( fseek(dumpf, file_pos, SEEK_SET) )		/* Write data at end */
+      message(NULLI, NULLP, FATAL, SEFAIL, cur_file, strerror(errno));
+   if( fwrite((gptr*)dump_buf, sizeof(float), dump_size, dumpf) < dump_size )
+      	message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
 
    (void)fseek(dumpf, 0L, SEEK_SET);			/* Write header      */
    if( fwrite((gptr*)&dump_header, sizeof(dump_t), 1, dumpf) == 0)
-      	message(NULLI, NULLP, FATAL, DWFAIL, cur_file);
+      	message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
 
-   (void)fclose(dumpf);
+   if( fclose(dumpf) )
+      	message(NULLI, NULLP, FATAL, DWERR, cur_file, strerror(errno));
+
    xfree(dump_buf);
 }
 /******************************************************************************

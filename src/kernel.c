@@ -14,6 +14,16 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	kernel.c,v $
+ * Revision 1.12  91/08/15  18:12:03  keith
+ * Modifications for better ANSI/K&R compatibility and portability
+ * --Changed sources to use "gptr" for generic pointer -- typedefed in "defs.h"
+ * --Tidied up memcpy calls and used struct assignment.
+ * --Moved defn of NULL to stddef.h and included that where necessary.
+ * --Eliminated clashes with ANSI library names
+ * --Modified defs.h to recognise CONVEX ANSI compiler
+ * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ *   for GNU compiler with and without fixed includes.
+ * 
  * Revision 1.11  91/02/19  14:51:26  keith
  * Minor changes to get rid of misleading compiler warnings.
  * 
@@ -54,7 +64,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.13 91/08/14 14:23:35 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 1.12 91/08/15 18:12:03 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -125,7 +135,6 @@ int	ptype;				/* Potential type selector	      */
       else
          return( 0.0 );
    }
-   return 0.0;				/* Turn of annoying warnings.  */
 }
 /******************************************************************************
  *  kernel   Innermost loop of force calculation.  Takes a vector of squared  *
