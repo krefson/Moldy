@@ -1,3 +1,23 @@
+/* MOLecular DYnamics simulation code, Moldy.
+Copyright (C) 1988, 1992, 1993 Keith Refson
+ 
+This program is free software; you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation; either version 2, or (at your option) any
+later version.
+ 
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+ 
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+ 
+In other words, you are welcome to use, share and improve this program.
+You are forbidden to forbid anyone else to use, share and improve
+what you give them.   Help stamp out software-hoarding!  */
 /******************************************************************************
  * Force	This module contains functions to implement the 'link cell'   *
  *		interatomic force calculation (Hockney, R.W. & Eastwood J.W.  *
@@ -72,7 +92,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 1.32 93/03/09 16:00:00 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 2.0 93/03/15 14:49:51 keith Rel $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -103,7 +123,6 @@ double		det(); 			/* Determinant of 3x3 matrix	      */
 void    	message();              /* Send message to stderr             */
 void    	invert();               /* 3x3 matrix inverter                */
 void    	mat_vec_mul();          /* Matrix by vector multiplier        */
-void    	spxpy();                /* Scattered vector add               */
 void    	transpose();            /* Generate 3x3 matrix transpose      */
 void    	zero_real();            /* Initialiser                        */
 void    	zero_double();          /* Initialiser                        */
