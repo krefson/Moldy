@@ -342,7 +342,7 @@ char	*argv[];
 			 {3, 0, 3, 1, "C of M forces"},
 			 {3, 0, 3, 1, "torques"},
 			 {9, 0, 1, 0, "stress tensor"} };
-#define NCPT (sizeof(cpt)/sizeof(cpt_mt))
+#define NCPT (int)(sizeof(cpt)/sizeof(cpt_mt))
 
    static int level_mask[16] = {  0x0000,0x000f,0x0070,0x007f,
 				  0x0380,0x038f,0x03f0,0x03ff,
