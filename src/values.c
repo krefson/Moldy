@@ -34,6 +34,26 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ * Revision 2.6  1994/02/17  16:38:16  keith
+ * Significant restructuring for better portability and
+ * data modularity.
+ *
+ * Got rid of all global (external) data items except for
+ * "control" struct and constant data objects.  The latter
+ * (pot_dim, potspec, prog_unit) are declared with CONST
+ * qualifier macro which evaluates to "const" or nil
+ * depending on ANSI/K&R environment.
+ * Also moved as many "write" instantiations of "control"
+ * members as possible to "startup", "main" leaving just
+ * "dump".
+ *
+ * Declared as "static"  all functions which should be.
+ *
+ * Added CONST qualifier to (re-)declarations of ANSI library
+ * emulation routines to give reliable compilation even
+ * without ANSI_LIBS macro. (#define's away for K&R
+ * compilers)
+ *
  * Revision 2.5  94/01/18  13:33:05  keith
  * Null update for XDR portability release
  * 
@@ -112,7 +132,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -131,6 +151,7 @@ double	vdot();				/* Vector dot product		      */
 double	sum();				/* Vector sum			      */
 void	zero_real();
 void	zero_double();
+void	zero_dbls();
 void	energy_dyad();
 double	trans_ke();
 double	rot_ke();
@@ -191,14 +212,14 @@ av_info_t av_info[] = { {tke_n, "Trans KE",   CONV_E_N,	11, "%11.5g",-1, NULL},
 			{msqf_n,"<F**2>",     CONV_F_N,	10, "%10.5g",-3, NULL},
 			{msqt_n,"<N**2>",     CONV_N_N,	10, "%10.5g",-3, NULL},
 			{dip_n, "Dip Mom",    CONV_D_N,	 8, "%8.2g", 3,  NULL}};
-static  int	av_size;		/* Size of averages database          */
-static  int	av_mt_size;		/* Size of entry inaverages database  */
+static  size_mt	av_size;		/* Size of averages database          */
+static  size_mt	av_mt_size;		/* Size of entry inaverages database  */
 static  av_head_mt  *av_head;
 static	av_mt	*av;			/* Dynamic array of averages structs  */
 static	int	navs = 0;		/* Size of array av                   */
 static	int	max_row = 0;		/* Largest number of components       */
 static  int	max_col = (int)press_n;	/* Number to print across page        */
-static  int     av_tmp_size;
+static  size_mt av_tmp_size;
 static  gptr    *av_tmp;
 /*========================== Macros ==========================================*/
 #define NAVT			(int)end
@@ -217,7 +238,7 @@ static  gptr    *av_tmp;
 void	init_averages(nspecies, vsn, roll_interval, old_roll_interval,av_convert)
 int	nspecies;
 char	*vsn;
-int	roll_interval, old_roll_interval;
+long	roll_interval, old_roll_interval;
 int	*av_convert;
 {
    av_mt		*av_mp;
@@ -236,10 +257,10 @@ int	*av_convert;
    /* Determine size of database, Allocate space and set pointers             */
    av_mt_size = sizeof(av_mt)+(roll_interval-1)*sizeof(double);
    av_size = sizeof(av_head_mt) + navs*av_mt_size;
-   av_head  = (av_head_mt*)aalloc( av_size, char);
+   av_head  = (av_head_mt*)balloc(1, av_size);
    av_head->nav = av_head->nroll = av_head->iroll = 0;
    av       = (av_mt*)(av_head+1);
-   zero_double((double*)av, (int)(navs*av_mt_size/sizeof(double)));
+   zero_dbls((double*)av, navs*av_mt_size/sizeof(double));
 
    av_mp = av;
    for(i = 0; i < (int)end; i++)	/* Set up pointers to area of array   */
@@ -266,7 +287,7 @@ int	*av_convert;
       if( major < cmajor || (major==cmajor && minor <= cminor ) )
       {
 	 av_tmp_size = (navs+1)*sizeof(old_av_u_mt);
-	 av_tmp = aalloc(av_tmp_size, char);
+	 av_tmp = balloc(1,av_tmp_size);
 	 *av_convert = 1;
       }
       /*
@@ -276,7 +297,7 @@ int	*av_convert;
       {
 	 av_tmp_size =  sizeof(av_head_mt) 
 	             + navs*(sizeof(av_mt)+(old_roll_interval-1)*sizeof(double));
-	 av_tmp = aalloc(av_tmp_size, char);
+	 av_tmp = balloc(1, av_tmp_size);
 	 *av_convert = 2;
       }
    }
@@ -287,10 +308,11 @@ int	*av_convert;
  * Also a convenient place to implement reset_averages.			      *
  ******************************************************************************/
 void	convert_averages(roll_interval, old_roll_interval, av_convert)
-int	roll_interval, old_roll_interval;
+long	roll_interval, old_roll_interval;
 int	av_convert;
 {
-   int iav, old_nroll, old_iroll, rbl, prev_av_mt_size;
+   int iav, old_nroll, old_iroll, rbl;
+   size_mt prev_av_mt_size;
    old_av_u_mt *old_av_mp=(old_av_u_mt *)av_tmp;
    av_head_mt	*prev_av_head = (av_head_mt *)av_tmp;
    av_mt	        *av_mp, *prev_av_mp;
@@ -603,7 +625,7 @@ void	output()
 {
    char	s[64];
 
-   (void)sprintf(s, "Timestep %d      Current values", control.istep);
+   (void)sprintf(s, "Timestep %ld      Current values", control.istep);
    print_frame('=', s, value);
 
    (void)sprintf(s,"Rolling averages over last %d timesteps", av_head->nroll);
