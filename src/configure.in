@@ -35,34 +35,39 @@ dnl
    if test $cc_matches -eq 1 ; then
     case "${target}" in
      alpha*-dec-osf*)   : ${OPT=-tune\ host\ -O4}  \
-                          ${OPT2=-tune\ host\ -ansi_alias\ -O5};;
+                          ${OPT2=-tune\ host\ -ansi_alias\ -O5} \
+	                  ${OPTAUX=$OPT2};;
      #sparc-sun-sunos*) : ${OPT=-fast\ -xO4}  \
      #                    ${OPT2=-fast\ -xO4\ -fsimple}  \
      #                    ${LDFLAGS=-fast} ;;
-     sparc-sun-sunos*)  : ${OPT=-fast\ -O4} ${OPT2=$OPT} \
+     sparc-sun-sunos*)  : ${OPT=-fast\ -O4} ${OPT2=$OPT} ${OPTAUX=$OPT2}\
                           ${LDFLAGS=-fast} ;;
      sparc-sun-solaris*): ${OPT=-fast\ -xO4}  \
                           ${OPT2=${OPT}\ -fsimple\ -xrestrict=%all} \
-                          ${LDFLAGS=-fast} ;;
-     rs6000-ibm-aix*)   : ${OPT=-qansialias\ -O3}  ${OPT2=$OPT};;
-     mips-sgi-irix5*)   : ${OPT=-O2\ -mips2} ${OPT2=$OPT} \
+                          ${OPTAUX=$OPT2} ${LDFLAGS=-fast} ;;
+     rs6000-ibm-aix*)   : ${OPT=-qansialias\ -O3}  \
+                          ${OPT2=$OPT} ${OPTAUX=$OPT2};;
+     mips-sgi-irix5*)   : ${OPT=-O2\ -mips2} ${OPT2=$OPT} ${OPTAUX=$OPT2}\
                           ${LIBS=-lmalloc\ -lfastm} ;;
      mips-sgi-irix6*)   : ${OPT=-O3} \
-                          ${OPT2=${OPT}\ -OPT:alias=restrict:fast_sqrt=on:roundoff=3:IEEE_arithmetic=3}};;
+                          ${OPT2=${OPT}\ -OPT:alias=restrict:fast_sqrt=on:roundoff=3:IEEE_arithmetic=3}} \
+                          ${OPTAUX=$OPT2};;
      hppa1.*-hp-*)      : ${OPT=+O3\ +Olibcalls}  \
-                          ${OPT2=${OPT}\ +Onoparmsoverlap}  ;;
+                          ${OPT2=${OPT}\ +Onoparmsoverlap} ${OPTAUX=$OPT2} ;;
      c*-convex-bsd*)    : ${OPT=-O2\ -na\ -nv\ -fi}  \
                           ${OPT2=${OPT}\ -alias\ standard\ -alias\ ptr_args\ -alias\ array_args} \
-                          ${LIBS=-fi\ -lveclib}  ;;
+                          ${OPTAUX=$OPT2} ${LIBS=-fi\ -lveclib}  ;;
      *mp-cray-unicos*|*90-cray-unicos*) 
-                        : ${OPT=-h\ nostdc,vector3,scalar3,ivdep} ${OPT2=$OPT}
-                        : ${LDFLAGS=-Wl,-D,HEAP=50000+50000\ -Wl,-D,STACK=10000+10000} \
+                        : ${OPT=-h\ nostdc,vector3,scalar3,ivdep}  \
+                          ${OPT2=$OPT} ${OPTAUX=$OPT2} \
+                          ${LDFLAGS=-Wl,-D,HEAP=50000+50000\ -Wl,-D,STACK=10000+10000} \
                           ${LIBS=-lsci}  ;;
      T3D-cray-unicos*)  : ${OPT=-O2} ${OPT2=-O3\ -hunroll,aggress,restrict=a} \
+                          ${OPTAUX=$OPT2} ${LIBS=-lsci} ;;
+     T3E-cray-unicos*)  : ${OPT=-O2} ${OPTAUX=-O3\ -hunroll,aggress,restrict=a} \
+                          ${OPT2=$OPTAUX,inlinefrom=auxil.c} \
                           ${LIBS=-lsci} ;;
-     T3E-cray-unicos*)  : ${OPT=-O2} ${OPT2=-O3\ -hunroll,aggress,restrict=a,inlinefrom=auxil.c} \
-                          ${LIBS=-lsci} ;;
-                    *)  : ${OPT=-O} ${OPT2=$OPT} 
+                    *)  : ${OPT=-O} ${OPT2=$OPT} ${OPTAUX=$OPT2}
     esac
    fi
 fi
@@ -76,7 +81,7 @@ if test "x$ac_cv_prog_gcc" = xyes; then
         i586*|i686*)  OPT=-O2\ -mcpu=pentium\ -malign-double ;;
    esac
    OPT=${OPT}\ -ffast-math
-   OPTAUX=-funroll-loops
+   OPTAUX=${OPT}\ -funroll-loops
 fi
 AC_PROG_CPP2
 
