@@ -23,6 +23,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.18  1998/11/26 17:08:02  keith
+ *       Performance improvements.
+ *        a) Cache values of sin and  cos(hx+ky) between calls of qsincos().
+ *        b) Eliminate use of chg[] array in inner loops by multiplying it
+ *           into sin(lz) and cos(lz). Also avoids need for separae, cache
+ *           -alighed copy.
+ *
  *       Revision 2.17  1998/11/25 14:44:32  keith
  *       Modified loops in "qsincos" adding explicit scalar temporaries.
  *       This gives a speedup of 20-40% on a T3E when used with the "-hsplit"
@@ -223,7 +230,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/ewald.c,v 2.17 1998/11/25 14:44:32 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/ewald.c,v 2.18 1998/11/26 17:08:02 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -748,14 +755,12 @@ mat_mt		stress;			/* Stress virial		(out) */
       /*
        * Calculate long-range coulombic contribution to stress tensor
        */
-NOVECTOR
-      for(i = 0; i < 3; i++)
-      {
-	 stress[i][i] += pe_k;
-NOVECTOR
-	 for(j = i; j < 3; j++)
-	    stress[i][j] -= pe_k * coeff2 * kv[i] * kv[j];
-      }
+      stress[0][0] += pe_k - pe_k * coeff2 * kv[0] * kv[0];
+      stress[0][1] -=        pe_k * coeff2 * kv[0] * kv[1];
+      stress[0][2] -=        pe_k * coeff2 * kv[0] * kv[2];
+      stress[1][1] += pe_k - pe_k * coeff2 * kv[1] * kv[1];
+      stress[1][2] -=        pe_k * coeff2 * kv[1] * kv[2];
+      stress[2][2] += pe_k - pe_k * coeff2 * kv[2] * kv[2];
       /*
        * Evaluation of site forces.   Non-framework sites interact with all others
        */
