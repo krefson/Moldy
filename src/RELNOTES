@@ -1,3 +1,40 @@
+RELEASE 2.14
+------------
+ * Fix for missing error messages when MPI parallel run aborts.
+
+ * Fixed compile problem with auxil.c on non-unix systems. (Cygnus)
+ 
+ * Several bug fixes in utilities, msd etc.
+
+ * New CSSR output option in mdavpos.c and PDB for mdshak.c.
+
+ * New programs
+
+  mdbond: for calculating interparticle distances and angles within user
+           specified cutoffs. Output is in an identical format to that
+	   of the "bond" utility provided with the Shell lattice
+           dynamics code of Neil Allan and Gus Barrera of Bristol University.
+
+  bdist:   reads the output from mdbond and sorts it into a format
+           suitable for plotting bond and angle distribution curves.
+
+  ransub:  for introducing randomly distributed solute particles/molecules
+           into a crystalline lattice system.
+
+  plotrdf: A perl script which extracts RDFs from the output file and
+           writes a script of gnuplot commands to plot
+           them. Alternatively it will output the data in columnar format.
+ 
+ 
+Release 2.13
+------------
+
+* Various optimizations to ewald sum and force calculation
+
+* Tuning for Cray T3E and SGI Origin 2000 platforms.
+
+* Now uses GNU autoconf.
+
 Release 2.12f
 -------------
 * Bugfixes and portability enhancements to utilities, msd, mdavpos, mdtraj.
