@@ -2,7 +2,10 @@
  * Ewald	The reciprocal-space part of the standard Ewald sum technique *
  ******************************************************************************
  *      Revision Log
- *       $Log:	ewald.c,v $
+ *       $Log:	ewald_parallel.c,v $
+ * Revision 1.1  90/01/31  13:18:59  keith
+ * Initial revision
+ * 
  * Revision 1.6  89/12/15  12:56:26  keith
  * Added conditional ionclusion of <fastmath.h> for stellar
  * 
@@ -32,7 +35,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore1/keith/md/moldy/RCS/ewald.c,v 1.6 89/12/15 12:56:26 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.2 90/04/24 18:38:48 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if  defined(convexvc) || defined(stellar)
@@ -90,8 +93,8 @@ mat_t		stress;			/* Stress virial		(out) */
    register	int	nsites = system->nsites;
    		double	kx,ky,kz;
    		vec_t	kv;		/* (Kx,Ky,Kz)  			     */
-   static 	struct _hkl *hkl;
-   static	int	nhkl = 0;
+   	 	struct _hkl *hkl;
+   		int	nhkl = 0;
    mat_t	htrinv;
 /*
  * Maximum values of h, k, l  s.t. |k| < k_cutoff
@@ -159,34 +162,34 @@ mat_t		stress;			/* Stress virial		(out) */
 	 ssite += spec->nsites*spec->nmols;
       }
       note("Ewald self-energy = %f Kj/mol",self_energy*CONV_E);
-
-      /*
-       * Build array hkl[] of k vectors within cutoff
-       */
-      transpose(hinv, htrinv);
-      mat_sca_mul(2*PI, htrinv, htrinv);
-      hkl = aalloc(4*(hmax+1)*(kmax+1)*(lmax+1), struct _hkl);
-      for(h = 0; h <= hmax; h++)
-	 for(k = (h==0 ? 0 : -kmax); k <= kmax; k++)
-	    for(l = (h==0 && k==0 ? 1 : -lmax); l <= lmax; l++)
-	    {
-	       kv[0] = h; kv[1] = k; kv[2] = l;
-	       mat_vec_mul(htrinv, (vec_t*)kv,(vec_t*)kv,1);
-	       if( SUMSQ(kv) < SQR(control.k_cutoff) )
-	       {
-		  hkl[nhkl].h = h; hkl[nhkl].k = k; hkl[nhkl].l = l;
-		  hkl[nhkl].kx = kv[0];
-		  hkl[nhkl].ky = kv[1];
-		  hkl[nhkl].kz = kv[2];
-		  nhkl++;
-	       }
-	    }
-      if( (hkl = (struct _hkl *)realloc((char*)hkl, (size_t)
-					nhkl*sizeof *hkl)) == 0)
-	 message(NULLI, NULLP, FATAL, "Realloc fails in Ewald");
-
       init = false;
    }
+   
+   /*
+    * Build array hkl[] of k vectors within cutoff
+    */
+   transpose(hinv, htrinv);
+   mat_sca_mul(2*PI, htrinv, htrinv);
+   hkl = aalloc(4*(hmax+1)*(kmax+1)*(lmax+1), struct _hkl);
+   for(h = 0; h <= hmax; h++)
+      for(k = (h==0 ? 0 : -kmax); k <= kmax; k++)
+	 for(l = (h==0 && k==0 ? 1 : -lmax); l <= lmax; l++)
+	 {
+	    kv[0] = h; kv[1] = k; kv[2] = l;
+	    mat_vec_mul(htrinv, (vec_t*)kv,(vec_t*)kv,1);
+	    if( SUMSQ(kv) < SQR(control.k_cutoff) )
+	    {
+	       hkl[nhkl].h = h; hkl[nhkl].k = k; hkl[nhkl].l = l;
+	       hkl[nhkl].kx = kv[0];
+	       hkl[nhkl].ky = kv[1];
+	       hkl[nhkl].kz = kv[2];
+	       nhkl++;
+	    }
+	 }
+   if( (hkl = (struct _hkl *)realloc((char*)hkl, (size_t)
+				     nhkl*sizeof *hkl)) == 0)
+      message(NULLI, NULLP, FATAL, "Realloc fails in Ewald");
+
    *pe -= self_energy;			/* Subtract self energy term	      */
       
 
@@ -280,6 +283,7 @@ VECTORIZE
    cfree((char*)chx); cfree((char*)cky); cfree((char*)clz); 
    cfree((char*)shx); cfree((char*)sky); cfree((char*)slz);
    cfree((char*)pe_n);   cfree((char*)stress_n);
+   cfree((char*)hkl);
    if( nthreads > 1)
       cfree((char*)s_f_n);
 }
