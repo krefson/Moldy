@@ -34,6 +34,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: kernel.c,v $
+ *       Revision 2.8  1996/10/04 17:27:24  keith
+ *       Rescheduled line order to overlap divide/computation on DEC Alpha/T3D.
+ *
  *       Revision 2.7  1994/06/08 13:22:31  keith
  *       Null update for version compatibility
  *
@@ -139,7 +142,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/kernel.c,v 2.7 1994/06/08 13:22:31 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/kernel.c,v 2.8 1996/10/04 17:27:24 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -167,6 +170,7 @@ CONST pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
 		              {"buckingham",3},
                               {"mcy",4},
 		              {"generic",6},
+                              {"dbnew",7},
 		              {0,0}};	            /* MUST be null-terminated*/
 /*
  *  Array of dimensions of pot'l parameters.  Powers of {m,l,t} per parameter.
@@ -175,7 +179,9 @@ CONST dim_mt   pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
                                  {{1,8,-2},{1,2,-2},{0,-1,0}},
 		                 {{1,2,-2},{0,-1,0},{1,2,-2},{0,-1,0}},
 			         {{1,2,-2},{0,-1,0},{1,14,-2},
-			          {1,6,-2},{1,8,-2},{1,10,-2}}};
+			          {1,6,-2},{1,8,-2},{1,10,-2}},
+                              {{1,8,-2},{1,2,-2},{0,-1,0},{1,2,-2},{0,-1,0},
+                              {1,2,-2},{0,-1,0}}};
 
 /*========================== Macros ==========================================*/
 
@@ -193,6 +199,7 @@ CONST dim_mt   pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
 #define E6POT 1
 #define MCYPOT 2
 #define GENPOT 3
+#define DBPOT 4
 /*============================================================================*/
 /******************************************************************************
  *  dist_pot   return attractive part of potential integrated from cutoff to  *
@@ -219,6 +226,12 @@ int	ptype;				/* Potential type selector	      */
          return( 0.0 );
     case GENPOT:
       return ( potpar[4] / ( 3.0*CUBE(cutoff)) + potpar[3] / cutoff);
+    case DBPOT:
+      return(potpar[0] / ( 3.0*CUBE(cutoff))
+                -potpar[3] * (SQR(cutoff)/potpar[4] + 2*cutoff/SQR(potpar[4])
+                           + 2.0 / CUBE(potpar[4])) * exp(-potpar[4]*cutoff)
+                -potpar[5] * (SQR(cutoff)/potpar[6] + 2*cutoff/SQR(potpar[6])
+                           + 2.0 / CUBE(potpar[6])) * exp(-potpar[6]*cutoff));
    }
 }
 /******************************************************************************
@@ -244,11 +257,13 @@ real	*pot[];			/* Vectors of potential parameters.	 (in) */
                  r_4_r, r_8_r;
    register real erfc_term;		/* Intermediates in erfc calculation. */
    	    real ppe = 0.0;		/* Local accumulator of pot. energy.  */
-   	    real exp_f1, exp_f2;	/* Temporary for b*exp(-cr) etc       */
+   	    real exp_f1, exp_f2,
+            exp_f3;                     /* Temporary for b*exp(-cr) etc       */
    register int	jsite;			/* Loop counter for vectors.	      */
    real *p0 = pot[0], *p1 = pot[1],     /* Local bases for arrays of pot'l    */
         *p2 = pot[2], *p3 = pot[3],     /* parameters.			      */
-        *p4 = pot[4], *p5 = pot[5];
+        *p4 = pot[4], *p5 = pot[5],
+        *p6 = pot[6];
 
    if(alpha > 0.0)
       switch(ptype)
@@ -363,6 +378,34 @@ VECTORIZE
 	                   + p1[jsite]*exp_f1 * r_r;
 	 }
 	 break;      
+case DBPOT:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+         {
+            /*
+             * Calculate r and coulombic part
+             */
+            r       = sqrt(r_sqr[jsite]);
+            ar      = alpha*r;
+            t = 1.0/(1.0+PP*ar);
+            erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+            r_r  = 1.0 / r; 
+            t = POLY5(t) * erfc_term * r_r;
+            erfc_term = t + norm * erfc_term;
+            r_sqr_r = SQR(r_r);
+            /*
+             * Non-coulombic ie potential-specific part
+             */
+            exp_f1 = p1[jsite] * exp(-p2[jsite] * r);
+            exp_f2 = p3[jsite] * exp(-p4[jsite] * r);
+            exp_f3 = p5[jsite] * exp(-p6[jsite] * r);
+            r_6_r   = p0[jsite] * CUBE(r_sqr_r);
+            ppe += t - r_6_r + exp_f1 + exp_f2 + exp_f3;
+            forceij[jsite] = r_sqr_r*(-6.0* r_6_r+ erfc_term)
+             + p2[jsite]*exp_f1 * r_r + p4[jsite]*exp_f2 * r_r
+                                      + p6[jsite]*exp_f3 * r_r;
+         }
+         break;
       }
    else
       switch(ptype)
@@ -428,6 +471,34 @@ VECTORIZE
 	                   + p1[jsite]*exp_f1 * r_r;
 	 }
 	 break;      
+case DBPOT:
+VECTORIZE
+         for(jsite=jmin; jsite < nnab; jsite++)
+         {
+            /*
+             * Calculate r and coulombic part
+             */
+            r       = sqrt(r_sqr[jsite]);
+            ar      = alpha*r;
+            r_r  = 1.0 / r;
+            erfc_term = nab_chg[jsite]* chg * exp(-SQR(ar));
+            t = 1.0/(1.0+PP*ar);
+            t = POLY5(t) * erfc_term * r_r;
+            erfc_term = t + norm * erfc_term;
+            r_sqr_r = SQR(r_r);
+            /*
+             * Non-coulombic ie potential-specific part
+             */
+            exp_f1 = p1[jsite] * exp(-p2[jsite] * r);
+            exp_f2 = p3[jsite] * exp(-p4[jsite] * r);
+            exp_f3 = p5[jsite] * exp(-p6[jsite] * r);
+            r_6_r   = p0[jsite] * CUBE(r_sqr_r);
+            ppe += t - r_6_r + exp_f1 + exp_f2 + exp_f3;
+            forceij[jsite] = r_sqr_r*(-6.0* r_6_r+ erfc_term)
+             + p2[jsite]*exp_f1 * r_r + p4[jsite]*exp_f2 * r_r
+                                      + p6[jsite]*exp_f3 * r_r;
+         }
+         break;
       }     
    *pe += ppe;
 }
