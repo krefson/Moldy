@@ -25,6 +25,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.16  1996/08/23 15:06:01  keith
+ *       Fixed bug whereby rot elements of temp_value[] were uninitialized.
+ *       This caused a crash on non-ieee machines.
+ *
+ *       Revision 2.15  1996/08/14 16:23:24  keith
+ *       Fixed error in thermoststat implementation and integration.
+ *
  *       Revision 2.14  1996/03/14 14:42:27  keith
  *       Altered "rescale()" to suntract net velocity in case of
  *       separate-species rescaling, since that doesn't conserve momentum.
@@ -211,7 +218,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/accel.c,v 2.14 1996/03/14 14:42:27 keith Exp $";
+static char *RCSid = "$Header: /home/rahman/keith/moldy/src/RCS/accel.c,v 2.16 1996/08/23 15:06:01 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -465,12 +472,14 @@ spec_mp		species;
    for(spec=species, ispec = 0; ispec < nspecies; spec++, ispec++)
    {
       temp_value[2*ispec  ] = 
-	trans_ke(sys->h, spec->velp, spec->mass, spec->nmols)
-	   /(1.5*spec->nmols*kB);
-      if(spec->rdof > 0)			/* Only if polyatomic species */
+	 trans_ke(sys->h, spec->velp, spec->mass, spec->nmols)
+	 /(1.5*spec->nmols*kB);
+      if(spec->rdof > 0)                       /* Only if polyatomic species */
          temp_value[2*ispec+1] = 
-	   rot_ke(spec->quat, spec->qdotp, spec->inertia, spec->nmols)
-	   /(0.5*kB*spec->rdof*spec->nmols);
+	    rot_ke(spec->quat, spec->qdotp, spec->inertia, spec->nmols)
+	    /(0.5*kB*spec->rdof*spec->nmols);
+      else
+	 temp_value[2*ispec+1] = 0.0;
    }
    /*
     *  Get average of translational and rotational temps (per species)
@@ -482,19 +491,20 @@ spec_mp		species;
 	 if( ! spec->framework )
 	    temp_value[2*ispec  ] = temp_value[2*ispec+1] = 
 	       (3*temp_value[2*ispec  ] + spec->rdof*temp_value[2*ispec+1]) /
-		  (3+spec->rdof);
+	       (3+spec->rdof);
       }
       ttemp_mass = rtemp_mass = control.ttmass;
    }
-   else {
-	   ttemp_mass = control.ttmass;
-	   rtemp_mass = control.rtmass;
-	   /*
-	    * ttemp_mass and rtemp_mass are used here to make easier introduction
-	    * of different thermal masses for different species later on, provided such
-	    * necessity rises
-	    */
-	}
+   else 
+   {
+      ttemp_mass = control.ttmass;
+      rtemp_mass = control.rtmass;
+      /*
+       * ttemp_mass and rtemp_mass are used here to make easier introduction
+       * of different thermal masses for different species later on, provided 
+       * such necessity rises 
+       */
+   }
 	 
    /*
     *  Perform average over species if thermostatting together.
