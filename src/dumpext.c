@@ -313,7 +313,7 @@ char	*argv[];
    extern int	optind;
    extern char	*optarg;
    int		errflg = 0, genflg = 0, tsflg = 0, bflg = 0;
-   int          nmols=0, nmols_r=0;
+   int          nmols=-1, nmols_r=-1;
    int		xcpt= -1;
    char		*dump_name=0, *dump_base=0, *out_name=0;
    char		cur_dump[256];
@@ -415,9 +415,9 @@ char	*argv[];
    /*
     *  Interactive input of parameters not supplied as argument
     */
-   if( ! nmols )
+   if( nmols <= 0)
       nmols = get_int("Number of molecules? ",1,1000000);
-   if( ! nmols_r )
+   if( nmols_r < 0)
       nmols_r = get_int("Number of polyatomic molecules? ",0,1000000);
    if( xcpt < 0 )
    {
