@@ -30,12 +30,9 @@ what you give them.   Help stamp out software-hoarding!  */
  * read_restart()	Read simulation dynamic variables, averages & rdf's   *
  ******************************************************************************
  *      Revision Log
- *       $Log:	restart.c,v $
- * Revision 2.3  93/10/28  12:27:25  keith
- * Corrected declarations of stdargs functions to be standard-conforming
- * 
- * Revision 2.3  93/10/28  12:25:07  keith
- * Corrected declarations of stdargs functions to be standard-conforming
+ *       $Log: restart.c,v $
+ * Revision 2.5  94/01/18  13:32:56  keith
+ * Null update for XDR portability release
  * 
  * Revision 2.3  93/10/28  10:28:11  keith
  * Corrected declarations of stdargs functions to be standard-conforming
@@ -86,11 +83,11 @@ what you give them.   Help stamp out software-hoarding!  */
  * --Moved defn of NULL to stddef.h and included that where necessary.
  * --Eliminated clashes with ANSI library names
  * --Modified defs.h to recognise CONVEX ANSI compiler
- * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ * --Modified declaration of size_mt and inclusion of sys/types.h in aux.c
  *   for GNU compiler with and without fixed includes.
  * 
  * Revision 1.10  91/03/12  15:43:16  keith
- * Tidied up typedefs size_t and include file <sys/types.h>
+ * Tidied up typedefs size_mt and include file <sys/types.h>
  * Added explicit function declarations.
  * 
  * Revision 1.9  91/02/19  14:51:31  keith
@@ -100,7 +97,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * Made 'reset-averages' parameter actually do something.
  * 
  * Revision 1.7  90/05/02  15:28:55  keith
- * Removed references to size_t and time_t typedefs, no longer in "defs.h"
+ * Removed references to size_mt and time_t typedefs, no longer in "defs.h"
  * 
  * Revision 1.6  89/11/01  17:40:36  keith
  * Read_restart modified to allow skip of read of averages data -
@@ -121,7 +118,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 2.3 93/10/28 12:27:25 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/restart.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -141,6 +138,7 @@ int		replace();
 gptr		*av_ptr();
 char		*atime();
 char		*cctime();
+gptr		*rdf_ptr();
 #if defined(ANSI) || defined(__STDC__)
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
@@ -149,18 +147,16 @@ void		note();			/* Write a message to the output file */
 void		message();		/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
-extern  contr_mt control;
-extern	int	***rdf;				/* Accumulated RDF bins       */
-/*========================== External data definitions =======================*/
-restrt_mt		restart_header = {0L, 0L, "", "", "0.0$", 0};
+extern contr_mt control;		    /* Main simulation control parms. */
 /*============================================================================*/
 typedef struct {FILE *fp; XDR *xp;} xfp_mt;
-static unsigned long stored_size = 0;
+static size_mt stored_size = 0;
 static boolean xdr_read;
 static int    size_flg = 0;
 /******************************************************************************
  * creset() reset and rewind input stream.				      *
  ******************************************************************************/
+static
 void creset(fp)
 FILE 	*fp;
 {
@@ -172,7 +168,8 @@ FILE 	*fp;
  *   cnext.  Read the size of the next 'record' stored in the file.           *
  *   Leave file pointer unchanged.  ie do lookahead.			      *
  ******************************************************************************/
-unsigned long cnext(xfp)
+static
+size_mt cnext(xfp)
 xfp_mt	xfp;
 {
    (void)fread((gptr*)&stored_size, sizeof stored_size, 1, xfp.fp);
@@ -184,7 +181,8 @@ xfp_mt	xfp;
    return stored_size;
 }
 #ifdef USE_XDR
-unsigned long xdr_cnext(xfp)
+static
+size_mt xdr_cnext(xfp)
 xfp_mt	xfp;
 {
    if( xdr_read ) {
@@ -202,10 +200,11 @@ xfp_mt	xfp;
  *   expected value.  Finally call fread to read in this data and check for   *
  *   error and end of file						      *
  ******************************************************************************/
+static
 void	cread(xfp, ptr, size, nitems, proc)
 xfp_mt	xfp;
 gptr	*ptr;
-size_t	size;
+size_mt	size;
 int	nitems;
 xdrproc_t proc;
 {
@@ -235,10 +234,11 @@ xdrproc_t proc;
       message(NULLI,NULLP,FATAL,"Unknown write error");
 }
 #ifdef USE_XDR
+static
 void	xdr_cread(xfp, ptr, size, nitems, proc)
 xfp_mt	xfp;
 gptr	*ptr;
-size_t	size;
+size_mt	size;
 int	nitems;
 xdrproc_t proc;
 {
@@ -281,10 +281,11 @@ xdrproc_t proc;
 /******************************************************************************
  *  cwrite.  opposite of cread.  write the length followed by the data	      *
  ******************************************************************************/
+static
 void	cwrite(xfp, ptr, size, nitems, proc)
 xfp_mt	xfp;
 gptr	*ptr;
-size_t	size;
+size_mt	size;
 int	nitems;
 xdrproc_t proc;
 {
@@ -295,10 +296,11 @@ xdrproc_t proc;
       message(NULLI,NULLP,FATAL,REWRT,strerror(errno));
 }
 #ifdef USE_XDR
+static
 void	xdr_cwrite(xfp, ptr, size, nitems, proc)
 xfp_mt	xfp;
 gptr	*ptr;
-size_t	size;
+size_mt	size;
 int	nitems;
 xdrproc_t proc;
 {
@@ -339,7 +341,7 @@ xdrproc_t proc;
 #endif
 /******************************************************************************
  *  re_re_header   Read from the (already opened) restart file, the	      *
- *  restart_header and control structs.                                       *
+ *  restart header and control structs.                                       *
  ******************************************************************************/
 static   XDR		xdrs;
 void	re_re_header(restart, header, contr)
@@ -355,7 +357,7 @@ contr_mt  *contr;
    xdrstdio_create(xfp.xp, restart, XDR_DECODE);
    if( cnext(xfp) == XDR_RESTRT_SIZE )
    {
-      cread(xfp,  (gptr*)header, sizeof(restrt_mt), 1, xdr_restrt);
+      cread(xfp,  (gptr*)header, lsizeof(restrt_mt), 1, xdr_restrt);
       header->vsn[15] = '\0';   /* Add terminator in case vsn is garbage*/
       if( ! strstr(header->vsn,"(XDR)") )
 	 xdr_read = FALSE;
@@ -368,15 +370,16 @@ contr_mt  *contr;
 #endif
    xfp.fp=restart;
    if( ! xdr_read )
-      cread(xfp,  (gptr*)header, sizeof(restrt_mt), 1, xdr_restrt);
-   cread(xfp,  (gptr*)contr, sizeof(contr_mt), 1, xdr_contr); 
+      cread(xfp,  (gptr*)header, lsizeof(restrt_mt), 1, xdr_restrt);
+   cread(xfp,  (gptr*)contr, lsizeof(contr_mt), 1, xdr_contr); 
 }
 /******************************************************************************
  *  conv_potsize    Convert potential parameters array if NPOTP has changed   *
  ******************************************************************************/
+static
 void conv_potsize(pot, old_pot_size, old_npotp, npotpar, npotrecs)
 pot_mt	*pot;
-size_t  old_pot_size;
+size_mt   old_pot_size;
 int     old_npotp, npotpar, npotrecs;
 {
    int		i;
@@ -388,10 +391,9 @@ int     old_npotp, npotpar, npotrecs;
    {
       note("Old potential parameter array size = %d, new = %d",old_npotp,NPOTP);
       tmp_pot = aalloc( old_pot_size*npotrecs, char);
-      memcpy(tmp_pot, (gptr*)pot, old_pot_size*npotrecs);
+      memcp(tmp_pot, pot, old_pot_size*npotrecs);
       for( i=0; i < npotrecs; i++)
-	 memcpy((gptr*)(pot+i), tmp_pot+old_pot_size*i, 
-		MIN(old_pot_size,sizeof(pot_mt)));
+	 memcp(pot+i, tmp_pot+old_pot_size*i, MIN(old_pot_size,sizeof(pot_mt)));
       xfree(tmp_pot);
    }
    else
@@ -411,30 +413,31 @@ site_mp		*site_info;		/* To be pointed at site_info array   */
 pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
 {
    spec_mp	spec;
-   size_t	old_pot_size;
+   size_mt	old_pot_size;
    int		old_npotp, n_pot_recs;
    xfp_mt	xfp;
 
    xfp.xp = &xdrs;
    xfp.fp = restart;
 
-   cread(xfp,  (gptr*)system, sizeof(system_mt), 1, xdr_system);/* Read in system structure*/
+   cread(xfp,  (gptr*)system, lsizeof(system_mt), 1, xdr_system);
+   						   /* Read in system structure*/
 
    /* Allocate space for species, site_info and potpar arrays and set pointers*/
    *spec_ptr  = aalloc(system->nspecies,                spec_mt );
    *site_info = aalloc(system->max_id,                  site_mt );
    *pot_ptr   = aalloc(system->max_id * system->max_id, pot_mt );
    /*  read species array into allocated space				      */
-   cread(xfp,  (gptr*)*spec_ptr, sizeof(spec_mt), system->nspecies, xdr_species);
+   cread(xfp, (gptr*)*spec_ptr, lsizeof(spec_mt), system->nspecies, xdr_species);
    
    for (spec = *spec_ptr; spec < &(*spec_ptr)[system->nspecies]; spec++)
    {
       spec->p_f_sites = ralloc(spec->nsites);	/* Allocate the species -     */
       spec->site_id   = ialloc(spec->nsites);	/* specific arrays	      */
-      cread(xfp,  (gptr*)spec->p_f_sites, sizeof(real), 3*spec->nsites, xdr_real);
-      cread(xfp,  (gptr*)spec->site_id, sizeof(int), spec->nsites, xdr_int);
+      cread(xfp,(gptr*)spec->p_f_sites, lsizeof(real), 3*spec->nsites, xdr_real);
+      cread(xfp,(gptr*)spec->site_id,   lsizeof(int), spec->nsites, xdr_int);
    }
-   cread(xfp,  (gptr*)*site_info, sizeof(site_mt), system->max_id, xdr_site);
+   cread(xfp,  (gptr*)*site_info, lsizeof(site_mt), system->max_id, xdr_site);
    /*
     * Potential Parameters -- complicated by need to convert if NPOTP changed.
     */
@@ -455,12 +458,13 @@ pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
 /******************************************************************************
  *  read_restart.   read the dynamic simulation variables from restart file.  *
  ******************************************************************************/
-void	read_restart(restart, system)
+void	read_restart(restart, system, av_convert)
 FILE		*restart;
-system_mp	system; 
+system_mp	system;
+int		av_convert; 
 {
    gptr		*ap;			/* Pointer to averages database       */
-   size_t	asize;			/* Size of averages database	      */
+   size_mt	asize;			/* Size of averages database	      */
    boolean	rdf_flag;		/* Indicates whether file contains rdf*/
    int		rdf_size = control.nbins*system->max_id*(system->max_id-1)/2;
    xfp_mt	xfp;
@@ -468,36 +472,37 @@ system_mp	system;
    xfp.xp= &xdrs;
    xfp.fp=restart;
 
-   cread(xfp,  (gptr*)system->c_of_m, sizeof(real), 3*system->nmols, xdr_real);
-   cread(xfp,  (gptr*)system->vel,    sizeof(real), 3*system->nmols, xdr_real);
-   cread(xfp,  (gptr*)system->velp,   sizeof(real), 3*system->nmols, xdr_real);
-   cread(xfp,  (gptr*)system->acc,    sizeof(real), 3*system->nmols, xdr_real);
-   cread(xfp,  (gptr*)system->acco,   sizeof(real), 3*system->nmols, xdr_real);
-   cread(xfp,  (gptr*)system->accvo,  sizeof(real), 3*system->nmols, xdr_real);
+   cread(xfp,  (gptr*)system->c_of_m, lsizeof(real), 3*system->nmols, xdr_real);
+   cread(xfp,  (gptr*)system->vel,    lsizeof(real), 3*system->nmols, xdr_real);
+   cread(xfp,  (gptr*)system->velp,   lsizeof(real), 3*system->nmols, xdr_real);
+   cread(xfp,  (gptr*)system->acc,    lsizeof(real), 3*system->nmols, xdr_real);
+   cread(xfp,  (gptr*)system->acco,   lsizeof(real), 3*system->nmols, xdr_real);
+   cread(xfp,  (gptr*)system->accvo,  lsizeof(real), 3*system->nmols, xdr_real);
    if(system->nmols_r > 0)
    {
-      cread(xfp,  (gptr*)system->quat,    sizeof(real), 4*system->nmols_r, xdr_real);
-      cread(xfp,  (gptr*)system->qdot,    sizeof(real), 4*system->nmols_r, xdr_real);
-      cread(xfp,  (gptr*)system->qdotp,   sizeof(real), 4*system->nmols_r, xdr_real);
-      cread(xfp,  (gptr*)system->qddot,   sizeof(real), 4*system->nmols_r, xdr_real);
-      cread(xfp,  (gptr*)system->qddoto,  sizeof(real), 4*system->nmols_r, xdr_real);
-      cread(xfp,  (gptr*)system->qddotvo, sizeof(real), 4*system->nmols_r, xdr_real);
+      cread(xfp,  (gptr*)system->quat,    lsizeof(real), 4*system->nmols_r, xdr_real);
+      cread(xfp,  (gptr*)system->qdot,    lsizeof(real), 4*system->nmols_r, xdr_real);
+      cread(xfp,  (gptr*)system->qdotp,   lsizeof(real), 4*system->nmols_r, xdr_real);
+      cread(xfp,  (gptr*)system->qddot,   lsizeof(real), 4*system->nmols_r, xdr_real);
+      cread(xfp,  (gptr*)system->qddoto,  lsizeof(real), 4*system->nmols_r, xdr_real);
+      cread(xfp,  (gptr*)system->qddotvo, lsizeof(real), 4*system->nmols_r, xdr_real);
    }
-   cread(xfp,  (gptr*)system->h,       sizeof(real), 9, xdr_real);
-   cread(xfp,  (gptr*)system->hdot,    sizeof(real), 9, xdr_real);
-   cread(xfp,  (gptr*)system->hdotp,   sizeof(real), 9, xdr_real);
-   cread(xfp,  (gptr*)system->hddot,   sizeof(real), 9, xdr_real);
-   cread(xfp,  (gptr*)system->hddoto,  sizeof(real), 9, xdr_real);
+   cread(xfp,  (gptr*)system->h,       lsizeof(real), 9, xdr_real);
+   cread(xfp,  (gptr*)system->hdot,    lsizeof(real), 9, xdr_real);
+   cread(xfp,  (gptr*)system->hdotp,   lsizeof(real), 9, xdr_real);
+   cread(xfp,  (gptr*)system->hddot,   lsizeof(real), 9, xdr_real);
+   cread(xfp,  (gptr*)system->hddoto,  lsizeof(real), 9, xdr_real);
 
-   cread(xfp,  (gptr*)system->hddotvo, sizeof(real), 9, xdr_real);
+   cread(xfp,  (gptr*)system->hddotvo, lsizeof(real), 9, xdr_real);
 
-   ap = av_ptr(&asize);			/* get addr and size of database      */
-   xdr_set_av_size(asize);		/* Pass asize to xdr_averages.  Ugh! */
+   ap = av_ptr(&asize,av_convert);	      /* get addr, size of database   */
+   xdr_set_av_size_conv(asize,av_convert);    /* Pass  to xdr_averages.  Ugh! */
    cread(xfp, ap, asize, 1, xdr_averages);
 
-   cread(xfp,  (gptr*)&rdf_flag, sizeof rdf_flag, 1, xdr_bool); /* Stored RDF data?  */
+   cread(xfp,  (gptr*)&rdf_flag, lsizeof rdf_flag, 1, xdr_bool); 
+   				    /* Read flag signalling stored RDF data.  */
    if(rdf_flag && control.rdf_interval>0)/* Only read if data there and needed*/
-      cread(xfp,  (gptr*)rdf[1][1], sizeof(int), rdf_size, xdr_int);
+      cread(xfp, rdf_ptr(), lsizeof(int), rdf_size, xdr_int);
 #ifdef USE_XDR
    if( xdr_read )
       xdr_destroy(xfp.xp);
@@ -509,8 +514,9 @@ system_mp	system;
  *  the 'restart_header' and 'control' structs, the system-specification      *
  *  (system species, site_info and potpar data) and the dynamic variables.    *
  ******************************************************************************/
-void	write_restart(save_name, system, species, site_info, potpar)
+void	write_restart(save_name, header, system, species, site_info, potpar)
 char		*save_name;		/* Name of save file to be written    */
+restrt_mt	*header;		/* Restart header struct.	      */
 system_mp	system;			/* Pointer to system array (in main)  */
 spec_mp		species;		/* Pointer to be set to species array */
 site_mp		site_info;		/* To be pointed at site_info array   */
@@ -518,14 +524,14 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
 {
    spec_mp	spec;
    gptr		*ap;			/* Pointer to averages database       */
-   size_t	asize;			/* Size of averages database	      */
+   size_mt	asize;			/* Size of averages database	      */
    int		rdf_size = control.nbins*system->max_id*(system->max_id-1)/2;
    int		zero = 0, one = 1;
    restrt_mt	save_header;
    FILE		*save;
    XDR		xdrsw;
    xfp_mt	xfp;
-   char		*vsn = "$Revision: 2.3 $"+11;
+   char		*vsn = "$Revision: 2.5.1.1 $"+11;
 
    save = fopen(control.temp_file, "wb");
    if(save == NULL)
@@ -540,64 +546,63 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
       xdrstdio_create(xfp.xp, save, XDR_ENCODE);
 #endif
 
-   control.reset_averages = 0;		/* This flag never propagated.	      */
-   save_header = restart_header;
+   save_header = *header;
    (void)strncpy(save_header.vsn, vsn, sizeof save_header.vsn-1);
    save_header.vsn[strlen(save_header.vsn)-2] = '\0'; /* Strip trailing $     */
    if( control.xdr_write )
       (void)strncat(save_header.vsn," (XDR)",16);
-   save_header.prev_timestamp = restart_header.timestamp;
+   save_header.prev_timestamp = header->timestamp;
    save_header.timestamp = time((time_t*)0);		/* Update header      */
    save_header.seq++;
    
-   cwrite(xfp,  (gptr*)&save_header, sizeof save_header, 1, xdr_restrt);
-   cwrite(xfp,  (gptr*)&control, sizeof control, 1, xdr_contr); 
+   cwrite(xfp,  (gptr*)&save_header, lsizeof save_header, 1, xdr_restrt);
+   cwrite(xfp,  (gptr*)&control, lsizeof control, 1, xdr_contr); 
 
-   cwrite(xfp,  (gptr*)system, sizeof(system_mt), 1, xdr_system);
-   cwrite(xfp,  (gptr*)species, sizeof(spec_mt), system->nspecies, xdr_species);
+   cwrite(xfp,  (gptr*)system, lsizeof(system_mt), 1, xdr_system);
+   cwrite(xfp,  (gptr*)species, lsizeof(spec_mt), system->nspecies, xdr_species);
    
    for (spec = species; spec < &species[system->nspecies]; spec++)
    {
-      cwrite(xfp,  (gptr*)spec->p_f_sites, sizeof(real), 3*spec->nsites, xdr_real);
-      cwrite(xfp,  (gptr*)spec->site_id, sizeof(int), spec->nsites, xdr_int);
+      cwrite(xfp,(gptr*)spec->p_f_sites,lsizeof(real), 3*spec->nsites, xdr_real);
+      cwrite(xfp,(gptr*)spec->site_id,  lsizeof(int), spec->nsites, xdr_int);
    }
-   cwrite(xfp,  (gptr*)site_info, sizeof(site_mt), system->max_id, xdr_site);
+   cwrite(xfp,  (gptr*)site_info, lsizeof(site_mt), system->max_id, xdr_site);
    xdr_set_npotpar(NPOTP);	/* Pass npotpar to xdr_pot. Ugh! */
-   cwrite(xfp,  (gptr*)potpar, sizeof(pot_mt), SQR(system->max_id), xdr_pot);
+   cwrite(xfp,  (gptr*)potpar, lsizeof(pot_mt), SQR(system->max_id), xdr_pot);
 
-   cwrite(xfp,  (gptr*)system->c_of_m, sizeof(real), 3*system->nmols, xdr_real);
-   cwrite(xfp,  (gptr*)system->vel,    sizeof(real), 3*system->nmols, xdr_real);
-   cwrite(xfp,  (gptr*)system->velp,   sizeof(real), 3*system->nmols, xdr_real);
-   cwrite(xfp,  (gptr*)system->acc,    sizeof(real), 3*system->nmols, xdr_real);
-   cwrite(xfp,  (gptr*)system->acco,   sizeof(real), 3*system->nmols, xdr_real);
-   cwrite(xfp,  (gptr*)system->accvo,  sizeof(real), 3*system->nmols, xdr_real);
+   cwrite(xfp,  (gptr*)system->c_of_m, lsizeof(real), 3*system->nmols, xdr_real);
+   cwrite(xfp,  (gptr*)system->vel,    lsizeof(real), 3*system->nmols, xdr_real);
+   cwrite(xfp,  (gptr*)system->velp,   lsizeof(real), 3*system->nmols, xdr_real);
+   cwrite(xfp,  (gptr*)system->acc,    lsizeof(real), 3*system->nmols, xdr_real);
+   cwrite(xfp,  (gptr*)system->acco,   lsizeof(real), 3*system->nmols, xdr_real);
+   cwrite(xfp,  (gptr*)system->accvo,  lsizeof(real), 3*system->nmols, xdr_real);
    if(system->nmols_r > 0)
    {
-      cwrite(xfp,  (gptr*)system->quat,    sizeof(real), 4*system->nmols_r, xdr_real);
-      cwrite(xfp,  (gptr*)system->qdot,    sizeof(real), 4*system->nmols_r, xdr_real);
-      cwrite(xfp,  (gptr*)system->qdotp,   sizeof(real), 4*system->nmols_r, xdr_real);
-      cwrite(xfp,  (gptr*)system->qddot,   sizeof(real), 4*system->nmols_r, xdr_real);
-      cwrite(xfp,  (gptr*)system->qddoto,  sizeof(real), 4*system->nmols_r, xdr_real);
-      cwrite(xfp,  (gptr*)system->qddotvo, sizeof(real), 4*system->nmols_r, xdr_real);
+      cwrite(xfp, (gptr*)system->quat,    lsizeof(real), 4*system->nmols_r, xdr_real);
+      cwrite(xfp, (gptr*)system->qdot,    lsizeof(real), 4*system->nmols_r, xdr_real);
+      cwrite(xfp, (gptr*)system->qdotp,   lsizeof(real), 4*system->nmols_r, xdr_real); 
+      cwrite(xfp, (gptr*)system->qddot,   lsizeof(real), 4*system->nmols_r, xdr_real);
+      cwrite(xfp, (gptr*)system->qddoto,  lsizeof(real), 4*system->nmols_r, xdr_real);
+      cwrite(xfp, (gptr*)system->qddotvo, lsizeof(real), 4*system->nmols_r, xdr_real);
    }
-   cwrite(xfp,  (gptr*)system->h,       sizeof(real), 9, xdr_real);
-   cwrite(xfp,  (gptr*)system->hdot,    sizeof(real), 9, xdr_real);
-   cwrite(xfp,  (gptr*)system->hdotp,   sizeof(real), 9, xdr_real);
-   cwrite(xfp,  (gptr*)system->hddot,   sizeof(real), 9, xdr_real);
-   cwrite(xfp,  (gptr*)system->hddoto,  sizeof(real), 9, xdr_real);
-   cwrite(xfp,  (gptr*)system->hddotvo, sizeof(real), 9, xdr_real);
+   cwrite(xfp,  (gptr*)system->h,       lsizeof(real), 9, xdr_real);
+   cwrite(xfp,  (gptr*)system->hdot,    lsizeof(real), 9, xdr_real);
+   cwrite(xfp,  (gptr*)system->hdotp,   lsizeof(real), 9, xdr_real);
+   cwrite(xfp,  (gptr*)system->hddot,   lsizeof(real), 9, xdr_real);
+   cwrite(xfp,  (gptr*)system->hddoto,  lsizeof(real), 9, xdr_real);
+   cwrite(xfp,  (gptr*)system->hddotvo, lsizeof(real), 9, xdr_real);
 
-   ap = av_ptr(&asize);				/* get addr, size of database */
-   xdr_set_av_size(asize);		/* Pass asize to xdr_averages.  Ugh! */
+   ap = av_ptr(&asize,0);			/* get addr, size of database */
+   xdr_set_av_size_conv(asize,0);	 /* Pass asize to xdr_averages.  Ugh! */
    cwrite(xfp, ap, asize, 1, xdr_averages);
    
    if(control.rdf_interval > 0)			/* If we have rdf data	      */
    {
-      cwrite(xfp,  (gptr*)&one, sizeof(int), 1, xdr_bool);/* Flag rdf data in file      */
-      cwrite(xfp,  (gptr*)rdf[1][1], sizeof(int), rdf_size, xdr_int);/* write data     */
+      cwrite(xfp,  (gptr*)&one, lsizeof(int), 1, xdr_bool);/* Flag rdf data   */
+      cwrite(xfp, rdf_ptr(), lsizeof(int), rdf_size, xdr_int);/* write data   */
    }
    else
-      cwrite(xfp,  (gptr*)&zero, sizeof(int), 1, xdr_bool);/* Otherwise flag no rdf data*/
+      cwrite(xfp,  (gptr*)&zero, lsizeof(int), 1, xdr_bool);/*flag no rdf data*/
       
 #ifdef USE_XDR
    if( control.xdr_write )

@@ -27,7 +27,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * rdf[idi][idj][ibin]	RDF database (also accessed by 'restart')	      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	rdf.c,v $
+ *       $Log: rdf.c,v $
+ * Revision 2.5  94/01/18  13:32:55  keith
+ * Null update for XDR portability release
+ * 
  * Revision 2.3  93/10/28  10:28:08  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -117,7 +120,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 2.3 93/10/28 10:28:08 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/rdf.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -141,9 +144,14 @@ void	put_line();
 double	precision();
 void	inhibit_vectorization();		/* Self-explanatory dummy     */
 /*========================== External data references ========================*/
-extern contr_mt	control;
-/*========================== External data definitions  ======================*/
-int	***rdf;				/* The RDF 'array'	      */
+extern contr_mt	control;    		    /* Main simulation control parms. */
+/*====================================data definitions  ======================*/
+static int	***rdf;				/* The RDF 'array'	      */
+static   int	*rdf_base;			/* base of data area          */
+gptr *rdf_ptr()
+{
+   return (gptr*)rdf_base;
+}
 /*========================== Macros ==========================================*/
 #define MATMUL(i, m, r) (m[i][0]*r[0] + m[i][1]*r[1] + m[i][2]*r[2])
 #define floor(x)  (double)((int)((x) + 10) - 10) /* Vectorisable macro floor()*/
@@ -155,23 +163,21 @@ int	***rdf;				/* The RDF 'array'	      */
 void	init_rdf(system)
 system_mp	system;				/* System info struct	      */
 {
-   int		*rdf_base;			/* base of data area          */
    int		max_id = system->max_id;
    int		idi, idj;
+   int		*base;
 
    rdf = aalloc(max_id, int ** );
-   rdf_base = ialloc(control.nbins * max_id * (max_id - 1) / 2);
-   (void)memset((char*)rdf_base, 0, control.nbins * max_id * (max_id - 1) / 2*sizeof(int));
+   base = rdf_base = ialloc(control.nbins * max_id * (max_id - 1) / 2);
+   memst(base, 0, control.nbins * max_id * (max_id - 1) / 2*sizeof(int));
    for(idi = 1; idi < max_id; idi++)
       rdf[idi] = aalloc(max_id, int * );
    for(idi = 1; idi < max_id; idi++)
       for(idj = idi; idj < max_id; idj++)
       {
-         rdf[idi][idj] = rdf[idj][idi] = rdf_base;
-         rdf_base += control.nbins;
+         rdf[idi][idj] = rdf[idj][idi] = base;
+         base += control.nbins;
       }
-   if(control.limit <= 0.0)				/* Choose a limit     */
-      control.limit = 0.5*MIN3(system->h[0][0],system->h[1][1],system->h[2][2]);
 }
 /******************************************************************************
  *  rdf_calc.  Calculate site pair distances and bin for RDF.                 *
@@ -257,7 +263,7 @@ site_mt		site_info[];
    double	norm;
    char		buf[32];
    
-   (void)memset((gptr*)nfrac,0,system->max_id*sizeof(*nfrac));
+   memst(nfrac,0,system->max_id*sizeof(*nfrac));
    for(spec = species; spec < species+system->nspecies; spec++)
       for(is = 0; is < spec->nsites; is++)
 	 nfrac[spec->site_id[is]] += spec->nmols;

@@ -37,6 +37,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ * Revision 2.5  94/01/21  12:21:22  keith
+ * Corrected trivial and latent bug in print_config()
+ * 
  * Revision 2.3  93/10/28  10:28:01  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -76,7 +79,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * --Moved defn of NULL to stddef.h and included that where necessary.
  * --Eliminated clashes with ANSI library names
  * --Modified defs.h to recognise CONVEX ANSI compiler
- * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ * --Modified declaration of size_mt and inclusion of sys/types.h in aux.c
  *   for GNU compiler with and without fixed includes.
  * 
  * 
@@ -132,7 +135,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/output.c,v 2.5 1994/01/18 13:32:51 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/output.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -154,23 +157,20 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/output.c,v 2.5 19
 void	conv_control();			/* Unit conversion for 'control'      */
 char	*atime();			/* Current date and time in ASCII     */
 char	*cctime();			/* Convert long time to ASCII.	      */
+void	rmlockfiles();
 /*========================== External data references ========================*/
-extern  contr_mt 	control;
-extern	restrt_mt	restart_header;
-extern	pots_mt		potspec[];
-extern	match_mt	match[];
-extern	int		nmatch;
-extern	char		backup_lockfile[];
-extern	char		dump_lockfile[];
+extern	      contr_mt 	control;	    /* Main simulation control parms. */
+extern	CONST match_mt	match[];	    /* Control file keyword table.    */
+extern  CONST pots_mt	potspec[];	    /* Potential type specification   */
 /*========================== External data definitions  ======================*/
-int	out_page = 1;			/* Which page of output we are on     */
-int	out_line = 999999;	        /* Which line of output               */
+static  int	out_page = 1;		    /* Which page of output we are on */
+static  int	out_line = 999999;	    /* Which line of output           */
 /*========================== Macros ==========================================*/
 #define		S_USED		0x01
 /*========================== Special Control output cases ====================*/
-static  int	one=1;
-static	unit_mt	prog_unit = {MUNIT, LUNIT, TUNIT, QUNIT};
-static	match_mt	special[] = {
+static  CONST int	one=1;
+extern	CONST unit_mt	prog_unit;
+static	CONST match_mt	special[] = {
         {"lattice-start",	"%d", "",	(gptr*)&one},
 	{"restart-file",	"%s", "",	(gptr*)""},
 	{"sys-spec-file",	"%s", "",	(gptr*)""},
@@ -179,7 +179,17 @@ static	match_mt	special[] = {
 	{"time-unit",		"%lf", "",	(gptr*)&prog_unit.t},
 	{"charge-unit",		"%lf", "",	(gptr*)&prog_unit.q}
 		      };
-static	int	nspecial = sizeof(special) / sizeof(match_mt);
+static	CONST int	nspecial = sizeof(special) / sizeof(match_mt);
+/******************************************************************************
+ * lines_left().  How many lines are left on page?			      *
+ ******************************************************************************/
+int lines_left()
+{
+   if( control.page_length > 0) 
+      return MAX(0,control.page_length - out_line);
+   else
+      return 999999;
+}
 /******************************************************************************
  * new_line.   print a newline and update line counter                        *
  ******************************************************************************/
@@ -210,7 +220,7 @@ void	new_page()
  *  Banner line.							      *
  ******************************************************************************/
 void	put_line(c)
-char	c;
+int	c;
 {
    int n = control.page_width;
    while(n-- > 0)
@@ -265,10 +275,7 @@ va_dcl
       (*nerrs)++;
    if(sev == FATAL)
    {
-      if( backup_lockfile[0] )
-	 remove(backup_lockfile);
-      if( dump_lockfile[0] )
-	 remove(dump_lockfile);
+      rmlockfiles();
       exit(3);
    }
 }
@@ -303,7 +310,7 @@ va_dcl
  ******************************************************************************/
 static void	print_array(text, n)
 char	*text[];
-size_t	n;
+size_mt	n;
 {
    int i;
    for(i=0; i<n; i++)
@@ -376,23 +383,24 @@ static char	*copy_notice[] = {"Moldy Copyright (C) Keith Refson 1988, 1992, 1993
 /******************************************************************************
  *  banner_page   Write the banner and relevant system/run information        *
  ******************************************************************************/
-void	banner_page(system, species)
+void	banner_page(system, species, restart_header)
 system_mp	system;
-spec_mt	species[];
+spec_mt		species[];
+restrt_mt	*restart_header;
 {
    spec_mp	spec;
    mat_mp	h = system->h;
    char		version[132], *vsn=version;
 
    new_page(); new_lins(2);
-   print_array( banner, sizeof banner / sizeof(char*));
+   print_array( banner, lsizeof banner / sizeof(char*));
    (void)sprintf(version, "Version %.*s (%.*s) %.*s",
 		 	(int)strlen(Revision+11)-1,      Revision+11,
 		 	(int)strlen(Revision_State+8)-1, Revision_State+8,
 		 	(int)strlen(Revision_Date+7)-1,  Revision_Date+7);
-   print_array( &vsn, (size_t)1);
-   print_array( name_addr, sizeof name_addr / sizeof(char*));
-   print_array( copy_notice, sizeof copy_notice / sizeof(char*));
+   print_array( &vsn, (size_mt)1);
+   print_array( name_addr, lsizeof name_addr / sizeof(char*));
+   print_array( copy_notice, lsizeof copy_notice / sizeof(char*));
    if(control.restart_file[0] != '\0')
       if(control.new_sysdef)
          (void)printf( " New system specification read in from file %s",
@@ -511,16 +519,17 @@ spec_mt	species[];
    if(control.restart_file[0] == '\0')
    {
       (void)printf( " New run entitled \"%s\" started %s",
-	      restart_header.title, restart_header.init_date);
+	      restart_header->title, restart_header->init_date);
       new_line();
    }
    else
    {
       (void)printf( " Run initialised from restart file %s written %s",
-		    control.restart_file, cctime(&restart_header.timestamp));
+		    control.restart_file, cctime(&restart_header->timestamp));
       new_line();
       (void)printf( " This is restart No %d of run \"%s\" started %s",
-	    restart_header.seq, restart_header.title, restart_header.init_date);
+	    restart_header->seq, restart_header->title, 
+		                 restart_header->init_date);
       new_line();
    }
    (void)fflush(stdout);
@@ -529,6 +538,7 @@ spec_mt	species[];
  *  print sysdef   Print out the definition of the system, in the format that *
  *  read_sysdef can interpret.                                                *
  ******************************************************************************/
+static
 void    print_sysdef(file, system, species, site_info, potpar)
 FILE		*file;
 system_mp       system;                 /* Pointer to system array (in main)  */
@@ -582,24 +592,22 @@ site_mp		site_info;		/* To be pointed at site_info array   */
 pot_mp		potpar;			/* To be pointed at potpar array      */
 {
    FILE 	*out;
-   match_mt	*match_p, *cur, *special_p;
+   CONST match_mt	*match_p, *cur, *special_p;
    spec_mp	spec;
    int		imol, code, i, j, k;
    double	cell_length[3], cell_angle[3];
    mat_mp	h = system->h;
-   contr_mt	save_control;
 
    /*
     * Convert 'control' to input units for correct rereading.
     * Save current values and restore afterwards.
     */
-   save_control = control;
    conv_control(&prog_unit, false);
 
    if( (out = fopen(save_name, "w")) == NULL )
       message(NULLI, NULLP, FATAL, OSFAIL, save_name);
 
-   for( match_p = match; match_p < &match[nmatch]; match_p++)
+   for( match_p = match; match_p->key; match_p++)
    {
       for( special_p = special; special_p < &special[nspecial]; special_p++)
 	 if( ! strcmp(match_p->key, special_p->key) )
@@ -660,7 +668,7 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
    if( ferror(out) || fclose(out) )
       message(NULLI,NULLP,FATAL,REWRT,strerror(errno));
 
-   control = save_control;
+   conv_control(&prog_unit, true);
 }
 
 	 

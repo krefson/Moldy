@@ -22,7 +22,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * Ewald	The reciprocal-space part of the standard Ewald sum technique *
  ******************************************************************************
  *      Revision Log
- *       $Log:	ewald_parallel.c,v $
+ *       $Log: ewald_parallel.c,v $
+ * Revision 2.5  1994/01/26  16:34:36  keith
+ * Fixed non-ansi #endif.
+ *
  * Revision 2.3  93/10/28  10:28:59  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -79,7 +82,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * --Moved defn of NULL to stddef.h and included that where necessary.
  * --Eliminated clashes with ANSI library names
  * --Modified defs.h to recognise CONVEX ANSI compiler
- * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ * --Modified declaration of size_mt and inclusion of sys/types.h in aux.c
  *   for GNU compiler with and without fixed includes.
  * 
  * Revision 1.11  91/05/29  17:02:00  keith
@@ -106,7 +109,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * *** empty log message ***
  * 
  * Revision 1.4  90/05/02  15:37:31  keith
- * Removed references to size_t and time_t typedefs, no longer in "defs.h"
+ * Removed references to size_mt and time_t typedefs, no longer in "defs.h"
  * 
  * Revision 1.3  90/04/26  15:29:48  keith
  * Changed declaration of arralloc back to char*
@@ -147,7 +150,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 2.5 94/01/18 13:32:29 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 2.5 1994/01/26 16:34:36 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -179,7 +182,7 @@ double	sum();				/* Sum of elements of 'real' vector   */
 void	ewald_inner();			/* Inner loop forward reference       */
 int	nprocessors();			/* Return no. of procs to execute on. */
 #if defined(ANSI) || defined(__STDC__)
-gptr	*arralloc(size_t,int,...); 	/* Array allocator		      */
+gptr	*arralloc(size_mt,int,...); 	/* Array allocator		      */
 void	note(char *, ...);		/* Write a message to the output file */
 void	message(int *, ...);		/* Write a warning or error message   */
 #else
@@ -188,7 +191,7 @@ void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
-extern	contr_mt	control;		/* Main simulation control record     */
+extern	contr_mt	control;       	/* Main simulation control record     */
 /*========================== Macros ==========================================*/
 #define astar hinvp[0]
 #define bstar hinvp[1]
@@ -538,6 +541,7 @@ VECTORIZE
  * function because some compilers (notably Stellar's) generate MUCH better  *
  * vector code this way. 						     *
  *****************************************************************************/
+static
 void      qsincos(coshx,sinhx,cosky,sinky,coslz,sinlz,chg,
 		  qcoskr,qsinkr,k,l,nsites)
 real coshx[], sinhx[], cosky[], sinky[], coslz[], sinlz[],

@@ -92,7 +92,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 2.4 94/01/18 13:41:12 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/force_parallel.c,v 2.5 1994/01/18 13:41:57 keith Stab $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -129,7 +129,7 @@ double  	precision();            /* Floating pt precision.             */
 void    	kernel();               /* Force kernel routine               */
 double 		mol_radius();           /* Radius of largest molecule.        */
 #if defined(ANSI) || defined(__STDC__)
-gptr		*arralloc(size_t,int,...); /* Array allocator		      */
+gptr		*arralloc(size_mt,int,...); /* Array allocator		      */
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
 #else
@@ -138,7 +138,7 @@ void		note();			/* Write a message to the output file */
 void		message();		/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
-extern  contr_mt control;
+extern  contr_mt control;                   /* Main simulation control parms. */
 /*========================== Structs local to module =========================*/
 typedef struct cell_s			/* Prototype element of linked list of*/
 {					/* molecules within interaction range */
@@ -388,7 +388,7 @@ double  cutoff;
     */
    nnab = 4*(mx+1)*(my+1)*(mz+1);
    cellmap = (int***)arralloc(sizeof ***cellmap, 3, 0, mx, -my-1, my, -mz-1, mz);
-   (void)memset((gptr*)(cellmap[0][-my-1]-mz-1),0, nnab*sizeof ***cellmap);
+   memst(cellmap[0][-my-1]-mz-1,0, nnab*sizeof ***cellmap);
 
    /*
     * Add cells with corner-pair distances < cutoff
@@ -715,6 +715,7 @@ mat_mt          stress;                 /* Stress virial                (out) */
    double	*pe_n = (double *)aalloc(nthreads, double);
    mat_mt	*stress_n = (mat_mt *)aalloc(nthreads, mat_mt);
    real		***s_f_n;
+   double	subcell = control.subcell;	/* Local copy. May change it. */
 
 #ifdef DEBUG2
    double ppe, rr[3], ss[3];
@@ -733,10 +734,10 @@ mat_mt          stress;                 /* Stress virial                (out) */
    zero_real(stress_n[0][0],9*nthreads);
    zero_double(pe_n, nthreads);
 
-   if(control.subcell <= 0.0) control.subcell = control.cutoff/5.0;
-   nx = system->h[0][0]/control.subcell+0.5;
-   ny = system->h[1][1]/control.subcell+0.5;
-   nz = system->h[2][2]/control.subcell+0.5;
+   if(subcell <= 0.0) subcell = control.cutoff/5.0;
+   nx = system->h[0][0]/subcell+0.5;
+   ny = system->h[1][1]/subcell+0.5;
+   nz = system->h[2][2]/subcell+0.5;
    ncells = nx*ny*nz;
    if( nx != onx || ny != ony || nz != onz )
    {

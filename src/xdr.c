@@ -25,7 +25,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *      formats, strings are stored as fixed-length opaque data.	      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	xdr.c,v $
+ *       $Log: xdr.c,v $
+ * Revision 2.5  94/01/18  13:33:07  keith
+ * Null update for XDR portability release
+ * 
  * Revision 2.4  94/01/18  13:15:18  keith
  * Put casts in function calls to satisfy picky-picky-picky SGI compiler.
  * Added return values to dummy xdr functions to get rid of VMS warnings.
@@ -44,7 +47,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/xdr.c,v 2.4 94/01/18 13:15:18 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/xdr.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -178,6 +181,7 @@ dump_mt   *sp;
       xdr_vector(xdrs, (gptr*)&sp->timestamp, 3, sizeof(unsigned long), xdr_u_long);
 }
 
+static
 bool_t xdr_av_head_t(xdrs,ap)
 XDR	  *xdrs;
 av_head_mt *ap;
@@ -187,6 +191,7 @@ av_head_mt *ap;
       xdr_double(xdrs, &ap->align);
 }
 
+static
 bool_t xdr_old_av_u_t(xdrs,ap)
 XDR	  *xdrs;
 old_av_u_mt *ap;
@@ -197,12 +202,15 @@ old_av_u_mt *ap;
 		 (7+MAX_ROLL_INTERVAL)*XDR_DOUBLE_SIZE-2*XDR_INT_SIZE);
 }
 
-static size_t xdr_av_size;
+static size_mt  xdr_av_size;
+static int    av_convert;
 
-void   xdr_set_av_size(size)
-size_t	   size;
+void   xdr_set_av_size_conv(size, av_conv)
+size_mt	   size;
+int	   av_conv;
 {
    xdr_av_size = size;
+   av_convert = av_conv;
 }
 
 bool_t xdr_averages(xdrs, ap)
@@ -210,13 +218,12 @@ XDR	   *xdrs;
 gptr	   *ap;
 {
    /*
-    * The following global requires explanation.  It is
+    * The global flag av_convert requires explanation.  It is
     * set by init_averages() which is always called before
     * this function.  av_convert=1 if we are reading data in
     * the old (fixed length = MAX_ROLL_INTERVAL) format and
     * 0 or 2 otherwise. 
     */
-   extern int av_convert;
    unsigned    navst;		/* Total # of average data items */
    old_av_u_mt *apo = (old_av_u_mt *)ap;
    av_head_mt  *aph = (av_head_mt  *)ap;
@@ -270,8 +277,8 @@ xdr_vector(xdrs, basep, nelem, elemsize, xdr_elem)
 }
 
 #else
-void	xdr_set_npotpar () {}
-void	xdr_set_av_size () {}
+void	xdr_set_npotpar (npotpar) int npotpar; {}
+void	xdr_set_av_size_conv (size, av_conv) size_mt size; int av_conv; {}
 bool_t	xdr_site () {return 0;}
 bool_t	xdr_restrt () {return 0;}
 bool_t	xdr_averages () {return 0;}

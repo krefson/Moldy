@@ -33,7 +33,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *		with it AND THIS MODULE.				      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	kernel.c,v $
+ *       $Log: kernel.c,v $
+ * Revision 2.5  94/01/18  13:32:38  keith
+ * Null update for XDR portability release
+ * 
  * Revision 2.4  94/01/13  12:46:53  keith
  * Aedded distant porential correction for GENPOT potential (NTS 13/1/94.
  * 
@@ -113,7 +116,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 2.4 94/01/13 12:46:53 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/kernel.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -137,19 +140,19 @@ void	message(int *,...);		/* Write a warning or error message   */
 void	message();			/* Write a warning or error message   */
 #endif
 /*========================== Potential type specification ====================*/
-pots_mt	potspec[]  = {{"lennard-jones",2},
-		      {"buckingham",3},
-                      {"mcy",4},
-		      {"generic",6}};
-int	npott=(sizeof potspec / sizeof(pots_mt));
+CONST pots_mt	potspec[]  = {{"lennard-jones",2},  /* Name, index & # parms  */
+		              {"buckingham",3},
+                              {"mcy",4},
+		              {"generic",6},
+		              {0,0}};	            /* MUST be null-terminated*/
 /*
  *  Array of dimensions of pot'l parameters.  Powers of {m,l,t} per parameter.
  */
-dim_mt   pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
-                           {{1,8,-2},{1,2,-2},{0,-1,0}},
-		           {{1,2,-2},{0,-1,0},{1,2,-2},{0,-1,0}},
-			   {{1,2,-2},{0,-1,0},{1,14,-2},
-			    {1,6,-2},{1,8,-2},{1,10,-2}}};
+CONST dim_mt   pot_dim[][NPOTP]= {{{1,2,-2},{0,1,0}},
+                                 {{1,8,-2},{1,2,-2},{0,-1,0}},
+		                 {{1,2,-2},{0,-1,0},{1,2,-2},{0,-1,0}},
+			         {{1,2,-2},{0,-1,0},{1,14,-2},
+			          {1,6,-2},{1,8,-2},{1,10,-2}}};
 
 /*========================== Macros ==========================================*/
 

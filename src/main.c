@@ -26,7 +26,10 @@ what you give them.   Help stamp out software-hoarding!  */
  *		values of the simulation control parameters.		      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	main.c,v $
+ *       $Log: main.c,v $
+ * Revision 2.5  94/01/18  13:32:42  keith
+ * Null update for XDR portability release
+ * 
  * Revision 2.3  93/10/28  10:27:59  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -112,7 +115,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 2.3 93/10/28 10:27:59 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -148,28 +151,25 @@ void	message(int *, ...);		/* Write a warning or error message   */
 void	note();				/* Write a message to the output file */
 void	message();			/* Write a warning or error message   */
 #endif
+void	rmlockfiles();			/* Delete all lock files.	      */
 /*========================== External data definition ========================*/
-contr_mt		control;
-unit_mt		input_unit;
-char		backup_lockfile[L_name];
-char		dump_lockfile[L_name];
+contr_mt control;                           /* Main simulation control parms. */
 /*============================================================================*/
 /******************************************************************************
  *  Signal handler.  Just set flag and return.				      *
  ******************************************************************************/
 static int	sig_flag = 0;
+static
 void	shutdown(sig)
 int sig;
 {
    sig_flag = sig;
 }
+static
 void	siglock(sig)
 int sig;
 {
-   if( backup_lockfile[0] )
-      remove(backup_lockfile);
-   if( dump_lockfile[0] )
-      remove(dump_lockfile);
+   rmlockfiles();
    signal(sig, SIG_DFL);
    raise(sig);
 }
@@ -184,6 +184,8 @@ char	*argv[];
    spec_mt	*species;
    site_mt	*site_info;
    pot_mt	*potpar;
+   restrt_mt	restart_header;
+   int		backup_restart;
    mat_mt	stress_vir;
    double	pe[NPE];
    double	delta_cpu = 0.0, cpu_base = cpu();
@@ -199,7 +201,8 @@ char	*argv[];
 #endif
 
    start_up((argc>1)?argv[1]:"", (argc>2)?argv[2]:"",
-	    &system, &species, &site_info, &potpar);
+	    &system, &species, &site_info, &potpar, 
+	    &restart_header, &backup_restart);
    meansq_f_t = (vec_mt (*)[2])ralloc(2*system.nspecies);
    
    /*
@@ -238,7 +241,8 @@ char	*argv[];
    {
       control.istep++;
       do_step(&system, species, site_info, potpar,
-	      meansq_f_t, pe, dip_mom, stress_vir);
+	      meansq_f_t, pe, dip_mom, stress_vir, 
+	      &restart_header, backup_restart);
    
       values(&system, species, meansq_f_t, pe, dip_mom, stress_vir);
    
@@ -271,7 +275,8 @@ char	*argv[];
       if(control.backup_interval > 0 &&
 	 control.istep % control.backup_interval == 0)
       {
-	 write_restart(control.backup_file,&system, species, site_info, potpar);
+	 write_restart(control.backup_file, &restart_header,
+		       &system, species, site_info, potpar);
 	 purge(control.backup_file);
       }
 
@@ -285,14 +290,16 @@ char	*argv[];
 	 note("Run ended after step %d - SIGTERM received", control.istep);
       else
 	 note("Run ended after step %d - cpu limit exceeded", control.istep);
-      write_restart(control.backup_file, &system, species, site_info, potpar);
+      write_restart(control.backup_file, &restart_header, 
+		    &system, species, site_info, potpar);
    }
    else if(control.save_file[0] != '\0')
    {
       if( control.print_sysdef )
 	 print_config(control.save_file, &system, species, site_info, potpar);
       else
-	 write_restart(control.save_file, &system, species, site_info, potpar);
+	 write_restart(control.save_file, &restart_header,
+		       &system, species, site_info, potpar);
       (void)remove(control.backup_file);		/* Get rid of backup */
    }
    else
@@ -301,9 +308,6 @@ char	*argv[];
    note("Run used %.2fs of CPU time and %.2fs elapsed", cpu()-cpu_base,
 	rt_clock()-rt);
 
-   if( backup_lockfile[0] )
-      remove(backup_lockfile);
-   if( dump_lockfile[0] )
-      remove(dump_lockfile);
+   rmlockfiles();
    return(0);
 }

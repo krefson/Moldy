@@ -33,7 +33,10 @@ what you give them.   Help stamp out software-hoarding!  */
  * averages()		Calculate and print averages()			      *
  ******************************************************************************
  *      Revision Log
- *       $Log:	values.c,v $
+ *       $Log: values.c,v $
+ * Revision 2.5  94/01/18  13:33:05  keith
+ * Null update for XDR portability release
+ * 
  * Revision 2.3  93/10/28  10:28:15  keith
  * Corrected declarations of stdargs functions to be standard-conforming
  * 
@@ -75,12 +78,12 @@ what you give them.   Help stamp out software-hoarding!  */
  * --Moved defn of NULL to stddef.h and included that where necessary.
  * --Eliminated clashes with ANSI library names
  * --Modified defs.h to recognise CONVEX ANSI compiler
- * --Modified declaration of size_t and inclusion of sys/types.h in aux.c
+ * --Modified declaration of size_mt and inclusion of sys/types.h in aux.c
  *   for GNU compiler with and without fixed includes.
  * 
  * 
  * Revision 1.9  91/03/12  15:43:29  keith
- * Tidied up typedefs size_t and include file <sys/types.h>
+ * Tidied up typedefs size_mt and include file <sys/types.h>
  * Added explicit function declarations.
  * 
  * Revision 1.8  90/05/16  18:40:53  keith
@@ -109,7 +112,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 2.3 93/10/28 10:28:15 keith Stab $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/values.c,v 2.5.1.1 1994/02/03 18:36:12 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -138,6 +141,7 @@ void	new_lins();
 void	new_page();
 gptr    *talloc();		       /* Interface to memory allocator       */
 void    tfree();		       /* Free allocated memory	      	      */
+int	lines_left();		       /* on current page of output	      */
 #if defined(ANSI) || defined(__STDC__)
 void		note(char *, ...);	/* Write a message to the output file */
 void		message(int *, ...);	/* Write a warning or error message   */
@@ -146,8 +150,7 @@ void		note();			/* Write a message to the output file */
 void		message();		/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
-extern	contr_mt	control;
-extern	int	out_line, out_page;	/* Current line and page in output    */
+extern	contr_mt	control;            /* Main simulation control parms. */
 /*========================== Structs local to module =========================*/
 
 typedef struct
@@ -169,6 +172,7 @@ typedef struct
    av_mt		**p;
 } av_info_t;
 /*========================== Global variables ================================*/
+static
 av_info_t av_info[] = { {tke_n, "Trans KE",   CONV_E_N,	11, "%11.5g",-1, NULL},
 			{rke_n, "Rot KE",     CONV_E_N,	11, "%11.5g",-1, NULL},
 			{pe_n,  "Pot Energy", CONV_E_N,	11, "%11.5g",NPE,NULL},
@@ -194,7 +198,6 @@ static	av_mt	*av;			/* Dynamic array of averages structs  */
 static	int	navs = 0;		/* Size of array av                   */
 static	int	max_row = 0;		/* Largest number of components       */
 static  int	max_col = (int)press_n;	/* Number to print across page        */
-	int	av_convert = 0;
 static  int     av_tmp_size;
 static  gptr    *av_tmp;
 /*========================== Macros ==========================================*/
@@ -211,10 +214,11 @@ static  gptr    *av_tmp;
  *  following rule - a positive entry is the true multiplicity and a negative *
  *  one is multiplied by the number of species for the true multiplicity.     *
  ******************************************************************************/
-void	init_averages(nspecies, vsn, roll_interval, old_roll_interval)
+void	init_averages(nspecies, vsn, roll_interval, old_roll_interval,av_convert)
 int	nspecies;
 char	*vsn;
 int	roll_interval, old_roll_interval;
+int	*av_convert;
 {
    av_mt		*av_mp;
    int		i, imult;
@@ -251,6 +255,7 @@ int	roll_interval, old_roll_interval;
     * Do we have to do any conversion on averages read from restart file?
     * We just allocate buffers and set flags here.
     */
+   *av_convert = 0;
    if( vsn )
    {
       /*
@@ -262,7 +267,7 @@ int	roll_interval, old_roll_interval;
       {
 	 av_tmp_size = (navs+1)*sizeof(old_av_u_mt);
 	 av_tmp = aalloc(av_tmp_size, char);
-	 av_convert = 1;
+	 *av_convert = 1;
       }
       /*
        * Has size of rolling average store changed?
@@ -272,7 +277,7 @@ int	roll_interval, old_roll_interval;
 	 av_tmp_size =  sizeof(av_head_mt) 
 	             + navs*(sizeof(av_mt)+(old_roll_interval-1)*sizeof(double));
 	 av_tmp = aalloc(av_tmp_size, char);
-	 av_convert = 2;	 
+	 *av_convert = 2;
       }
    }
 }
@@ -281,8 +286,9 @@ int	roll_interval, old_roll_interval;
  * if restart file written using old "static" scheme.			      *
  * Also a convenient place to implement reset_averages.			      *
  ******************************************************************************/
-void	convert_averages(roll_interval, old_roll_interval)
+void	convert_averages(roll_interval, old_roll_interval, av_convert)
 int	roll_interval, old_roll_interval;
+int	av_convert;
 {
    int iav, old_nroll, old_iroll, rbl, prev_av_mt_size;
    old_av_u_mt *old_av_mp=(old_av_u_mt *)av_tmp;
@@ -309,12 +315,10 @@ int	roll_interval, old_roll_interval;
 	 av_mp->sum_sq = old_av_mp->av.sum_sq;
 	 av_mp->mean   = old_av_mp->av.mean;
 	 av_mp->sd     = old_av_mp->av.sd;
-	 (void)memcpy((gptr*)(av_mp->roll + av_head->nroll - rbl),
-		      (gptr*)(old_av_mp->av.roll + old_iroll - rbl),
-		      rbl*sizeof(double));
-	 (void)memcpy((gptr*)av_mp->roll, 
-		      (gptr*)(old_av_mp->av.roll+old_nroll-av_head->nroll+rbl),
-		      (av_head->nroll-rbl)*sizeof(double));
+	 memcp(av_mp->roll+av_head->nroll-rbl, old_av_mp->av.roll+old_iroll-rbl,
+	       rbl*sizeof(double));
+	 memcp(av_mp->roll, old_av_mp->av.roll+old_nroll-av_head->nroll+rbl,
+	       (av_head->nroll-rbl)*sizeof(double));
 	 INC(av_mp);
 	 old_av_mp++;
       }
@@ -335,19 +339,16 @@ int	roll_interval, old_roll_interval;
 	  * Can do a struct copy -- will only pick up 1st roll entry
 	  */
 	 *av_mp = *prev_av_mp;
-	 (void)memcpy((gptr*)(av_mp->roll + av_head->nroll - rbl),
-		      (gptr*)(prev_av_mp->roll + old_iroll - rbl),
-		      rbl*sizeof(double));
-	 (void)memcpy((gptr*)av_mp->roll, 
-		      (gptr*)(prev_av_mp->roll+old_nroll-av_head->nroll+rbl),
-		      (av_head->nroll-rbl)*sizeof(double));
+	 memcp(av_mp->roll+av_head->nroll-rbl, prev_av_mp->roll+old_iroll-rbl,
+	       rbl*sizeof(double));
+	 memcp(av_mp->roll, prev_av_mp->roll+old_nroll-av_head->nroll+rbl,
+	       (av_head->nroll-rbl)*sizeof(double));
 
 	 INC(av_mp);
 	 prev_av_mp = (av_mt*)((char*)prev_av_mp + prev_av_mt_size);
       }
       break;
    }
-   av_convert = 0;
    /*
     *  Reset averages and counters to zero if a) requested
     *  or b) we have not yet reached begin_average. (The latter 
@@ -368,8 +369,9 @@ int	roll_interval, old_roll_interval;
 /******************************************************************************
  * av_ptr   Return a pointer to averages database and its size (for restart)  *
  ******************************************************************************/
-gptr	*av_ptr(size)
-size_t	*size;
+gptr	*av_ptr(size, av_convert)
+size_mt	*size;
+int	av_convert;
 {
    switch(av_convert)
    {
@@ -523,6 +525,7 @@ int	comp;
    return(mean/ av_head->nroll);
 }
 
+static
 double	roll_sd(type, comp)
 av_n	type;
 int	comp;
@@ -548,8 +551,9 @@ int	comp;
  *  info from struct to be printed in the same format.  av_info contains      *
  *  the field width and format to use for each data type.                     *
  ******************************************************************************/
+static
 void print_frame(header_sym, header_text, f)
-char	header_sym;
+int	header_sym;
 char	*header_text;
 double	(*f)();
 {
@@ -558,18 +562,16 @@ double	(*f)();
    static boolean	initial = true;
    if(initial)
    {
-      initial = false;
-      out_line = control.page_length;     	/* Force header on 1st call   */
       for(icol = 0; icol < max_col; icol++)	/* Count total width	      */
          out_width  += av_info[icol].field_width + 1;
-      /* if(out_width > control.page_width)*/
    }
-   if(out_line + max_row + 1 > control.page_length)	/* If near end of page*/
+   if( initial || lines_left() < max_row + 1 )	/* If near end of page*/
    {
       new_page();
       for(icol = 0; icol < max_col; icol++)             /* Print column titles*/
          (void)printf(" %*s", av_info[icol].field_width, av_info[icol].name);
       new_line();
+      initial = false;
    }
    col = 0;					/* Print row of 'header_sym'  */
    while(col++ < 8)				/* with 'header_text' in the  */
@@ -628,7 +630,7 @@ void	averages()
       return;
    }   
      
-   if(out_line + NAVT +4 > control.page_length)	/* If near end of page*/
+   if(lines_left() < NAVT + 4 )	/* If near end of page*/
       new_page();
    else
       new_lins(2);
