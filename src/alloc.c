@@ -18,6 +18,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	alloc.c,v $
+ * Revision 1.6  90/04/25  14:20:16  keith
+ * Modified to allow for machines with word ptr != char ptr.
+ * 
  * Revision 1.5  90/03/26  16:54:46  keith
  * Added portability warning to header comments.
  * 
@@ -36,14 +39,15 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.5 90/03/26 16:54:46 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/alloc.c,v 1.6 90/04/25 14:20:16 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #if ANSI || __STDC__
-#include <stdarg.h>
+#   include <stdarg.h>
 #else
-#include <varargs.h>
+#   include <varargs.h>
 #endif
+#include "stddef.h"
 /*========================== program include files ===========================*/
 #include "defs.h"
 #include "messages.h"
@@ -67,7 +71,7 @@ char	*file;
 {
    char *p = calloc((unsigned) n, (unsigned) size);
    if(p == NULL && (n*size != 0))
-      message(NULLI, NULLP, FATAL, MEMORY, line, file,
+      message(NULLI, NULLP, FATAL, NOMEM, line, file,
 	      (int)n, (unsigned long)size);
    return(p);
 }
