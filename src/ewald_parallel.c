@@ -23,6 +23,11 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald_parallel.c,v $
+ * Revision 2.0  93/03/15  14:49:49  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.22  93/03/12  12:23:05  keith
  * Reorganized defines to recognise all ANSI (__type__) forms.
  * Moved spxpy() from aux.c to force.c and force_parallel.c
@@ -135,7 +140,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 1.22 93/03/12 12:23:05 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald_parallel.c,v 2.0 93/03/15 14:49:49 keith Rel $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -527,6 +532,7 @@ real coshx[], sinhx[], cosky[], sinky[], coslz[], sinlz[],
 int  k,l,nsites;
 {
    int is;
+   real qckr;
    
    if( k >= 0 )
       if( l >= 0 )
@@ -537,12 +543,13 @@ int  k,l,nsites;
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    qcoskr[is] = chg[is]*(
+	    qckr = chg[is]*(
 		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
                 - (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
 	    qsinkr[is] = chg[is]*(
                   (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
 		+ (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
+	    qcoskr[is] = qckr;
 	 }
       }
       else
@@ -553,12 +560,13 @@ VECTORIZE
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    qcoskr[is] = chg[is]*(
+	    qckr = chg[is]*(
 		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
                 + (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
 	    qsinkr[is] = chg[is]*(
                   (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
 		- (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
+	    qcoskr[is] = qckr;
 	 }
       }
    else
@@ -570,12 +578,13 @@ VECTORIZE
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    qcoskr[is] = chg[is]*(
+	    qckr = chg[is]*(
 		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
                 - (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
 	    qsinkr[is] = chg[is]*(
                   (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
 		+ (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
+	    qcoskr[is] = qckr;
 	 }
       }
       else
@@ -586,12 +595,13 @@ VECTORIZE
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    qcoskr[is] = chg[is]*(
+	    qckr = chg[is]*(
 		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
                 + (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
 	    qsinkr[is] = chg[is]*(
                   (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
 		- (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
+	    qcoskr[is] = qckr;
 	 }
      }
 }
@@ -625,7 +635,7 @@ real	**site_force;
    int is, i, j, h, k, l;
    struct _hkl *phkl;
    double vol = *volp, r_4_alpha = *r_4_alphap;
-   real		force_comp;
+   real		force_comp, kv0, kv1, kv2;
    real *qcoskr = dalloc(nsites), *qsinkr = dalloc(nsites);
    real		*site_fx = site_force[0],
    		*site_fy = site_force[1],
@@ -634,7 +644,9 @@ real	**site_force;
    for(phkl = hkl+ithread; phkl < hkl+nhkl; phkl += nthreads)
    {
       h  = phkl->h;	    k     = phkl->k;  l     = phkl->l;
-      kv[0] = phkl->kx; kv[1] = phkl->ky; kv[2] = phkl->kz;
+      kv0 = kv[0] = phkl->kx; 
+      kv1 = kv[1] = phkl->ky; 
+      kv2 = kv[2] = phkl->kz;
 /*
  * Calculate pre-factors A(K) etc
  */
@@ -691,9 +703,9 @@ VECTORIZE
       for(is = 0; is < nsitesxf; is++)
       {
 	 force_comp = qsinkr[is]*sqcoskr - qcoskr[is]*sqsinkr;
-	 site_fx[is] += kv[0] * force_comp;
-	 site_fy[is] += kv[1] * force_comp;
-	 site_fz[is] += kv[2] * force_comp;
+	 site_fx[is] += kv0 * force_comp;
+	 site_fy[is] += kv1 * force_comp;
+	 site_fz[is] += kv2 * force_comp;
       }
 #if 1
 /*
@@ -703,9 +715,9 @@ VECTORIZE
       for(is = nsitesxf; is < nsites; is++)
       {
 	 force_comp = qsinkr[is]*sqcoskrn - qcoskr[is]*sqsinkrn;
-	 site_fx[is] += kv[0] * force_comp;
-	 site_fy[is] += kv[1] * force_comp;
-	 site_fz[is] += kv[2] * force_comp;
+	 site_fx[is] += kv0 * force_comp;
+	 site_fy[is] += kv1 * force_comp;
+	 site_fz[is] += kv2 * force_comp;
       }
 #endif
 /*

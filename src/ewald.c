@@ -23,6 +23,15 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log:	ewald.c,v $
+ * Revision 2.1  93/05/17  10:42:22  keith
+ * Optimized qsincos() -- should give up to 25% speed improvement on
+ * compilers without assert no aliasing options.
+ * 
+ * Revision 2.0  93/03/15  14:49:02  keith
+ * Added copyright notice and disclaimer to apply GPL
+ * to all modules. (Previous versions licensed by explicit 
+ * consent only).
+ * 
  * Revision 1.23  93/03/12  12:22:38  keith
  * Reorganized defines to recognise all ANSI (__type__) forms.
  * Moved spxpy() from aux.c to force.c and force_parallel.c
@@ -126,7 +135,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 1.23 93/03/12 12:22:38 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/ewald.c,v 2.1 93/05/17 10:42:22 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -178,6 +187,7 @@ real coshx[], sinhx[], cosky[], sinky[], coslz[], sinlz[],
 int  k,l,nsites;
 {
    int is;
+   real qckr;
    
    if( k >= 0 )
       if( l >= 0 )
@@ -185,12 +195,13 @@ int  k,l,nsites;
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    qcoskr[is] = chg[is]*(
+	    qckr = chg[is]*(
 		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
                 - (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
 	    qsinkr[is] = chg[is]*(
                   (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
 		+ (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
+	    qcoskr[is] = qckr;
 	 }
       }
       else
@@ -198,12 +209,13 @@ VECTORIZE
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    qcoskr[is] = chg[is]*(
+	    qckr = chg[is]*(
 		  (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*coslz[is] 
                 + (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*sinlz[is]);
 	    qsinkr[is] = chg[is]*(
                   (sinhx[is]*cosky[is] + coshx[is]*sinky[is])*coslz[is] 
 		- (coshx[is]*cosky[is] - sinhx[is]*sinky[is])*sinlz[is]);
+	    qcoskr[is] = qckr;
 	 }
       }
    else
@@ -212,12 +224,13 @@ VECTORIZE
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    qcoskr[is] = chg[is]*(
+	    qckr = chg[is]*(
 		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
                 - (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
 	    qsinkr[is] = chg[is]*(
                   (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
 		+ (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
+	    qcoskr[is] = qckr;
 	 }
       }
       else
@@ -225,12 +238,13 @@ VECTORIZE
 VECTORIZE
 	 for(is = 0; is < nsites; is++)
 	 {
-	    qcoskr[is] = chg[is]*(
+	    qckr = chg[is]*(
 		  (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*coslz[is] 
                 + (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*sinlz[is]);
 	    qsinkr[is] = chg[is]*(
                   (sinhx[is]*cosky[is] - coshx[is]*sinky[is])*coslz[is] 
 		- (coshx[is]*cosky[is] + sinhx[is]*sinky[is])*sinlz[is]);
+	    qcoskr[is] = qckr;
 	 }
      }
 }
@@ -283,7 +297,7 @@ mat_mt		stress;			/* Stress virial		(out) */
    real		*site0, *site1, *site2;
    real		*qcoskr = dalloc(nsites),	/* q(i) cos(K.R(i))	      */
 		*qsinkr = dalloc(nsites);	/* q(i) sin(K.R(i))	      */
-   real		force_comp;
+   real		force_comp, kv0, kv1, kv2;
    double	r_4_alpha = -1.0/(4.0 * control.alpha * control.alpha);
    double	vol = det(system->h);	/* Volume of MD cell		      */
    static	double	self_energy,	/* Constant self energy term	      */
@@ -446,9 +460,9 @@ VECTORIZE
 /*
  * Calculate actual K vector and its squared magnitude.
  */
-      kv[0] = h*astar[0] + k*bstar[0] + l*cstar[0]; 
-      kv[1] = h*astar[1] + k*bstar[1] + l*cstar[1]; 
-      kv[2] = h*astar[2] + k*bstar[2] + l*cstar[2];
+      kv0 = kv[0] = h*astar[0] + k*bstar[0] + l*cstar[0]; 
+      kv1 = kv[1] = h*astar[1] + k*bstar[1] + l*cstar[1]; 
+      kv2 = kv[2] = h*astar[2] + k*bstar[2] + l*cstar[2];
       
       ksq = SUMSQ(kv);
       
@@ -510,9 +524,9 @@ VECTORIZE
       for(is = 0; is < nsitesxf; is++)
       {
 	 force_comp = qsinkr[is]*sqcoskr - qcoskr[is]*sqsinkr;
-	 site_fx[is] += kv[0] * force_comp;
-	 site_fy[is] += kv[1] * force_comp;
-	 site_fz[is] += kv[2] * force_comp;
+	 site_fx[is] += kv0 * force_comp;
+	 site_fy[is] += kv1 * force_comp;
+	 site_fz[is] += kv2 * force_comp;
       }
 #if 1
 /*
@@ -522,9 +536,9 @@ VECTORIZE
       for(is = nsitesxf; is < nsites; is++)
       {
 	 force_comp = qsinkr[is]*sqcoskrn - qcoskr[is]*sqsinkrn;
-	 site_fx[is] += kv[0] * force_comp;
-	 site_fy[is] += kv[1] * force_comp;
-	 site_fz[is] += kv[2] * force_comp;
+	 site_fx[is] += kv0 * force_comp;
+	 site_fy[is] += kv1 * force_comp;
+	 site_fz[is] += kv2 * force_comp;
       }
 #endif
    }
