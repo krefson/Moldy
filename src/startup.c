@@ -36,7 +36,14 @@ what you give them.   Help stamp out software-hoarding!  */
  * gauss_rand()		Return random sample from univariant gaussian         *
  ******************************************************************************
  *      Revision Log
- *       $Log:	startup.c,v $
+ *       $Log: startup.c,v $
+ * Revision 2.4  94/01/24  18:18:35  keith
+ * Deleted commented-out code for NR jacobi() function. Eigens() is
+ * now well-tested.  Eliminated compiler warnings.
+ * 
+ * Added external "backup_restart" to flag that run started from a
+ * backup file.  For dump().
+ * 
  * 
  * Revision 2.3  93/10/28  10:28:13  keith
  * Corrected declarations of stdargs functions to be standard-conforming
@@ -175,7 +182,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 2.5 94/01/21 12:24:07 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 2.5 1994/01/24 18:20:11 keith Stab $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -212,6 +219,7 @@ void		rot_to_q();
 void		print_sysdef();
 char		*atime();
 double		mdrand();
+double		precision();
 void		smdrand();
 void		inhibit_vectorization();	/* Self-explanatory dummy     */
 #if defined(ANSI) || defined(__STDC__)
@@ -486,6 +494,8 @@ quat_mt		qpf[];			/* Quaternion rotation to princ.frame*/
    int		nz;			/* Count of zero moments of inertia  */
    int		i, j, isite, id; 	/* Various loop counters	     */
    boolean	flag;			/* Used to test for charges	     */
+   double	imax;			/* Largest moment of inertia	     */
+   double	eps = 10.0*precision(); /* Criterion for "zero" moment.	     */
 
    system->nsites  = 0;  system->nmols  = 0;
    system->nmols_r = 0;  system->d_of_f = 0;
@@ -544,8 +554,15 @@ quat_mt		qpf[];			/* Quaternion rotation to princ.frame*/
 #ifdef	DEBUG
          print_mat(v," *D* Rotation Mat.");
 #endif
-         nz = (spec->inertia[0]==0) + (spec->inertia[1]==0)  /* Count zero   */
-                                    + (spec->inertia[2]==0); /* moments.     */
+	 imax = MAX3(spec->inertia[0],spec->inertia[1],spec->inertia[2]);
+	 nz = 0;
+	 for( i=0; i<3; i++)			 /* Count zero  moments.     */ 
+	    if( spec->inertia[i] < eps*imax )
+	    {
+	       nz++;
+	       spec->inertia[i] = 0.0;
+	    }
+	    
          spec->rdof = 3-nz;			/* Rotational deg. of freedom*/
 	 if( spec->framework )			/* Frameworks can't rotate   */
 	 {
