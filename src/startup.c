@@ -37,6 +37,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: startup.c,v $
+ * Revision 2.7  1994/06/08  13:16:34  keith
+ * Changed all timestep-related parameters to type "long". This means
+ * that 16-bit DOS compilers can do more than 32767 timesteps.
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -210,7 +214,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/startup.c,v 2.7 1994/06/08 13:16:34 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -258,7 +262,8 @@ void		note();			/* Write a message to the output file */
 void		message();		/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
-extern	contr_mt		control;    /* Main simulation control parms. */
+extern	contr_mt	control;       /* Main simulation control parms. */
+extern int 		ithread, nthreads;
 /*========================== GLOBAL variables ================================*/
 CONST   unit_mt	prog_unit = {MUNIT, LUNIT, TUNIT, QUNIT};
 static	unit_mt	input_unit;		/* Unit specification (see Convert.c) */
@@ -969,10 +974,10 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
     *  know the name of the backup file (Whew!).  Now we have
     *  all the parameter values we can set up and test the lockfiles.
     */
-   if( control.backup_file[0] )
+   if( ithread == 0 && control.backup_file[0] )
       (void)strcat(strncpy(backup_lockname,control.backup_file,L_name-5),
 		   LOCKEX);
-   if( control.dump_file[0] )
+   if( ithread == 0 && control.dump_file[0] )
    {
       (void)sprintf(dump_lockname, control.dump_file, 0);
       (void)strncat(dump_lockname, LOCKEX, L_name-1);
@@ -980,10 +985,7 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
    if( backup_lockname[0] )
    {
       if( fopen(backup_lockname,"r") )
-      {
-	 message(NULLI, NULLP, ERROR, LOCKED, "backup", backup_lockname);
-	 exit(2);
-      }
+	 message(NULLI, NULLP, -FATAL, LOCKED, "backup", backup_lockname);
       if( (lock=fopen(backup_lockname,"w")) != 0 )
 	 (void)fclose(lock);
       else
@@ -993,10 +995,9 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
    {
       if( fopen(dump_lockname,"r") )
       {
-	 message(NULLI, NULLP, ERROR, LOCKED, "dump", dump_lockname);
 	 if( backup_lockname[0] )
 	    remove(backup_lockname);
-	 exit(2);
+	 message(NULLI, NULLP, -FATAL, LOCKED, "dump", dump_lockname);
       }
       if( (lock=fopen(dump_lockname,"w")) != 0 )
 	 (void)fclose(lock);
@@ -1168,7 +1169,8 @@ int		*backup_restart;	/* (ptr to) flag said purpose   (out) */
       if( freopen(out_name, "a", stdout) == NULL )
          message(NULLI, NULLP, FATAL, OOFAIL, out_name, strerror(errno));
    }
-   banner_page(system, *species, restart_header);
+   if( ithread == 0 )
+      banner_page(system, *species, restart_header);
    if( qpf != NULL )
       xfree(qpf);
 }

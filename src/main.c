@@ -27,6 +27,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: main.c,v $
+ * Revision 2.7  1994/06/08  13:14:37  keith
+ * Changed all timestep-related parameters to type "long". This means
+ * that 16-bit DOS compilers can do more than 32767 timesteps.
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -135,7 +139,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/main.c,v 2.7 1994/06/08 13:14:37 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -174,6 +178,9 @@ void	message();			/* Write a warning or error message   */
 void	rmlockfiles();			/* Delete all lock files.	      */
 /*========================== External data definition ========================*/
 contr_mt control;                           /* Main simulation control parms. */
+int ithread=0, nthreads=1;
+static int ival;
+#define ADDR(expr)  (ival=(expr),&ival)
 /*============================================================================*/
 /******************************************************************************
  *  Signal handler.  Just set flag and return.				      *
@@ -190,6 +197,11 @@ void	siglock(sig)
 int sig;
 {
    rmlockfiles();
+#ifdef SPMD
+   if( sig == SIGINT )
+      par_sigintreset();
+   else   
+#endif
    signal(sig, SIG_DFL);
    raise(sig);
 }
@@ -206,13 +218,17 @@ char	*argv[];
    pot_mt	*potpar;
    restrt_mt	restart_header;
    int		backup_restart;
-   mat_mt	stress_vir;
-   double	pe[NPE];
+   static mat_mt	stress_vir;
+   static double	pe[NPE];
    double	delta_cpu = 0.0, cpu_base = cpu();
    double	rt = rt_clock();
    vec_mt	(*meansq_f_t)[2];
    vec_mt	dip_mom;
+   int 		i;
 
+#ifdef SPMD
+   par_begin(&argc, &argv, &ithread, &nthreads);
+#endif
 #ifdef PARALLEL
 # ifdef ardent
    int nthreads = nprocessors();
@@ -220,9 +236,17 @@ char	*argv[];
 # endif
 #endif
 
-   start_up((argc>1)?argv[1]:"", (argc>2)?argv[2]:"",
-	    &system, &species, &site_info, &potpar, 
-	    &restart_header, &backup_restart);
+#if defined(SPMD) && !defined(READALL)
+   if( ithread == 0 )
+#endif
+      start_up((argc>1)?argv[1]:"", (argc>2)?argv[2]:"",
+	       &system, &species, &site_info, &potpar, 
+	       &restart_header, &backup_restart);
+#if defined(SPMD) && !defined(READALL)
+   replicate(&control, &system, &species, &site_info, &potpar, 
+	     &restart_header);
+#endif
+
    meansq_f_t = (vec_mt (*)[2])ralloc(2*system.nspecies);
    
    /*
@@ -255,79 +279,95 @@ char	*argv[];
    /*
     *  Main MD timestep loop
     */
-   while( control.istep < control.nsteps &&
-	  cpu()-cpu_base+delta_cpu < control.cpu_limit &&
-	  sig_flag == 0)
+   while( control.istep < control.nsteps && sig_flag == 0)
    {
       control.istep++;
       do_step(&system, species, site_info, potpar,
 	      meansq_f_t, pe, dip_mom, stress_vir, 
 	      &restart_header, backup_restart);
-   
+      
       values(&system, species, meansq_f_t, pe, dip_mom, stress_vir);
    
-      if(control.istep % control.print_interval == 0)
-         output();
-      
+      if( ithread == 0 && control.istep % control.print_interval == 0)
+	 output();
+
       if(control.scale_interval > 0)
       {
-         if(control.istep <= control.scale_end &&
-            control.istep % control.scale_interval == 0)
-            rescale(&system, species);
-         if(control.istep == control.scale_end)
-            note("Temperature scaling turned off after step %ld", control.istep);
+	 if(control.istep <= control.scale_end &&
+	    control.istep % control.scale_interval == 0)
+	    rescale(&system, species);
+	 if( ithread == 0 && control.istep == control.scale_end)
+	    note("Temperature scaling turned off after step %ld", control.istep);
       }
 
       if(control.average_interval > 0 && control.istep >= control.begin_average)
       {
          if( control.istep == control.begin_average )
-            note("started accumulating thermodynamic averages on timestep %ld", 
-		 control.istep);
+	 {
+	    if( ithread == 0 )
+	       note("started accumulating thermodynamic averages on timestep %ld", 
+		    control.istep);
+	 }
          else if ( (control.istep-control.begin_average + 1) %
 		    control.average_interval == 0)
             averages();
       }
 
-      if(control.rdf_interval > 0 && control.istep >= control.begin_rdf && 
-        (control.istep-control.begin_rdf+1) % control.rdf_out == 0)
-         print_rdf(&system, species, site_info);
-
-      if(control.backup_interval > 0 &&
-	 control.istep % control.backup_interval == 0)
+      if( ithread == 0 )
       {
-	 write_restart(control.backup_file, &restart_header,
-		       &system, species, site_info, potpar);
-	 purge(control.backup_file);
+	 if(control.rdf_interval > 0 && control.istep >= control.begin_rdf && 
+	    (control.istep-control.begin_rdf+1) % control.rdf_out == 0)
+	    print_rdf(&system, species, site_info);
+
+	 if(control.backup_interval > 0 &&
+	    control.istep % control.backup_interval == 0)
+	 {
+	    write_restart(control.backup_file, &restart_header,
+			  &system, species, site_info, potpar);
+	    purge(control.backup_file);
+	 }
       }
-
       if(delta_cpu == 0.0) delta_cpu = cpu() - cpu_base;/* Time for a timestep*/
-
+      /*
+       * Better make sure every process wants to stop at the same time!
+       */
+      if(  cpu()-cpu_base+delta_cpu >= control.cpu_limit )
+	 sig_flag++; 	/* Cheat */
+#ifdef SPMD
+      par_imax(&sig_flag);
+#endif
    }					/* End of main MD timestep loop	      */
    
-   if(control.istep < control.nsteps)	/* Run ended prematurely	      */
+   if( ithread == 0 )
    {
-      if(sig_flag == SIGTERM)
-	 note("Run ended after step %ld - SIGTERM received", control.istep);
-      else
-	 note("Run ended after step %ld - cpu limit exceeded", control.istep);
-      write_restart(control.backup_file, &restart_header, 
-		    &system, species, site_info, potpar);
-   }
-   else if(control.save_file[0] != '\0')
-   {
-      if( control.print_sysdef )
-	 print_config(control.save_file, &system, species, site_info, potpar);
-      else
-	 write_restart(control.save_file, &restart_header,
+      if(control.istep < control.nsteps) /* Run ended prematurely	      */
+      {
+	 if(sig_flag == SIGTERM)
+	    note("Run ended after step %ld - SIGTERM received", control.istep);
+	 else
+	    note("Run ended after step %ld - cpu limit exceeded", control.istep);
+	 write_restart(control.backup_file, &restart_header, 
 		       &system, species, site_info, potpar);
-      (void)remove(control.backup_file);		/* Get rid of backup */
-   }
-   else
-      (void)remove(control.backup_file);		/* Get rid of backup */
-      
-   note("Run used %.2fs of CPU time and %.2fs elapsed", cpu()-cpu_base,
-	rt_clock()-rt);
+      }
+      else if(control.save_file[0] != '\0')
+      {
+	 if( control.print_sysdef )
+	    print_config(control.save_file, &system, species, site_info, potpar);
+	 else
+	    write_restart(control.save_file, &restart_header,
+			  &system, species, site_info, potpar);
+	 (void)remove(control.backup_file);		/* Get rid of backup */
+      }
+      else
+	 (void)remove(control.backup_file);		/* Get rid of backup */
 
-   rmlockfiles();
+      rmlockfiles();
+   }
+   (void)fflush(stdout);
+   printf(" *I* Run used %.2fs of CPU time and %.2fs elapsed\n", cpu()-cpu_base,
+	   rt_clock()-rt);
+#ifdef SPMD
+   par_finish();
+#endif
    return(0);
 }

@@ -25,6 +25,9 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ * Revision 2.7  1994/06/08  13:07:39  keith
+ * New version of array allocator which breaks up requests for DOS.
+ *
  * Revision 2.6  1994/02/17  16:38:16  keith
  * Significant restructuring for better portability and
  * data modularity.
@@ -178,7 +181,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.6 1994/02/17 16:38:16 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.7 1994/06/08 13:07:39 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -186,7 +189,7 @@ static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/accel.c,v 2.6 199
 #include	<math.h>
 #include	"string.h"
 #include	"stddef.h"
-#ifdef DEBUG6
+#if defined(DEBUG6) || defined(DEBUG7)
 #include	<stdio.h>
 #endif
 /*========================== program include files ===========================*/
@@ -237,6 +240,7 @@ void		message();		/* Write a warning or error message   */
 #endif
 /*========================== External data references ========================*/
 extern contr_mt control;                    /* Main simulation control parms. */
+extern int 	ithread, nthreads;
 /*========================== Macros ==========================================*/
 #define ITER_MAX 10
 #define	CONVRG	1.0e-7
@@ -469,8 +473,8 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
    vec_mp          force_base = ralloc(sys->nmols),
 		   torque_base = sys->nmols_r?ralloc(sys->nmols_r):0;
    real		**site = (real**)arralloc((size_mt)sizeof(real), 2,
-					  0, 2, 0, sys->nsites-1),
-   		**site_force = (real**)arralloc((size_mt)sizeof(real), 2,
+					  0, 2, 0, sys->nsites-1);
+   real		**site_force = (real**)arralloc((size_mt)sizeof(real), 2,
 						0, 2, 0, sys->nsites-1);
 /*
  * Other local variables
@@ -495,8 +499,9 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
    if (init)
    {
       dist = distant_const(sys, species, potpar, control.cutoff);
-      note("Distant potential correction = %f, Pressure correction = %f",
-	   CONV_E * dist / vol, CONV_P * dist / (vol * vol));
+      if( ithread == 0 )
+	 note("Distant potential correction = %f, Pressure correction = %f",
+	      CONV_E * dist / vol, CONV_P * dist / (vol * vol));
       init = false;
    }
 /*
@@ -586,13 +591,23 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
  * Real-space part of force evaluation - no loop over species for efficiency
  */
    force_calc(site, site_force, sys, species, chg, potpar, pe, stress);
-
 /*
  * Reciprocal-space part of Ewald sum
  */
    if (control.alpha > ALPHAMIN)
    {
       ewald(site, site_force, sys, species, chg, pe + 1, stress);
+   }
+/*
+ *  Sum Pot, energies, forces and stress from each parallel invocation
+ */
+#ifdef SPMD
+   par_dsum(pe, NPE);
+   par_rsum(stress[0], 9);
+   par_rsum(site_force[0], 3*sys->nsites);
+#endif
+   if (control.alpha > ALPHAMIN)
+   {
 /*
  * Dipole moment contribution to forces and potential (De Leeuw, Perram
  * and Smith Proc Roy Soc A373, 27-56 (1980)
@@ -763,23 +778,24 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
       if (spec->rdof > 0)
 	 mean_square(torque[ispec], meansq_f_t[ispec][1], spec->nmols);
    }
-
+   if( ithread == 0 )
+   {
 /*
  * Accumulate radial distribution functions
  */
-   if (control.rdf_interval > 0 && control.istep >= control.begin_rdf &&
-	 control.istep % control.rdf_interval == 0)
-      rdf_calc(site, sys, species);
+      if (control.rdf_interval > 0 && control.istep >= control.begin_rdf &&
+	  control.istep % control.rdf_interval == 0)
+	 rdf_calc(site, sys, species);
 
 /*
  * Perform periodic dump of dynamic data
  */
-   if (control.dump_interval > 0 && control.dump_level != 0 &&
+      if (control.dump_interval > 0 && control.dump_level != 0 &&
 	 control.istep >= control.begin_dump &&
-	 (control.istep - control.begin_dump) % control.dump_interval == 0)
-      dump(sys, force_base, torque_base, stress, pe[0] + pe[1], restart_header,
-	   backup_restart);
-
+	  (control.istep - control.begin_dump) % control.dump_interval == 0)
+	 dump(sys, force_base, torque_base, stress, pe[0] + pe[1], restart_header,
+	      backup_restart);
+   }
 /*
  * Deallocate the dynamic storage before exiting
  */
@@ -824,4 +840,3 @@ int	nspecies;
    return radius;
 }
 
-   
