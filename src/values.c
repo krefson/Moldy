@@ -34,6 +34,10 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ *       Revision 2.14  2000/11/08 18:37:39  keith
+ *       Now prints "correct" names for energy function.  Previous version of
+ *       this overwrote string constant!
+ *
  *       Revision 2.13  2000/11/07 10:26:51  keith
  *       Updated header text to correct th'dy fn for ensemble.
  *       Tidied up some of the auto-converted function declarations
@@ -164,7 +168,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.13 2000/11/07 10:26:51 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.14 2000/11/08 18:37:39 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -550,7 +554,7 @@ void	values(system_mt *system,        /* record of system info             */
 	 rkem5[ispec] = rkem3[ispec]; 
 	 rkem3[ispec] = rkem1[ispec]; 
 	 rkem1[ispec] = rkep1[ispec];
-         rkep1[ispec] = rot_ke(spec->avel, system->ts, spec->inertia, spec->nmols);
+         rkep1[ispec] = rot_ke(spec->avel, 0.5*(tsold+system->ts), spec->inertia, spec->nmols);
 	 if(rkem1[ispec] < 0.0)
 	    rkem1[ispec] = rkem3[ispec] = rkem5[ispec] = rkep1[ispec];
 	 e = KEINT(rkep1[ispec], rkem1[ispec], rkem3[ispec], rkem5[ispec]);
