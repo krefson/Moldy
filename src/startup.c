@@ -17,10 +17,13 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	startup.c,v $
+ * Revision 1.1  89/04/27  15:16:41  keith
+ * Initial revision
+ * 
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: startup.c,v 1.3 89/04/25 16:42:42 keith Exp $";
+static char *RCSid = "$Header: startup.c,v 1.2 89/06/01 21:25:24 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -728,13 +731,11 @@ pot_p		*potpar;		/* Pointer to pot'l parameter array   */
 
    if( control.out_file[0] != NULL )	/* Open output file (or use stdout)   */
    {
-      control.out = fopen(control.out_file, "a");
-      if( control.out == NULL )
+      (void)fflush(stdout);		/* Purge buffer before opening file   */
+      if( freopen(control.out_file, "a", stdout) == NULL )
          message(NULLI, NULLP, FATAL, OOFAIL, control.out_file);
    }
-   else
-      control.out = stdout;
    banner_page(system, *species);
    if( control.print_sysdef )
-      print_sysdef(system, *species, *site_info, *potpar, control.out);
+      print_sysdef(system, *species, *site_info, *potpar);
 }
