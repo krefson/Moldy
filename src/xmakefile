@@ -26,6 +26,10 @@ CFLAGS= -g -O $(CFLAGS0)
 #  **** Cray **** (CC 5.n) - At last can compile C kernel
 #CFLAGS= -h vector,olevel_3,vmesg_1,ivdep  $(CFLAGS0)
 #LDFLAGS=  -l /usr/lib/libbsd.a -l /lib/libsci.a
+#  **** Cray **** (SCC )
+CC=scc
+CFLAGS= -h vector,olevel_3,vreport,ivdep,fastaddr $(CFLAGS0)
+LDFLAGS= -l /usr/lib/libbsd.a -l /lib/libsci.a
 #  ***** End *****
 LINT=		lint
 PFLAGS=		-p
@@ -54,7 +58,7 @@ UTILS = moldyextract dumpanalyze dumpconvert dumpextract  moldyanalyze
 
 EXTRAS = $(UTILS:%=%.c) mdshak.c
 
-HFILES=		structs.h defs.h string.h time.h stddef.h messages.h
+HFILES=		structs.h defs.h string.h time.h stddef.h stdlib.h messages.h
 
 moldy:		$(OFILES) $(EXTRA_OBJ)
 		$(CC)  $(OFILES) $(EXTRA_OBJ) $(LDFLAGS) -lm -o moldy
@@ -97,20 +101,27 @@ tags:		$(CFILES) $(HFILES) kernel.f
 		etags $(CFILES) $(HFILES) kernel.f 
 
 clean:		
-		/bin/rm -f  $(OFILES) $(LFILES) moldy $(UTILS) mdshak
+		/bin/rm -f  $(OFILES) $(LFILES) moldy $(UTILS) mdshak\
+			moldy.dvi moldy.toc moldy.aux
 
-cleaner:	
+spotless:	
 		make -i clean
 		/bin/rm moldy.shar moldy.shar.Z cray.job cray.job.Z \
 			moldy.job moldy.job.Z compile.com compile.com.Z\
 			moldy.com moldy.com.Z
 annihilate:
 		make -i cleaner
-		/bin/rm $(CFILES) $(HFILES) kernel.f Makefile\
-		$(EXTRAS) $(INFILES)
+		/bin/rm $(CFILES) $(HFILES) kernel.f moldy.tex Makefile\
+		$(EXTRAS) $(INFILES) READ.ME
 #
 #  Export options
 #
+moldy.tar:	READ.ME $(CFILES) $(HFILES) kernel.f Makefile moldy.tex\
+		$(EXTRAS) $(INFILES)
+		tar cvf moldy.tar\
+		READ.ME $(CFILES) kernel.f $(HFILES) Makefile moldy.tex\
+		$(EXTRAS) $(INFILES)
+
 moldy.shar:	READ.ME $(CFILES) $(HFILES) kernel.f Makefile moldy.tex\
 		$(EXTRAS) $(INFILES)
 		shar READ.ME $(CFILES) kernel.f $(HFILES) Makefile moldy.tex\
