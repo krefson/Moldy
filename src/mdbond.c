@@ -28,6 +28,13 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdbond.c,v $
+ *  Revision 1.8.4.1  2000/12/07 15:58:31  keith
+ *  Mainly cosmetic minor modifications and added special comments to
+ *  shut lint up.
+ *
+ *  Revision 1.8  1999/12/07 13:24:29  keith
+ *  checked in with -k by keith at 1999/12/08 09:39:13
+ *
  *  Revision 1.8  1999/12/08 15:52:36  craig
  *  Reduced blim and alim arrays to two elements each , viz. min and max.
  *  Replaced unnecessary blim[2] / alim[2] elements with dummy variable in call to forstr.
@@ -80,7 +87,7 @@ what you give them.   Help stamp out software-hoarding! */
  */
 
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdbond.c,v 1.8 1999/12/07 13:24:29 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdbond.c,v 1.8.4.1 2000/12/07 15:58:31 keith Exp $";
 #endif
 #include "defs.h"
 #ifdef HAVE_STDARG_H
@@ -305,12 +312,12 @@ int		sp_range[3];
 	  	      node = morethan_BOND(broot,bond);
                       if( node == NULL )
                       {
-                         if( insert_data(broot,bond,1) < 0 )
+                         if( insert_data(broot,(void*)bond,1) < 0 )
                             error("Error creating first node in bond list - \n%s\n",strerror(errno));
                       }
                       else
                       {
-                         if( insert_at_position(broot,node,bond,0) < 0 )
+                         if( insert_at_position(broot,node,(void*)bond,0) < 0 )
                             error("Error inserting node in bond list - \n%s\n",strerror(errno));
                       }
 
@@ -359,12 +366,12 @@ int		sp_range[3];
 		                        node = morethan_ANGLE(aroot,angle);
                                         if( node == NULL )
                                         {
-                                          if( insert_data(aroot,angle,1) < 0 )
+                                          if( insert_data(aroot,(void*)angle,1) < 0 )
                                              error("Error creating first node in angle list - \n%s\n",strerror(errno));
                                         }
                                         else
                                         {
-                                          if( insert_at_position(aroot,node,angle,0) < 0 )
+                                          if( insert_at_position(aroot,node,(void*)angle,0) < 0 )
                                              error("Error inserting node in angle list - \n%s\n",strerror(errno));
                                         }
                                      }
@@ -436,12 +443,12 @@ int		sp_range[3];
 		                                node = morethan_ANGLE(aroot,angle);
                                                 if( node == NULL )
                                                 {
-                                                  if( insert_data(aroot,angle,1) < 0 )
+                                                  if( insert_data(aroot,(void*)angle,1) < 0 )
                                                      error("Error creating first node in angle list - \n%s\n",strerror(errno));
                                                 }
                                                 else
                                                 {
-                                                  if( insert_at_position(aroot,node,angle,0) < 0 )
+                                                  if( insert_at_position(aroot,node,(void*)angle,0) < 0 )
                                                      error("Error inserting node in angle list - \n%s\n",strerror(errno));
                                                 }
                                             }

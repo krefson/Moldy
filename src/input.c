@@ -29,6 +29,21 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: input.c,v $
+ *       Revision 2.11.4.1  2000/12/07 16:05:53  keith
+ *       Mainly cosmetic minor modifications and added special comments to
+ *       shut lint up.
+ *
+ *       Also freed memory allocated during lattice_start().
+ *
+ *       Revision 2.13  2000/11/22 11:59:52  keith
+ *       Freed memory used during lattice-start
+ *
+ *       Revision 2.12  2000/04/27 17:57:08  keith
+ *       Converted to use full ANSI function prototypes
+ *
+ *       Revision 2.11  1999/07/22 13:14:45  keith
+ *       SOme grammatical fixes to error messages.
+ *
  *       Revision 2.10  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -207,7 +222,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/input.c,v 2.10 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/input.c,v 2.11.4.1 2000/12/07 16:05:53 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -252,7 +267,7 @@ char	*line;
 int	len;
 FILE	*file;
 {
-   char	*s, *t;
+   char	*s;
    int  i;
    do
    {
@@ -442,12 +457,14 @@ pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
               else
                  (void)strcpy(s_ptr->name, name);
               s_ptr->flag |= S_NAME;
+	      /*FALLTHRU*/
            case 6:				/* Site charge supplied.      */
               if(s_ptr->flag & S_CHARGE && charge != s_ptr->charge)
                  message(&nerrs,line,ERROR,CCONF,id, s_ptr->charge);
               else
                  s_ptr->charge = charge;
               s_ptr->flag |= S_CHARGE;
+	      /*FALLTHRU*/
            case 5:				/* Site mass supplied.        */
               if(s_ptr->flag & S_MASS && mass != s_ptr->mass)
                  message(&nerrs,line,ERROR,MCONF,id, s_ptr->mass);
@@ -456,6 +473,7 @@ pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
               else
                  s_ptr->mass = mass;
               s_ptr->flag |= S_MASS;
+	      /*FALLTHRU*/
            case 4:				/* All site co-ordinates      */
 	      for( i = 0; i < 3; i++ )
 	         spec->p_f_sites[isite][i] = p_f_sites[i];
@@ -569,7 +587,7 @@ quat_mt	qpf[];				/* Princ frame rotation quaternion    */
 {
    typedef struct init_s {int species;  struct init_s *next;
                   double r[3], q[4];} init_mt; 	/* For linked list of coords  */
-   init_mt	*cur, *init = NULL;		/* Current and header of list */
+   init_mt	*cur, *next, *init = NULL;		/* Current and header of list */
    double	a, b, c, calpha, cbeta, cgamma;	/* Unit cell lengths, angles  */
    int		ix, iy, iz, nx, ny, nz;		/* Number of unit cells in MDC*/
    spec_mp	spec;
@@ -671,6 +689,12 @@ quat_mt	qpf[];				/* Princ frame rotation quaternion    */
 	       nmols[cur->species]++;
 	    }
    }
+   for(cur = init; cur != NULL; cur = next)
+   {
+      next = cur -> next;
+      xfree(cur);
+   }
+   xfree(nmols);
    message(NULLI, NULLP, INFO, LATTIC);
 }
 /*******************************************************************************

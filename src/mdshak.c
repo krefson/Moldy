@@ -19,7 +19,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdshak.c,v 2.20 1999/10/29 16:44:28 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdshak.c,v 2.21.4.1 2000/12/07 15:58:30 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -45,7 +45,6 @@ gptr	*arralloc();	        	/* Array allocator		      */
 #endif
 
 void    moldy_out();
-void	make_sites();
 char	*strlower();
 void	read_sysdef();
 void	initialise_sysdef();
@@ -94,7 +93,7 @@ char	*argv[];
    int		iout = 0;
    int		outsw=0;
    char		*filename = NULL, *dump_name = NULL;
-   char		*dumplims = NULL, *atom_sel = NULL;
+   char		*dumplims = NULL;
    char		*insert = NULL;
    char		*tempname;
    char		dumpcommand[256];
@@ -128,12 +127,9 @@ char	*argv[];
    else
      outsw = OUTBIN;
 
-   while( (c = getopt(argc, argv, "a:d:o:cr:s:d:t:i:hxbvpyg") ) != EOF )
+   while( (c = getopt(argc, argv, "d:o:cr:s:d:t:i:hxbvpyg") ) != EOF )
       switch(c)
       {
-       case 'a': 
-	 atom_sel = optarg;
-	 break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error("failed to open file \"%s\" for output", optarg);
@@ -362,7 +358,7 @@ char	*argv[];
                if( irec == start )
                {
                    prev_cofm = aalloc(sys.nmols, vec_mt);
-                   zero_real(prev_cofm, 3*sys.nmols);
+                   zero_real(prev_cofm[0], 3*sys.nmols);
                }
                traj_con(&sys, prev_cofm, irec-start);
            }

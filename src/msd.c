@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 2.0 1999/11/18 09:58:33 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/msd.c,v 2.0.4.1 2000/12/07 15:58:27 keith Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,13 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/msd.c,v 2.0
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 2.0.4.1  2000/12/07 15:58:27  keith
+ *  Mainly cosmetic minor modifications and added special comments to
+ *  shut lint up.
+ *
+ *  Revision 2.0  1999/11/18 09:58:33  keith
+ *  checked in with -k by keith at 1999/11/25 14:27:58
+ *
  *  Revision 2.0  1999/11/25  14:05:33  craig
  *  Selection of positions outside of limits now possible with -X,-Y,-Z
  *  Added new function "in_region" to utlsup.c
@@ -387,7 +394,7 @@ char	*argv[];
    real         ***msd;
    int		it;
 
-   zero_real(range,9);
+   zero_real(range[0],9);
 
 #define MAXTRY 100
    control.page_length=1000000;
@@ -661,7 +668,7 @@ char	*argv[];
 
   /* Allocate memory for trajectory data and zero */
    traj_cofm = (vec_mt**)arralloc(sizeof(vec_mt),2,0,nslices-1,0,sys.nmols-1);
-   zero_real(traj_cofm[0], nslices*sys.nmols*3);
+   zero_real(traj_cofm[0][0], nslices*sys.nmols*3);
 
   /* Allocate array to store unit cell matrices */
    hmat = aalloc(nslices, mat_mt);

@@ -37,6 +37,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *      $Log: startup.c,v $
+ *      Revision 2.16.4.1  2000/12/07 15:46:28  keith
+ *      Changed d_of_f to be 3N-3 rather than 3N.
+ *
+ *      Revision 2.16  1999/12/20 15:19:26  keith
+ *      Check for rdf-limit or nbinds changed on restart, and handle
+ *      gracefully.
+ *
  *      Revision 2.15  1999/10/11 09:51:07  keith
  *      Fully implemented new constant-pressure algorithm.
  *      Select by "const-pressure=2" in control.
@@ -252,7 +259,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/startup.c,v 2.15 1999/10/11 09:51:07 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/startup.c,v 2.16.4.1 2000/12/07 15:46:28 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -760,7 +767,9 @@ quat_mt		qpf[];			/* Quaternion rotation to princ.frame*/
    printf(" *D* Totals: nsites = %d, nmols = %d, nmols_r = %d, dof = %d\n",
           system->nsites, system->nmols, system->nmols_r, system->d_of_f);
 #endif
-   
+
+   system->d_of_f -= 3;  /*Since total linear mimentum = 0 */
+
    flag = false;			/* Test to see if any charges present */
    for(id = 1; id < system->max_id; id++)
       flag |= (site_info[id].charge != 0.0);

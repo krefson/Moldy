@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdavpos.c,v 2.11 1999/10/11 14:05:19 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/mdavpos.c,v 2.12.4.1 2000/12/07 15:58:32 keith Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *
@@ -28,6 +28,14 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/mdavpos.c,v
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.12.4.1  2000/12/07 15:58:32  keith
+ *  Mainly cosmetic minor modifications and added special comments to
+ *  shut lint up.
+ *
+ *  Revision 2.12  1999/10/29 16:44:28  keith
+ *  Updated usage message
+ *  Corrected interface to traj_con().
+ *
  *  Revision 2.12  1999/10/25 10:07:55  craig
  *  Updated usage message for new output formats.
  *  Modified routine (in utlsup.c) for connecting trajectories.
@@ -472,7 +480,7 @@ char	*argv[];
 
   /* create arrays for previous c_of_m`s for each species */
      prev_cofm = aalloc(sys.nmols, vec_mt);
-     zero_real(prev_cofm,3*sys.nmols);
+     zero_real(prev_cofm[0],3*sys.nmols);
      avpos = aalloc(sys.nspecies, spec_mt);
   
      if( (dump_buf = (float*)malloc(dump_size)) == 0)

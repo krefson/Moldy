@@ -43,6 +43,15 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: dump.c,v $
+ *       Revision 2.10.2.2.2.1  2000/12/07 15:58:36  keith
+ *       Mainly cosmetic minor modifications and added special comments to
+ *       shut lint up.
+ *
+ *       Revision 2.10.2.2  2000/09/29 14:24:21  keith
+ *       Added tests and made secure against buffer overflow in "vsn" field of
+ *       dump and restart headers.  The 16-char buffer leads to overflows with
+ *       long CVS version strings
+ *
  *       Revision 2.10.2.1  2000/08/29 16:49:20  keith
  *       Fixed RNG to be synchronous on multiprocessor -- needed for
  *       scale-options=8.
@@ -176,7 +185,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.10.2.1 2000/08/29 16:49:20 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dump.c,v 2.10.2.2.2.1 2000/12/07 15:58:36 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -225,7 +234,9 @@ dump_mt	*hdr_p;
 boolean	*xdr_write;
 {
    int      errflg = true;	/* Provisionally !!   */
+#ifdef USE_XDR
    char     vbuf[sizeof hdr_p->vsn + 1];
+#endif
 
    *xdr_write = false;
    if( (*dumpf = fopen(fname, "r+b")) == NULL)	/* Open dump file     */
@@ -297,7 +308,7 @@ double		pe;
    boolean	xdr_write = false;	/* Is current dump in XDR format?     */
    static int	firsttime = 1;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.10.2.1 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.10.2.2.2.1 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    if( ! strchr(control.dump_file, '%') )

@@ -26,6 +26,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: xdr.c,v $
+ *       Revision 2.13.4.1  2000/12/07 16:05:20  keith
+ *       Mainly cosmetic minor modifications and added special comments to
+ *       shut lint up.
+ *
+ *       Revision 2.13  2000/04/24 15:06:17  keith
+ *       Fixed bug where ints were stored as booleans, losing value.
+ *
  *       Revision 2.12  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -89,7 +96,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/xdr.c,v 2.12 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/xdr.c,v 2.13.4.1 2000/12/07 16:05:20 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"structs.h"
@@ -104,8 +111,10 @@ bool_t xdr_real(xdrs, rp)
 XDR     *xdrs;
 real    *rp;
 {
+   /*CONSTCOND*/
    if( sizeof(real) == sizeof(double) )
       return xdr_double(xdrs, (double*)rp);
+   /*CONSTCOND*/
    else if( sizeof(real) == sizeof(float) )
       return xdr_float(xdrs, (float*)rp);
    else
@@ -344,7 +353,9 @@ xdr_vector(xdrs, basep, nelem, elemsize, xdr_elem)
 }
 #endif
 #else
+/*ARGSUSED*/
 void	xdr_set_npotpar (npotpar) int npotpar; {}
+/*ARGSUSED*/
 void	xdr_set_av_size_conv (size, av_conv) size_mt size; int av_conv; {}
 bool_t	xdr_site () {return 0;}
 bool_t	xdr_restrt () {return 0;}

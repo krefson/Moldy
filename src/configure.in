@@ -4,6 +4,9 @@ AC_CONFIG_HEADER(config.h)
 
 AC_CANONICAL_SYSTEM
 
+dnl Checks for programs.
+AC_PROG_CC2
+
 if test "${CC-cc}" != gcc; then
 dnl 
 dnl Check for C compiler. DEFCC is preferred compiler, ALTCC is a list
@@ -15,18 +18,19 @@ dnl
       rs6000-ibm-aix*)    DEFCC=cc ALTCC="mpcc mpicc bspcc xlc c89" ;;
       sparc-sun-sunos*)   DEFCC=cc ALTCC="mpicc bspcc acc";;
       sparc-sun-solaris*) DEFCC=cc ALTCC="mpicc bspcc c89";;
+      mips-sgi-irix*)     DEFCC=cc ALTCC="mpicc bspcc c89";;
 dnl   
 dnl Unfortunately the Bourne-shell "env=value command" construct breaks the 
 dnl configure script.
 dnl However we can rely on the "env" command in the case of the crays.
 dnl   
-      T3D-cray-unicos*)   DEFCC="env TARGET=cray-t3d cc" ALTCC="mpicc bspcc";;
-      T3E-cray-unicos*)   DEFCC="env TARGET=cray-t3e cc" ALTCC="mpicc bspcc";;
+      alpha-cray-unicosmk*)   DEFCC="env TARGET=cray-t3d cc" ALTCC="mpicc bspcc cc";;
+      alphaev*-cray-unicosmk*) DEFCC="env TARGET=cray-t3e cc" ALTCC="mpicc bspcc cc";;
 dnl
 dnl Alternative compilers for Linux
 dnl
-      i?86-pc-linux*)     DEFCC=pgcc ALTCC="gcc mpicc bspcc";;
-                     *)   ALTCC="mpicc bspcc";;
+      i?86-pc-linux*)     DEFCC=pgcc ALTCC="mpicc bspcc";;
+                     *)   ALTCC="cc mpicc bspcc";;
    esac
 dnl
 dnl Here we test whether the specified (or default) C compiler is one of those
@@ -54,7 +58,8 @@ dnl
                           ${OPT2=$OPT} ${OPTAUX=$OPT2};;
      mips-sgi-irix5*)   : ${OPT=-O2\ -mips2} ${OPT2=$OPT} ${OPTAUX=$OPT2}\
                           ${LIBS=-lmalloc\ -lfastm} ;;
-     mips-sgi-irix6*)   : ${CFLAGS=-woff\ 1174,84} ${OPT=-O3} \
+     mips-sgi-irix6*)   : ${CFLAGS=-woff\ 1174,84,1552,1680} ${LDFLAGS=-woff\ 84} \
+			  ${OPT=-O3} \
                           ${OPT2=${OPT}\ -OPT:alias=restrict:fast_sqrt=on:roundoff=3:IEEE_arithmetic=3}} \
                           ${OPTAUX=$OPT2};;
      hppa1.*-hp-*)      : ${OPT=+O3\ +Olibcalls}  \
@@ -64,14 +69,14 @@ dnl
      c*-convex-bsd*)    : ${OPT=-O2\ -na\ -nv\ -fi}  \
                           ${OPT2=${OPT}\ -alias\ standard\ -alias\ ptr_args\ -alias\ array_args} \
                           ${OPTAUX=$OPT2} ${LIBS=-fi\ -lveclib}  ;;
-     *mp-cray-unicos*|*90-cray-unicos*) 
+     *mp-cray-unicos*|*90-cray-unicos*|sv1-cray-unicos*) 
                         : ${OPT=-h\ nostdc,vector3,scalar3,ivdep}  \
                           ${OPT2=$OPT} ${OPTAUX=$OPT2} \
                           ${LDFLAGS=-Wl,-D,HEAP=50000+50000\ -Wl,-D,STACK=10000+10000} \
                           ${LIBS=-lsci}  ;;
-     T3D-cray-unicos*)  : ${OPT=-O2} ${OPT2=-O3\ -hunroll,aggress,restrict=a} \
+     alpha-cray-unicosmk*)   : ${OPT=-O2} ${OPT2=-O3\ -hunroll,aggress,restrict=a} \
                           ${OPTAUX=$OPT2} ${LIBS=-lsci} ;;
-     T3E-cray-unicos*)  : ${OPT=-O2} ${OPTAUX=-O3\ -hunroll,aggress,restrict=a} \
+     alphaev*-cray-unicosmk*) : ${OPT=-O2} ${OPTAUX=-O3\ -hunroll,aggress,restrict=a} \
                           ${OPT2=$OPTAUX,inlinefrom=auxil.c} \
                           ${LIBS=-lsci} ;;
      i?86-pc-linux*)      if test $CC = "pgcc" ; then
@@ -83,8 +88,6 @@ dnl
    fi
 fi
 
-dnl Checks for programs.
-AC_PROG_CC2
 dnl AC_PATH_CPP
 dnl Extra compiler options.  We know whether we are using gcc at this point.
 if test "x$ac_cv_prog_gcc" = xyes; then

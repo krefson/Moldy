@@ -42,6 +42,23 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: algorith.c,v $
+ *       Revision 2.11.4.1  2000/10/11 16:11:09  keith
+ *       First working version of H. Bekker's pbc algorithm.  This computes
+ *       forces and stresses correctly without computing the virial in the
+ *       inner loop.
+ *
+ *       It relies on atomic sites being assigned to cells rather than
+ *       molecules, and should therefore be more efficient for systems
+ *       containing "large" molecules.  This is because the neighbour
+ *       list can be smaller.
+ *
+ *       It gives exactly the same energies, forces and stresses as the standard
+ *       version for systems like controp.tips2 and control.quartz, but only in
+ *       strict-cutoff mode.  Lazy cutoff mode generates slightly different numbers.
+ *
+ *       Revision 2.11  1999/09/14 13:31:31  keith
+ *       Experimental version implementing true const P (strain-mask=512).
+ *
  *       Revision 2.10  1998/05/07 17:06:11  keith
  *       Reworked all conditional compliation macros to be
  *       feature-specific rather than OS specific.
@@ -135,7 +152,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/algorith.c,v 2.10 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/algorith.c,v 2.11.4.1 2000/10/11 16:11:09 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include 	"defs.h"
@@ -297,15 +314,16 @@ VECTORIZE
  *  molecules from the principal-frame sites, the quaternions and the centre  *
  *  of mass co-ordinates.  Called once for each molecular species.            *
  ******************************************************************************/
-void make_sites(h, c_of_m_s , quat, p_f_sites, framework, site, nmols, nsites)
+void make_sites(h, c_of_m_s , quat, p_f_sites, site, nmols, nsites,
+		molflag)
 mat_mt		h;		/* Unit cell matrix h		     (in)     */
 vec_mp		c_of_m_s,	/* Centre of mass co-ords [nmols][3] (in)     */
 		p_f_sites;	/* Principal-frame sites [nsites][3] (in)     */
 real		**site;		/* Sites [nmols*nsites][3]          (out)     */
-int		framework;	/* Flag to signal framework structure (in)    */
 quat_mp		quat;		/* Quaternions [nmols][4]            (in)     */
 int		nmols,		/* Number of molecules                        */
 		nsites;		/* Number of sites on each molecule           */
+int		molflag;	/* Whether to apply pbc to sites or cofm      */
 {
    int		imol, isite, i;	/* Counters				      */
    vec_mt	c_of_m;		/* Unscaled centre of mass co-ordinates       */
@@ -335,7 +353,7 @@ int		nmols,		/* Number of molecules                        */
       }
    }
 
-   if( framework )			/* Apply pbc's to put sites into cell */
+   if( molflag!=MOLPBC ) /* Apply pbc's to put sites into cell */
       for( isite = 0; isite < nmols*nsites; isite++ )
       {
           site[0][isite] -= lx  *      floor(MATMUL(0,hinv,site,isite) + 0.5);

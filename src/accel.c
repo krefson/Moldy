@@ -25,6 +25,24 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: accel.c,v $
+ *       Revision 2.19.2.1.2.1  2000/10/11 16:11:08  keith
+ *       First working version of H. Bekker's pbc algorithm.  This computes
+ *       forces and stresses correctly without computing the virial in the
+ *       inner loop.
+ *
+ *       It relies on atomic sites being assigned to cells rather than
+ *       molecules, and should therefore be more efficient for systems
+ *       containing "large" molecules.  This is because the neighbour
+ *       list can be smaller.
+ *
+ *       It gives exactly the same energies, forces and stresses as the standard
+ *       version for systems like controp.tips2 and control.quartz, but only in
+ *       strict-cutoff mode.  Lazy cutoff mode generates slightly different numbers.
+ *
+ *       Revision 2.19.2.1  2000/05/19 11:06:42  keith
+ *       Fixed bug in stress calculation for polyatomic molecules.
+ *       Was using old set of co-ordinates.
+ *
  *       Revision 2.19  1999/10/08 15:49:58  keith
  *       Fully implemented new constant-pressure algorithm.
  *       Select by "const-pressure=2" in control.
@@ -230,7 +248,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/CVS/moldy/src/accel.c,v 2.19 1999/10/08 15:49:58 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/accel.c,v 2.19.2.1.2.1 2000/10/11 16:11:08 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	"defs.h"
@@ -923,7 +941,8 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
    for (spec = species; spec < &species[nspecies]; spec++)
    {
       make_sites(sys->h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		spec->framework,site_sp[spec-species],spec->nmols,spec->nsites);
+		 site_sp[spec-species],spec->nmols,spec->nsites,
+		 SITEPBC);
 #ifdef DEBUG1
    { int is;
      printf("%s co-ordinates\n",spec->name);
@@ -931,7 +950,7 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
 	printf("%24.15f %24.15f %24.15f\n", site_sp[spec-species][0][is],
 	       		                   site_sp[spec-species][1][is],
 	                                   site_sp[spec-species][2][is]);
-  }
+   }
 #endif
    }
 
@@ -955,6 +974,12 @@ int		backup_restart;	       /* Flag signalling backup restart (in)*/
    par_rsum(stress[0], 9);
    par_rsum(site_force[0], 3*nsarray);
 #endif
+   for (spec = species; spec < &species[nspecies]; spec++)
+   {
+      make_sites(sys->h, spec->c_of_m, spec->quat, spec->p_f_sites,
+		 site_sp[spec-species],spec->nmols,spec->nsites,
+		 spec->framework?SITEPBC:MOLPBC);
+   }
    if (control.alpha > ALPHAMIN)
    {
 /*

@@ -19,11 +19,18 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/dumpconv.c,v 2.9 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/dumpconv.c,v 2.10.4.1 2000/12/07 15:58:36 keith Exp $";
 #endif
 
 /*
  * $Log: dumpconv.c,v $
+ * Revision 2.10.4.1  2000/12/07 15:58:36  keith
+ * Mainly cosmetic minor modifications and added special comments to
+ * shut lint up.
+ *
+ * Revision 2.10  1998/05/22 11:11:47  keith
+ * Protected va_dcl redefinition.
+ *
  * Revision 2.9  1998/05/07 17:06:11  keith
  * Reworked all conditional compliation macros to be
  * feature-specific rather than OS specific.
@@ -275,7 +282,7 @@ dump_mt	*header;
    if((c = strchr(header->vsn, '\n')))
       *c = '\0';
    num  = 2;
-   num += scanf("%d %d %d %d %d", &header->istep, &header->dump_interval,
+   num += scanf("%ld %ld %d %d %d", &header->istep, &header->dump_interval,
 	  &header->dump_level, &header->maxdumps, &header->ndumps);
    num += scanf("%ld %ld %ld %d",&header->timestamp,
 		 &header->restart_timestamp,
@@ -312,7 +319,7 @@ dump_mt	*header;
    if( (s = strstr(header->vsn,"(XDR)") ) != 0 )
       *s = 0;
    printf("%s\n%s\n",header->title, header->vsn);
-   printf("%d %d %d %d %d\n", header->istep, header->dump_interval,
+   printf("%ld %ld %d %d %d\n", header->istep, header->dump_interval,
 	  header->dump_level, header->maxdumps, header->ndumps);
    printf("%ld %ld %ld %d\n",header->timestamp, header->restart_timestamp,
 	   header->dump_init, header->dump_size); 

@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/molout.c,v 1.3 1999/11/01 17:24:49 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/molout.c,v 1.4.4.1 2000/12/07 15:51:21 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -140,7 +140,7 @@ char		*insert;
    for(spec = species; spec < species+system->nspecies; spec++)
    {
       make_sites(system->h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 spec->framework, site, spec->nmols, spec->nsites);
+		 site, spec->nmols, spec->nsites, MOLPBC);
 
       mat_vec_mul3(hinv, site, spec->nsites*spec->nmols);
 
@@ -218,7 +218,7 @@ int		intyp;
    for(spec = species; spec < species+system->nspecies; ispec++, spec++)
    {
      make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-           spec->framework, site, spec->nmols, spec->nsites);
+		site, spec->nmols, spec->nsites, MOLPBC);
 
      isite = 0;
      for(imol = 0; imol < spec->nmols; imol++)
@@ -283,7 +283,7 @@ char		*insert;
    for(spec = species; spec < species+system->nspecies; spec++)
    {
       make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 spec->framework, site, spec->nmols, spec->nsites);
+		 site, spec->nmols, spec->nsites, MOLPBC);
 
       isite = 0;
       for(imol = 0; imol < spec->nmols; imol++)
@@ -329,7 +329,7 @@ site_mt		site_info[];
    for(spec = species; spec < species+system->nspecies; spec++)
    {
       make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 spec->framework, site, spec->nmols, spec->nsites);
+		 site, spec->nmols, spec->nsites, MOLPBC);
 
       isite = 0;
       for(imol = 0; imol < spec->nmols; imol++)
@@ -379,7 +379,7 @@ spec_mt		species[];
    for(spec = species; spec < species+system->nspecies; spec++)
    {
       make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-		 spec->framework, site, spec->nmols, spec->nsites);
+		 site, spec->nmols, spec->nsites, MOLPBC);
 
       mat_vec_mul3(hinv, site, spec->nsites*spec->nmols);
 
@@ -457,7 +457,7 @@ int		intyp;
    for(spec = species; spec < species+system->nspecies; ispec++, spec++)
    {
      make_sites(h, spec->c_of_m, spec->quat, spec->p_f_sites,
-           spec->framework, site, spec->nmols, spec->nsites);
+		site, spec->nmols, spec->nsites, MOLPBC);
 
      mat_vec_mul3(hinv, site, spec->nsites*spec->nmols);
 

@@ -26,6 +26,13 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: auxil.c,v $
+ *       Revision 2.17.2.1.2.1  2000/12/07 15:46:58  keith
+ *       Corrected (mostly) harmless error in declaration of sum().
+ *
+ *       Revision 2.17.2.1  2000/08/29 16:49:19  keith
+ *       Fixed RNG to be synchronous on multiprocessor -- needed for
+ *       scale-options=8.
+ *
  *       Revision 2.17  1999/09/09 11:32:59  keith
  *       Got rid of #ifdef unix and rely on HAVE_FEATURE macros to
  *       conditionally compile the timers.  This enables compilation
@@ -282,7 +289,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.17 1999/09/09 11:32:59 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/auxil.c,v 2.17.2.1.2.1 2000/12/07 15:46:58 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -532,7 +539,7 @@ VECTORIZE
 }
 double sum(n,x,ix)
 register int	n;
-register double	x[];
+register real	x[];
 register int	ix;
 {
    register double	sa=0.0,sb=0.0,sc=0.0,sd=0.0,s1=0.0,s2=0.0,s3=0.0,s4=0.0;

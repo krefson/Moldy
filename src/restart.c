@@ -31,6 +31,15 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $
+ *       Revision 2.12.2.1.2.1  2000/12/07 15:58:29  keith
+ *       Mainly cosmetic minor modifications and added special comments to
+ *       shut lint up.
+ *
+ *       Revision 2.12.2.1  2000/09/29 14:24:22  keith
+ *       Added tests and made secure against buffer overflow in "vsn" field of
+ *       dump and restart headers.  The 16-char buffer leads to overflows with
+ *       long CVS version strings
+ *
  *       Revision 2.12  1999/12/20 15:19:26  keith
  *       Check for rdf-limit or nbinds changed on restart, and handle
  *       gracefully.
@@ -166,7 +175,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/restart.c,v 2.12 1999/12/20 15:19:26 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/restart.c,v 2.12.2.1.2.1 2000/12/07 15:58:29 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -204,6 +213,7 @@ static int    size_flg = 0;
 /******************************************************************************
  * creset() reset and rewind input stream.				      *
  ******************************************************************************/
+#ifdef USE_XDR
 static
 void creset(fp)
 FILE 	*fp;
@@ -212,6 +222,7 @@ FILE 	*fp;
    if( fseek(fp,0L,0) )
       message(NULLI,NULLP,FATAL,SEFAIL,"<RESTART FILE>",strerror(errno));      
 }
+#endif
 /******************************************************************************
  *   cnext.  Read the size of the next 'record' stored in the file.           *
  *   Leave file pointer unchanged.  ie do lookahead.			      *
@@ -248,6 +259,7 @@ xfp_mt	xfp;
  *   expected value.  Finally call fread to read in this data and check for   *
  *   error and end of file						      *
  ******************************************************************************/
+/*ARGSUSED4*/
 static
 void	cread(xfp, ptr, size, nitems, proc)
 xfp_mt	xfp;
@@ -329,6 +341,7 @@ xdrproc_t proc;
 /******************************************************************************
  *  cwrite.  opposite of cread.  write the length followed by the data	      *
  ******************************************************************************/
+/*ARGSUSED4*/
 static
 void	cwrite(xfp, ptr, size, nitems, proc)
 xfp_mt	xfp;
@@ -397,7 +410,9 @@ FILE	  *restart;
 restrt_mt *header;
 contr_mt  *contr;
 {
+#ifdef USE_XDR
    char         vbuf[sizeof header->vsn + 1];
+#endif
    int		vmajor,vminor;
    xfp_mt	xfp;
    xfp.xp =     &xdrs;
@@ -536,7 +551,8 @@ pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
       old_npotp = ((long)cnext(xfp)/ n_pot_recs - (long)sizeof(pot_mt))/
                        (long)sizeof(real) + NPOTP;
    old_pot_size = sizeof(pot_mt) + (old_npotp - NPOTP) * sizeof(real);
-   *pot_ptr = (pot_mt*)aalloc(n_pot_recs*MAX(sizeof(pot_mt),old_pot_size), char);
+   *pot_ptr = aalloc((n_pot_recs+1)*
+		     MAX(sizeof(pot_mt),old_pot_size)/sizeof(pot_mt), pot_mt);
    xdr_set_npotpar(old_npotp);		/* Pass npotpar to xdr_pot. Ugh! */
    cread(xfp,  (gptr*)*pot_ptr, old_pot_size, n_pot_recs, xdr_pot);
    conv_potsize(*pot_ptr, old_pot_size, old_npotp, system->n_potpar, n_pot_recs);
@@ -647,7 +663,7 @@ pot_mp		potpar;			/* To be pointed at potpar array      */
    XDR		xdrsw;
    xfp_mt	xfp;
 #define REV_OFFSET 11
-   char		*vsn = "$Revision: 2.12 $"+REV_OFFSET;
+   char		*vsn = "$Revision: 2.12.2.1.2.1 $"+REV_OFFSET;
 #define LEN_REVISION strlen(vsn)
 
    save = fopen(control.temp_file, "wb");

@@ -19,11 +19,18 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/dumpanal.c,v 2.8 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/Attic/dumpanal.c,v 2.9.4.1 2000/12/07 15:58:37 keith Exp $";
 #endif
 
 /*
  * $Log: dumpanal.c,v $
+ * Revision 2.9.4.1  2000/12/07 15:58:37  keith
+ * Mainly cosmetic minor modifications and added special comments to
+ * shut lint up.
+ *
+ * Revision 2.9  1999/12/20 15:23:32  keith
+ * Removed parenthesis from check
+ *
  * Revision 2.8  1998/05/07 17:06:11  keith
  * Reworked all conditional compliation macros to be
  * feature-specific rather than OS specific.
@@ -166,8 +173,8 @@ dump_mt	*header;
 {
    printf("Title\t\t\t= \"%s\"\n",header->title);
    printf("RCS Revision\t\t= %.*s\n", (int)strlen(header->vsn)-1, header->vsn);
-   printf("Istep\t\t\t= %d\n",header->istep);
-   printf("Dump_interval\t\t= %d\n", header->dump_interval);
+   printf("Istep\t\t\t= %ld\n",header->istep);
+   printf("Dump_interval\t\t= %ld\n", header->dump_interval);
    printf("Dump_level\t\t= %d\n", header->dump_level);
    printf("Max dumps\t\t= %d\n", header->maxdumps);
    printf("Dump Size\t\t= %d\n", header->dump_size);

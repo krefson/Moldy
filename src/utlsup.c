@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/utlsup.c,v 1.2 1999/10/29 16:44:28 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/utlsup.c,v 1.5.4.1 2000/12/07 15:58:29 keith Exp $";
 #endif
 
 #include "defs.h"
@@ -24,10 +24,13 @@ char	*comm;
 /******************************************************************************
  * Dummies of moldy routines so that utils may be linked with moldy library   *
  ******************************************************************************/
+/*VARARGS*/
 void 	init_rdf()
 {}
+/*VARARGS*/
 gptr *rdf_ptr()
 {return 0;}
+/*VARARGS*/
 void new_lins()
 {}
 int lines_left()
@@ -38,8 +41,10 @@ void	new_line()
 {
    (void)putchar('\n');
 }
+/*VARARGS*/
 void	banner_page()
 {}
+/*VARARGS*/
 void	note()
 {}
 
@@ -63,7 +68,6 @@ va_dcl
    char         *buff;
    int          sev;
    char         *format;
-   static char  *sev_txt[] = {" *I* "," *W* "," *E* "," *F* "};
 #ifdef HAVE_STDARG_H
    va_start(ap, nerrs);
 #else
@@ -182,7 +186,7 @@ real 	lo, hi;
    if( ans_flag )
       return(ans_r);
    else
-      return(EOF);
+      return((double)EOF);
 }
 /******************************************************************************
  * get_sym().  Read a character from stdin and match to supplied set          *

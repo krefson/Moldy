@@ -22,6 +22,14 @@ what you give them.   Help stamp out software-hoarding!  */
  * Parallel - support and interface routines to parallel MP libraries.	      *
  ******************************************************************************
  *       $Log: parallel.c,v $
+ *       Revision 2.21.2.1.2.1  2000/12/07 15:58:28  keith
+ *       Mainly cosmetic minor modifications and added special comments to
+ *       shut lint up.
+ *
+ *       Revision 2.21.2.1  2000/08/29 16:49:19  keith
+ *       Fixed RNG to be synchronous on multiprocessor -- needed for
+ *       scale-options=8.
+ *
  *       Revision 2.21  1998/07/17 14:54:06  keith
  *       Ported SHMEM version to IRIX 6/ SGI Origin 2000
  *
@@ -79,7 +87,7 @@ what you give them.   Help stamp out software-hoarding!  */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2.21 1998/07/17 14:54:06 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2.21.2.1.2.1 2000/12/07 15:58:28 keith Exp $";
 #endif
 /*========================== program include files ===========================*/
 #include	"defs.h"
@@ -115,10 +123,14 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/parallel.c,v 2
 #endif
 /*========================== External function declarations ==================*/
 gptr            *talloc();	       /* Interface to memory allocator       */
+void		tfree();
 gptr		*av_ptr();
 gptr            *rdf_ptr();
 void		init_averages();
 void		allocate_dynamics();
+void		init_rdf();
+unsigned long	getseed();
+void		smdrand();
 extern int 	ithread, nthreads;
 /*====================== Utilities for interface functions ===================*/
 #ifdef TCGMSG
@@ -391,7 +403,7 @@ int  n;
    if(n > tmpsize)
    {
       if( tmpbuf )
-	 free(tmpbuf);
+	 xfree(tmpbuf);
       tmpbuf = aalloc(n, int);
       tmpsize = n;
    }
@@ -609,7 +621,7 @@ int  n;
    if(n > tmpsize)
    {
       if( tmpbuf )
-	 free(tmpbuf);
+	 xfree(tmpbuf);
       tmpbuf = dalloc(n);
       tmpsize = n;
    }
@@ -631,7 +643,7 @@ int  n;
    if(n > tmpsize)
    {
       if( tmpbuf )
-	 free(tmpbuf);
+	 xfree(tmpbuf);
       tmpbuf = aalloc(n, double);
       tmpsize = n;
    }
@@ -1135,15 +1147,16 @@ int code;
 /******************************************************************************
  *  copy_sysdef                                                            *
  ******************************************************************************/
+/*ARGSUSED*/
 void	copy_sysdef(system, spec_ptr, site_info, pot_ptr)
 system_mp	system;			/* Pointer to system array (in main)  */
 spec_mp		*spec_ptr;		/* Pointer to be set to species array */
 site_mp		*site_info;		/* To be pointed at site_info array   */
 pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
 {
+#ifdef SPMD
    spec_mp	spec;
    int		n_pot_recs;
-#ifdef SPMD
    /*
     * Fetch "system" struct
     */
@@ -1175,20 +1188,21 @@ pot_mp		*pot_ptr;		/* To be pointed at potpar array      */
     */
    n_pot_recs = SQR(system->max_id);
    if( ithread > 0 )
-      *pot_ptr = (pot_mt*)aalloc(n_pot_recs*sizeof(pot_mt), char);
+      *pot_ptr = aalloc(n_pot_recs, pot_mt);
    par_broadcast((gptr*)*pot_ptr, n_pot_recs, sizeof(pot_mt), 0);
 #endif
 }
 /******************************************************************************
  *  copy_dynamics()							      *
  ******************************************************************************/
+/*ARGSUSED*/
 void	copy_dynamics(system)
 system_mp	system;
 {
+#ifdef SPMD
    gptr		*ap;			/* Pointer to averages database       */
    size_mt	asize;			/* Size of averages database	      */
 
-#ifdef SPMD
    par_broadcast((gptr*)system->c_of_m,3*system->nmols, sizeof(real), 0);
    par_broadcast((gptr*)system->vel,   3*system->nmols, sizeof(real), 0);
    par_broadcast((gptr*)system->velp,  3*system->nmols, sizeof(real), 0);
@@ -1238,6 +1252,7 @@ system_mp	system;
  *               This is for parallel implementations and allows "start_up"   *
  *		 to be called on one processor.                               *
  ******************************************************************************/
+/*ARGSUSED*/
 void replicate(control, system, spec_ptr, site_info, pot_ptr, restart_header)
 contr_mt  *control;
 system_mt *system;
@@ -1246,12 +1261,12 @@ site_mt	  **site_info;
 pot_mt    **pot_ptr;
 restrt_mt *restart_header;
 {
+#ifdef SPMD
    int av_convert;
    int jran;
    /*
     *  Fetch the top-level structs
     */
-#ifdef SPMD
    par_broadcast((gptr*)control, 1, sizeof *control, 0);
    par_broadcast((gptr*)restart_header, 1, sizeof *restart_header, 0);
    /*

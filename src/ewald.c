@@ -23,6 +23,14 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: ewald.c,v $
+ *       Revision 2.19.4.1  2000/12/07 15:58:34  keith
+ *       Mainly cosmetic minor modifications and added special comments to
+ *       shut lint up.
+ *
+ *       Revision 2.19  1998/12/03 15:45:17  keith
+ *       Hand unrolled stress loops to avoid attempts by compilers to optimise
+ *       loops with 1 or 2 iterations.
+ *
  *       Revision 2.18  1998/11/26 17:08:02  keith
  *       Performance improvements.
  *        a) Cache values of sin and  cos(hx+ky) between calls of qsincos().
@@ -230,7 +238,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/ewald.c,v 2.18 1998/11/26 17:08:02 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/ewald.c,v 2.19.4.1 2000/12/07 15:58:34 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include 	"defs.h"
@@ -312,7 +320,7 @@ real coshx[], sinhx[], cosky[], sinky[], coslz[], sinlz[],
 int  h, k,l,nsites;
 {
    int is;
-   real qckr, chxky, shxky;
+   real qckr, chxky;
    static int hlast=-1000000,klast=-1000000;
    
    if( h != hlast || k != klast ) 
@@ -502,7 +510,7 @@ mat_mt		stress;			/* Stress virial		(out) */
 {
    mat_mt	hinvp;			/* Matrix of reciprocal lattice vects*/
    int		h, k, l;		/* Recip. lattice vector indices     */
-   int		i, j, is, ssite;	/* Counters.			     */
+   int		i, is, ssite;		/* Counters.			     */
    spec_mp	spec;			/* species[ispec]		     */
    int		nsites = system->nsites;
    double	pe_k,			/* Pot'l energy for current K vector */

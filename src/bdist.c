@@ -6,6 +6,13 @@ Copyright (C) 1999 Craig Fisher */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: bdist.c,v $
+ *  Revision 1.5.4.1  2000/12/07 15:58:32  keith
+ *  Mainly cosmetic minor modifications and added special comments to
+ *  shut lint up.
+ *
+ *  Revision 1.5  1999/11/01 17:16:43  keith
+ *  Fixed lint complaints.
+ *
  *  Revision 1.4  1999/09/24 10:51:54  keith
  *  Minor changes to Usage message.
  *
@@ -88,7 +95,6 @@ char    *instr;
 int     *start, *finish, *inc;
 {
    char *p, *pp, *str = mystrdup(instr);
-   long strtol();
   
    if( (p = strchr(str,':')) != NULL)
    {
@@ -476,6 +482,7 @@ char	*argv[];
       fgets(dummy,sizeof(dummy),Fp);
 
    /* Read bond length data from input file */
+   /*CONSTCOND*/
    while (1)
    { 
       fscanf(Fp,"%s - %s %d - %s %lf",a,atom1,&b,atom2,&rij);
@@ -493,7 +500,7 @@ char	*argv[];
             bond = NEW(BOND);
             strncpy((bond->atom1), atom1, 3);
             strncpy((bond->atom2), atom2, 3);
-            insert_data(&root_bond,bond,1);
+            insert_data(&root_bond,(void*)bond,1);
          }
          else
          {
@@ -510,7 +517,7 @@ char	*argv[];
             count = NEW(COUNT);
             count->xaxis = u;
             count->yaxis = 1;
-            insert_data(&(bond->root_count),count,1);
+            insert_data(&(bond->root_count),(void*)count,1);
          }
       }
    }
@@ -535,7 +542,7 @@ char	*argv[];
             strncpy((angle->atom1), atom1, 3);
             strncpy((angle->atom2), atom2, 3);
             strncpy((angle->atom3), atom3, 3);
-            insert_data(&root_angle,angle,1);
+            insert_data(&root_angle,(void*)angle,1);
          } 
          else
          { 
@@ -552,7 +559,7 @@ char	*argv[];
             count = NEW(COUNT);
             count->xaxis = u;
             count->yaxis = 1;
-            insert_data(&(angle->root_count),count,1);
+            insert_data(&(angle->root_count),(void*)count,1);
          }
       }
    }

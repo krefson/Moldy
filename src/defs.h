@@ -19,9 +19,31 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
 /*
- * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.14 1999/09/09 11:42:37 keith Exp $
+ * $Header: /home/minphys2/keith/CVS/moldy/src/defs.h,v 2.14.2.1.2.2 2000/12/07 15:58:37 keith Exp $
  *
  * $Log: defs.h,v $
+ * Revision 2.14.2.1.2.2  2000/12/07 15:58:37  keith
+ * Mainly cosmetic minor modifications and added special comments to
+ * shut lint up.
+ *
+ * Revision 2.14.2.1.2.1  2000/10/11 16:11:09  keith
+ * First working version of H. Bekker's pbc algorithm.  This computes
+ * forces and stresses correctly without computing the virial in the
+ * inner loop.
+ *
+ * It relies on atomic sites being assigned to cells rather than
+ * molecules, and should therefore be more efficient for systems
+ * containing "large" molecules.  This is because the neighbour
+ * list can be smaller.
+ *
+ * It gives exactly the same energies, forces and stresses as the standard
+ * version for systems like controp.tips2 and control.quartz, but only in
+ * strict-cutoff mode.  Lazy cutoff mode generates slightly different numbers.
+ *
+ * Revision 2.14.2.1  2000/08/29 16:57:53  keith
+ * Updated revision mechanism for CVS -- should now print correct
+ * version number if checked out with that tag.
+ *
  * Revision 2.14  1999/09/09 11:42:37  keith
  * Update for 2.14 release
  *
@@ -258,8 +280,8 @@ what you give them.   Help stamp out software-hoarding!  */
 /*
  * Version ID strings
  */
-#define          REVISION         "$Name$"
-#define		 REVISION_DATE    "$Date: 1999/09/09 11:42:37 $"
+#define          REVISION         "$Name:  $"
+#define		 REVISION_DATE    "$Date: 2000/12/07 15:58:37 $"
 #define		 REVISION_STATE   "$State: Exp $"
 
 #ifdef HAVE_CONFIG_H
@@ -331,13 +353,15 @@ what you give them.   Help stamp out software-hoarding!  */
 #define SEEK_END	2
 #endif
 
+#define MOLPBC 1
+#define SITEPBC 0
 #define	L_name		128			/* Max Length of file names  */
 #define	NPE		2			/* real & Ewald PE's	     */
 #undef  MAX
-#define MAX(x,y)	((x) > (y) ? (x) : (y))
+#define MAX(a,b)        (((a)>(b))?(a):(b))  
 #define MAX3(x,y,z)	MAX(x, MAX(y,z))
 #undef  MIN
-#define MIN(x,y)	((x) < (y) ? (x) : (y))
+#define MIN(a,b)        (((a)<(b))?(a):(b))         
 #define	MIN3(x,y,z)	MIN(((x) < (y) ? (x) : (y)),z)
 #define SUMSQ(x)	(x[0]*x[0] + x[1]*x[1] +x[2]*x[2])
 #define SUMSQ2(x)	(x[1]*x[1] + x[2]*x[2] +x[3]*x[3])

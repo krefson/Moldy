@@ -37,6 +37,15 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: output.c,v $
+ *       Revision 2.16.2.1.2.1  2000/12/07 15:48:43  keith
+ *       Banner_page() is now more selective about printing messages of intent
+ *       to perform scaling and RDF computations.  Checks to see if these will
+ *       be done within range of current run first.
+ *
+ *       Revision 2.16.2.1  2000/08/29 17:27:45  keith
+ *       Updated revision mechanism for CVS -- should now print correct
+ *       version number if checked out with that tag.
+ *
  *       Revision 2.16  2000/04/24 15:07:48  keith
  *       Added extra output to banner_page.  Now ALL important control-file
  *       options are logged in the output.
@@ -198,7 +207,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.16 2000/04/24 15:07:48 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.16.2.1.2.1 2000/12/07 15:48:43 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include "defs.h"
@@ -218,9 +227,11 @@ static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/output.c,v 2.1
 #include "messages.h"
 /*========================== External function declarations ==================*/
 void	conv_control();			/* Unit conversion for 'control'      */
+void    conv_potentials();		/* Convert potential parameters       */
 char	*atime();			/* Current date and time in ASCII     */
 char	*cctime();			/* Convert long time to ASCII.	      */
 void	rmlockfiles();
+void    par_abort();
 /*========================== External data references ========================*/
 extern	      contr_mt 	control;	    /* Main simulation control parms. */
 extern	const match_mt	match[];	    /* Control file keyword table.    */
@@ -233,7 +244,7 @@ static  int	out_line = 999999;	    /* Which line of output           */
 #define		S_USED		0x01
 /*========================== Special Control output cases ====================*/
 static        int	one=1;
-extern	      unit_mt	prog_unit;
+extern	const unit_mt	prog_unit;
 extern	      unit_mt	input_unit;
 static	const match_mt	special[] = {
         {"lattice-start",	"%d", "",	(gptr*)&one},
@@ -535,7 +546,7 @@ restrt_mt	*restart_header;
    format_long("Final step",control.nsteps);
    format_dbl("Size of step",control.step,TUNIT_N);
    format_dbl("CPU limit",control.cpu_limit,"s");
-   if(control.scale_interval > 0)
+   if(control.scale_interval > 0 && control.istep <= control.scale_end)
    {
       if( control.scale_options & 0x8 )
       {
@@ -567,7 +578,7 @@ restrt_mt	*restart_header;
       format_long("No. steps between scalings",control.scale_interval);
       format_long("End scaling at step",control.scale_end);
    }
-   if((control.scale_interval > 0) || (control.const_temp == 1))
+   if((control.scale_interval > 0) || (control.const_temp != 0))
       format_dbl("Applied Temperature",control.temp,"K");
    if(control.const_temp)
    {
@@ -635,7 +646,7 @@ restrt_mt	*restart_header;
       }
    }
 
-   if( control.rdf_interval > 0 )
+   if( control.rdf_interval > 0 && control.begin_rdf <= control.nsteps)
    {
       (void)printf(" Radial distribution functions will be calculated");
       new_line();

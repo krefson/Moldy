@@ -156,7 +156,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% RCS Emulation stuff                                 %%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\newcommand{\RCSrevision}{$ $Revision: 2.24 $ $}
+\newcommand{\RCSrevision}{$ $Revision: 2.25.6.1 $ $}
 \newcommand{\moldyversion}{2.14}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -646,8 +646,7 @@ and $\bm{\delta}$ is the unit matrix.
 \subsection{Potential Functions}
 \label{sec:potentials}
 % LJ, Buckingham (Born-Mayer) & MCY
-\moldy\ supports most common forms of potential function.  In
-particular, 
+\moldy\ supports most common forms of potential function including,
 \begin{list}{}{%
 \setlength{\parsep}{0in} 
 \setlength{\labelwidth}{1in}
@@ -2070,12 +2069,12 @@ m & n & p^{1}_{mn} & p^{2}_{mn} & \ldots & p^{r}_{mn}  \\
 \end{array}
 \end{displaymath}
 where \emph{potential-type} is one of the keywords
-\Lit{Lennard-Jones}, \Lit{Buckingham} or \Lit{MCY} or
-\Lit{generic} to identify the kind of potentials to be used, $i, j,
-k, l, m, n$ are site ids and $p^{\alpha}_{ij}$ is the $\alpha^{th}$
-potential parameter between sites $i$ and $j$.  There should be one
-line for each distinct pair of site ids.  If any pair is omitted a
-warning is issued and the parameter values are set to zero.
+\Lit{Lennard-Jones}, \Lit{Buckingham}, \Lit{MCY}, \Lit{generic},
+\Lit{morse} or \Lit{hiw} to identify the kind of potentials to be
+used, $i, j, k, l, m, n$ are site ids and $p^{\alpha}_{ij}$ is the
+$\alpha^{th}$ potential parameter between sites $i$ and $j$.  There should
+be one line for each distinct pair of site ids.  If any pair is
+omitted a warning is issued and the parameter values are set to zero.
 
 The meaning of the parameters for the currently defined potentials is
 as follows:
@@ -2102,6 +2101,15 @@ and the four parameters appear on the line in the order $A, B, C, D$.
 \[\phi(r_{ij}) = A_{ij} \exp(-B_{ij}r_{ij}) + C_{ij}/r_{ij}^{12} -
   D_{ij}/r_{ij}^4 -E_{ij}/r_{ij}^6 -F_{ij}/r_{ij}^8\]
 with the six parameters $A_{ij}$ -- $F_{ij}$.
+\item[morse] This is the Busing-Ida-Gilbert plus Morse-potential as
+  used in the Japanese MD program Mdxorto.  It has the form
+\[\phi(r_{ij}) = B_{ij}  exp ((C_{ij}-r_{ij})D_{ij})   - E_{ij}/r_{ij}^6 + F_{ij} \exp (-2G_{ij}(r_{ij}-H_{ij})) - 2F_{ij}\exp (-G_{ij}(r_{ij}-H_{ij}))\]
+with seven parameters $B_{ij}$ -- $H_{ij}$.
+\item[HIW]  This is a Lennard-Jones potential with an extra
+  fourth-power term to describe ion-water interactions in solution
+  using the \emph{HIW} model of R. R Pappalardo and
+  E. Sanchez-Marcos\cite{pappalardo:93}.  The form is
+\[\phi(r_{ij}) =  A_{ij}/r_{ij}^4 + B_{ij}/r_{ij}^6 + C_{ij}/r_{ij}^{12}\]
 \end{Litdescription}
 \noindent
 Other types of potential may be easily added: see section~\ref{sec:newpot}.

@@ -27,6 +27,14 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  * $Log: main.c,v $
+ * Revision 2.14.4.1  2000/12/07 15:58:33  keith
+ * Mainly cosmetic minor modifications and added special comments to
+ * shut lint up.
+ *
+ * Revision 2.14  1999/10/08 10:53:34  keith
+ * Added checks to behave sensibly if rdf-interval changed during accumulation
+ * of RDF data upon restart and to discard excess data if begin-rdf changed.
+ *
  * Revision 2.13  1998/05/07 17:06:11  keith
  * Reworked all conditional compliation macros to be
  * feature-specific rather than OS specific.
@@ -167,7 +175,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/main.c,v 2.13 1998/05/07 17:06:11 keith Exp $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/main.c,v 2.14.4.1 2000/12/07 15:58:33 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -177,6 +185,7 @@ static char *RCSid = "$Header: /home/eeyore_data/keith/moldy/src/RCS/main.c,v 2.
 #define SIGXCPU SIGCPULIM
 #endif		/* Unicos uses SIGCPULIM not SIGXCPU. */
 #include	<stdio.h>
+#include	"string.h"
 /*========================== Program include files ===========================*/
 #include	"structs.h"
 #include	"messages.h"
@@ -188,7 +197,6 @@ double	value();
 void	averages();
 void	output();
 void	rescale();
-void	dump();
 void	print_rdf();
 void	print_config();
 double	cpu();
@@ -257,7 +265,9 @@ char	*argv[];
    int		backup_restart;
    static mat_mt	stress_vir;
    static double	pe[NPE];
+#ifdef SPMD
    double t0, t00;
+#endif
    double	delta_cpu = 0.0, cpu_base = cpu();
    double	rt = rt_clock();
    vec_mt	(*meansq_f_t)[2];

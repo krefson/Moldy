@@ -34,6 +34,15 @@ what you give them.   Help stamp out software-hoarding!  */
  ******************************************************************************
  *      Revision Log
  *       $Log: values.c,v $
+ *       Revision 2.8.4.1  2000/12/07 15:58:29  keith
+ *       Mainly cosmetic minor modifications and added special comments to
+ *       shut lint up.
+ *
+ *       Revision 2.8  1998/05/07 17:06:11  keith
+ *       Reworked all conditional compliation macros to be
+ *       feature-specific rather than OS specific.
+ *       This is for use with GNU autoconf.
+ *
  *       Revision 2.7  1994/06/08 13:17:00  keith
  *       Made database size a size_mt (unsigned long) for 16 bit machines.
  *
@@ -135,7 +144,7 @@ what you give them.   Help stamp out software-hoarding!  */
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore_data/keith/md/moldy/RCS/values.c,v 2.7 1994/06/08 13:17:00 keith stab $";
+static char *RCSid = "$Header: /home/minphys2/keith/CVS/moldy/src/values.c,v 2.8.4.1 2000/12/07 15:58:29 keith Exp $";
 #endif
 /*========================== Program include files ===========================*/
 #include	"defs.h"
@@ -226,7 +235,7 @@ static  size_mt av_tmp_size;
 static  gptr    *av_tmp;
 /*========================== Macros ==========================================*/
 #define NAVT			(int)end
-#define INC(av_mp)    (av_mp = (av_mt*)((char*)av_mp + av_mt_size))
+#define INC(av_mp)    (av_mp = (av_mt*)((double*)av_mp + av_mt_size/sizeof(double)))
 /*============================================================================*/
 /******************************************************************************
  *  init_averages  Allocate space for and initialise the averages database.   *
@@ -370,7 +379,7 @@ int	av_convert;
 	       (av_head->nroll-rbl)*sizeof(double));
 
 	 INC(av_mp);
-	 prev_av_mp = (av_mt*)((char*)prev_av_mp + prev_av_mt_size);
+	 prev_av_mp = (av_mt*)((double*)prev_av_mp + prev_av_mt_size/sizeof(double));
       }
       break;
    }
@@ -492,7 +501,6 @@ mat_mt		stress_vir;	/* 'Potential' part of stress, or virial      */
    for (spec = species; spec < &species[system->nspecies]; spec++)
       energy_dyad(ke_dyad, system->h, spec->vel, spec->mass, spec->nmols);
 
-   k = 0;
    for(i = 0; i < 3; i++)
    {
       for(j = i; j < 3; j++)
@@ -513,7 +521,8 @@ mat_mt		stress_vir;	/* 'Potential' part of stress, or virial      */
       for(i = 0; i < 3; i++)
       {
          add_average(CONV_F*CONV_F*meansq_f_t[ispec][0][i], msqf_n, k);
-         add_average(CONV_N*CONV_N*meansq_f_t[ispec][1][i], msqt_n, k++);
+         add_average(CONV_N*CONV_N*meansq_f_t[ispec][1][i], msqt_n, k);
+	 k++;
       }
 
    for(i = 0; i < 3; i++)
@@ -662,7 +671,6 @@ void	averages()
    (void)printf( "   Averages over last %d timesteps",av_head->nav);
    new_line();
 
-   av_mp = av;
    for(iav = 0; iav < NAVT; iav++)
    {
       for(i = 0; i < av_info[iav].mult; i++)
