@@ -23,6 +23,9 @@
  ******************************************************************************
  *      Revision Log
  *       $Log:	dump.c,v $
+ * Revision 1.9  90/05/02  15:28:52  keith
+ * Removed references to size_t and time_t typedefs, no longer in "defs.h"
+ * 
  * Revision 1.8  90/04/25  17:09:23  keith
  * Corrected test for mutation failure.
  * 
@@ -52,7 +55,7 @@
  * 
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.8 90/04/25 17:09:23 keith Exp $";
+static char *RCSid = "$Header: /home/eeyore/keith/md/moldy/RCS/dump.c,v 1.9 90/05/02 15:28:52 keith Exp $";
 #endif
 /*========================== Library include files ===========================*/
 #include	<stdio.h>
@@ -169,7 +172,7 @@ double		pe;
    if( errflg || control.istep == control.begin_dump )
    {
       (void)strcpy(dump_header.title, control.title);
-      (void)strncpy(dump_header.vsn, "$Revision: 1.8 $"+11,
+      (void)strncpy(dump_header.vsn, "$Revision: 1.9 $"+11,
 		                     sizeof dump_header.vsn-1);
       dump_header.dump_interval = control.dump_interval;
       dump_header.dump_level    = control.dump_level;
@@ -177,6 +180,12 @@ double		pe;
       dump_header.dump_size	= dump_size;
       dump_header.dump_init     = time((time_t *)0);
 
+      note(DUMPST, cur_file, control.istep);
+   }
+      
+   if( ndumps == 0)				/* Start of new dump file     */
+   {
+      if( dumpf ) (void)fclose(dumpf);		/* Finished with old file     */
       while( (dumpf = fopen(cur_file, "r")) != 0 )
       {
 	 (void)fclose(dumpf);
@@ -184,21 +193,6 @@ double		pe;
 	    message(NULLI, NULLP, FATAL, MUFAIL, control.dump_file, nmutates);
 	 message(NULLI, NULLP, WARNING, DMPEXS, cur_file, control.dump_file);
 	 (void)sprintf(cur_file, control.dump_file, filenum);
-      }
-      note(DUMPST, cur_file, control.istep);
-   }
-      
-   if( ndumps == 0)				/* Start of new dump file     */
-   {
-      if( dumpf ) (void)fclose(dumpf);		/* Finished with old file     */
-      while( dumpf = fopen(cur_file, "r"))
-      {
-	 (void)fclose(dumpf);
-	 if( nmutates++ >= NMUTATES || 
-	    mutate(strcpy(prev_file, control.dump_file)) == NULL)
-	    message(NULLI, NULLP, FATAL, MUFAIL, prev_file, nmutates);
-	 message(NULLI, NULLP, WARNING, DMPEXS, cur_file , prev_file);
-	 (void)sprintf(cur_file, prev_file, filenum);
       }
 
       dump_header.ndumps = 0;	dump_header.istep = control.istep;
