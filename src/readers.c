@@ -53,7 +53,7 @@ what you give them.   Help stamp out software-hoarding! */
 
 #define TITLE_SIZE  80
 #define DATAREC "%d record%ssuccessfully read from %s"
-#define MAX_CSSR 9999
+#define XSATOMS "Only reading first %d atoms from \"%s\". Increase MAX_ATOMS to read more."
 
 /*========================== External data references ========================*/
 extern  const pots_mt   potspec[];           /* Potential type specification  */
@@ -336,12 +336,12 @@ FILE     *Fp;
    if( (Fp = fopen(filename,"r")) == NULL)
       error("Failed to open configuration file \"%s\" for reading", filename);
 
-   while( strcmp(strlower(keyword),"end") !=0 )
+   while( strcasecmp(keyword,"end") !=0 )
    {
        if( sscanf(get_line(line,LLEN,Fp,0),"%s",keyword) < 1)
            error("File \"%s\" has incorrect format", filename);
 
-       if(strcmp(strlower(keyword),"title") == 0 )         /* Title */
+       if(strcasecmp(keyword,"title") == 0 )         /* Title */
        {
           if(isspace(line[9]))
              strncpy(title,line+10,TITLE_SIZE);
@@ -351,9 +351,9 @@ FILE     *Fp;
           }
        }
 
-       if(strcmp(strlower(keyword),"cryst1") == 0)   /* CRYST1 - Specify unit cell */
+       if(strcasecmp(keyword,"cryst1") == 0)   /* CRYST1 - Specify unit cell */
        {
-          if( sscanf(line,"CRYST1%9lf%9lf%9lf%7lf%7lf%7lf%11c",
+          if( sscanf(strlower(line),"cryst1%9lf%9lf%9lf%7lf%7lf%7lf%11c",
              &cell[0],&cell[1],&cell[2],&cell[3],&cell[4],&cell[5],spgr) < 6 )
                 error("Error in CRYST1 line of \"%s\" -- should have at least 6 parameters", filename);
 
@@ -363,7 +363,7 @@ FILE     *Fp;
 
        if(strncasecmp(keyword,"scale",5) == 0 )         /* SCALE */
        {
-          sscanf(line, "SCALE%1d", &irow);
+          sscanf(strlower(line), "scale%1d", &irow);
           if( irow < 1 || irow > 3 )
              error("Error in \"%s\" - Error in SCALE[1-3] - %6s unknown", filename, line);
 
@@ -373,10 +373,14 @@ FILE     *Fp;
           scaleflg+=irow;
        }
 
-       if(strcmp(strlower(keyword),"hetatm") == 0 || strcmp(strlower(keyword),"atom") == 0)
+       if(strncasecmp(keyword,"hetatm",6) == 0 || strncasecmp(keyword,"atom",4) == 0)
        {
-          if( natoms > MAX_ATOMS )
-              error("\"%s\" contains too many atoms! (max: %d)\n", filename, MAX_ATOMS);
+          if( natoms >= MAX_ATOMS )
+          {
+             message(NULLI, NULLP, WARNING, XSATOMS, MAX_ATOMS, filename);
+             natoms = MAX_ATOMS;
+             break;
+          }
 
           sscanf(line+12,"%4s%*1c%*3s%*2c%*4d%*4c%8lf%8lf%8lf", dummy,
                &x[natoms][0], &x[natoms][1], &x[natoms][2]);
@@ -679,7 +683,7 @@ FILE     *Fp;
 
       if (strncasecmp(line,"dim ",3) == 0)  /* Periodicity */
       {
-         if( sscanf(line,"dimension %d", &dimension) != 1)
+         if( sscanf(strlower(line),"dimension %d", &dimension) != 1)
             error("Error in DIMENSION line of \"%s\" -- should have 1 parameter", filename);
       }
       if( dimension != 3)
@@ -787,8 +791,12 @@ FILE     *Fp;
 
            if (strncasecmp("eof", *buffer, 3) != 0)
            {
-             if( natoms > MAX_ATOMS )
-                 error("\"%s\" contains too many atoms! (max: %d)\n", filename, MAX_ATOMS);
+             if( natoms >= MAX_ATOMS )
+             {
+                message(NULLI, NULLP, WARNING, XSATOMS, MAX_ATOMS, filename);
+                natoms = MAX_ATOMS;
+                break;
+             }
 
 /* enough tokens */
 /* Use scattering element in lookup, as label not always element symbol */
@@ -900,8 +908,11 @@ FILE     *Fp;
    if( sscanf(get_line(line,LLEN,Fp,0),"%d", &natoms) < 1)
       error("EOF or unexpected format on line 1 in \"%s\"", filename);
 
-   if( natoms > MAX_ATOMS )
-      error("\"%s\" contains too many atoms! (max: %d)\n", filename, MAX_ATOMS);
+   if( natoms >= MAX_ATOMS )
+      {
+      message(NULLI, NULLP, WARNING, XSATOMS, MAX_ATOMS, filename);
+      natoms = MAX_ATOMS;
+      }
 
    if( sscanf(get_line(line,LLEN,Fp,0),"%s", title) < 1)
       error("EOF or unexpected format on line 2 in \"%s\"", filename);
