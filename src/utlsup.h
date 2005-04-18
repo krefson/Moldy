@@ -15,6 +15,8 @@
 #define ARC 6
 #define XTL 7
 
+#define MAX_CSSR 9999
+
 /* Utility messages */
 #define EXEC       "executing command\n    %s"
 #define COMPLETE   "calculation completed"

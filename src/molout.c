@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/molout.c,v 1.15 2004/12/07 13:00:01 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/molout.c,v 1.16 2005/03/06 18:29:08 cf Exp $";
 #endif
 
 #include "defs.h"
@@ -472,7 +472,7 @@ cssr_out(system_mt *system, mat_mp h, spec_mt *species,
                 isite++;
 
 /* Exit if no of atoms exceeds max allowed by CSSR format */
-   if( isite > 9999 )
+   if( isite > MAX_CSSR )
       error("Too many atoms (%d) for CSSR format. Process aborted.", isite);
 
 /* Write the cssr header */
