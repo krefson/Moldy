@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.21 2005/02/07 11:25:21 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.22 2005/03/06 18:26:18 cf Exp $";
 #endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
@@ -33,6 +33,11 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.21 2005/02/
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdvaf.c,v $
+ *  Revision 1.22  2005/03/06 18:26:18  cf
+ *  Returned velocity variables to floats.
+ *  Moved vdotf to utlsup.c
+ *  Removed unnecessary zeroing of vel variable.
+ *
  *  Revision 1.21  2005/02/07 11:25:21  cf
  *  Changed floats to reals.
  *

@@ -28,6 +28,10 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdbond.c,v $
+ *  Revision 1.15  2005/02/04 14:51:37  cf
+ *  Reads header info with dumpext to determine maximum time slice range.
+ *  Common utility messages/errors moved to utlsup.h.
+ *
  *  Revision 1.14  2005/01/13 12:39:08  cf
  *  Added verbose option for dump files.
  *  Prevent output of "Success" when dumpcommand error occurs.
@@ -115,7 +119,7 @@ what you give them.   Help stamp out software-hoarding! */
  */
 
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdbond.c,v 1.14 2005/01/13 12:39:08 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdbond.c,v 1.15 2005/02/04 14:51:37 cf Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -137,13 +141,6 @@ void    make_sites(real (*h)[3], vec_mp c_of_m_s,
 /*======================== Global variables ==================================*/
 int ithread=0, nthreads=1;
 
-/*
- * Default limits for bond intervals and angle intervals - integers only
- */
-#define BOND_MIN  2
-#define BOND_MAX  20        /* Interparticle distances in tenths of Angstroms */
-#define ANGLE_MIN  0
-#define ANGLE_MAX  180      /* Angle intervals in degrees */
 /*
  * Structures for bond and angle data. 
  */
@@ -271,7 +268,7 @@ bond_calc(system_mt *system, spec_mt *species, site_mt *site_info, ROOT **broot,
    for( u = 0; u < 3; u++)
    {
       a[u] = sqrt(SQR(h[0][u]) + SQR(h[1][u]) + SQR(h[2][u]));
-      max[u] = (pbc ? ceil(blim[1]/10.0/a[u]): 0.0);
+      max[u] = (pbc ? ceil(blim[1]*BOND_SCALE/a[u]): 0.0);
       min[u] = -1.0 * max[u];
    }
 
@@ -338,7 +335,7 @@ bond_calc(system_mt *system, spec_mt *species, site_mt *site_info, ROOT **broot,
 
                              dist1 = DISTANCE(point2, point1);
 
-                             if( (dist1 >= blim[0]/10.0) && (dist1 <= blim[1]/10.0) )
+                             if( (dist1 >= blim[0]*BOND_SCALE) && (dist1 <= blim[1]*BOND_SCALE) )
                              { 
                                 flag = 1;
                                 bond = NEW(BOND); /* Create new bond record */
@@ -368,7 +365,7 @@ bond_calc(system_mt *system, spec_mt *species, site_mt *site_info, ROOT **broot,
                                 nmolk = nmolj;
 
                                 /* Calculate angle about spec1 molecule */
-                                for(spec3 = spec2, nspec3 = 0; spec3 < species+system->nspecies; spec3++, nspec3++)
+                                for(spec3 = spec2, nspec3 = nspec2; spec3 < species+system->nspecies; spec3++, nspec3++)
 	                           if( spec_mask[nspec3] )
 		                   {
 	                              if( !mflag )
@@ -403,7 +400,7 @@ bond_calc(system_mt *system, spec_mt *species, site_mt *site_info, ROOT **broot,
 
                                                   dist2 = DISTANCE(point3, point1);
 
-                                                  if( (dist2 >= blim[0]/10.0 ) && (dist2 <= blim[1]/10.0) )
+                                                  if( (dist2 >= blim[0]*BOND_SCALE ) && (dist2 <= blim[1]*BOND_SCALE) )
                                                   {
                                                      for(u = 0; u < 3; u++)
                                                      {
@@ -451,6 +448,8 @@ bond_calc(system_mt *system, spec_mt *species, site_mt *site_info, ROOT **broot,
 			                 }
 			              }
 		                   }
+                                   else
+                                     nmolk += spec3->nmols;
 		             }  
 		          }
 		       }
@@ -469,6 +468,7 @@ bond_calc(system_mt *system, spec_mt *species, site_mt *site_info, ROOT **broot,
 
                           for(spec3 = spec1, nspec3 = 0; spec3 < species+system->nspecies; spec3++, nspec3++)
 		             if( spec_mask[nspec3] )
+                             {
                                 for( k=(spec3==spec1?i+1:0); k < spec3->nmols; k++)
                                 {
                                    nmolk++;
@@ -492,7 +492,7 @@ bond_calc(system_mt *system, spec_mt *species, site_mt *site_info, ROOT **broot,
 
                                             dist1 = DISTANCE(point1, point2);
 
-                                            if( (dist1 >= blim[0]/10.0 ) && (dist1 <= blim[1]/10.0) )
+                                            if( (dist1 >= blim[0]*BOND_SCALE ) && (dist1 <= blim[1]*BOND_SCALE) )
                                             {
                                                for( frac2[0] = min[0]; frac2[0] <= max[0]; frac2[0]++) 
                                                for( frac2[1] = min[1]; frac2[1] <= max[1]; frac2[1]++) 
@@ -511,7 +511,7 @@ bond_calc(system_mt *system, spec_mt *species, site_mt *site_info, ROOT **broot,
    
                                                      dist2 = DISTANCE(point3, point2);
    
-                                                     if( (dist2 >= blim[0]/10.0 ) && (dist2 <= blim[1]/10.0) )
+                                                     if( (dist2 >= blim[0]*BOND_SCALE) && (dist2 <= blim[1]*BOND_SCALE) )
                                                      {
                                                         for(u = 0; u < 3; u++)
                                                         {
@@ -562,12 +562,19 @@ bond_calc(system_mt *system, spec_mt *species, site_mt *site_info, ROOT **broot,
                                       }
                                    }
 		                }
+                             }
+                             else
+                               nmolk += spec3->nmols;
                        }
 	            }
                  }
 	      }
+              else
+                nmolj += spec2->nmols;
         }
      }
+     else
+       nmoli += spec1->nmols;
 }
 /******************************************************************************
  * data_out().  Output bonds and angles to file with same format as Shell by  *
@@ -628,7 +635,8 @@ main(int argc, char **argv)
    int		errflg = 0;
    int		intyp = 0;
    int		start = 0, finish = 0, inc = 1;
-   int		tflag = 0, bflag = 0, aflag = 0;
+   int		tflag = 0;
+   boolean	bflag = false, aflag = false;
    int		irec;
    char         *bondlims = NULL, *anglims = NULL;
    char		*filename = NULL, *dump_base = NULL;
@@ -652,7 +660,7 @@ main(int argc, char **argv)
    int		xflag = 0;  /* Include right angles (default) */
    int		dump_level = 0;
 
-   int          blim[2], alim[2];         /* Min and max values for bonds and angles */
+   int          blim[3], alim[3];         /* Min and max values for bonds and angles */
    ROOT         *root_bond = NULL;        /* Root of bond linked list */
    ROOT         *root_angle = NULL;       /* Root of angle linked list */
    int          arglen, ind, genflg=0;
@@ -661,9 +669,15 @@ main(int argc, char **argv)
 #define MAXTRY 100
    control.page_length=1000000;
 
+   /* Set up default limits */
+   sprintf(line, "%d-%d:%d", BOND_MIN, BOND_MAX, BOND_INC);
+   bondlims = mystrdup(line);
+   sprintf(line, "%d-%d:%d", ANGLE_MIN, ANGLE_MAX, ANGLE_INC);
+   anglims = mystrdup(line);
+
    comm = argv[0];
 
-   while( (c = getopt(argc, argv, "r:s:d:t:g:o:b:a:pxjv") ) != EOF )
+   while( (c = getopt(argc, argv, "r:s:d:t:g:o:b:a:pxjv?") ) != EOF )
       switch(c)
       {
        case 'r':
@@ -691,10 +705,14 @@ main(int argc, char **argv)
             error(NOOUTF, optarg);
 	 break;
        case 'b':
+         (void)free(bondlims);
          bondlims = mystrdup(optarg);
+         bflag = true;
          break;
        case 'a':
+         (void)free(anglims);
 	 anglims = mystrdup(optarg);
+         aflag = true;
          break;
        case 'p': /* Apply periodic boundary conditions */
 	 pbc = 1;
@@ -782,100 +800,76 @@ main(int argc, char **argv)
 #ifdef DEBUG
    {
       int i;
+      fputs("species mask ", stderr);
       for(i = 0; i < sys.nspecies; i++)
          if(spec_mask[i])
-            putchar('1');
+            fputs("1", stderr);
          else
-            putchar('0');
-      putchar('\n');
+            fputs("0", stderr);
+      fputs("\n", stderr);
    }
 #endif
 
-   /* Set default values for bond limits (x10) */
-   blim[0] = BOND_MIN;
-   blim[1] = BOND_MAX;
-
-   if( bondlims == NULL )
-      bflag++;
-
    /* Input and check bond length limits where necessary */
-   while( !bflag)
+   while( bondlims)
    {
-      if( forstr(bondlims, &(blim[0]), &(blim[1]), &inc) )
+      if( forstr(bondlims, &(blim[0]), &(blim[1]), &(blim[2])) )
       {
          fputs("Invalid range for bond lengths \"", stderr);
          fputs(bondlims, stderr);
          fputs("\"\n", stderr);
       }
-      else
-      {
-         bflag++;
-         if( blim[0] == blim[1] )
-         {
-            if( BOND_MIN < blim[1] )
-               blim[0] = BOND_MIN;
-            else
-               blim[0] = 0.0;
-         }
-      }
-      if( blim[0] > blim[1] || blim[0] < 0 )
+
+      if( blim[0] >= blim[1] || blim[0] < 0 )
       {
          fputs("Bond length limits must satisfy max >= min and min >= 0\n", stderr);
-         bflag = 0;
-      }
-      if( !bflag)
-      {
-         blim[0] = BOND_MIN;
-         blim[1] = BOND_MAX;
+
          (void)free(bondlims);
          bondlims = NULL;
          fputs("Please specify range of bond limits in form min-max\n", stderr);
          bondlims = get_str("min-max? ");
       }
+      else
+         break;
    }
 
-   /* Set default values for angle limits */
-   alim[0] = ANGLE_MIN;
-   alim[1] = ANGLE_MAX;
+   if( !bflag )
+      message(NULLI,NULLP,INFO,MAXBOND,
+              blim[0]*BOND_SCALE,blim[1]*BOND_SCALE,blim[2]*BOND_SCALE);
 
-   if( anglims == NULL )
-       aflag++;
+#if DEBUG
+fprintf(stderr, "bond range %d-%d:%d\n", blim[0], blim[1], blim[2]);
+#endif
 
    /* Input and check angle limits where necessary */
-   while (!aflag)
+   while (anglims)
    {
-      if( forstr(anglims, &(alim[0]), &(alim[1]), &inc) )
+      if( forstr(anglims, &(alim[0]), &(alim[1]), &(alim[2])) )
       {
          fputs("Invalid range for angles \"", stderr);
          fputs(anglims, stderr);
          fputs("\"\n", stderr);
       }
-      else
-      {
-         aflag++;
-         if( alim[0] == alim[1] )
-         {
-            if( ANGLE_MIN < alim[1] )
-               alim[0] = ANGLE_MIN;
-            else
-               alim[0] = 0.0;
-         }
-      }
-      if( alim[0] > alim[1] || alim[0] < 0 )
+      if( alim[0] >= alim[1] || alim[0] < 0 )
       {
          fputs("Angle limits must satisfy max >= min and min >= 0\n", stderr);
-         aflag=0;
-      }
-      if( !aflag)
-      {
-         alim[0] = ANGLE_MIN;
-         alim[1] = ANGLE_MAX;
+
          (void)free(anglims);
          anglims = NULL;
          fputs("Please specify range of angle limits in form min-max\n", stderr);
          anglims = get_str("min-max? ");
       }
+      else
+         break;
    }
+
+   if( !aflag )
+      message(NULLI, NULLP, INFO, MAXANGLE, alim[0], alim[1], alim[2]);
+
+#if DEBUG
+fprintf(stderr, "angle range %d-%d:%d\n", alim[0], alim[1], alim[2]);
+#endif
+
 
    switch(data_source)                  /* To read configurational data       */
    {
@@ -886,6 +880,7 @@ main(int argc, char **argv)
       init_averages(sys.nspecies, restart_header.vsn,
                     control.roll_interval, control.roll_interval,
                     &av_convert);
+      control.rdf_interval = 0; /* Skip rdf data */
       read_restart(Fp, restart_header.vsn, &sys, av_convert);
       break;
     case 'd':
@@ -993,7 +988,7 @@ main(int argc, char **argv)
 
 #ifdef DEBUG
       fprintf(stderr,"Successfully read dump record %d from file \"%s\"\n",
-          irec%control.maxdumps, dump_name);
+          irec%control.maxdumps, dump_names);
 #endif
          /* Perform bond/angle calculations for each slice of dump file */
          bond_calc(&sys, species, site_info, &root_bond, &root_angle, spec_mask, blim, alim, pbc, mflag); 
@@ -1027,5 +1022,5 @@ main(int argc, char **argv)
       data_out(&root_bond, &root_angle, xflag);
    }
    if( verbose ) message(NULLI, NULLP, INFO, COMPLETE);
-   return 0;    
+   return 0;
 }

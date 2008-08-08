@@ -25,6 +25,9 @@ what you give them.   Help stamp out software-hoarding! */
  **************************************************************************************
  *  Revision Log
  *  $Log: syswrite.c,v $
+ *  Revision 2.10  2005/02/04 14:53:09  cf
+ *  Common utility messages/errors moved to utlsup.h.
+ *
  *  Revision 2.9  2004/12/07 13:00:01  cf
  *  Merged with latest utilities.
  *
@@ -77,7 +80,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/syswrite.c,v 2.9 2004/12/07 13:00:01 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/syswrite.c,v 2.10 2005/02/04 14:53:09 cf Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -91,9 +94,10 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/syswrite.c,v 2.9 2004/1
 #include "structs.h"
 #include "messages.h"
 #include "utlsup.h"
-#include "sginfo.h"
 #include "specdata.h"
+#include "sginfo.h"
 #include "readers.h"
+#include "elements.h"
 
 /*========================== External data references ========================*/
 extern  const pots_mt   potspec[];           /* Potential type specification  */
@@ -116,79 +120,6 @@ int     add_suffix(char *string, int number)
    sprintf(string, "%s%d", string, number);
 
    return 0;
-}
-/******************************************************************************
- * read_pot().  Read potential data from file.                                *
- ******************************************************************************/
-static
-int       read_pot(char *potfile, pot_mp *pot_ptr, site_mt *spec, int max_id)
-{
-char       atom1[4], atom2[4];
-double     chg1, chg2;
-double     p_tmp;
-pot_mt     pot;
-int        i, n_items;
-char       name[LLEN],             /* Temporary potential type name      */
-           line[LLEN],             /* Store for input line from file     */
-           pline[LLEN];            /* Used in pot'l paramater parsing    */
-int        ptype=-1;               /* Potential type index               */
-int        nerrs = 0;              /* Accumulated error count            */
-int        idi, idj;
-site_mt	   *spi,*spj;              /* Temporary species pointers         */
-
-FILE       *Fpot;
-
-    if( (Fpot = fopen(potfile,"r")) == NULL)
-        return ptype;
-
-    n_items = sscanf(get_line(line,LLEN,Fpot,1), "%s", name);
-    if( n_items <= 0 )
-       message(NULLI,NULLP,FATAL,SYSEOF,"potential type specification");
-
-    for(i = 0; potspec[i].name; i++)             /* Is 'name' a known type? */
-       if(strcmp(strlower(name), potspec[i].name) == 0)
-          break;
-
-    if(! potspec[i].name)                        /* Did the loop find 'name'? */
-       message(&nerrs,line,FATAL,UNKPOT,name);   /* no                        */
-    ptype = i;                                   /* yes                       */
-
-    while(sscanf(get_line(line,LLEN,Fpot,1),"%s",name) > 0
-                    && strcmp(strlower(name), "end") != 0)
-    {
-        n_items = 0;
-        if(sscanf(line,"%4s %lf %4s %lf %[^#]",atom1,&chg1,atom2,&chg2,pline) <= 2)
-           message(&nerrs,line,ERROR,NOPAIR);
-        else
-        {
-                                              /* Now read in parameters */
-           (void)strcat(pline, "$");              /* Add marker to end      */
-           while(n_items < NPOTP && sscanf(pline,"%lf %[^#]", &p_tmp, pline) > 1 )
-              pot.p[n_items++] = p_tmp;
-        }
-
-       for( idi = 0; idi < max_id; idi++)
-         for( idj = idi; idj < max_id; idj++)
-         {
-           spi = spec+idi;
-           spj = spec+idj;
-
-           if( ((!strcmp(atom1,spi->name)) && (chg1 == spi->charge) &&
-             (!strcmp(atom2,spj->name)) && (chg2 == spj->charge)) ||
-                ((!strcmp(atom1,spj->name)) && (chg1 == spj->charge) &&
-                   (!strcmp(atom2,spi->name)) && (chg2 == spi->charge)) )
-           {
-               (*pot_ptr)[idj + idi * max_id] = pot;
-           }
-         }
-    }
-
-   fclose(Fpot);
-
-   if(nerrs > 0)                        /* if any errors have been detected */
-      message(&nerrs,NULLP,FATAL,ERRS,nerrs,(nerrs>1)?'s':' ');
-
-    return ptype;
 }
 /******************************************************************************
  * copy_atom_data()  Make copy of atom/molecule names and positions           *
@@ -216,25 +147,26 @@ main(int argc, char **argv)
    int		errflg = 0;
    char		*filename = NULL, *specname = NULL;
    char         *filetype = "";
-   char		*elename = "elements.dat";
-   char		*potname = NULL;
-   char		elefile[PATHLN] = "";
-   char		potfile[PATHLN] = "";
+   char		*elefile = NULL;
+   char		*potfile = NULL;
    char		title[TITLE_SIZE] = "";
    char		*buffer[NLEN];
    double	cell[6];                      /* Cell parameters */
    mat_mt	h;                            /* Hessian */
    int		insw=-1;                      /* Switch for input format */
    int		typetot=0, atomtot=0;         /* No of species, atoms */
-   int		idij, ip, cflag = 0;
+   int		idij, ip;
+   int          cflag = 0;                    /* Flag for periodic system */
    int		nflag;                        /* Flag for site type matching */
    int          n_elem;                       /* No of records read from element data file */
-   spec_data    element[NELEM];               /* Element info */
+   spec_data	elem_data[NELEM];             /* Element info */
+   const ele_data   *elem;                    /* Pointer to element info */
    spec_mt 	spec[MAX_SPECIES];            /* Species info */
    site_mt      *site, *st, specsite[MAX_SPECIES];  /* Site info */ 
    pot_mt       *pot_par;                     /* Potential parameters */
    int		ptype = -1, n_potpar=NPOTP;
    char         spgr[16];                     /* Space Group in Herman Maugain form */
+   int          repeat[3] = {0,0,0};          /* Simulation box repeat factors from command line*/
    double       simbox[3] = {1,1,1};          /* Simulation box repeat factors */
    vec_mt	x[MAX_ATOMS]; 	              /* C of M coordinates */
    double       charge[MAX_ATOMS];            /* Site charge array */
@@ -242,24 +174,22 @@ main(int argc, char **argv)
    int		num_mols = 1;		      /* No of molecules for non-lattice start species */
 
    comm = argv[0];
-   while( (u = getopt(argc, argv, "i:o:y:e:n:l:") ) != EOF )
+   while( (u = getopt(argc, argv, "i:o:y:e:n:l:a:b:c:?") ) != EOF )
       switch(u)
       {
        case 'i':
 	 filename = optarg;
-         filetype = strlower(read_ftype(filename));
+         filetype = read_ftype(filename);
 	 break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
 	    error(NOOUTF, optarg);
 	 break;
        case 'y':
-         potname = optarg;
-         /* Create full path name, but don't exceed max length of string */
-         strncat(strncat(potfile,POTPATH,PATHLN-strlen(potfile)), potname, PATHLN-strlen(potfile));
+         potfile = optarg;
 	 break;
        case 'e':
-	 elename = optarg;
+	 elefile = optarg;
          break;
        case 'n':
 	 num_mols = atoi(optarg);
@@ -269,6 +199,15 @@ main(int argc, char **argv)
        case 'l':
 	 specname = optarg;
          break;
+       case 'a':
+	 repeat[0] = atoi(optarg);
+         break;
+       case 'b':
+	 repeat[1] = atoi(optarg);
+         break;
+       case 'c':
+	 repeat[2] = atoi(optarg);
+         break;
        default:
        case '?': 
 	 errflg++;
@@ -277,7 +216,9 @@ main(int argc, char **argv)
    if( errflg )
    {
       fprintf(stderr,"Usage: %s [-i input-file] [-o output-file] ",comm);
-      fputs("[-n no-of-molecules] [-l species-label] [-y potential-parameter-file]\n",stderr);
+      fputs("[-n no-of-molecules] [-l species-label] [-e element-data-file] ",stderr);
+      fputs("[-y potential-parameter-file] [-a a-direction-cell-repeat-factor] ",stderr);
+      fputs("[-b a-direction-cell-repeat-factor] [-c c-direction-cell-repeat-factor]\n", stderr);
 
       exit(2);
    }
@@ -285,22 +226,24 @@ main(int argc, char **argv)
    /* If no filename given on command line, request from user */
    while( insw < 0)
    {
-      if( !strncmp(filetype, "cssr",4) )
+      if( !strcasecmp(filetype, "cssr") )
            insw = CSSR;
-      else if( !strncmp(filetype, "pdb",3) )
+      else if( !strcasecmp(filetype, "pdb") )
            insw = PDB;
-      else if( !strncmp(filetype, "shak",4) )
+      else if( !strcasecmp(filetype, "shak") )
            insw = SHAK;
-      else if( !strncmp(filetype, "xtl",3) )
+      else if( !strcasecmp(filetype, "ins") || !strcasecmp(filetype, "res"))
+           insw = SHELX;
+      else if( !strcasecmp(filetype, "xtl") )
            insw = XTL;
-      else if( !strncmp(filetype, "xyz",3) )
+      else if( !strcasecmp(filetype, "xyz") )
            insw = XYZ;
 
       if( insw < 0)
       {
-         if( (filename = get_str("Structure file name? (PDB, CSSR, SCHAKAL, XTL, XYZ) ")) == NULL )
+         if( (filename = get_str("Structure file name? (PDB, CSSR, SCHAKAL, SHELX, XTL, XYZ) ")) == NULL )
             exit(2);
-         filetype = strlower(read_ftype(filename));
+         filetype = read_ftype(filename);
       }
    }
 
@@ -318,6 +261,9 @@ main(int argc, char **argv)
 	 break;
       case SHAK:
          atomtot = read_shak(filename, h, label, x, charge, title, simbox);
+	 break;
+      case SHELX:
+         atomtot = read_shelx(filename, h, label, x, title, spgr);
 	 break;
       case XTL:
          atomtot = read_xtl(filename, h, label, x, charge, title, spgr);
@@ -354,12 +300,10 @@ main(int argc, char **argv)
    if( strcmp(spgr,"P 1") && atomtot > 0 && cflag )
       atomtot = sgexpand(MAX_ATOMS, atomtot, x, label, charge, spgr);
 
-   /* Create full path name for element data, but don't exceed max length of string */
-   strncat(strncat(elefile, ELEPATH, PATHLN-strlen(elefile)), elename, PATHLN-strlen(elefile));
-
    /* Check if element data file is available */
-   if( (n_elem = read_ele(element, elefile)) < 0 )
-      message(NULLI,NULLP,WARNING,NOELEM,elefile);
+   if( elefile ) 
+     if( n_elem = read_ele(elem_data, elefile) < 0 )
+       message(NULLI,NULLP,WARNING,NOELEM,elefile);
 
    site = (site_mt*)arralloc(sizeof(site_mt),1,0,atomtot-1);
    copy_atom_data(site, charge, label, atomtot);
@@ -367,10 +311,10 @@ main(int argc, char **argv)
    /* Loop to determine no of different species */
    for(st = site; st < site+atomtot; st++)
    {
+      strlower(st->name);                    /* Remainder of symbol lowercase */
       st->name[0] = xtoupper(st->name[0]);   /* First character of symbol uppercase */
-      strlower(st->name+1);   /* Remainder of symbol lowercase */
 
-      nflag = 0;    /*  Flag for whether site (1) assigned or (0) not assigned to species */
+      nflag = 0;   /*  Flag for whether site assigned (1) or not assigned (0) to species */
       if( cflag )  /* Lattice start: Treat each atom as single species */
       {
         if( typetot > 0 )
@@ -387,16 +331,32 @@ main(int argc, char **argv)
         {
            if( typetot > MAX_SPECIES )
              error("Too many species found - current limit is %d (MAX_SPECIES in specdata.h)", MAX_SPECIES);
-           for( j=0; j < n_elem; j++)        /* Search element/species data for match with site */
-             if( !strcmp(st->name, element[j].symbol) )
-             {
-                strncpy(spec[typetot].name,element[j].name,NLEN);
-                st->mass = element[j].mass;
-                if( insw == SHAK || insw == XYZ)
-                   st->charge = element[j].charge;
-                nflag++;
-                break;
-             }
+
+           /* First check user-specified element data file */
+           if( elefile )
+             for( j=0; j < n_elem; j++)        /* Search element/species data for match with site */
+               if( !strcmp(st->name, elem_data[j].symbol) )
+               {
+                 strncpy(spec[typetot].name,elem_data[j].name,NLEN);
+                 st->mass = elem_data[j].mass;
+                 if( insw == SHAK || insw == XYZ)
+                   st->charge = elem_data[j].charge;
+                 nflag++;
+                 break;
+               }
+
+           /* If not found, check default element data */
+           if( !nflag)
+             for (elem = ElementData; elem->name; elem++)
+               if(  (!strcasecmp(st->name, elem->symbol)) )
+               {
+                 strncpy(spec[typetot].name,elem->name, NLEN);
+                 st->mass = elem->mass;
+                 if( insw == SHAK || insw == XYZ)
+                   st->charge = elem->charge;
+                 nflag++;
+                 break;
+               }
 
            if( !nflag)
              strcpy(spec[typetot].name, st->name);
@@ -421,19 +381,33 @@ main(int argc, char **argv)
              }
          if (!nflag)                          /* If no matches, create new site type */
          {
-            for( j=0; j < n_elem; j++)        /* Search element/species data for match with site */
-              if( !strcmp(st->name, element[j].symbol) )
-              {
-                st->mass = element[j].mass;
-                nflag++;
-                break;
-              }
-            /* Create new site entry */
-            strcpy(specsite[typetot].name, st->name);
-            specsite[typetot].mass = st->mass;
-            specsite[typetot].charge = st->charge;
-            st->pad = typetot;
-            typetot++;
+           /* First check user-specified element data file */
+           if( elefile )
+             for( j=0; j < n_elem; j++)        /* Search element/species data for match with site */
+               if( !strcmp(st->name, elem_data[j].symbol) )
+               {
+                 st->mass = elem_data[j].mass;
+                 nflag++;
+                 break;
+               }
+
+           /* If not found, check default element data */
+           if (!nflag)
+             for (elem = ElementData; elem->name; elem++)
+               if(  (!strcasecmp(st->name, elem->symbol)) )
+                 if( !strcmp(st->name, ElementData[j].symbol) )
+                 {
+                   st->mass = ElementData[j].mass;
+                   nflag++;
+                   break;
+                 }
+
+           /* Create new site entry */
+           strcpy(specsite[typetot].name, st->name);
+           specsite[typetot].mass = st->mass;
+           specsite[typetot].charge = st->charge;
+           st->pad = typetot;
+           typetot++;
          }
       }
    }
@@ -460,8 +434,13 @@ main(int argc, char **argv)
    }
 
    /* Read potential parameter file if available */
-   if( (potname != NULL) && ((ptype = read_pot(potfile, &pot_par, specsite, typetot)) < 0) )
+   if( (potfile != NULL) && ((ptype = read_pot(potfile, &pot_par, specsite, 0, typetot)) < 0) )
        message(NULLI,NULLP,WARNING,NOPOTL,potfile);
+
+   /* nb. Command line repeat factors override those from Schakal file*/
+   for( i=0; i<3; i++)
+      if( repeat[i] > 0)
+         simbox[i] = (double)repeat[i];
 
    /* Write data to file in Moldy input form */
    if (strchr(title,'\n') != NULL )
@@ -476,7 +455,7 @@ main(int argc, char **argv)
    {
      for( i=0; i < typetot; i++)
      {
-       printf("%-14s %d\n",spec[i].name, spec[i].nmols);
+       printf("%-14s %d\n",spec[i].name, (int)(spec[i].nmols*simbox[0]*simbox[1]*simbox[2]));
        printf("%-3d    0    0    0  %12.12g %12.12g  %s\n",i+1,
                      specsite[i].mass,specsite[i].charge,specsite[i].name);
      }

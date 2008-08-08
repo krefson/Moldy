@@ -6,14 +6,7 @@
 /*
  * file formats
  */
-#define SHAK   0
-#define XYZ 1
-#define OUTBIN 2
-#define DCD 3
-#define PDB 4
-#define CSSR 5
-#define ARC 6
-#define XTL 7
+enum {SHAK, XYZ, OUTBIN, DCD, PDB, CSSR, ARC, XTL, SHELX};
 
 #define MAX_CSSR 9999
 
@@ -37,6 +30,24 @@
 #define NORESTART  "couldn't open restart file \"%s\" for reading -\n%s\n"
 #define DUMPCOMM   "failure executing \"dumpext\" command - \n%s"
 #define UNKSTRUCT  "structure file \"%s\" of unknown format"
+
+/*
+ * Default limits for mdbond and bdist
+ */
+#define BOND_MIN   0    /* Default minimum bond length */
+#define BOND_MAX   200  /* Default maximum bond length */
+#define BOND_INC   1    /* Default minimum bond increment - must be 1 */
+#define ANGLE_MIN  0    /* Default minimum angle in degrees */
+#define ANGLE_MAX  180  /* Default maximum angle in degrees */
+#define ANGLE_INC  1    /* Default minimum angle increment - must be 1 */
+
+#define BOND_SCALE 0.01 /* Scaling factor for bond increments as 
+                           fraction of angstrom */
+/*
+ * Messages
+ */
+#define MAXBOND "Using default range %4.2f-%4.2f:%4.2f A for distances"
+#define MAXANGLE "Using default range %d-%d:%d deg for angles"
 
 /*======================== External data references =======================================*/
 extern int optind;
@@ -109,3 +120,5 @@ void    conv_potentials(const unit_mt *unit_from, const
 			unit_mt *unit_to, pot_mt *potpar, int npotpar,
 			int ptype, site_mt *site_info, int max_id);
 void    read_control(FILE *file, const match_mt *match);
+int     str_cut(char *in, char *out);
+char    *trim(char *s);

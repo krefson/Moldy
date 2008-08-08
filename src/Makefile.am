@@ -163,6 +163,8 @@ parallel.o: parallel.c defs.h config.h structs.h messages.h
 quaterns.o: quaterns.c defs.h config.h
 ransub.o: ransub.c readers.c defs.h config.h structs.h messages.h utlsup.h \
         specdata.h readers.h
+readers.o: readers.c defs.h list.h messages.h sginfo.h specdata.h structs.h \
+        utlsup.h
 restart.o: restart.c defs.h config.h structs.h messages.h xdr.h
 sgclib.o: sgclib.c sginfo.h
 sgio.o: sgio.c sginfo.h

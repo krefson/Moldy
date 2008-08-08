@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/utlsup.c,v 1.19 2005/02/04 14:54:23 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/utlsup.c,v 1.20 2005/03/06 18:27:13 cf Exp $";
 #endif
 #include "defs.h"
 #include <stdarg.h>
@@ -18,6 +18,8 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/utlsup.c,v 1.19 2005/02
 #endif
 
 char	*comm;
+
+#define STRLEN 80
 
 void invert (real (*a)[3], real (*b)[3]);
 void mat_vec_mul (real (*m)[3], vec_mp in_vec, vec_mp out_vec, int number);
@@ -96,9 +98,29 @@ void    error(char *format, ...)
    exit(3);
 }
 /******************************************************************************
+ * trim().  Trim leading and trailing spaces from string variables            *
+ ******************************************************************************/
+char    *trim(char *s)
+{
+char    *t = s, *p;
+
+   /* Remove leading spaces */
+   while( *t == ' ' && *t != '\0')
+      t++;
+
+   strcpy(s, t);
+
+   /* Now remove trailing spaces */
+   p = s + strlen(s);
+   while( p > s && !isalnum(*p))
+      *p-- = '\0';
+
+   return (s);
+}
+/******************************************************************************
  * mystrdup().  Routine for copying one string to another.                    *
  ******************************************************************************/
-char * mystrdup(char *s)
+char * mystrdup(const char *s)
 {
    char * t = NULL;
    if(s) t=malloc(strlen(s)+1);
@@ -137,7 +159,7 @@ int     tokenise(char *fields, char *mask, int len)
 }
 /******************************************************************************
  * get_tokens(). Routine for breaking down string into substrings.            *
- *               Returns no of substrings.                                    *
+ *               Returns no of substrings (not including comments).           *
  ******************************************************************************/
 int   get_tokens(char *buf, char **linev, char *sep)
 {
@@ -146,6 +168,8 @@ int   get_tokens(char *buf, char **linev, char *sep)
 
    while( (p = strtok(buf,sep) ) != NULL)
    {
+      if( strncmp(p,"#",1) == 0) /* Ignore comments */
+         break;
       *(linev++) = p;
       linec++;
       buf = NULL;
@@ -204,7 +228,7 @@ real get_real(char *prompt, real lo, real hi)
  ******************************************************************************/
 int get_sym(char *prompt, char *cset)
 {
-   char		ans_c, ans_str[80];
+   char		ans_c, ans_str[STRLEN];
    int		ans_flag;
 
    ans_flag = 0;
@@ -224,7 +248,6 @@ int get_sym(char *prompt, char *cset)
 /******************************************************************************
  * get_str().  Read a string from stdin, issuing a prompt                     *
  ******************************************************************************/
-#define STRLEN 80
 char	*get_str(char *prompt)
 {
    char		ans_str[STRLEN];
@@ -311,22 +334,22 @@ char    *get_line(char *line, int len, FILE *file, int skip)
    {
       do
       {
-         s = fgets(line, len, file);               /* Read one line of input     */
-         if(s == NULL) break;                      /* exit if end of file        */
+         s = fgets(line, len, file);            /* Read one line of input     */
+         if(s == NULL) break;                   /* exit if end of file        */
          i = strlen(s) - 1;
          while(i >= 0 && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
-            s[i--] = '\0';                         /* Strip trailing white space */
+            s[i--] = '\0';                      /* Strip trailing white space */
       }
-      while(*s == '\0' || *s == '#');              /* Repeat if blank or comment */
+      while(*s == '\0' || *s == '#');           /* Repeat if blank or comment */
    }
    else
    {
       s = fgets(line, len, file);               /* Read one line of input     */
-      if(s != NULL)                             /* ignore if end of file        */
+      if(s != NULL)                             /* ignore if end of file      */
       {
          i = strlen(s) - 1;
          while(i >= 0 && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n'))
-            s[i--] = '\0';                         /* Strip trailing white space */
+            s[i--] = '\0';                      /* Strip trailing white space */
       }
    }
 
@@ -548,7 +571,7 @@ int rewind_dump(FILE *dumpf, int xdr)
    return fseek(dumpf, 0L, SEEK_SET);
 }
 /******************************************************************************
- *  check_control. Check if control info contained in input file.             *
+ *  check_control. Check if file contains control info.                       *
  ******************************************************************************/
 int check_control(FILE *file)
 {
@@ -559,7 +582,39 @@ int check_control(FILE *file)
   num_items = sscanf(line, " %[^= ] = %127[^#]", name, value);
   rewind(file);
   if( num_items == 2 )
-    return 1;
+    return 1; /* Control info present */
   else
-    return 0;
+    return 0; /* No control info present */
+}
+/******************************************************************************
+ * str_cut().  Separates alphabetical and numeric parts of a string.          *
+ ******************************************************************************/
+int     str_cut(char *in, char *out) /* Input and output strings must be different */
+{
+   int          i,j,k=strlen(in);
+   int          value;
+
+   for( i=0; i < k; i++)
+     if( isdigit(in[i]) || in[i] == '-' )
+        break;
+
+   for( j=0; j < k; j++)
+     if( isalpha(in[j]) )
+        break;
+
+   if( i <= j )
+   {
+      strncpy(out,in+j,k-j);   /* Copy alphabetical part */
+      in[j] ='\0';             /* Truncate alphabetical part */
+      value=atoi(in);          /* Convert numeric part */
+   }
+   else
+   {
+      strncpy(out,in,i);       /* Copy alphabetical part */
+      value=atoi(in+i);        /* Convert numeric part */
+   }
+   if( strrchr(in,'-') != NULL && value > 0 )
+        value *= -1;
+
+   return value;
 }

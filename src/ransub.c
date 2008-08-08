@@ -27,6 +27,9 @@ what you give them.   Help stamp out software-hoarding! */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: ransub.c,v $
+ *  Revision 1.23  2005/02/04 14:52:54  cf
+ *  Common utility messages/errors moved to utlsup.h.
+ *
  *  Revision 1.22  2004/12/07 13:00:01  cf
  *  Merged with latest utilities.
  *
@@ -177,7 +180,7 @@ what you give them.   Help stamp out software-hoarding! */
  *
  */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/ransub.c,v 1.22 2004/12/07 13:00:01 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/ransub.c,v 1.23 2005/02/04 14:52:54 cf Exp $";
 #endif  
 
 #include "defs.h"
@@ -196,34 +199,32 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/ransub.c,v 1.22 2004/12
 #include "specdata.h"
 #include "sginfo.h"
 #include "readers.h"
+#include "elements.h"
 
 void    afree(gptr *p);
 double		mdrand(void);
 
 extern const  unit_mt prog_unit;
-static  unit_mt input_unit = {MUNIT, LUNIT, TUNIT, _ELCHG};
+extern unit_mt input_unit;
 
 void eigens(real *A, real *RR, real *E, int N);
 void eigensort(real *ev, real *e, int n, vec_mt m);
-void	q_to_rot(real *quat, mat_mt rot);
+void q_to_rot(real *quat, mat_mt rot);
 
 /*======================== Global variables =======================================*/
 int ithread=0, nthreads=1;
 
 /* Time units for different energy units */
-#define KJMOL 1.0e-13 			/* kilojoules per mole */
-#define EV 1.018050697e-14  		/* electron volts */
-#define KCALS 4.88882131e-14 		/* kilocalories per mole */
-#define E2A 2.682811715e-15 		/* electron charge squared per angstrom */
+#define KJMOL (sqrt(MUNIT*AVOGAD/1e3)*LUNIT)              /* kilojoules per mole */
+#define EV    (sqrt(MUNIT/_ELCHG)*LUNIT)                  /* electron volts */
+#define KCALS (sqrt(MUNIT*AVOGAD/_kcal)*LUNIT)            /* kilocalories per mole */
+#define E2A   (sqrt(MUNIT*PI*_EPS0)*2e-5/_ELCHG*LUNIT)    /* electron charge squared per angstrom */
 
 /* Energy unit selection */
 #define UNIT_KJMOL 0
 #define UNIT_KCALS 1
 #define UNIT_EV 2
 #define UNIT_E2A 3
-
-#define OFF               0
-#define ON                1
 
 #define NJACOBI 30
 #define PRECISION 1e-6
@@ -239,7 +240,8 @@ extern const match_mt  match[];
 
 /******************************************************************************
  *  default_control.   Initialise 'control' with default values from 'match' *
- ******************************************************************************/static
+ ******************************************************************************/
+static
 void    default_control(void)
 {
    const match_mt       *match_p;
@@ -277,86 +279,16 @@ int     prep_pot(system_mt *system, site_mt *site_info, pot_mt *potpar, int nuni
          input_unit.t = E2A;
          break;
       }
+
+      /* Reset other input units to default values */
+      input_unit.m = MUNIT;
+      input_unit.l = LUNIT;
+      input_unit.q = _ELCHG;
+
       conv_potentials(&prog_unit, &input_unit, potpar, system->n_potpar,
           system->ptype, site_info, system->max_id);
 
       return 0;
-}
-/******************************************************************************
- * read_pot().  Read potential data from file.                                *
- ******************************************************************************/
-static
-int        read_pot(char *potfile, pot_mp *pot_ptr, int max_id, int new_sites, site_mt site_info[])
-{
-char       atom1[4], atom2[4];
-double     chg1, chg2;
-double     p_tmp;
-pot_mt     pot;
-int        i,idi,idj, n_items;
-char       name[LLEN],             /* Temporary species name             */
-           line[LLEN],             /* Store for input line from file     */
-           pline[LLEN];            /* Used in pot'l paramater parsing    */
-int        ptype = -1;             /* Potential type index               */
-int        nerrs = 0;              /* Accumulated error count            */
-site_mt    spi, spj;
-
-FILE       *Fpot;
-
-    if( (Fpot = fopen(potfile,"r")) == NULL)
-        return ptype;
-
-    n_items = sscanf(get_line(line,LLEN,Fpot,1), "%s", name);
-
-    if( n_items <= 0 )
-       message(NULLI,NULLP,FATAL,SYSEOF,"potential type specification");
-
-    for(i = 0; potspec[i].name; i++)             /* Is 'name' a known type? */
-       if(strcmp(strlower(name), potspec[i].name) == 0)
-          break;
-
-    if(! potspec[i].name)                        /* Did the loop find 'name'? */
-      message(&nerrs,line,FATAL,UNKPOT,name);   /* no                        */
-    ptype = i;                                   /* yes                       */
-
-    while(sscanf(get_line(line,LLEN,Fpot,1),"%s",name) > 0
-                 && strcmp(strlower(name), "end") != 0)
-    {
-       n_items = 0;
-       if(sscanf(line,"%s %lf %s %lf %[^#]",atom1,&chg1,atom2,&chg2,pline) <= 2)
-            message(&nerrs,line,ERROR,NOPAIR);
-       else
-       {
-                                             /* Now read in parameters   */
-          (void)strcat(pline, "$");          /*   Add marker to end      */
-          while(n_items < NPOTP && sscanf(pline,"%lf %[^#]", &p_tmp, pline) > 1 )
-              pot.p[n_items++] = p_tmp;
-       }
-
-       for( idi = 1; idi < max_id; idi++)
-       {
-          spi = site_info[idi];
-          for( idj = max_id; idj < max_id+new_sites; idj++)
-          {
-             spj = site_info[idj];
-             if( ((!strcmp(atom1,spi.name)) && (chg1 == spi.charge) &&
-              (!strncmp(atom2,spj.name,4)) && (chg2 == spj.charge)) ||
-                 ((!strcmp(atom1,spj.name)) && (chg1 == spj.charge) &&
-                    (!strcmp(atom2,spi.name)) && (chg2 == spi.charge)) )
-             {
-                          /* Assign additional potential parameters */
-                          (*pot_ptr)[idi + idj * max_id] = pot;
-                          (*pot_ptr)[idj + idi * max_id] = pot;
-             }
-          }
-       }
-    }
-
-    fclose(Fpot);
-
-    if(nerrs > 0)                        /* if any errors have been detected */
-       message(&nerrs,NULLP,FATAL,ERRS,nerrs,(nerrs>1)?'s':' ');
-
-    return ptype;
 }
 /******************************************************************************
  * sort_pos. Sort positions to be replaced into ascending order               *
@@ -627,7 +559,10 @@ printf("nsteps=%ld\n", control.nsteps);
 printf("step=%lf\n", control.step);
 if( control.print_sysdef )
   printf("text-mode-save=%d\n", control.print_sysdef);
-printf("molecular-cutoff=%d\n", control.molpbc);
+if( control.molpbc)
+  printf("molecular-cutoff=%d\n", control.molpbc);
+if( control.nosymmetric_rot )
+  printf("dont-use-symm-rot=%d\n", control.nosymmetric_rot);
 if( control.scale_options )
   printf("scale-options=%d\n", control.scale_options);
 if( control.surface_dipole )
@@ -638,6 +573,8 @@ if( control.lattice_start )
   if( control.sysdef != NULL && strcmp(control.sysdef,""))
     printf("sys-spec-file=%s\n", control.sysdef);
 }
+else
+  printf("density=%lf\n", control.density);
 if( control.save_file != NULL && strcmp(control.save_file,""))
   printf("save-file=%s\n", control.save_file);
 if( control.dump_file != NULL && strcmp(control.dump_file,""))
@@ -675,26 +612,28 @@ if( control.const_pressure )
   printf("w=%lf\n", control.pmass);
   printf("strain-mask=%d\n", control.strain_mask);
 }
+printf("temperature=%lf\n", control.temp);
 if( control.const_temp )
 {
   printf("const-temp=%d\n", control.const_temp);
-  printf("temperature=%lf\n", control.temp);
   printf("rtmass=%lf\n", control.rtmass);
   printf("ttmass=%lf\n", control.ttmass);
 }
 if(control.subcell)
   printf("subcell=%lf\n", control.subcell);
-printf("cutoff=%lf\n", control.cutoff);
-printf("density=%lf\n", control.density);
-printf("ewald-accuracy=%lf\n", control.ewald_accuracy);
 printf("alpha=%lf\n", control.alpha);
-printf("k-cutoff=%lf\n", control.k_cutoff);
+if( control.alpha != 0)
+{
+  printf("cutoff=%lf\n", control.cutoff);
+  printf("k-cutoff=%lf\n", control.k_cutoff);
+}
+printf("ewald-accuracy=%lf\n", control.ewald_accuracy);
 printf("rdf-limit=%lf\n", control.limit);
 printf("cpu-limit=%g\n", control.cpu_limit);
-printf("mass-unit=%g\n", input_unit.m);
-printf("length-unit=%g\n", input_unit.l);
-printf("time-unit=%g\n", input_unit.t);
-printf("charge-unit=%g\n", input_unit.q);
+printf("mass-unit=%.15g\n", input_unit.m);
+printf("length-unit=%.15g\n", input_unit.l);
+printf("time-unit=%.15g\n", input_unit.t);
+printf("charge-unit=%.15g\n", input_unit.q);
 puts("end");
 }
 /******************************************************************************
@@ -718,16 +657,16 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    int          max_id = system->max_id; /* Total no of different sites in system */
    int          dflag = 0;
    int		namelength = 0;
-   vec_mt       *p_f_sites=ralloc(dopant->nsites);    /* Dopant site positions in principal frame */
-   vec_mt       *dopant_sites=ralloc(dopant->nsites); /* Site positions of single dopant molecule */
+   vec_mt       *p_f_sites;     /* Dopant site positions in principal frame */
+   vec_mt       *dopant_sites;  /* Site positions of single dopant molecule */
    quat_mt      quaternion;
    boolean	polymol;
-   vec_mt       *site = ralloc(dopant->nsites);
+   vec_mt       *site;          /* Dopant sites */
    vec_mt       solvent_pos;    /* Position vector of dopant relative to solvent cofm */
    vec_mt       solute_pos;     /* Position vector of dopant relative to solvent cofm */
    mat_mt       rot_mat;        /* Rotation matrix */
    real		inertia[6];     /* Inertia tensor for rot to principal frame */
-   double	*mass=aalloc(dopant->nsites,double);	/* Temporary storage for dopant site mass */
+   double	*mass;	        /* Temporary storage for dopant site mass */
    int		*num_site=ialloc(max_id);               /* No of each site type */
    vec_mt	mult;	/* Factor for multiplying positions after eigensort (+1 or -1) */
 
@@ -744,9 +683,18 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    beta  = 180/PI*acos((h[0][0]*h[0][2]+h[1][0]*h[1][2]+h[2][0]*h[2][2])/a/c);
    gamma = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/a/b);
 
+   if( dopant->nsites > 0 )
+   {
+      p_f_sites    = ralloc(dopant->nsites);
+      dopant_sites = ralloc(dopant->nsites);
+      site         = ralloc(dopant->nsites);
+      mass         = aalloc(dopant->nsites, double);
+   }
+
    if( dopant->nsites > 1 )
    {
       zero_real(inertia,6);
+
       for( isite = 0; isite < dopant->nsites; isite++)
       {
          mass[isite] = site_info[dopant->site_id[isite]].mass;
@@ -797,7 +745,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    for(spec = species, i = 0; spec < species+system->nspecies; spec++)
    {
       /* Check if species matches species to be substituted */
-      if( (molname != NULL) && !strcmp(strlower(spec->name), molname) )
+      if( (molname != NULL) && !strcasecmp(spec->name, molname) )
       {
          specmol = spec->nmols - dopant->nmols; /* Subtract number of substituting species */
          id = i;    /* Label identifying species being substituted */
@@ -806,7 +754,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
          specmol = spec->nmols;
 
       /* Check if dopant species already present in system */
-      if( (dopant->name != NULL) && !strcmp(strlower(spec->name),dopant->name) )
+      if( (dopant->name != NULL) && !strcasecmp(spec->name,dopant->name) )
       {
          specmol += dopant->nmols;
          message(NULLI,NULLP,WARNING,"Species `%s' already present in system - properties left unchanged",dopant->name);
@@ -817,7 +765,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
 
       if( specmol > 0 )      /* Write species data for original species */
       {
-         (void)printf("%s  %d  %s\n", spec->name, specmol,
+         (void)printf("%-16s  %d  %s\n", spec->name, specmol,
                     spec->framework ? "framework" : "");
          for(isite=0; isite < spec->nsites; isite++)
             {
@@ -839,7 +787,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    }
    if( !dflag && id >= 0 && dopant->nmols > 0 && strncmp("#",dopant->name,1) )  /* Write data for species added */
    {
-      (void)printf("%s  %d  %s\n", dopant->name, dopant->nmols,
+      (void)printf("%-16s  %d  %s\n", dopant->name, dopant->nmols,
            (species+id)->framework ? "framework" : "");
 
       for(isite=0; isite < dopant->nsites; isite++)
@@ -855,9 +803,9 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
          site_info[dopant->site_id[isite]].mass < 0 ? site_info[(species+id)->site_id[0]].mass:
                     site_info[dopant->site_id[isite]].mass,
          site_info[dopant->site_id[isite]].charge == 1e6 ? site_info[(species+id)->site_id[0]].charge:
-                     site_info[dopant->site_id[isite]].charge,
+                    site_info[dopant->site_id[isite]].charge,
          !strcmp(site_info[dopant->site_id[isite]].name,"") ? site_info[(species+id)->site_id[0]].name:
-                     site_info[dopant->site_id[isite]].name);
+                    site_info[dopant->site_id[isite]].name);
          num_site[dopant->site_id[isite]] += dopant->nmols;
       }
    }
@@ -902,7 +850,7 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
          else
  	    polymol = false;
 
-         if( molname != NULL && !strcmp(strlower(spec->name), molname) ) /* Species being replaced */
+         if( molname != NULL && !strcasecmp(spec->name, molname) ) /* Species being replaced */
          {
             if( ipos < dopant->nmols && positions[ipos] == imol )  /* Match species position with list of substituted positions */
             {
@@ -970,9 +918,13 @@ sys_spec_out(system_mt *system, spec_mt *species, spec_mt *dopant, char *molname
    }
    (void)printf("end\n");
 
-   afree((gptr*) site);
-   afree((gptr*) dopant_sites);
-   xfree(mass);
+   if( dopant->nsites > 0 )
+   {
+     afree((gptr*)site);
+     afree((gptr*)p_f_sites);
+     afree((gptr*)dopant_sites);
+     xfree(mass);
+   }
    xfree(num_site);
    if( ferror(stdout) )
       error("Error writing output - \n%s\n", strerror(errno));
@@ -1071,11 +1023,9 @@ main(int argc, char **argv)
    int          n_elem = -1;       /* No of records read from element data file */
    char         *filename = NULL;
    char         *molname = NULL;
-   char         *elename = "elements.dat";
-   char         *potname = NULL;
+   char         *elefile = NULL;
+   char         *potfile = NULL;
    char         *dopfile = NULL;
-   char         elefile[PATHLN] = "";
-   char         potfile[PATHLN] = "";
    FILE         *Fp = NULL;
    restrt_mt    restart_header;
    system_mt    sys;
@@ -1086,10 +1036,11 @@ main(int argc, char **argv)
    quat_mt      *qpf = NULL;
    int          av_convert;
    int          maxmol;
-   spec_data    element[NELEM];
+   spec_data    elem_data[NELEM];
+   const ele_data    *elem;
    spec_data    dopant = {"","",-1.0, 1e6};
    spec_mt      dopspec;
-   site_mt      *dopsite=NULL, *totsite;
+   site_mt      *dopsite=NULL, totsite[MAX_SPECIES];
    int          ndopsites = -1, *pos;
    vec_mt       dopant_coords[MAX_ATOMS];
    double       charge[MAX_ATOMS];
@@ -1099,22 +1050,24 @@ main(int argc, char **argv)
    char         title[TITLE_SIZE];
    int          newsites=0;
    int          insw = -1;
+   int          old_rdf_interval;  /* Remember rdf interval when skipping rdf data */
    double       simbox[3];
    double	euler[3];
-   boolean      strict_match = OFF;
-   boolean      shift_cofm = OFF;
-   int		file_type, energy_unit = 0;
+   boolean      strict_match = false;
+   boolean      shift_cofm = false;
+   boolean	include_control = true;
+   uint		energy_unit = 0;
+   int          nerrs = 0;              /* Accumulated error count */
 
 #define MAXTRY 100
-   control.page_length=1000000;
-   dopspec.nmols = dopspec.rdof = 0;
+   dopspec.nmols = dopspec.rdof = dopspec.nsites = 0;
    zero_real(h[0],9);
    zero_double(charge,MAX_ATOMS);
    zero_double(euler,3);
    strcpy(spgr,"P 1");
 
    comm = argv[0];
-   while( (c = getopt(argc, argv, "cr:s:m:n:u:o:w:q:z:e:y:a:hxjf:t:p:v:") ) != EOF )
+   while( (c = getopt(argc, argv, "cr:s:m:n:u:o:w:q:z:e:y:a:hxjf:t:p:v:?") ) != EOF )
       switch(c)
       {
        case 'c':
@@ -1128,13 +1081,13 @@ main(int argc, char **argv)
 	 filename = optarg;
 	 break;
        case 'm':
-	 molname = strlower(mystrdup(optarg));
+	 molname = mystrdup(optarg);
 	 break;
        case 'n':
          dopspec.nmols = atoi(optarg);
 	 break;
        case 'u':
-	 strncpy(dopant.name, strlower(optarg),NLEN);  /* Name of dopant species */
+	 strncpy(dopant.name, optarg, NLEN);  /* Name of dopant species */
 	 break;
        case 'w':
          dopant.mass = atof(optarg);  /* Mass of monatomic dopant species */
@@ -1146,20 +1099,19 @@ main(int argc, char **argv)
          strncpy(dopant.symbol, optarg, 4);  /* Symbol of monatomic dopant species */
 	 break;
        case 'e':
-         elename = optarg;   /* Name of element data file */
+         elefile = optarg;   /* Name of element data file */
          break;
        case 'y':
-         potname = optarg;   /* Name of potential parameter file */
-         strncat(strncat(potfile, POTPATH, PATHLN-strlen(potfile)), potname, PATHLN-strlen(potfile));
+         potfile = optarg;   /* Name of potential parameter file */
          break;
        case 'a':
          dopfile = optarg;   /* Structure file for (polyatomic) dopant species */
          break;
        case 'x':
-         strict_match = ON;  /* Match atoms/ions by name and charge rather than name only */
+         strict_match = true;  /* Match atoms/ions by name and charge rather than name only */
          break;
        case 'h':
-         shift_cofm = ON;    /* Position molecules using first sites rather than COFMs */
+         shift_cofm = true;    /* Position molecules using first sites rather than COFMs */
          break;
        case 'j':
          dopspec.rdof = 1;   /* Generate (random) new quaternions for all dopant molecules */
@@ -1178,7 +1130,7 @@ main(int argc, char **argv)
          break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
-	    error(NOOUTF, optarg);
+	    error(NOOUTF, optarg, strerror(errno));
 	 break;
        default:
        case '?': 
@@ -1220,25 +1172,25 @@ main(int argc, char **argv)
    {
     case 's':
       if( (Fp = fopen(filename,"r")) == NULL)
-	 error(NOSYSSPEC, filename);
+	 error(NOSYSSPEC, filename, strerror(errno));
       default_control(); 
-      file_type = check_control(Fp);
-      if (file_type)
+      include_control = check_control(Fp);
+      if (include_control)
         read_control(Fp, match);
-        
+
       read_sysdef(Fp, &sys, &species, &site_info, &potpar);
       qpf = qalloc(sys.nspecies);
       initialise_sysdef(&sys, species, site_info, qpf);
       break;
     case 'r':
       if( (Fp = fopen(filename,"rb")) == NULL)
-	 error(NORESTART, filename); 
+	 error(NORESTART, filename, strerror(errno)); 
       re_re_header(Fp, &restart_header, &control);
       re_re_sysdef(Fp, restart_header.vsn, &sys, &species, &site_info, &potpar);
       prep_pot(&sys, site_info, potpar, energy_unit);
       break;
     default:
-      error("Internal error - invalid input type", "");
+      message(NULLI,NULLP,FATAL,"Internal error - invalid input type");
    }
    allocate_dynamics(&sys, species);
    maxmol = sys.nmols;
@@ -1278,7 +1230,7 @@ main(int argc, char **argv)
       if( molname != NULL)
       {
          for(spec = species; spec < species+sys.nspecies; spec++)
-            if( !strcmp(strlower(spec->name), molname) )
+            if( !strcasecmp(spec->name, molname) )
          {
              maxmol = spec->nmols;
              mflag++;
@@ -1318,33 +1270,27 @@ main(int argc, char **argv)
 
    data_source = intyp;
 
-   /* Create full path name, but don't exceed max length of string */
-   strncat(strncat(elefile, ELEPATH, PATHLN-strlen(elefile)), elename, PATHLN-strlen(elefile));
-
    /* Read dopant species data from element data file if available */
-   n_elem = read_ele(element, elefile);
-   if(n_elem < 0 )
-      message(NULLI,NULLP,WARNING,NOELEM,elefile);
+   if( (elefile != NULL) && (n_elem = read_ele(elem_data, elefile)) < 0)
+      message(&nerrs,NULLP,WARNING,NOELEM,elefile);
   
    if( dopspec.nmols > 0 )
    {
       /* If dopant molecular structure file specified, read in data */
       if( dopfile != NULL )
       {
-         if( !strncmp(strlower(read_ftype(dopfile)),"pdb",3) )
+         if( !strncasecmp(read_ftype(dopfile),"pdb",3) )
             insw = PDB;
-         else
-            if( !strncmp(strlower(read_ftype(dopfile)),"cssr",4) )
-               insw = CSSR;
-            else
-               if( !strncmp(strlower(read_ftype(dopfile)),"shak",4) )
-                  insw = SHAK;
-               else
-                  if( !strncmp(strlower(read_ftype(dopfile)),"xtl",3) )
-                     insw = XTL;
-                  else
-                     if( !strncmp(strlower(read_ftype(dopfile)),"xyz",3) )
-                        insw = XYZ;
+         else if( !strncasecmp(read_ftype(dopfile),"cssr",4) )
+            insw = CSSR;
+         else if( !strncasecmp(read_ftype(dopfile),"shak",4) )
+            insw = SHAK;
+         else if( !strncasecmp(read_ftype(dopfile),"ins",3) || !strncasecmp(read_ftype(dopfile),"res",3))
+            insw = SHELX;
+         else if( !strncasecmp(read_ftype(dopfile),"xtl",3) )
+            insw = XTL;
+         else if( !strncasecmp(read_ftype(dopfile),"xyz",3) )
+            insw = XYZ;
 
 
          switch(insw)  /* Read in data according to format selected */
@@ -1358,6 +1304,9 @@ main(int argc, char **argv)
             case SHAK:
                ndopsites = read_shak(dopfile, h, label, dopant_coords, charge, title, simbox);
                break;
+            case SHELX:
+               ndopsites = read_shelx(dopfile, h, label, dopant_coords, title, spgr);
+               break;
             case XTL:
                ndopsites = read_xtl(dopfile, h, label, dopant_coords, charge, title, spgr);
                break;
@@ -1365,11 +1314,11 @@ main(int argc, char **argv)
                ndopsites = read_xyz(dopfile, h, label, dopant_coords, title);
                break;
             default:
-               error(UNKSTRUCT, dopfile);
+               message(NULLI,NULLP,FATAL,UNKSTRUCT,dopfile);
          }
 
          if( ndopsites < 0)
-            message(NULLI,NULLP,WARNING,NOSUB,dopfile);
+            message(&nerrs,NULLP,WARNING,NOSUB,dopfile);
 
          if( strcmp(spgr,"P 1")  && ndopsites > 0 )
             ndopsites = sgexpand(MAX_ATOMS, ndopsites, dopant_coords, label, charge, spgr);
@@ -1381,7 +1330,7 @@ main(int argc, char **argv)
       {
          ndopsites = 1;
          if( !strcmp(dopant.symbol,"" ) )
-            strcpy(label[0],dopant.name);
+            strcpy(label[0], dopant.name);
          else
             strcpy(label[0],dopant.symbol);
          dopant_coords[0][0] = dopant_coords[0][1] = dopant_coords[0][2] = 0.0;
@@ -1389,9 +1338,9 @@ main(int argc, char **argv)
 
       dopsite = (site_mt*)arralloc(sizeof(site_mt),1,0,ndopsites-1);
       if( shift_cofm )
-         site_info[0].pad = ON;
+         site_info[0].pad = 1;
       else
-         site_info[0].pad = OFF;
+         site_info[0].pad = 0;
       strcpy(dopspec.name, dopant.name);
       dopspec.nsites = ndopsites;
       dopspec.site_id = ialloc(ndopsites+1);
@@ -1488,18 +1437,36 @@ main(int argc, char **argv)
             if( label[i] != NULL )
                strncpy((dopsite+newsites)->name, label[i], 4);
 
-            for( irec=0; irec < n_elem; irec++)
+            /* First check default element data */
+            for (elem = ElementData; elem->name; elem++)
+              {
+
+                if( (ndopsites == 1) && (!strcasecmp(dopspec.name, elem->name)) )
+                {
+                  strcpy(dopsite->name, elem->symbol);
+                  break;
+                }
+                if( !strcasecmp((dopsite+newsites)->name, elem->symbol) )
+                {
+                  if( (dopsite+newsites)->mass < 0)
+                     (dopsite+newsites)->mass = elem->mass;
+                  if( (dopsite+newsites)->charge == 1e6 && !strict_match )
+                     (dopsite+newsites)->charge = elem->charge;
+                }
+              }
+
+           /* for( irec=0; irec < n_elem; irec++)
             {
-               if( (ndopsites == 1) && (!strcmp(strlower(dopspec.name),strlower((element+irec)->name))) )
-                  strncpy(dopsite->name, (element+irec)->symbol, 4);
-               if( !strcmp((dopsite+newsites)->name,(element+irec)->symbol) )
+               if( (ndopsites == 1) && (!strcasecmp(dopspec.name,(elem_data+irec)->name)) )
+                  strncpy(dopsite->name, (elem_data+irec)->symbol, 4);
+               if( !strcasecmp((dopsite+newsites)->name, (elem_data+irec)->symbol) )
                {
                   if( (dopsite+newsites)->mass < 0)
-                     (dopsite+newsites)->mass = (element+irec)->mass;
+                     (dopsite+newsites)->mass = (elem_data+irec)->mass;
                   if( (dopsite+newsites)->charge == 1e6 && !strict_match )
-                     (dopsite+newsites)->charge = (element+irec)->charge;
+                     (dopsite+newsites)->charge = (elem_data+irec)->charge;
                }
-            }
+            } */
             newsites++;
          }
       }
@@ -1509,17 +1476,17 @@ main(int argc, char **argv)
 
    copy_pot(new_pot,potpar,sys.max_id, newsites);  /* Create enlarged potential parm array to accommodate new species */
 
-   totsite = (site_mt*)arralloc(sizeof(site_mt),1,0,sys.max_id+newsites-1);
+/*   totsite = (site_mt*)arralloc(sizeof(site_mt),1,0,sys.max_id+newsites-1); */
 
    create_total_sites(sys.max_id, newsites, site_info, dopsite, totsite); /* Combine dopant and system site arrays */
 
    /* If potential parameter file exists, read in data */
-   if( (potname != NULL) && (read_pot(potfile, &new_pot, sys.max_id, newsites, totsite) < 0) )
-        message(NULLI,NULLP,WARNING,NOPOTL,potfile);
+   if( (potfile != NULL) && (read_pot(potfile, &new_pot, totsite, newsites, sys.max_id) < 0) )
+        message(&nerrs,NULLP,WARNING,NOPOTL,potfile);
 
    sys.max_id += newsites;
 
-   if( !cflg ) /* Write control info at top of new file */
+   if( !cflg && include_control) /* Write control info at top of new file */
      control_out(&sys);
 
    switch(data_source)                  /* To read configurational data       */
@@ -1533,7 +1500,12 @@ main(int argc, char **argv)
         init_averages(sys.nspecies, restart_header.vsn,
                       control.roll_interval, control.roll_interval,
                       &av_convert);
+
+        old_rdf_interval = control.rdf_interval;
+        control.rdf_interval = 0; /* Skip rdf data */
         read_restart(Fp, restart_header.vsn, &sys, av_convert);
+        control.rdf_interval = old_rdf_interval;
+
         random_pos(maxmol, dopspec.nmols, pos);
         sys_spec_out(&sys, species, &dopspec, molname, pos, totsite, euler, new_pot);
       break;
@@ -1542,5 +1514,9 @@ main(int argc, char **argv)
     }
    afree(dopsite);
    afree(totsite);
+
+   if(nerrs > 0)                        /* if any errors have been detected */
+      message(&nerrs,NULLP,FATAL,ERRS,nerrs,(nerrs>1)?'s':' ');
+
    return 0;
 }

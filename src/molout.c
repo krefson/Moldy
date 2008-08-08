@@ -1,5 +1,5 @@
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/molout.c,v 1.16 2005/03/06 18:29:08 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/molout.c,v 1.17 2005/04/18 14:13:21 cf Exp $";
 #endif
 
 #include "defs.h"
@@ -12,6 +12,7 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/molout.c,v 1.16 2005/03
 #include "structs.h"
 #include "ReadDCD.h"
 #include "utlsup.h"
+#include "specdata.h"
 
 void	make_sites(real (*h)[3], vec_mp c_of_m_s, 
 		   quat_mp quat, vec_mp p_f_sites, 
@@ -144,7 +145,8 @@ schakal_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info,
  * xtl_out().  Write a system configuration to stdout in the form of an       *
  * BIOSYM XTL file.							      *
  ******************************************************************************/
-static void xtl_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, char *insert, int intyp)
+static void xtl_out(system_mt *system, mat_mp h, spec_mt *species,
+                    site_mt *site_info, char *insert, int intyp)
 {
    real		**site = (real**)arralloc(sizeof(double),2,
 					    0,2,0,system->nsites-1);
@@ -154,6 +156,7 @@ static void xtl_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site
    mat_mt	hinv;
    int		imol, isite, is;
    int		charge;
+   char		*scatter;
 
    if( intyp == 'r' )
       qconv = CONV_Q;
@@ -169,7 +172,7 @@ static void xtl_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site
    beta  = 180/PI*acos((h[0][0]*h[0][2]+h[1][0]*h[1][2]+h[2][0]*h[2][2])/a/c);
    gamma = 180/PI*acos((h[0][0]*h[0][1]+h[1][0]*h[1][1]+h[2][0]*h[2][1])/a/b);
 
-   printf("TITLE %s\n",control.title);
+   printf("TITLE %s\n", control.title);
    puts("DIMENSION 3");
    printf("CELL \n%f %f %f %f %f %f\n", a, b, c, alpha, beta, gamma);
    printf("SYMMETRY  NUMBER 1  LABEL P1\n");
@@ -187,14 +190,17 @@ static void xtl_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site
       {
 	 for(is = 0; is < spec->nsites; is++)
 	 {
+            scatter = malloc(NLEN+1);
             charge = (int)abs(site_info[spec->site_id[is]].charge*qconv);
+            str_cut(site_info[spec->site_id[is]].name, scatter);
 	    if(fabs(site_info[spec->site_id[is]].mass) != 0)
-	       (void)printf("%-4s %10.5f %10.5f %10.5f %7.4f   0.0000  1.0000   %-2s%d%c\n",
+	       (void)printf("%-4s %10.5f %10.5f %10.5f %7.4f   0.0000  1.0000   %s%d%c\n",
 			    site_info[spec->site_id[is]].name,
 			    site[0][isite], site[1][isite], site[2][isite],
 			    site_info[spec->site_id[is]].charge*qconv,
-                            site_info[spec->site_id[is]].name, charge, (charge >=0 ? '+':'-'));
+                            scatter, charge, (site_info[spec->site_id[is]].charge >=0 ? '+':'-'));
 	    isite++;
+            (void)free(scatter);
 	 }
       }
    }
@@ -528,7 +534,7 @@ arc_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, int i
    spec_mt      *spec;
    double       a,b,c, alpha, beta, gamma;
    double       qconv;  /* Variable for converting charge from program units */
-   char         atom_name[5], name_charge[7], *elem_sym;
+   char         atom_name[10], name_charge[7], *elem_sym;
    double       atom_charge;
    int          imol, isite, divd;
    int          is, ispec=1;
@@ -571,8 +577,8 @@ arc_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, int i
             divd = pow(10, 5-strlen(elem_sym));
             if( divd > 1)
             {
-               sprintf(atom_name,"%s%d",elem_sym,(imol+1)%divd);
-               sprintf(name_charge,"%s%-5.0f",elem_sym,fabs(atom_charge));
+               sprintf(atom_name,"%s%d", elem_sym, (imol+1)%divd);
+               sprintf(name_charge,"%s%-5.0f", elem_sym, fabs(atom_charge));
             }
             else
             {
@@ -580,7 +586,7 @@ arc_out(system_mt *system, mat_mp h, spec_mt *species, site_mt *site_info, int i
                strncpy(name_charge, site_info[spec->site_id[is]].name, 5);
             }
             if(fabs(site_info[spec->site_id[is]].mass) != 0)
-               (void)printf("%-5s %14.9f %14.9f %14.9f XXX  %-2d     %-7s %-2s %6.3f\n",
+               (void)printf("%-5.5s %14.9f %14.9f %14.9f XXX  %-2d     %-7.7s %-2.2s %6.3f\n",
                     atom_name, site[0][isite], site[1][isite], site[2][isite],
                     ispec, name_charge, elem_sym, atom_charge);
             isite++;

@@ -1,10 +1,4 @@
 \providecommand{\bysame}{\leavevmode\hbox to3em{\hrulefill}\thinspace}
-\providecommand{\MR}{\relax\ifhmode\unskip\space\fi MR }
-% \MRhref is called by the amsart/book/proc definition of \MR.
-\providecommand{\MRhref}[2]{%
-  \href{http://www.ams.org/mathscinet-getitem?mr=#1}{#2}
-}
-\providecommand{\href}[2]{#2}
 \begin{thebibliography}{10}
 
 \bibitem{abramowitz:70}
@@ -16,7 +10,7 @@ M.~P. Allen and D.~J. Tildesley, \emph{Computer simulation of liquids},
   Clarendon Press, Oxford, 1987.
 
 \bibitem{andersen:80}
-Hans~C. Andersen, \emph{Molecular dynamics simulation at constant pressure
+H.~C. Andersen, \emph{Molecular dynamics simulation at constant pressure
   and/or temperature}, J. Chem. Phys. \textbf{72} (1980), no.~4, 2384--2393.
 
 \bibitem{beeman:76}
@@ -52,7 +46,7 @@ E.~Clementi, G.~Corongiu, and J.~H. Detrich, \emph{Parallelism in computations
   (1985), 287--294.
 
 \bibitem{cleveland:88}
-Charles~L. Cleveland, \emph{New equations of motion for molecular dynamics
+C.~L. Cleveland, \emph{New equations of motion for molecular dynamics
   systems that change shape}, J. Chem. Phys. \textbf{89} (1988), no.~8,
   4987--4993.
 
@@ -96,7 +90,7 @@ J.~P. Hansen and I.~R. McDonald, \emph{Theory of simple liquids}, 2nd ed.,
   Academic Press, London, 1986.
 
 \bibitem{tcgmsg:94}
-Robert~J. Harrison, \emph{Tcgmsg send/receive subroutines}, Battelle Pacific
+R.~J. Harrison, \emph{Tcgmsg send/receive subroutines}, Battelle Pacific
   Northwest Laboratory, 1994, Available by internet ftp from url
   ftp://ftp.tcg.anl.gov/pub/tcgmst/tcgmsg-4.04.tar.Z.
 
@@ -135,7 +129,7 @@ H.~Kistenmacher, H.~Popkie, and E.~Clementi, \emph{Study of the structure of
   5842.
 
 \bibitem{knuth:73a}
-Donald~E. Knuth, \emph{Fundamental algorithms}, second ed., The Art of Computer
+D.~E. Knuth, \emph{Fundamental algorithms}, second ed., The Art of Computer
   Programming, vol.~1, section 1.2, Addison-Wesley, 1973.
 
 \bibitem{laakonsen:85}
@@ -144,7 +138,7 @@ A.~Laakonsen, \emph{Computer simulation package for liquids and solids with
   KGN-41, IBM Corporation, Kingston, N. Y.12401, USA, 1985.
 
 \bibitem{deleeuw:80}
-S.~W.~De Leeuw, J.~W. Perram, and E.~R. Smith, \emph{Simulation of
+S.~W.~de Leeuw, J.~W. Perram, and E.~R. Smith, \emph{Simulation of
   electrostatic systems in periodic boundary conditions. {I} {L}attice sums and
   dielectric constant}, Proc. Roy. Soc. \textbf{A373} (1980), 27--56.
 
@@ -153,7 +147,7 @@ O.~Matsuoka, E.~Clementi, and M.~Yoshimine, \emph{{CI} study of the water dimer
   potential surface}, J. Chem. Phys. \textbf{64} (1976), no.~4, 1351--1361.
 
 \bibitem{bsp:93}
-Richard Miller, \emph{A library for bulk-synchronous parallel computing},
+R.~Miller, \emph{A library for bulk-synchronous parallel computing},
   Parallel Processing Specialist Group workshop on General Purpose Parallel
   Computing, British Computer Society, 1993.
 
@@ -171,7 +165,7 @@ S.~Nos\'{e} and M.~L. Klein, \emph{Constant pressure molecular dynamics for
   molecular systems}, Mol. Phys. \textbf{50(5)} (1983), 1055--1076.
 
 \bibitem{pappalardo:93}
-Rafael~Rodriguez Pappalardo and Enrique Sanchez~Marcos, \emph{Recovering the
+R.~Rodriguez Pappalardo and E.~Sanchez~Marcos, \emph{Recovering the
   concept of the hydrated ion for modelling ionic solutions: A monte carlo
   study of {Zn$^{2+}$} in water}, J. Phys. Chem. \textbf{97} (1993),
   4500--4504.
@@ -200,7 +194,7 @@ J.~G. Powles, W.~A.~B. Evans, E.~McGrath, K.~E. Gubbins, and S.~Murad, \emph{A
   Phys. \textbf{38} (1979), 893--908.
 
 \bibitem{press:92C}
-William~H. Press, Saul~A. Teukolsky, William~T. Vetterling, and Brian~P.
+W.~H. Press, S.~A. Teukolsky, William~T. Vetterling, and Brian~P.
   Flannery, \emph{Numerical recipes in {C} the art of scientific computing},
   2nd ed., Cambridge University Press, 1992.
 
@@ -252,7 +246,7 @@ L.~Verlet, \emph{Computer `experiments' on classical fluids. {I}.
   \textbf{165} (1967), 201--214.
 
 \bibitem{wentzcovitch:91}
-Renata~M. Wentzcovitch, \emph{Invariant molecular-dynamics approach to
+R.~M. Wentzcovitch, \emph{Invariant molecular-dynamics approach to
   structural phase transitions}, Phys. Rev. B \textbf{44} (1991), no.~5,
   2358--2361.
 

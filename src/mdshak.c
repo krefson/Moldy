@@ -94,10 +94,12 @@ main(int argc, char **argv)
      outsw = ARC;
    else if (strstr(comm, "mdxtl") )
      outsw = XTL;
+   else if (strstr(comm, "mdins") )
+     outsw = SHELX;
    else
      outsw = OUTBIN;
 
-   while( (c = getopt(argc, argv, "o:r:s:d:t:i:yf:v") ) != EOF )
+   while( (c = getopt(argc, argv, "o:r:s:d:t:i:yf:v?") ) != EOF )
       switch(c)
       {
        case 'o':
@@ -132,22 +134,24 @@ main(int argc, char **argv)
          trajsw = 1;
 	 break;
        case 'f':
-	  if( !strcasecmp(optarg, "shak") )
-	     outsw = SHAK;
-	  else if (!strcasecmp(optarg, "pdb") )
-	     outsw = PDB;
-	  else if (!strcasecmp(optarg, "xyz") )
-	     outsw = XYZ;
-	  else if (!strcasecmp(optarg, "dcd") || !strcasecmp(optarg, "vmd") )
-	     outsw = DCD;
-	  else if (!strcasecmp(optarg, "cssr") )
-	     outsw = CSSR;
-	  else if (!strcasecmp(optarg, "arc") )
-	     outsw = ARC;
-	  else if (!strcasecmp(optarg, "xtl") )
-	     outsw = XTL;
-	  else if (!strcasecmp(optarg, "bin") )
-	     outsw = OUTBIN;
+	 if( !strcasecmp(optarg, "shak") )
+	    outsw = SHAK;
+	 else if (!strcasecmp(optarg, "pdb") )
+	    outsw = PDB;
+	 else if (!strcasecmp(optarg, "xyz") )
+	    outsw = XYZ;
+	 else if (!strcasecmp(optarg, "dcd") || !strcasecmp(optarg, "vmd") )
+	    outsw = DCD;
+	 else if (!strcasecmp(optarg, "cssr") )
+	    outsw = CSSR;
+	 else if (!strcasecmp(optarg, "arc") )
+	    outsw = ARC;
+	 else if (!strcasecmp(optarg, "xtl") )
+	    outsw = XTL;
+         else if (!strcasecmp(optarg, "ins") )
+            outsw = SHELX;
+	 else if (!strcasecmp(optarg, "bin") )
+	    outsw = OUTBIN;
 	 break;
        case 'v':
          verbose++;

@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/msd.c,v 2.10 2005/02/04 14:52:34 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/msd.c,v 2.11 2005/02/07 11:29:18 cf Exp $";
 #endif
 /**************************************************************************************
  * msd    	Code for calculating mean square displacements of centres of mass     *
@@ -35,6 +35,9 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/msd.c,v 2.10 2005/02/04
  ************************************************************************************** 
  *  Revision Log
  *  $Log: msd.c,v $
+ *  Revision 2.11  2005/02/07 11:29:18  cf
+ *  Removed unnecessary list declarations/definitions.
+ *
  *  Revision 2.10  2005/02/04 14:52:34  cf
  *  Reads header info with dumpext to determine system info and maximum time slice range.
  *  Common utility messages/errors moved to utlsup.h.
@@ -514,7 +517,7 @@ main(int argc, char **argv)
    else if( strstr(comm, "mdtraj") )
       outsw = TRAJ;
 
-   while( (c = getopt(argc, argv, "t:m:i:g:o:w:xXyYzZv") ) != EOF )
+   while( (c = getopt(argc, argv, "t:m:i:g:o:w:xXyYzZv?") ) != EOF )
       switch(c)
       {
        case 't':

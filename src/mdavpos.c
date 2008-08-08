@@ -20,7 +20,7 @@ In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
 #ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdavpos.c,v 2.21 2005/01/13 12:38:56 cf Exp $";
+static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdavpos.c,v 2.22 2005/02/04 14:51:24 cf Exp $";
 #endif
 /**************************************************************************************
  * mdavpos    	code for calculating mean positions of                                *
@@ -28,6 +28,10 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdavpos.c,v 2.21 2005/0
  ************************************************************************************** 
  *  Revision Log
  *  $Log: mdavpos.c,v $
+ *  Revision 2.22  2005/02/04 14:51:24  cf
+ *  Reads header info with dumpext to determine maximum time slice range.
+ *  Common utility messages/errors moved to utlsup.h.
+ *
  *  Revision 2.21  2005/01/13 12:38:56  cf
  *  Added verbose option for dump files.
  *  Prevent output of "Success" when dumpcommand error occurs.
@@ -333,9 +337,9 @@ main(int argc, char **argv)
    int		errflg = 0;
    int		intyp = 0;
    int		outsw = SHAK;
-   int          avsw = FRAC;
-   int          rectsw = 0;
-   int          boxsw = 0;
+   int          avsw = FRAC; /* Switch for units to use when averaging */
+   int          rectsw = 0; /* Switch for  placing atoms in orthogonal cell */
+   int          boxsw = 0; /* Switch for forcing coords into sim cell */
    int		start = 0, finish = 0, inc = 1;
    int		tflag = 0, nav;
    int		irec;
@@ -366,7 +370,7 @@ main(int argc, char **argv)
 
    comm = argv[0];
 
-   while( (c = getopt(argc, argv, "r:s:t:o:f:aliv") ) != EOF )
+   while( (c = getopt(argc, argv, "r:s:t:o:f:aliv?") ) != EOF )
       switch(c)
       {
        case 'r':
@@ -388,31 +392,33 @@ main(int argc, char **argv)
            errflg++;
 	 break;
        case 'f':
-	  if( !strcasecmp(optarg, "shak") )
-	     outsw = SHAK;
-	  else if (!strcasecmp(optarg, "pdb") )
-	     outsw = PDB;
-	  else if (!strcasecmp(optarg, "xyz") )
-	     outsw = XYZ;
-	  else if (!strcasecmp(optarg, "dcd") || !strcasecmp(optarg, "vmd") )
-	     outsw = DCD;
-	  else if (!strcasecmp(optarg, "cssr") )
-	     outsw = CSSR;
-	  else if (!strcasecmp(optarg, "arc") )
-	     outsw = ARC;
-	  else if (!strcasecmp(optarg, "xtl") )
-	     outsw = XTL;
-	  else if (!strcasecmp(optarg, "bin") )
-	     outsw = OUTBIN;
-	  break;
+	 if( !strcasecmp(optarg, "shak") )
+	    outsw = SHAK;
+	 else if (!strcasecmp(optarg, "pdb") )
+	    outsw = PDB;
+	 else if (!strcasecmp(optarg, "xyz") )
+	    outsw = XYZ;
+	 else if (!strcasecmp(optarg, "dcd") || !strcasecmp(optarg, "vmd") )
+	    outsw = DCD;
+	 else if (!strcasecmp(optarg, "cssr") )
+	    outsw = CSSR;
+	 else if (!strcasecmp(optarg, "arc") )
+	    outsw = ARC;
+	 else if (!strcasecmp(optarg, "xtl") )
+	    outsw = XTL;
+         else if (!strcasecmp(optarg, "ins") )
+            outsw = SHELX;
+	 else if (!strcasecmp(optarg, "bin") )
+	    outsw = OUTBIN;
+	 break;
       case 'a':
-         avsw = CART;
+         avsw = CART; /* Switch to averaging Cartesian coords */
          break;
       case 'l':
-         rectsw = 1;
+         rectsw = 1; /* Remove off-diagonal components from sim cell */
          break;
       case 'i':
-         boxsw = 1;
+         boxsw = 1; /* Force coords to lie within sim cell */
          break;
       case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )

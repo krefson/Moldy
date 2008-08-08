@@ -21,14 +21,15 @@ what you give them.   Help stamp out software-hoarding! */
 /************************************************************************************
  * Readers   Routines for reading SHAKAL, CSSR and PDB structure files              *
  *           Contents:                                                              *
+ * is_symbol()       Return element no if label in element list                     *
  * multi_char()      Return value of run-time string as if multichar constant       *
- * trim()            Remove leading and trailing spaces from string                 *
- * str_cut()         Divide string into alphabetical and numerical parts            *
  * read_ftype        Read filename suffix to guess file type                        *
+ * read_pot          Read potential file                                            *
  * cell_to_prim      Calculate primitive cell matrix from unit cell parms           *
  * read_cssr()       Read data from Cambridge Search and Structure Retrieval file   *
  * read_pdb()        Read data from Brookhaven Protein Databank (PDB) file          *
  * read_shak()       Read data from Schakal file                                    *
+ * read_shelx()      Read data from shelx file                                      *
  * read_xtl()        Read data from Biosym xtl file                                 *
  * read_xyz()        Read data from generic xyz file                                *
  * read_ele()        Read element data from file                                    *
@@ -48,22 +49,90 @@ what you give them.   Help stamp out software-hoarding! */
 #include "structs.h"
 #include "messages.h"
 #include "utlsup.h"
-#include "sginfo.h"
 #include "specdata.h"
+#include "list.h"
+
+/* For space group info */
+#define SGCOREDEF__
+#include "sginfo.h"
 
 #define TITLE_SIZE  80
 #define DATAREC "%d record%ssuccessfully read from %s"
 #define XSATOMS "Only reading first %d atoms from \"%s\". Increase MAX_ATOMS to read more."
 
 /*========================== External data references ========================*/
+extern  const ele_data ElementData[];
 extern  const pots_mt   potspec[];           /* Potential type specification  */
-extern  const T_TabSgName TabSgName[];       /* Space group names, etc */
+/* extern  const T_TabSgName TabSgName[]; */      /* Space group names, etc */
 
 extern int transformation_matrix (char *buf, T_RTMx *trans_matrix);
 extern int symm_gen (T_RTMx matrix, mat_mp apos, char (*atype)[NLEN], double *charge, int max, int natoms, int abegin, int aend);
 extern void sgtransform (T_RTMx m, mat_mp x, mat_mp xp, int natoms);
 extern int sgexpand (int maxnatoms, int natoms, vec_mt (*a_lst), char (*label)[NLEN], double *charge, char *spgr);
 
+#define DEBUG_IS_ELEM 0
+/****************************************************/
+/* does a given string represent an element symbol? */
+/****************************************************/
+int is_symbol(char *input)
+{
+int i, j, m, n;
+int num_elements;
+char *label;
+
+/* checks */
+if (input == NULL)
+  return(0);
+/* zero length string matches something, so force it to return 0 */
+if (!strlen(input))
+  return(0);
+
+/* duplicate for manipulation */
+label = mystrdup(input);
+
+/* remove anything but alphabetic chars */
+for (i=0 ; i<strlen(label) ; i++)
+  if (!isalpha(*(label+i)))
+    *(label+i) = ' ';
+trim(label);
+
+m = strlen(label);
+
+/* catch Deuterium */
+if (strncasecmp(label, "D", strlen(label)) == 0)
+  *label = 'H';
+
+#if DEBUG_IS_ELEM
+printf("Looking for [%s]...", label);
+#endif
+
+/* attempt to match atom type with database */
+j=0;
+num_elements = sizeof *ElementData;
+
+/* FIXME - elim dependence on const */
+for(i=1 ; i<num_elements ; i++)
+  {
+/* only compare if lengths match */
+  n = strlen(ElementData[i].symbol);
+  if (n == m)
+    {
+    if (strcasecmp(label, ElementData[i].symbol) == 0)
+      {
+      j = i;
+      break;
+      }
+    }
+  }
+
+#if DEBUG_IS_ELEM
+if (j)
+  fprintf(stderr,"found.\n");
+else
+  fprintf(stderr,"not found.\n");
+#endif
+return(j);
+}
 /******************************************************************************
  * multi_char().  Return the value of a (run-time) string as if it had been   *
  *                declared as a multi-character constant. Up to 4-byte ints.  *
@@ -96,26 +165,6 @@ int multi_char(char *s)
    return m;
 }
 /******************************************************************************
- * trim().  Trim leading and trailing spaces from string variables            *
- ******************************************************************************/
-char    *trim(char *s)
-{
-char    *t = s, *p;
-
-   /* Remove leading spaces */
-   while( *t == ' ' && *t != '\0')
-      t++;
-
-   strcpy(s, t);
-
-   /* Now remove trailing spaces */
-   p = s + strlen(s);
-   while( p > s && !isalnum(*p))
-      *p-- = '\0';
-
-   return (s);
-}
-/******************************************************************************
  * cell_to_prim().  Convert unit cell params to primitive vector matrix.      *
  ******************************************************************************/
 void cell_to_prim(double *cell, mat_mt h)
@@ -132,38 +181,6 @@ double   ca, cb, cg, sg;               /* Cos and sin of cell angles */
    h[1][2] = cell[2] / sg * (ca - cb*cg);
    h[2][2] = cell[2] / sg * sqrt(1 - ca*ca - cb*cb - cg*cg + 2*ca*cb*cg);
    h[1][0] = h[2][0] = h[2][1] = 0.0;
-}
-/******************************************************************************
- * str_cut().  Separates alphabetical and numeric parts of a string.          *
- ******************************************************************************/
-int     str_cut(char *in, char *out) /* Input and output strings must be different */
-{
-   int          i,j,k=strlen(in);
-   int          value;
-
-   for( i=0; i < k; i++)
-     if( isdigit(in[i]) )
-        break;
-
-   for( j=0; j < k; j++)
-     if( isalpha(in[j]) )
-        break;
-
-   if( i <= j )
-   {
-      strncpy(out,in+j,k-j);   /* Copy alphabetical part */
-      in[j] ='\0';             /* Truncate alphabetical part */
-      value=atoi(in);          /* Convert numeric part */
-   }
-   else
-   {
-      strncpy(out,in,i);       /* Copy alphabetical part */
-      value=atoi(in+i);        /* Convert numeric part */
-   }
-   if( strrchr(out,'-') != NULL && value > 0 )
-        value *= -1;
-
-   return value;
 }
 /******************************************************************************
  * read_ftype().  Read suffix from filename.                                  *
@@ -183,6 +200,140 @@ char    *s = filename+strlen(filename);
    }
    else
      return ("");
+}
+/******************************************************************************
+ * read_pot().  Read potential data from file.                                *
+ ******************************************************************************/
+int       read_pot(char *potfile, pot_mp *pot_ptr, site_mt *spec, int add_sites, int max_id)
+{
+char       atom1[4], atom2[4];
+double     chg1, chg2;
+double     p_tmp;
+pot_mt     pot;
+int        i, m, n, n_items;
+char       name[LLEN],             /* Temporary potential type name      */
+           line[LLEN],             /* Store for input line from file     */
+           pline[LLEN];            /* Used in pot'l paramater parsing    */
+int        ptype=-1;               /* Potential type index               */
+int        nerrs = 0;              /* Accumulated error count            */
+int        idi, idj;
+site_mt    *spi,*spj;              /* Temporary species pointers         */
+boolean    flag1, flag2;           /* Atom labels = element symbol flags */
+int        match1, match2;         /* Atoms match sites */
+int        code1, code2;           /* Element number */
+
+FILE       *Fpot;
+
+    if( (Fpot = fopen(potfile,"r")) == NULL)
+        return ptype;
+
+    n_items = sscanf(get_line(line,LLEN,Fpot,1), "%s", name);
+    if( n_items <= 0 )
+       message(NULLI,NULLP,FATAL,SYSEOF,"potential type specification");
+
+    for(i = 0; potspec[i].name; i++)             /* Is 'name' a known type? */
+       if(strcasecmp(name, potspec[i].name) == 0)
+          break;
+
+    if(! potspec[i].name)                        /* Did the loop find 'name'? */       message(&nerrs,line,FATAL,UNKPOT,name);   /* no                        */    ptype = i;                                   /* yes                       */
+    while(sscanf(get_line(line,LLEN,Fpot,1),"%s",name) > 0
+                    && strcasecmp(name, "end") != 0)
+    {
+        n_items = 0;
+        flag1 = flag2 = false;
+        match1 = match2 = 0;
+
+        if(sscanf(line,"%4s %lf %4s %lf %[^#]",atom1,&chg1,atom2,&chg2,pline) <= 2)
+           message(&nerrs,line,ERROR,NOPAIR);
+        else
+        {
+                                              /* Now read in parameters */
+           (void)strcat(pline, "$");              /* Add marker to end      */
+           while(n_items < NPOTP && sscanf(pline,"%lf %[^#]", &p_tmp, pline) > 1 )
+              pot.p[n_items++] = p_tmp;
+        }
+
+       /* Is atom1 an element symbol or other label? */
+       m = is_symbol(atom1);
+       if (m)
+         if( strncasecmp(atom1, ElementData[m].symbol, strlen(ElementData[m].symbol)))
+           flag1 = true;
+
+       /* Is atom2 an element symbol or other label? */
+       n = is_symbol(atom2);
+       if (n)
+         if( strncasecmp(atom2, ElementData[n].symbol, strlen(ElementData[n].symbol)))
+           flag2 = true;
+
+       for( idi = 0; idi < max_id; idi++)
+       {
+         spi = spec+idi;
+         for( idj = idi; idj < max_id+add_sites; idj++)
+         {
+           spj = spec+idj;
+
+           code1 = is_symbol(spi->name);
+           code2 = is_symbol(spj->name);
+
+           if(flag1)
+             {
+             if( (m == code1) && (chg1 == spi->charge))
+               match1 = 1;
+             else
+               if( (m == code2) && (chg1 == spj->charge))
+                 match1 = 2;
+               else
+                 match1 = 0;
+             }
+           else
+             {
+             if( (!strcmp(atom1,spi->name)) && (chg1 == spi->charge))
+               match1 = 1;
+             else
+               if( (!strcmp(atom1,spj->name)) && (chg1 == spj->charge))
+                 match1 = 2;
+               else
+                 match1 = 0;
+             }
+
+           if(flag2)
+             {
+             if( (n == code2) && (chg2 == spj->charge))
+               match2 = 2;
+             else
+               if( (n == code1) && (chg2 == spi->charge))
+                 match2 = 1;
+               else
+                 match2 = 0;
+             }
+           else
+             {
+             if( (!strcmp(atom2,spj->name)) && (chg2 == spj->charge))
+               match2 = 2;
+             else
+               if( (!strcmp(atom2,spi->name)) && (chg2 == spi->charge))
+                 match2 = 1;
+               else
+                 match2 = 0;
+             }
+
+           if( (match1 == 1 && match2 == 2) ||
+               (match1 == 2 && match2 == 1) )
+           {
+               /* Assign additional potential parameters */
+               (*pot_ptr)[idi + idj * max_id] = pot;
+               (*pot_ptr)[idj + idi * max_id] = pot;
+           }
+         }
+       }
+    }
+
+   fclose(Fpot);
+
+   if(nerrs > 0)                        /* if any errors have been detected */
+      message(&nerrs,NULLP,FATAL,ERRS,nerrs,(nerrs>1)?'s':' ');
+
+    return ptype;
 }
 /******************************************************************************
  * read_cssr().  Read structural data from cssr file.                         *
@@ -247,7 +398,7 @@ int	 sgno=0, sgopt=0; /* Space group number and associated option */
           strcat(spgr,":a");
         sgopt = sgopt % 3;
         if(!sgopt) sgopt = 3;
-        sprintf(spgr,"%s%d",spgr,sgopt);
+          sprintf(spgr,"%s%d",spgr,sgopt);
      }
      /* Match cssr options to sginfo list order */
      else if( sgno == 9 || sgno == 15 )
@@ -266,7 +417,7 @@ int	 sgno=0, sgopt=0; /* Space group number and associated option */
           strcat(spgr,":-a");
         sgopt = sgopt % 3;
         if(!sgopt) sgopt = 3;
-        sprintf(spgr,"%s%d",spgr,sgopt);
+          sprintf(spgr,"%s%d",spgr,sgopt);
      }
      else if( sgno == 50 || sgno == 59 || sgno == 68)
      {
@@ -325,7 +476,7 @@ int      read_pdb(char *filename, mat_mp h, char (*label)[NLEN], vec_mp x, doubl
 {
 int      natoms = 0;
 double   cell[6];                                  /* Cell parameters */
-char     dummy[6], chg[2];
+char     dummy[4], chg[2];
 mat_mt   hinv;
 double   tr[3];
 char     line[LLEN], keyword[LLEN];
@@ -353,7 +504,7 @@ FILE     *Fp;
 
        if(strcasecmp(keyword,"cryst1") == 0)   /* CRYST1 - Specify unit cell */
        {
-          if( sscanf(strlower(line),"cryst1%9lf%9lf%9lf%7lf%7lf%7lf%11c",
+          if( sscanf(line,"CRYST1%9lf%9lf%9lf%7lf%7lf%7lf%11c",
              &cell[0],&cell[1],&cell[2],&cell[3],&cell[4],&cell[5],spgr) < 6 )
                 error("Error in CRYST1 line of \"%s\" -- should have at least 6 parameters", filename);
 
@@ -363,7 +514,7 @@ FILE     *Fp;
 
        if(strncasecmp(keyword,"scale",5) == 0 )         /* SCALE */
        {
-          sscanf(strlower(line), "scale%1d", &irow);
+          sscanf(line, "SCALE%1d", &irow);
           if( irow < 1 || irow > 3 )
              error("Error in \"%s\" - Error in SCALE[1-3] - %6s unknown", filename, line);
 
@@ -373,7 +524,7 @@ FILE     *Fp;
           scaleflg+=irow;
        }
 
-       if(strncasecmp(keyword,"hetatm",6) == 0 || strncasecmp(keyword,"atom",4) == 0)
+       if(strcasecmp(keyword,"hetatm") == 0 || strcasecmp(keyword,"atom") == 0)
        {
           if( natoms >= MAX_ATOMS )
           {
@@ -387,7 +538,7 @@ FILE     *Fp;
           str_cut(dummy, label[natoms]);
 
           trim(label[natoms]);
-          strcpy(chg,"  ");
+          sprintf(chg,"  ");
           sscanf(line+78,"%2s", chg);
           charge[natoms] = str_cut(chg, dummy);
 
@@ -516,8 +667,12 @@ FILE     *Fp;
              cell_to_prim(cell,h);
              break;
           case 'at':    /* Atom - add atom to list              */
-             if( natoms > MAX_ATOMS )
-                error("\"%s\" contains too many atoms! (max: %d)\n", filename, MAX_ATOMS);
+             if( natoms >= MAX_ATOMS )
+             {
+                message(NULLI, NULLP, WARNING, XSATOMS, MAX_ATOMS, filename);
+                natoms = MAX_ATOMS;
+                break;
+             }
 
              if( linec < 4 + blankflg)
              {
@@ -669,15 +824,19 @@ FILE     *Fp;
    if( (Fp = fopen(filename,"r")) == NULL)
       error("Failed to open configuration file \"%s\" for reading", filename);
 
+  /* initialize columns */
+   for(i=9;i--;)
+     column[i] = -1;
+
    while( !feof(Fp) )
    {
       get_line(line,LLEN,Fp,0);
       if(strncasecmp(line,"tit",3) == 0 )         /* Title */
       {
          if( strlen(line+5) == 0)
-            strncat(title,filename,TITLE_SIZE);
+            strncat(title, filename, TITLE_SIZE);
          else
-            strncat(title,line+5,TITLE_SIZE);
+            strncat(title, line+5, TITLE_SIZE);
          trim(title);
       }
 
@@ -716,22 +875,13 @@ FILE     *Fp;
           {
             strcat(spgr,":");
 
-            if(strcmp("b", strlower(*(buffer+i+1))) == 0)
-              strcat(spgr,"b");
-
-            if(strcmp("c", strlower(*(buffer+i+1))) == 0)
-              strcat(spgr,"c");
-
-            if(strcmp("a", strlower(*(buffer+i+1))) == 0)
-              strcat(spgr,"a");
-
-            if(strcmp("origin", strlower(*(buffer+i+1))) == 0)
+            if(strcasecmp("origin", *(buffer+i+1)) == 0)
               strcat(spgr,*(buffer+i+2));
 
-            if( strcmp(strlower(*(buffer+i)),"hexagonal") == 0 )
+            if( strcasecmp(*(buffer+i),"hexagonal") == 0 )
                  strcat(spgr,"h");
 
-            if( strcmp(strlower(*(buffer+i)),"rhombohedral") == 0 )
+            if( strcasecmp(*(buffer+i),"rhombohedral") == 0 )
                  strcat(spgr,"r");
           }
         }
@@ -909,10 +1059,10 @@ FILE     *Fp;
       error("EOF or unexpected format on line 1 in \"%s\"", filename);
 
    if( natoms >= MAX_ATOMS )
-      {
+   {
       message(NULLI, NULLP, WARNING, XSATOMS, MAX_ATOMS, filename);
       natoms = MAX_ATOMS;
-      }
+   }
 
    if( sscanf(get_line(line,LLEN,Fp,0),"%s", title) < 1)
       error("EOF or unexpected format on line 2 in \"%s\"", filename);
@@ -937,7 +1087,199 @@ FILE     *Fp;
    return natoms;
 }
 /******************************************************************************
- * read_ele().  Read elemental data from file.                                *
+ * read_shelx(). Read structural data from shelx .ins or .res file.           *
+ ******************************************************************************/
+int      read_shelx(char *filename, mat_mp h, char (*label)[NLEN], vec_mp x, char *title, char *spgr)
+{
+int       i, num_tokens, natoms = 0, n_elem;
+const ele_data *elem;
+double    cell[6];                                  /* Cell parameters */
+char      line[LLEN], *buffer[LLEN];
+FILE      *Fp;
+T_SgInfo  SgInfo;
+const T_LatticeInfo  *LatticeInfo = LI_P; /* Defaults to primitive */
+int       Latt_N = 1;   /* Defaults to centrosymmetric primitive */
+char      *xyz = NULL; /* Symmetry operators */
+ROOT      *xyz_list = NULL; /* Linked list for xyz symmetry operator list */
+NODE      *node;    /* Node for xyz symmetry operator list */
+T_RTMx    SeitzMx;
+char      *sglabel;
+char      *temp_name = NULL;
+char      dummy[4];
+
+   if( (Fp = fopen(filename,"r")) == NULL)
+      error("Failed to open configuration file \"%s\" for reading", filename);
+
+   while ( get_line(line,LLEN,Fp,0))
+   {
+       num_tokens = get_tokens(line, buffer, " ");
+       if( num_tokens < 1)
+           error("File \"%s\" has incorrect format", filename);
+
+       if(strncasecmp(*buffer,"title",5) == 0 )         /* Title */
+          for( i=0; i<num_tokens; i++)
+             strncat(title,*(buffer+i),TITLE_SIZE);
+
+       if(strncasecmp(*buffer,"cell",4) == 0)   /* CELL - Specify unit cell */
+       {
+         if (num_tokens > 2)
+         {
+           cell[0] = atof(*(buffer+2));
+           cell[1] = atof(*(buffer+3));
+           cell[2] = atof(*(buffer+4));
+           cell[3] = atof(*(buffer+5));
+           cell[4] = atof(*(buffer+6));
+           cell[5] = atof(*(buffer+7));
+         }
+         else
+           error("Error in CELL line of \"%s\" -- should have at least 6 parameters", filename);
+
+         cell_to_prim(cell,h);
+       }
+
+       if(strncasecmp(*buffer,"latt",4) == 0 )
+       {
+          Latt_N = atof(*(buffer+1));
+
+          switch (abs(Latt_N))
+          {
+          case 1: LatticeInfo = LI_P; break;
+          case 5: LatticeInfo = LI_A; break;
+          case 6: LatticeInfo = LI_B; break;
+          case 7: LatticeInfo = LI_C; break;
+          case 2: LatticeInfo = LI_I; break;
+          case 3: LatticeInfo = LI_R; break;
+          case 4: LatticeInfo = LI_F; break;
+          }
+       }
+
+     if(strncasecmp(*buffer,"symm",4) == 0 )
+     {
+       /* Read xyz symmetry operators */
+       xyz = mystrdup(*(buffer+1));
+       for(i=2; i<num_tokens; i++)
+         xyz = strcat(xyz, strcat(" ",*(buffer+i)));
+
+       if( insert_data(&xyz_list, strlower(xyz), 1) < 0) /* Add to operator list */
+          error("Error creating first node in sym list - \n%s\n",strerror(errno));
+     }
+
+     /* End of useful header info */
+     if( strncasecmp("sfac", *buffer, 4) == 0 ||
+        strncasecmp("unit", *buffer, 4) == 0)
+     break;
+   }
+
+/* atom coordinate search */
+   for (;;)
+   {
+     get_line(line,LLEN,Fp,0);
+     num_tokens = get_tokens(line, buffer, " ");
+
+     if (!buffer)
+       break;
+
+     if(strncasecmp(*buffer,"end",3) == 0 ||
+        strncasecmp(*buffer,"hklf",4) == 0)
+       break;
+
+   /* Check atom is real element */
+
+     sprintf(dummy,"    ");
+     str_cut(mystrdup(*buffer), dummy); /* Convert atom label to atom symbol */
+     trim(dummy);
+     for( elem=ElementData; elem; elem++)
+       if( !strcmp(dummy,elem->symbol) &&
+           n_elem > 0 && num_tokens > 4 &&
+           strcmp(".",*(buffer+2)) != 0.0 &&
+           strcmp(".",*(buffer+3)) != 0.0 &&
+           strcmp(".",*(buffer+4)) != 0.0 )
+         {
+           strcpy(label[natoms],elem->symbol);
+           trim(label[natoms]);
+           x[natoms][0] = atof(*(buffer+2));
+           x[natoms][1] = atof(*(buffer+3));
+           x[natoms][2] = atof(*(buffer+4));
+           natoms++;
+           break;
+         }
+   }
+   InitSeitzMx(&SeitzMx, 1);
+   InitSgInfo(&SgInfo);
+
+   SgInfo.MaxList = 192;  /* absolute maximum number of symops */
+
+   SgInfo.ListSeitzMx
+      = malloc(SgInfo.MaxList * sizeof (*SgInfo.ListSeitzMx));
+
+   SgInfo.ListRotMxInfo
+      = malloc(SgInfo.MaxList * sizeof (*SgInfo.ListRotMxInfo));
+
+   if( Latt_N > 0 )
+     if (AddInversion2ListSeitzMx(&SgInfo) < 0)
+       goto ShelxReadError;
+
+   if (AddLatticeTr2ListSeitzMx(&SgInfo, LatticeInfo) < 0)
+     goto ShelxReadError;
+
+  /* Loop through sym operators */
+   if( VALID(&xyz_list))
+   {
+      node = xyz_list->head;
+      do
+      {
+      xyz = node->data;
+
+      if (ParseSymXYZ(xyz, &SeitzMx, STBF) < 0)
+         goto ShelxReadError;
+
+      if (Add2ListSeitzMx(&SgInfo, &SeitzMx) < 0)
+         goto ShelxReadError;
+
+      node = node->next;
+      } while(node != NULL);
+   }
+
+  if (CompleteSgInfo(&SgInfo) < 0)
+    goto ShelxReadError;
+
+  /* process space group name */
+  strcpy(sglabel, SgInfo.TabSgName->SgLabels);
+  for (i=0 ; i<strlen(sglabel) ; i++)
+    if (*(sglabel+i) == '_')
+      *(sglabel+i) = ' ';
+
+  i=strlen(sglabel);
+  while(i>0)
+    {
+    if (*(sglabel+i) == '=')
+      {
+      i++;
+      break;
+      }
+    i--;
+    }
+
+  /* fill in space group name */
+  if(sglabel) /* Modified by C.Fisher 2005 */
+    {
+    strcpy(spgr, sglabel+i);
+    trim(spgr);
+    free(sglabel);
+    }
+
+  fclose(Fp);
+
+  return natoms;
+
+ShelxReadError:
+
+  fprintf(stderr,"Error found in Shelx file %s\n", filename);
+  fclose(Fp);
+  return(1);
+}
+/******************************************************************************
+ * read_ele().  Read element data from file.                                  *
  ******************************************************************************/
 int          read_ele(spec_data *element, char *filename)
 {
@@ -951,18 +1293,16 @@ FILE       *Fe;
 
      if( (Fe = fopen(filename,"r")) == NULL)
         return -1;
-
-     for( ele = element; ele < element+NELEM; ele++ )
+     
+     while(!feof(Fe))
      {
         if( (sscanf(get_line(line,LLEN,Fe,1),"%32s %4s %lf %lf", name, symbol, &mass, &chg) < 4) && !feof(Fe) )
-            error("Unexpected format in \"%s\"", filename);
-        if( feof(Fe) )
-            break;
+            error("Unexpected format in \"%s\"", filename, strerror(errno));
         strcpy(ele->name, name);
         strcpy(ele->symbol, symbol);
         ele->mass = mass;
         ele->charge = chg;
-        n++;
+        ele++; n++;
      }
      fclose(Fe);
 

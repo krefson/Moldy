@@ -6,6 +6,9 @@ Copyright (C) 1999, 2003 Craig Fisher */
  ************************************************************************************** 
  *  Revision Log
  *  $Log: bdist.c,v $
+ *  Revision 1.10  2005/02/04 14:49:41  cf
+ *  Common utility messages/errors moved to utlsup.h.
+ *
  *  Revision 1.9  2004/12/07 13:00:02  cf
  *  Merged with latest utilities.
  *
@@ -57,22 +60,12 @@ Copyright (C) 1999, 2003 Craig Fisher */
 #include <string.h>
 #include <stdlib.h>
 #include "structs.h"
+#include "messages.h"
 #include "list.h"
 #include "utlsup.h"
 
-/*
- * Default limits for bond intervals and angle intervals - integers only
- */
-#define BOND_MIN  0
-#define BOND_MAX  20          /* Bond intervals in tenths of Angstroms */
-#define BOND_INC  5
-
-#define ANGLE_MIN  0
-#define ANGLE_MAX  180        /* Angle intervals in degrees */
-#define ANGLE_INC  1
-
 #define LLENGTH 80
-#define DIST 0
+#define DISTRIB 0
 #define COORD 1
 /*
  * Structures for bond, angle and count data. Each bond and angle record has a linked list
@@ -183,6 +176,48 @@ NODE *search_list_spec(ROOT **root, char *atom)
    return node;
 }
 /****************************************************************************
+ * max_bond(). return maximum distance (in angstroms) from bond list        *
+ ****************************************************************************/
+double max_bond(ROOT **root)
+{
+   NODE    *node = NULL;
+   BOND    *bd;
+   double  maximum = 0;
+
+   if( VALID(root) )
+   {
+      node = (*root)->head;
+      while(node != NULL)
+      {
+         bd = node->data;
+         maximum = MAX(bd->length, maximum);
+         node = node->next;
+      }
+   }
+   return maximum;
+}
+/****************************************************************************
+ * max_angle(). return maximum angle (in degrees) from angle list           *
+ ****************************************************************************/
+double max_angle(ROOT **root)
+{
+   NODE    *node = NULL;
+   ANGLE   *ang;
+   double  maximum = 0;
+
+   if( VALID(root) )
+   {
+      node = (*root)->head;
+      while(node != NULL)
+      {
+         ang = node->data;
+         maximum = MAX(ang->value, maximum);
+         node = node->next;
+      }
+   }
+   return maximum;
+}
+/****************************************************************************
  * search_bond(). compare atoms in bond list with those read from file       *
  ****************************************************************************/
 NODE *search_bond(ROOT **root, char *atom1, char *atom2)
@@ -266,7 +301,7 @@ void count_poly(ROOT **bond_root, ROOT **poly_root, int *blim)
       do
       {
          bd = node_bond->data;
-         if(VALID(&poly_root) && bd->length >= blim[0]/10.0 && bd->length <= blim[1]/10.0)
+         if(VALID(&poly_root) && bd->length >= blim[0]*BOND_SCALE && bd->length <= blim[1]*BOND_SCALE)
          {
             node_poly = search_list_atom(poly_root, bd->number1, 0);
             if( node_poly == NULL)
@@ -331,18 +366,15 @@ void count_poly(ROOT **bond_root, ROOT **poly_root, int *blim)
    }
 }
 /****************************************************************************
- * bond_dist(). create bond distribution list 		                    *
+ * bond_distribution(). create bond distribution list 		            *
  ****************************************************************************/
-void bond_dist(ROOT **bond_root, ROOT **bct_root, int *blim)
+void bond_distribution(ROOT **bond_root, ROOT **bct_root, int *blim)
 {
    NODE    *bd_node, *bct_node, *node_count;
    BOND    *bd;
    BOND_COUNTER	*bct;
    COUNT   *count;
-   int	   nbond, u;
-
-   /* Calculate total no of bond intervals */
-   nbond = ceil(1.0*(blim[1] - blim[0]) / blim[2]);
+   int	   u;
 
    /* Count no of bonds within each interval */
    if(VALID(bond_root))
@@ -351,7 +383,7 @@ void bond_dist(ROOT **bond_root, ROOT **bct_root, int *blim)
       do
       {
          bd = bd_node->data;
-         if(( bd->length >= blim[0]/10.0 ) && (bd->length <= blim[1]/10.0))
+         if(( bd->length >= blim[0]*BOND_SCALE ) && (bd->length <= blim[1]*BOND_SCALE))
          {
             bct_node = search_bond(bct_root, bd->atom1, bd->atom2);
             if( bct_node == NULL )
@@ -359,12 +391,13 @@ void bond_dist(ROOT **bond_root, ROOT **bct_root, int *blim)
                bct = NEW(BOND_COUNTER);
                strncpy((bct->atom1), bd->atom1, 3);
                strncpy((bct->atom2), bd->atom2, 3);
+               bct->root_count = NULL;
                insert_data(bct_root, bct, 1);
             }
             else
                bct = bct_node->data; 
 
-            u = floor((10.0*bd->length - blim[0])/blim[2]+0.5);
+            u = (int)floor((bd->length/BOND_SCALE - blim[0])/blim[2]+0.5);
 	    node_count = search_count(&(bct->root_count),u);
             if( node_count == NULL )
             {
@@ -384,18 +417,15 @@ void bond_dist(ROOT **bond_root, ROOT **bct_root, int *blim)
    }
 }
 /****************************************************************************
- * angle_dist(). create angle distribution list 		            *
+ * angle_distribution(). create angle distribution list 		    *
  ****************************************************************************/
-void angle_dist(ROOT **angle_root, ROOT **act_root, int *alim)
+void angle_distribution(ROOT **angle_root, ROOT **act_root, int *alim)
 {
    NODE    *ang_node, *act_node, *node_count;
    ANGLE   *ang;
    ANG_COUNTER  *act;
    COUNT   *count;
-   int	   nangle, u;
-
-   /* Calculate total no of angle intervals */
-   nangle = floor(1.0*(alim[1] - alim[0]) / alim[2]);
+   int	   u;
 
    /* Count no of angles within each interval */
    if(VALID(angle_root))
@@ -413,12 +443,13 @@ void angle_dist(ROOT **angle_root, ROOT **act_root, int *alim)
                strncpy((act->atom1), ang->atom1, 3);
                strncpy((act->atom2), ang->atom2, 3);
                strncpy((act->atom3), ang->atom3, 3);
+               act->root_count = NULL;
                insert_data(act_root, act, 1);
             } 
             else
                act = act_node->data;
 
-            u = floor((ang->value - alim[0])/alim[2] - 0.5);
+            u = (int)floor((ang->value - alim[0])/alim[2] - 0.5);
             node_count = search_count(&(act->root_count),u);
             if( node_count == NULL )
             {
@@ -440,7 +471,7 @@ void angle_dist(ROOT **angle_root, ROOT **act_root, int *alim)
 /****************************************************************************
  * write_BOND(). print out bond distribution list                           *
  ****************************************************************************/
-void write_BOND(ROOT **root, int *blim)
+void write_BOND(ROOT **root, int *blim, boolean zero)
 {
    NODE         *node;
    NODE         *node_count;
@@ -448,9 +479,13 @@ void write_BOND(ROOT **root, int *blim)
    COUNT	*ct;
    ROOT		*ct_root;
 
+   int		u, num_intervals;
    double	xvalue;
 
-   printf("Bond Distributions (per %4.2f Angstroms):\n",blim[2]/10.0);
+   printf("Bond Distributions (per %4.2f Angstroms):\n",blim[2]*BOND_SCALE);
+
+   /* Calculate total no of bond intervals */
+   num_intervals = (int)ceil(1.0*(blim[1] - blim[0]) / blim[2]);
 
    if(VALID(root))
    {
@@ -463,14 +498,30 @@ void write_BOND(ROOT **root, int *blim)
           if(VALID(&ct_root))
           {
             node_count = ct_root->head;
+            u = 0;
             do
             {
                ct = node_count->data;
-               xvalue = (blim[0] + (ct->xaxis)*blim[2])/10.0;
+               if (zero) /* Include bins with zero counts */
+                 while (u<ct->xaxis)
+                 {
+                   xvalue = (blim[0] + u*blim[2])*BOND_SCALE;
+                   printf("%5.2f     0\n", xvalue);
+                   u++;
+                 }
+               xvalue = (blim[0] + (ct->xaxis)*blim[2])*BOND_SCALE;
+               u++;
                printf("%5.2f     %d\n", xvalue, ct->yaxis);
                node_count = node_count->next;
             } while(node_count != NULL);
           }
+          if (zero) /* Add any trailing bins with zero counts */
+            while (u < num_intervals)
+            {
+              xvalue = (blim[0] + u*blim[2])*BOND_SCALE;
+              printf("%5.2f     0\n", xvalue);
+              u++;
+            }
           node = node->next;
       } while(node != NULL);
    }
@@ -478,7 +529,7 @@ void write_BOND(ROOT **root, int *blim)
 /****************************************************************************
  * write_ANGLE(). print out angle distribution list                         *
  ****************************************************************************/
-void write_ANGLE(ROOT **root, int *alim)
+void write_ANGLE(ROOT **root, int *alim, boolean zero)
 {
    NODE         *node;
    NODE		*node_count;
@@ -486,9 +537,13 @@ void write_ANGLE(ROOT **root, int *alim)
    COUNT	*ct;
    ROOT		*ct_root;
 
+   int		u, num_intervals;
    double	xvalue;
 
    printf("\nAngle Distributions (per %d degree%s):\n",alim[2],alim[2]==1?"":"s");
+
+   /* Calculate total no of angle intervals */
+   num_intervals = (int)ceil(1.0*(alim[1] - alim[0]) / alim[2]);
 
    if(VALID(root))
    {
@@ -501,14 +556,30 @@ void write_ANGLE(ROOT **root, int *alim)
           if(VALID(&ct_root))
           {
             node_count = ct_root->head;
+            u = 0;
             do
             {
                ct = node_count->data;
+               if (zero) /* Include bins with zero counts */
+                 while (u<ct->xaxis)
+                 {
+                   xvalue = (alim[0] + u*alim[2]);
+                   printf("%5.1f     0\n", xvalue);
+                   u++;
+                 }
                xvalue = (alim[0] + (ct->xaxis)*alim[2]);
                printf("%5.1f     %d\n", xvalue, ct->yaxis);
+               u++;
                node_count = node_count->next;
             } while(node_count != NULL);
           }
+          if (zero) /* Add any trailing bins with zero counts */
+            while (u < num_intervals)
+            {
+              xvalue = (alim[0] + u*alim[2]);
+              printf("%5.1f     0\n", xvalue);
+              u++;
+            }
           node = node->next;
       } while(node != NULL);
       putchar('\n');
@@ -563,9 +634,10 @@ int main(int argc, char **argv)
    char		atom1[3], atom2[3], atom3[3];   /* Atom labels */
    double	alpha, rij, r1, r2;             /* Angle and bond length variables */
    int		blim[3], alim[3]; 
-   int		bflag=0, aflag=0;               /* Flags for input of limits */
+   boolean	bflag = false, aflag = false;   /* Flags for input of limits */
    int		a, b, c;
-   int		inflag = 0, outsw = 0;
+   int		outsw = 0;
+   boolean      inflag = false, zero_flag = false;
    int		i, lineno=0;
    int		nslice=-1;
    char		keyword[LLENGTH], line[LLENGTH];
@@ -580,31 +652,40 @@ int main(int argc, char **argv)
 
    FILE		*Fp;
 
+   /* Set up default limits */
+   sprintf(dummy, "%d-%d:%d", BOND_MIN, BOND_MAX, BOND_INC);
+   bondlims = mystrdup(dummy);
+   sprintf(dummy, "%d-%d:%d", ANGLE_MIN, ANGLE_MAX, ANGLE_INC);
+   anglims = mystrdup(dummy);
+
    comm = argv[0];
    if( strstr(comm, "bdist") )
-     outsw = DIST;
+     outsw = DISTRIB;
    else
      outsw = COORD;
 
-   while( (u = getopt(argc, argv, "i:o:a:b:p") ) != EOF )
+   while( (u = getopt(argc, argv, "o:a:b:pz?") ) != EOF )
       switch(u)
       {
-       case 'i':
-	 filename = optarg;
-         inflag++;
-	 break;
        case 'o':
 	 if( freopen(optarg, "w", stdout) == NULL )
             error(NOOUTF, optarg);
 	 break;
        case 'a':
+         (void)free(anglims);
 	 anglims = mystrdup(optarg);
+         aflag = true;
 	 break;
        case 'b':
+         (void)free(bondlims);
 	 bondlims = mystrdup(optarg);
+         bflag = true;
 	 break;
        case 'p':
 	 outsw = COORD;
+	 break;
+       case 'z':
+	 zero_flag = true;  /* Include zero values in output */
 	 break;
        default:
        case '?': 
@@ -613,12 +694,18 @@ int main(int argc, char **argv)
 
    if( errflg )
    {
-      fprintf(stderr, "Usage: %s [-i input-file] [-b bond-limits] ",comm);
-      fprintf(stderr,"[-a angle-limits] %s[-o output-file]\n",outsw==COORD?"":"[-p] ");
+      fprintf(stderr, "Usage: %s [-b bond-limits] ",comm);
+      fprintf(stderr,"[-a angle-limits] %s[-o output-file] input-file\n",outsw==COORD?"":"[-p] ");
       exit(2);
    }
 
-   if( inflag == 0)
+   if( optind <= argc)
+   {
+      filename = argv[optind];
+      inflag = true;
+   }
+
+   if( !inflag)
      filename = get_str("Input filename? ");
 
    if( (Fp = fopen(filename,"r")) == NULL)
@@ -627,16 +714,8 @@ int main(int argc, char **argv)
       exit(2);
    }
 
-   /* Set default values for bond limits (x10) */
-   blim[0] = BOND_MIN;
-   blim[1] = BOND_MAX;
-   blim[2] = BOND_INC;
-
-   if( bondlims == NULL )
-       bflag++;
-
    /* Input and check bond length limits where necessary */
-   while (!bflag)
+   while (bondlims)
    {
       if( forstr(bondlims, &(blim[0]), &(blim[1]), &(blim[2])) )
       {
@@ -644,37 +723,23 @@ int main(int argc, char **argv)
          fputs(bondlims, stderr);
          fputs("\"\n", stderr);
       }
-      else
-         bflag++;
+
       if( blim[0] > blim[1] || blim[0] < 0 || blim[2] <= 0 )
       {
          fputs("Bond length limits must satisfy", stderr);
          fputs(" finish >= start, start >= 0 and increment > 0\n", stderr);
-         bflag = 0;
-      }
-      if( !bflag)
-      {
-         blim[0] = BOND_MIN;
-         blim[1] = BOND_MAX;
-         blim[2] = BOND_INC;
          (void)free(bondlims);
          bondlims = NULL;
          fputs("Please specify range of bond limits in form", stderr);
          fputs(" start-finish:increment\n", stderr);
          bondlims = get_str("s-f:n? ");
       }
+      else
+        break;
    }
 
-   /* Set default values for angle limits */
-   alim[0] = ANGLE_MIN;
-   alim[1] = ANGLE_MAX;
-   alim[2] = ANGLE_INC;
-
-   if( anglims == NULL )
-       aflag++;
-
    /* Input and check angle limits where necessary */
-   while (!aflag)
+   while (anglims)
    {
       if( forstr(anglims, &(alim[0]), &(alim[1]), &(alim[2])) )
       {
@@ -682,25 +747,19 @@ int main(int argc, char **argv)
          fputs(anglims, stderr);
          fputs("\"\n", stderr);
       }
-      else
-         aflag++;
+
       if( alim[0] > alim[1] || alim[0] < 0 || alim[2] <= 0 )
       {
          fputs("Angle limits must satisfy", stderr);
          fputs(" finish >= start, start >= 0 and increment > 0\n", stderr);
-         aflag=0;
-      }
-      if( !aflag)
-      {
-         alim[0] = ANGLE_MIN;
-         alim[1] = ANGLE_MAX;
-         alim[2] = ANGLE_INC;
          (void)free(anglims);
          anglims = NULL;
          fputs("Please specify range of angle limits in form", stderr);
          fputs(" start-finish:increment\n", stderr);
          anglims = get_str("s-f:n? ");
       }
+      else
+         break;
    }
 
    while (!feof(Fp))
@@ -732,7 +791,7 @@ int main(int argc, char **argv)
 	    }
             else
                if( sscanf(line,"%d - %s %d - %s %lf",&a,atom1,&b,atom2,&rij) < 5)
-                   error("Error in line %d of \"%s\" -- should have 5 parameters", lineno, filename);
+                  error("Error in line %d of \"%s\" -- should have 5 parameters", lineno, filename);
 
             bond = NEW(BOND);
             bond->number1 = a;
@@ -780,21 +839,46 @@ int main(int argc, char **argv)
 	 if( nslice > -1 )
             printf("- Time slice %d -\n\n",nslice);
 
-         if( outsw == DIST)
+/* Set maximum bond distance if not specified by user */
+         if( !bflag )
+            {
+            blim[1] = (int)ceil(max_bond(&root_bond)/BOND_SCALE); /* Default is maximum distance in list */
+            message(NULLI,NULLP,INFO,MAXBOND,
+                    blim[0]*BOND_SCALE,blim[1]*BOND_SCALE,blim[2]*BOND_SCALE);
+            }
+
+
+/* Set maximum angle if not specified by user */
+         if( !aflag )
+            {
+            alim[1] = (int)ceil(max_angle(&root_angle)); /* Default is maximum angle in list */
+            message(NULLI, NULLP, INFO, MAXANGLE, alim[0], alim[1], alim[2]);
+            }
+#if DEBUG
+fprintf(stderr, "bond range  %d-%d:%d\n", blim[0], blim[1], blim[2]);
+fprintf(stderr, "angle range %d-%d:%d\n", alim[0], alim[1], alim[2]);
+#endif
+
+         if( outsw == DISTRIB)
          {
             /* Calculate bond and angle distributions */
-            bond_dist(&root_bond, &root_bct, blim);
-            angle_dist(&root_angle, &root_act, alim);
+            bond_distribution(&root_bond, &root_bct, blim);
+            angle_distribution(&root_angle, &root_act, alim);
             /* Output data in column format */
-            write_BOND(&root_bct, blim);
-            write_ANGLE(&root_act, alim);
+            write_BOND(&root_bct, blim, zero_flag);
+            write_ANGLE(&root_act, alim, zero_flag);
+            delete_list(&root_bct);
+            delete_list(&root_act);
          }
          else
          {
             /* Calculate and output no of bonds for each molecule */
             count_poly(&root_bond, &root_poly, blim);
             write_poly(&root_poly);
+            delete_list(&root_poly);
          }
+         delete_list(&root_bond);
+         delete_list(&root_angle);
       }
    }
    fclose(Fp);
