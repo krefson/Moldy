@@ -1,4 +1,3 @@
-#define DEBUG_THERMOSTAT
 /* MOLecular DYnamics simulation code, Moldy.
 Copyright (C) 1988, 1992, 1993 Keith Refson
  

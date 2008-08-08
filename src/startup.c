@@ -680,9 +680,10 @@ spec_mt	species[];
  ******************************************************************************/
 void	thermalise(system_mp system, spec_mt *species)
 {
-   int		imol, i;		/* Counters for species, molecules etc*/
+   int		imol, i, j;		/* Counters for species, molecules etc*/
    spec_mp	spec;			/* Pointer to species[ispec]	      */
-   double	root_ktm, root_kti[3];	/* Gaussian widths of MB distribution */
+   double	root_ktm[3], root_kti[3];	/* Gaussian widths of MB distribution */
+   double	na[3];                  /* factors for reduced units */
    double	total_mass = 0;
    vec_mt	momentum;	      	/* Whole system momentum	      */
 
@@ -696,16 +697,26 @@ void	thermalise(system_mp system, spec_mt *species)
    system->tsmom = 0.0;
    system->rsmom = 0.0;
    
+   /* set factors for reduced units */
+   zero_real(na, 3);
+   for(i = 0; i < 3; i++)
+   {
+      for(j = 0; j<= i; j++)
+         na[i] += SQR(system->h[j][i]);
+      na[i] = sqrt(na[i]);
+   }
+
    for (spec = species; spec < species+system->nspecies; spec++)
    {
       if( !spec->framework)
       {
-	 root_ktm = system->ts*sqrt(kB * control.temp * spec->mass);
+	 for(i = 0; i < 3; i++)
+	   root_ktm[i] = system->ts*sqrt(kB * control.temp * spec->mass)/na[i];
 	 total_mass += spec->mass*spec->nmols;
 	 for(imol = 0; imol < spec->nmols; imol++)
 	    for(i = 0; i < 3; i++)	/* Centre of mass co-ords -1 < x < 1  */
 	    {
-	       spec->mom[imol][i]    = root_ktm * gauss_rand();
+	       spec->mom[imol][i]    = root_ktm[i] * gauss_rand();
 	       momentum[i] += spec->mom[imol][i];
 	    }
 	 

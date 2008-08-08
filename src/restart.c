@@ -27,7 +27,8 @@ what you give them.   Help stamp out software-hoarding!  */
  * cwrite()		Write length and data as record to file		      *
  * re_re_header()	Read the restart header and control structs	      *
  * re_re_sysdef()	Read system definition records from restart file      *
- * read_restart()	Read simulation dynamic variables, averages & rdf's   *
+ * read_restart()	Read simulation dynamic variables, averages & rdfs    *
+ * write_restart()      Write simulation dynamic variables, averages & rdfs   *
  ******************************************************************************
  *      Revision Log
  *       $Log: restart.c,v $

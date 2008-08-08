@@ -163,7 +163,7 @@ int read_dump_header(char *fname, FILE *dumpf, dump_mt *hdr_p, boolean *xdr_writ
    
    if( dump_sysinfo == 0)
       return errflg;
-   else if ( sysinfo_size == 0 )
+   else if ( sysinfo_size == sizeof(dump_sysinfo_mt) )
    {
       /*
        * Now check for sysinfo and read fixed part of it.  This is needed to
@@ -564,7 +564,7 @@ main(int argc, char **argv)
       sysinfo_size = sizeof(dump_sysinfo_mt);
       dump_sysinfo = (dump_sysinfo_mt*)malloc(sysinfo_size);
       if( read_dump_header(dump_name, dump_file, &header, &xdr, 
-			   0, dump_sysinfo) 
+			   sysinfo_size, dump_sysinfo) 
 	                       || ferror(dump_file) || feof(dump_file) )
       {
 	 fprintf(stderr, "Failed to read dump header \"%s\"\n", dump_name);
