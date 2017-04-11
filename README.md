@@ -1,4 +1,7 @@
-#     # ####### #       ######  #     #
+MOLDY
+
+
+                #     # ####### #       ######  #     #
 		##   ## #     # #       #     #  #   # 
 		# # # # #     # #       #     #   # #  
 		#  #  # #     # #       #     #    #   
@@ -16,15 +19,12 @@ mineral surfaces.  However it is sufficiently flexible that it ought
 to be useful for a wide range of simulation calculations of atomic,
 ionic and molecular systems.
 
-Moldy is licensed under the GNU General Public License (see file
+Moldy is licensed under the GNU General Public License V2 (see file
 COPYING) except for the modules sgclib.c sginfo.h and sgio.c which are
 contributed from the SgInfo package by Ralf W. Grosse-Kunstleve and
 licensed under separate terms (see file LICENSE-SGINFO).
 
-Moldy is available by anonymous file transfer from Oxford.  Connect to
-"ftp.earth.ox.ac.uk" using "ftp", with an account name of "anonymous" and
-your email address as password.  The relevant files are all in the
-"/pub" directory and are
+
 
 * moldy-2.yy.tar.gz   - The Unix distribution (also for MSDOS/Windoze)
 * moldy-2.yy.com      - The VMS distribution
@@ -32,8 +32,6 @@ your email address as password.  The relevant files are all in the
 * moldy-manual.ps.Z   - The Manual in PostScript form.  Note that
                         the distribution files already contain 
                         the LaTeX source.
-
-The corresponding URL is ftp://ftp.earth.ox.ac.uk/pub/moldy-2.yy.tar.gz.
 
 Please note that moldy is copyrighted and distributed under the GNU
 public license which is designed to encourage its distribution and
@@ -44,16 +42,11 @@ and if practical and appropriate I will incorporate your modifications
 into a future release.  I hope that as time goes on Moldy will become
 yet more comprehensive as a result of your input.
 
-If you want to be informed about updates, new versions, bugs etc,
-there is a mailing list called moldy-announce.  It is managed by
-majordomo and to join it send an email message to
-moldy-announce-request@maillist.ox.ac.uk containing the word
-"subscribe".
 
 There is a second list for discussion of simulations using Moldy,
 requesting help with problems and related issues called simply
 moldy. To join send an email message to
-moldy-request@maillist.ox.ac.uk containing the word "subscribe".
+moldy-request@jiscmail.ac.uk containing the word "subscribe".
 
 Contents of the distribution:
 
