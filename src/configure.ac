@@ -15,7 +15,7 @@ fi
 
 AC_CANONICAL_TARGET([])
 
-AM_INIT_AUTOMAKE(Moldy, 3.6)
+AM_INIT_AUTOMAKE()
 AM_CONFIG_HEADER(config.h)
 
 dnl Checks for programs.
@@ -195,7 +195,7 @@ AC_TYPE_SIGNAL
 AC_FUNC_STRFTIME
 AC_FUNC_VPRINTF
 
-AC_SEARCH_LIBS(xdr_int, nsl sun rpclib, 
+AC_SEARCH_LIBS(xdr_int, nsl sun rpclib tirpc,
 AC_DEFINE(HAVE_XDR_INT,,[Define if sun XDR routines are available]))
 
 AC_CHECK_FUNCS(gettimeofday getrusage strdup strerror strstr strchr memcpy memset remove strtol popen raise times)

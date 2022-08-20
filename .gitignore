@@ -1,0 +1,9 @@
+*.o
+*~
+aclocal.m4
+autom4te.cache
+compile
+configure
+stamp-h
+config.h.in
+Makefile.in

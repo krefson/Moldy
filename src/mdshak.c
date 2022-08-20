@@ -18,9 +18,6 @@ Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
-#ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdshak.c,v 2.30 2005/01/13 12:39:19 cf Exp $";
-#endif
 
 #include "defs.h"
 #include <stdarg.h>

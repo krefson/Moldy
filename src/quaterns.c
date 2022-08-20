@@ -21,62 +21,7 @@ what you give them.   Help stamp out software-hoarding!  */
 /******************************************************************************
  * quaterns	Functions for manipulating quaternions			      *
  ******************************************************************************
- *      Revision Log
- *       $Log: quaterns.c,v $
- *       Revision 2.13  2004/11/22 18:21:10  kr
- *       Merget "util_updates" branch into main
- *
- *       Revision 2.12.4.1  2004/03/01 04:53:56  moldydv
- *       Syswrite now treats non-periodic data (from XYZ and some CSSR files) as single species with initial configuration to be set using skew start.
- *       Options -n and -l added for no of particles and species label, respectively, for such systems.
- *
- *       Revision 2.12  2002/09/19 09:26:30  kr
- *       Tidied up header declarations.
- *       Changed old includes of string,stdlib,stddef and time to <> form
- *
- *       Revision 2.11  2000/12/06 17:45:32  keith
- *       Tidied up all ANSI function prototypes.
- *       Added LINT comments and minor changes to reduce noise from lint.
- *       Removed some unneccessary inclusion of header files.
- *       Removed some old and unused functions.
- *       Fixed bug whereby mdshak.c assumed old call for make_sites().
- *
- *       Revision 2.10  2000/04/27 17:57:10  keith
- *       Converted to use full ANSI function prototypes
- *
- *       Revision 2.9  2000/04/26 16:01:02  keith
- *       Dullweber, Leimkuhler and McLachlan rotational leapfrog version.
- *
- *       Revision 2.8  1998/05/07 17:06:11  keith
- *       Reworked all conditional compliation macros to be
- *       feature-specific rather than OS specific.
- *       This is for use with GNU autoconf.
- *
- *       Revision 2.7  1994/06/08 13:22:31  keith
- *       Null update for version compatibility
- *
- * Revision 2.5  1994/01/18  13:32:54  keith
- * Null update for XDR portability release
- *
- * Revision 2.3  93/10/28  10:28:05  keith
- * Corrected declarations of stdargs functions to be standard-conforming
- * 
- * Revision 2.0  93/03/15  14:49:18  keith
- * Added copyright notice and disclaimer to apply GPL
- * to all modules. (Previous versions licensed by explicit 
- * consent only).
- * 
- * Revision 1.2  93/03/09  15:59:06  keith
- * Changed all *_t types to *_mt for portability.
- * Reordered header files for GNU CC compatibility.
- * 
- * Revision 1.1  89/04/20  16:00:52  keith
- * Initial revision
- * 
  */
-#ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/quaterns.c,v 2.13 2004/11/22 18:21:10 kr Exp $";
-#endif
 /*========================== Library include files ===========================*/
 #include <math.h>
 /*========================== Program include files ===========================*/

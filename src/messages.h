@@ -18,9 +18,6 @@ Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding!  */
-/*
- * $Header: /home/moldy/CVS/moldy/src/messages.h,v 2.33 2004/12/07 18:20:49 cf Exp $
- */
 
 #ifndef SYSRD   /* Skip if already defined				      */
 

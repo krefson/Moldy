@@ -4,54 +4,6 @@ Copyright (C) 1999, 2003 Craig Fisher */
 /**************************************************************************************
  * bdist   code for calculating bond distributions from Shell-style bond output files *
  ************************************************************************************** 
- *  Revision Log
- *  $Log: bdist.c,v $
- *  Revision 1.10  2005/02/04 14:49:41  cf
- *  Common utility messages/errors moved to utlsup.h.
- *
- *  Revision 1.9  2004/12/07 13:00:02  cf
- *  Merged with latest utilities.
- *
- *  Revision 1.7.10.3  2004/12/06 19:03:40  cf
- *  Added stdlib.h to headers.
- *  Set uninitialized node to NULL.
- *  Removed unused variables.
- *
- *  Revision 1.7.10.2  2003/11/07 09:01:08  moldydv
- *  Fixed bug in bond length units.
- *
- *  Revision 1.7.10.1  2003/07/29 09:32:04  moldydv
- *  Able to handle multiple time slice output from mdbond.
- *  Added option -p to output coordination spheres of each molecule.
- *
- *  Revision 1.7  2002/09/19 09:26:27  kr
- *  Tidied up header declarations.
- *  Changed old includes of string,stdlib,stddef and time to <> form
- *
- *  Revision 1.6  2000/04/27 17:57:06  keith
- *  Converted to use full ANSI function prototypes
- *
- *  Revision 1.5  1999/11/01 17:16:43  keith
- *  Fixed lint complaints.
- *
- *  Revision 1.4  1999/09/24 10:51:54  keith
- *  Minor changes to Usage message.
- *
- *  Revision 1.4  1999/09/24 16:44:30  craig
- *  Minor changes to Usage message.
- *
- *  Revision 1.3  1999/09/21 15:34:10  keith
- *  Minor portability modifications.
- *
- *  Revision 1.2  1999/09/14 13:30:35  keith
- *  Fixed "return of ptr to stack var" error.
- *
- *  Revision 1.1  1999/07/22 14:02:26  keith
- *  Initial revision
- *
- *  Revision 1.0  1999/06/24 11:15:15  craig 
- *  Initial revision
- *
  */
 #include "defs.h"
 #include <errno.h>

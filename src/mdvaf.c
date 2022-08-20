@@ -19,9 +19,6 @@ Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
 what you give them.   Help stamp out software-hoarding! */
-#ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.22 2005/03/06 18:26:18 cf Exp $";
-#endif
 /**************************************************************************************
  * mdvaf    	Code for calculating velocity autocorrelation functions (vaf) and     *
  *              velocity total correlation functions (vtf) from MolDy dump files.     *
@@ -31,104 +28,6 @@ static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/mdvaf.c,v 1.22 2005/03/
  *                             1 to (total no. of dump slices-1)/2, step size 1       *
  *		nb. mdvaf time intervals taken relative to extracted dump slices.     *
  ************************************************************************************** 
- *  Revision Log
- *  $Log: mdvaf.c,v $
- *  Revision 1.22  2005/03/06 18:26:18  cf
- *  Returned velocity variables to floats.
- *  Moved vdotf to utlsup.c
- *  Removed unnecessary zeroing of vel variable.
- *
- *  Revision 1.21  2005/02/07 11:25:21  cf
- *  Changed floats to reals.
- *
- *  Revision 1.20  2005/02/04 14:52:15  cf
- *  Reads header info with dumpext to determine system info and maximum time slice range.
- *  Common utility messages/errors moved to utlsup.h.
- *
- *  Revision 1.19  2005/01/13 11:53:42  cf
- *  Removed unused -3 and -c options.
- *
- *  Revision 1.18  2005/01/13 11:30:15  cf
- *  Fixed formatting error in dumpext command line.
- *
- *  Revision 1.17  2005/01/11 17:06:27  kr
- *  Fixed error which failed to pass correct file args to "dumpext".
- *  Fixed real stinker of a buffer overflow on dumpcommand by making it dynamic.
- *  Added some helpful messages on the "-v" output.
- *
- *  Revision 1.16  2004/12/07 13:00:02  cf
- *  Merged with latest utilities.
- *
- *  Revision 1.13.10.5  2004/12/07 11:03:37  cf
- *  Added read_dump_header and made static.
- *  Added verbose option for dumpext.
- *
- *  Revision 1.13.10.4  2004/12/07 10:35:56  cf
- *  Incorporated Keith's corrections and additions.
- *
- *  Revision 1.13.10.3  2004/12/06 19:08:50  cf
- *  Removed unused variables.
- *  Removed option -c for skipping control info.
- *  Formatted output to be similar to msd.
- *  Choice of angular or linear velocities clearer.
- *  Automatically calculates x,y,z components.
- *
- *  Revision 1.13.10.2  2003/07/31 02:52:45  moldydv
- *  System info now read from dump header, not sys-spec or restart files.
- *  Updated function descriptions to reflect this.
- *  Improved error message handling for when dump level too low.
- *
- *  Revision 1.13.10.1  2003/07/29 09:40:53  moldydv
- *  Species now specified with -g in 'true' selector format.
- *
- *  Revision 1.13  2002/09/19 09:26:29  kr
- *  Tidied up header declarations.
- *  Changed old includes of string,stdlib,stddef and time to <> form
- *
- *  Revision 1.12  2001/05/18 11:02:00  keith
- *  Added "-3" option to calculate and print XYZ components separately
- *
- *  Revision 1.11  2001/02/19 18:06:04  keith
- *  Fix to work with a mixture of polyatomic and monatomic species.
- *
- *  Revision 1.10  2000/11/13 16:01:24  keith
- *  Changed dump format to contain principle-frame angular velocities.
- *  Adapted mdvaf.c to calculate angular acf's too - added "-a" flag.
- *
- *  Revision 1.9  2000/11/09 16:54:13  keith
- *  Updated utility progs to be consistent with new dump format
- *
- *  Revision 1.8  2000/04/27 17:57:10  keith
- *  Converted to use full ANSI function prototypes
- *
- *  Revision 1.7  1999/11/18 09:31:47  keith
- *  Fixed bug in zeroing vaf array.
- *
- *  Revision 1.7  1999/11/18  10:45:24  craig
- *  Fixed bug in zeroing vaf array.
- *
- *  Revision 1.6  1999/11/12  11:15:48  craig
- *  Fixed bug in species number iteration.
- *
- *  Revision 1.5  1999/11/01 17:24:16  keith
- *  Got rid of declaration of "comm" as it's already in "utlsup.h".
- *
- *  Revision 1.4  1999/10/29 16:44:28  keith
- *  Added function to read velocities from dump files.
- *
- *  Revision 1.4  1999/10/12 17:41:24  craig
- *  Added new function 'vel_to_moldy' to read velocity data
- *
- *  Revision 1.3  1999/10/11 14:13:29  keith
- *  Removed common functions to "utlsup.c".
- *  Removed some unused variables.
- *
- *  Revision 1.1  1999/10/11 10:50:07  keith
- *  Initial revision
- *
- *  Revision 1.0  1999/07/07 17:10:55  craig
- *  Initial revision
- *
  */
 #include "defs.h"
 #include <stdarg.h>
