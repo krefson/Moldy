@@ -1,6 +1,3 @@
-#ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/molout.c,v 1.17 2005/04/18 14:13:21 cf Exp $";
-#endif
 
 #include "defs.h"
 #include <stdarg.h>

@@ -23,65 +23,7 @@ what you give them.   Help stamp out software-hoarding! */
  * syswrite code for converting, SHAKAL, CSSR or PDB coords into Moldy sys-spec files *
  *              -y selects .pot file from which potentials are read                   *
  **************************************************************************************
- *  Revision Log
- *  $Log: syswrite.c,v $
- *  Revision 2.10  2005/02/04 14:53:09  cf
- *  Common utility messages/errors moved to utlsup.h.
- *
- *  Revision 2.9  2004/12/07 13:00:01  cf
- *  Merged with latest utilities.
- *
- *  Revision 2.6.10.5  2004/12/07 10:35:56  cf
- *  Incorporated Keith's corrections and additions.
- *
- *  Revision 2.6.10.4  2004/12/06 19:12:44  cf
- *  Removed unused variables and general tidying up.
- *
- *  Revision 2.6.10.3  2004/04/09 06:02:55  moldydv
- *  Moved xtoupper definition to utlsup.h
- *
- *  Revision 2.6.10.2  2004/03/01 04:54:03  moldydv
- *  Syswrite now treats non-periodic data (from XYZ and some CSSR files) as single species with initial configuration to be set using skew start.
- *  Options -n and -l added for no of particles and species label, respectively, for such systems.
- *
- *  Revision 2.6.10.1  2003/07/29 09:37:15  moldydv
- *  Moved defs of file format numbers to utlsup.h
- *  Replaced explicit lengths of name variables with NLEN.
- *  Removed space_minus function
- *  Now uses MAX_SPECIES from utlsup.h
- *  Separate file format options replaced by single option '-i'.
- *
- *  Revision 2.6  2002/09/19 09:26:30  kr
- *  Tidied up header declarations.
- *  Changed old includes of string,stdlib,stddef and time to <> form
- *
- *  Revision 2.5  2002/09/18 09:59:19  kr
- *  Rolled in several changes by Craig Fisher:
- *  Ransub can now read polyatomic species
- *  Syswrite can handle polyatomics from CSSR PDB or SCHACKAL files
- *
- *  Revision 2.4  2002/06/21 11:29:07  kr
- *  Got rid of K&R varargs-compatibility stuff.
- *
- *  Revision 2.3  2001/08/09 16:41:08  keith
- *  Fixed some bugs.
- *  Converted some expressions to use array syntax.
- *
- *  Revision 2.2  2001/08/09 11:46:56  keith
- *  Tidied up against some compiler warnings.
- *  Added license file for SgInfo routines with permission of
- *  Ralf W. Grosse-Kunstleve
- *
- *  Revision 2.1  2001/08/09 09:36:36  keith
- *  Incorporated Craig's new "Syswrite" utility.
- *
- * Revision 1.1  2001/04/25  18:27:41  fisher
- * Initial revision
- *
  */
-#ifndef lint
-static char *RCSid = "$Header: /home/moldy/CVS/moldy/src/syswrite.c,v 2.10 2005/02/04 14:53:09 cf Exp $";
-#endif
 #include "defs.h"
 #include <stdarg.h>
 #include <errno.h>

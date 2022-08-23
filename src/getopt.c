@@ -23,9 +23,6 @@
 
 #include <stdio.h>
 
-#ifndef lint
-static	char	sccsfid[] = "@(#) getopt.c 5.0 (UTZoo) 1985";
-#endif
 
 #define	ARGCH    (int)':'
 #define BADCH	 (int)'?'

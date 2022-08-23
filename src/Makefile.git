@@ -20,12 +20,14 @@
 #
 # Usage:
 #
-#     make -f Makefile.cvs
+#     make -f Makefile.git
 #
 # Moldy relies on autoconf 2.50 or greater.
 # If you have this version installed under a different name, invoke as
 #    make -f Makefile.cvs AUTOCONF=<path-to-autoconf-2.5x> AUTOHEADER=... 
 # if using GNU make or edit program selection lines below.
+
+# Now use "autoreconf"
 
 ACLOCAL=aclocal
 AUTOHEADER=autoheader
@@ -35,11 +37,9 @@ AUTOCONF=autoconf
 SHELL = /bin/sh
 
 prep:
-	$(ACLOCAL)
-	$(AUTOHEADER)
-	@touch stamp-h.in
-	$(AUTOMAKE) Makefile
-	WANT_AUTOCONF_2_5=1 $(AUTOCONF)
+	(cd .. && find githooks -type f -exec ln -sf ../../{} .git/hooks/ \;)
+	../.git/hooks/post-checkout
+	autoreconf -vif
 
 # The following two targets are pretty lame because we don't know that
 # the user wants to configure in `.', just like we don't know whether

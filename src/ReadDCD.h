@@ -7,13 +7,6 @@
  ***************************************************************************/
 
 /***************************************************************************
- * RCS INFORMATION:
- *
- *      $RCSfile: ReadDCD.h,v $
- *      $Author: keith $        $Locker:  $                $State: Exp $
- *      $Revision: 1.5 $      $Date: 1999/09/21 11:05:44 $
- *
- ***************************************************************************
  * DESCRIPTION:
  *
  * C routines to read and write binary DCD files (which use the goofy

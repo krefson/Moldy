@@ -22,32 +22,6 @@ what you give them.   Help stamp out software-hoarding! */
 /**************************************************************************************
  * spgrexp code for expanding unit cells from primitive coordinates and space group   *
  **************************************************************************************
- *  Revision Log
- *  $Log: spgrexp.c,v $
- *  Revision 2.5  2004/11/22 18:21:10  kr
- *  Merget "util_updates" branch into main
- *
- *  Revision 2.4.8.1  2003/07/29 09:45:20  moldydv
- *  Improvements, added functions and bug fixes for several utilities.
- *
- *  Revision 2.4  2002/09/19 09:26:30  kr
- *  Tidied up header declarations.
- *  Changed old includes of string,stdlib,stddef and time to <> form
- *
- *  Revision 2.3  2002/06/21 11:29:07  kr
- *  Got rid of K&R varargs-compatibility stuff.
- *
- *  Revision 2.2  2001/08/09 11:46:56  keith
- *  Tidied up against some compiler warnings.
- *  Added license file for SgInfo routines with permission of
- *  Ralf W. Grosse-Kunstleve
- *
- *  Revision 2.1  2001/08/09 09:36:35  keith
- *  Incorporated Craig's new "Syswrite" utility.
- *
- * Revision 1.1  2001/03/23  06:32:03  fisher
- * Initial revision
- *
  */
 
 #include <stdio.h>

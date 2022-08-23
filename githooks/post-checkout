@@ -1,0 +1,8 @@
+#! /bin/sh
+version=`git describe --always 2>/dev/null`
+rev_date=`git --no-pager log -1 --format=%cd HEAD 2>/dev/null`
+root=`git rev-parse --show-toplevel 2>/dev/null`
+
+echo "#define         REVISION         \"\$Name: $version\$\"" > $root/src/version.h
+echo "#define         REVISION_DATE    \"\$Date: $rev_date\$\"" >> $root/src/version.h
+echo "#define         REVISION_STATE   \"\$State: \$\"" >> $root/src/version.h
